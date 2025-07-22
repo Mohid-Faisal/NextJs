@@ -25,7 +25,7 @@ const Navbar = ({
 
         {/* Logo that shifts in/out */}
         <Link
-          href="/"
+          href="/dashboard"
           className={`text-xl font-semibold text-gray-800 absolute left-10 transition-all duration-300 ease-in-out ${
             isSidebarOpen
               ? "opacity-100 translate-x-0"

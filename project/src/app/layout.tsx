@@ -1,19 +1,28 @@
-// app/layout.tsx
-
 import "./globals.css";
-import type { Metadata } from "next";
-import LayoutContent from "@/components/LayoutContent";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
-export const metadata: Metadata = {
-  title: "Courier Dashboard",
-  description: "Admin and User Courier Portal",
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata = {
+  title: "Courier Express",
+  description: "Fast, Reliable and Affordable Courier Services",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en">
-      <body className="text-gray-900">
-        <LayoutContent>{children}</LayoutContent>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
+        {/* Wrap in ThemeProvider for dark/light support */}
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          {children}
+          <Toaster /> {/* ✅ Required for Sonner toast notifications */}
+        </ThemeProvider>
       </body>
     </html>
   );
