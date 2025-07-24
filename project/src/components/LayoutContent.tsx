@@ -29,7 +29,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 
         {/* Page content */}
         <main
-          className={`flex-1 bg-gray-100 overflow-y-auto p-6 h-[calc(100vh-64px)] transition-all duration-300 ease-in-out ${
+          className={`w-full flex-1 bg-gray-100 overflow-y-auto p-6 h-[calc(100vh-64px)] transition-all duration-300 ease-in-out ${
             sidebarOpen ? "ml-64" : "ml-20"
           }`}
         >

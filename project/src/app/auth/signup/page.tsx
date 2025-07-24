@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+import { ZodError } from "zod";
+import { signupSchema } from "@/zodschemas/signupSchema";
 
 const getPasswordStrength = (password: string) => {
   const strong = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -30,31 +32,30 @@ const SignupPage = () => {
   };
 
   const handleSignup = async () => {
-    if (!form.name || !form.email || !form.password) {
-      toast.error("Please fill in all fields.");
-      return;
-    }
-
     try {
+      const validated = signupSchema.parse(form); // throws if invalid
+  
       const response = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(validated),
       });
-
+  
       const data = await response.json();
-
+  
       if (response.ok && data.success) {
         toast.success("Signup successful! Redirecting to login...");
-        setTimeout(() => {
-          router.push("/auth/login");
-        }, 1500);
+        setTimeout(() => router.push("/auth/login"), 1500);
       } else {
         toast.error(data.message || "Signup failed. Try again.");
       }
     } catch (err) {
-      console.error("Signup error:", err);
-      toast.error("An unexpected error occurred.");
+      if (err instanceof ZodError) {
+        toast.error(err.issues[0].message); // Show first validation error
+      } else {
+        console.error("Signup error:", err);
+        toast.error("An unexpected error occurred.");
+      }
     }
   };
 

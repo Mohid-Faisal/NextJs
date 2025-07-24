@@ -50,47 +50,44 @@ export default function ShipmentsPage() {
   const getStatusColor = (status: Shipment["status"]) => {
     switch (status) {
       case "In Transit":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100";
       case "Delivered":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100";
       case "Pending":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
       case "Cancelled":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
   };
 
   const getInvoiceColor = (status: string) => {
     switch (status) {
       case "Paid":
-        return "bg-green-100 text-green-700";
+        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
       case "Unpaid":
-        return "bg-red-100 text-red-700";
+        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200";
       case "Overdue":
-        return "bg-orange-100 text-orange-700";
+        return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200";
     }
   };
 
   return (
-    <div className="p-10 max-w-7xl mx-auto">
-      <h2 className="text-4xl font-bold mb-6 text-gray-800">📦 All Shipments</h2>
+    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
+      <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">📦 All Shipments</h2>
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-4 items-center">
-        {/* Status Filter */}
         <div>
-          <span className="text-sm font-semibold text-gray-600 block mb-1">Status</span>
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Status</span>
           <Select value={statusFilter} onValueChange={(value) => {
             setPage(1);
             setStatusFilter(value);
           }}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[160px]" />
             <SelectContent>
               {STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
@@ -101,13 +98,10 @@ export default function ShipmentsPage() {
           </Select>
         </div>
 
-        {/* Sort by Date */}
         <div>
-          <span className="text-sm font-semibold text-gray-600 block mb-1">Sort by Date</span>
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Sort by Date</span>
           <Select value={sortOrder} onValueChange={(value) => setSortOrder(value)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Sort" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[140px]" />
             <SelectContent>
               {SORT_OPTIONS.map((option) => (
                 <SelectItem key={option} value={option}>
@@ -118,9 +112,8 @@ export default function ShipmentsPage() {
           </Select>
         </div>
 
-        {/* Search Input */}
         <div className="flex-1">
-          <span className="text-sm font-semibold text-gray-600 block mb-1">Search</span>
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Search</span>
           <Input
             placeholder="Search by tracking ID, sender, or receiver..."
             value={searchTerm}
@@ -134,14 +127,14 @@ export default function ShipmentsPage() {
       </div>
 
       {/* Shipments Table */}
-      <Card className="shadow-xl rounded-2xl border border-gray-200">
+      <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <CardContent className="p-6 overflow-x-auto">
           {shipments.length === 0 ? (
-            <p className="text-gray-600 text-center py-10 text-lg">No shipments found.</p>
+            <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">No shipments found.</p>
           ) : (
             <table className="min-w-full table-auto border-separate border-spacing-y-4">
               <thead>
-                <tr className="text-sm text-gray-500 uppercase">
+                <tr className="text-sm text-gray-500 dark:text-gray-300 uppercase">
                   <th className="px-4 py-2 text-left">Tracking ID</th>
                   <th className="px-4 py-2 text-left">Sender</th>
                   <th className="px-4 py-2 text-left">Receiver</th>
@@ -151,15 +144,14 @@ export default function ShipmentsPage() {
                   <th className="px-4 py-2 text-left">Status</th>
                   <th className="px-4 py-2 text-left">Total Cost</th>
                   <th className="px-4 py-2 text-left">Date</th>
-                  <th className="px-4 py-2 text-right">Action</th>
                 </tr>
               </thead>
               <AnimatePresence>
-                <tbody className="text-sm text-gray-700 font-light">
+                <tbody className="text-sm text-gray-700 dark:text-gray-200 font-light">
                   {shipments.map((shipment) => (
                     <motion.tr
                       key={shipment.id}
-                      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -168,7 +160,7 @@ export default function ShipmentsPage() {
                       <td className="px-4 py-3 font-medium">{shipment.trackingId}</td>
                       <td className="px-4 py-3">{shipment.senderName}</td>
                       <td className="px-4 py-3">{shipment.recipientName}</td>
-                      <td className="px-4 py-3">{shipment.recipientAddress}</td>
+                      <td className="px-4 py-3">{shipment.destination}</td>
                       <td className="px-4 py-3">{shipment.paymentMethod}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(shipment.invoiceStatus)}`}>
@@ -182,11 +174,6 @@ export default function ShipmentsPage() {
                       </td>
                       <td className="px-4 py-3">Rs. {shipment.totalCost}</td>
                       <td className="px-4 py-3">{new Date(shipment.createdAt).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right">
-                        <Button size="sm" variant="outline" className="hover:scale-105 transition-transform">
-                          View
-                        </Button>
-                      </td>
                     </motion.tr>
                   ))}
                 </tbody>
@@ -198,7 +185,7 @@ export default function ShipmentsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600">
+        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
           <Button
             disabled={page <= 1}
             onClick={() => setPage((prev) => prev - 1)}

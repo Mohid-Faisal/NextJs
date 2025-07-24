@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={inter.className}>
-      <body className="text-gray-900 bg-gray-50 dark:bg-background">
+      <body className="text-gray-900 bg-gray-50 dark:bg-black dark:text-white transition-colors duration-300">
         <LayoutContent>{children}</LayoutContent>
         <Toaster position="top-center" richColors />
       </body>

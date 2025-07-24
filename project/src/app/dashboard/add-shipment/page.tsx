@@ -73,9 +73,9 @@ const AddShipmentPage = () => {
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto px-4"
+      className="max-w-4xl mx-auto px-4 py-8 text-gray-900 dark:text-white"
     >
-      <Card className="w-full shadow-md">
+      <Card className="w-full shadow-md bg-white dark:bg-zinc-900">
         <CardContent className="p-8">
           <h1 className="text-3xl font-bold mb-8 text-center">
             Add New Shipment
@@ -108,7 +108,6 @@ const AddShipmentPage = () => {
               </div>
             ))}
 
-            {/* Payment Method Dropdown */}
             <div className="flex flex-col space-y-2">
               <Label>Payment Method</Label>
               <Select
@@ -125,7 +124,6 @@ const AddShipmentPage = () => {
               </Select>
             </div>
 
-            {/* Status Dropdown */}
             <div className="flex flex-col space-y-2">
               <Label>Status</Label>
               <Select
@@ -143,7 +141,6 @@ const AddShipmentPage = () => {
               </Select>
             </div>
 
-            {/* Invoice Status Dropdown */}
             <div className="flex flex-col space-y-2">
               <Label>Invoice Status</Label>
               <Select

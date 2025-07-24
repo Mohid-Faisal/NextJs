@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import docRates from "../../../../public/DHL PK RATES DOC.json";
-import nonDocRates from "../../../../public/DHL PK RATES NON_DOC.json"; 
+import docRates from "../../../../data/DHL PK RATES DOC.json";
+import nonDocRates from "../../../../data/DHL PK RATES NON_DOC.json"; 
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

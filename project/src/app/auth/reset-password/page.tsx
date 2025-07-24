@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { ResetPasswordSchema } from "@/zodschemas/resetpasswordSchema";
+import { ZodError } from "zod";
 
 const getPasswordStrength = (password: string) => {
   const strong = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -33,23 +35,16 @@ const ResetPasswordPage = () => {
   };
 
   const handleReset = async () => {
-    if (!form.email || !form.password || !form.confirmPassword) {
-      toast.error("Please fill in all fields.");
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      toast.error("Passwords do not match.");
-      return;
-    }
 
     try {
+      const validated = ResetPasswordSchema.parse(form);
+
       const response = await fetch("/api/reset-password", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: form.email,
-          password: form.password,
+          email: validated.email,
+          password: validated.password,
         }),
       });
 
@@ -62,8 +57,12 @@ const ResetPasswordPage = () => {
         toast.error(data.message || "Failed to reset password.");
       }
     } catch (err) {
-      console.error("Reset error:", err);
-      toast.error("An unexpected error occurred.");
+      if (err instanceof ZodError) {
+        toast.error(err.issues[0].message);
+      } else {
+        console.error("Reset error:", err);
+        toast.error("An unexpected error occurred.");
+      }
     }
   };
 

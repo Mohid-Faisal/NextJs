@@ -2,10 +2,11 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Courier Express",
   description: "Fast, Reliable and Affordable Courier Services",
 };
@@ -17,11 +18,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        {/* Wrap in ThemeProvider for dark/light support */}
+      <body
+        className={`min-h-screen font-sans antialiased ${inter.className}`}
+      >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           {children}
-          <Toaster /> {/* ✅ Required for Sonner toast notifications */}
+          <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
     </html>
