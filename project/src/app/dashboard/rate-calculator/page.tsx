@@ -5,7 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const destinations = [
   "Middle East",
@@ -31,11 +37,18 @@ const RateCalculator = () => {
     destination: "",
   });
 
-  const [rate, setRate] = useState<number | null>(null);
+  const [rates, setRates] = useState<{
+    doc?: number;
+    nonDoc?: number;
+  } | null>(null);
+
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.type === "number" ? Math.max(0, Number(e.target.value)).toString() : e.target.value;
+    const value =
+      e.target.type === "number"
+        ? Math.max(0, Number(e.target.value)).toString()
+        : e.target.value;
     setForm({ ...form, [e.target.name]: value });
   };
 
@@ -43,28 +56,54 @@ const RateCalculator = () => {
     setForm({ ...form, destination: value });
   };
 
-  const calculateRate = () => {
-    const { weight, length, width, height } = form;
+  const handleCalculate = async () => {
+    const { weight, length, width, height, destination } = form;
     const w = parseFloat(weight);
     const l = parseFloat(length);
     const wd = parseFloat(width);
     const h = parseFloat(height);
 
-    if ([w, l, wd, h].some((v) => isNaN(v) || v < 0)) {
-      setError("Please enter valid positive numbers for all dimensions and weight.");
-      setRate(null);
+    if ([w, l, wd, h].some((v) => isNaN(v) || v <= 0)) {
+      setError(
+        "Please enter valid positive numbers for all dimensions and weight."
+      );
+      setRates(null);
       return;
     }
 
     setError(null);
-    const volume = l * wd * h;
-    const baseRate = 100;
-    const rate = baseRate + w * 10 + volume * 0.05;
-    setRate(parseFloat(rate.toFixed(2)));
+
+    try {
+      const res = await fetch("/api/rate-calc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          region: destination,
+          weight: w,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "No matching rate found.");
+        setRates(null);
+      } else {
+        setRates({
+          doc: data.DOC ? parseFloat(data.DOC) : undefined,
+          nonDoc: data.NON_DOC ? parseFloat(data.NON_DOC) : undefined,
+        });
+      }
+    } catch (err) {
+      setError("Something went wrong while fetching rates.");
+      setRates(null);
+    }
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] w-full flex items-center justify-center bg-gray-50 dark:bg-background overflow-hidden">
+    <div className="h-[calc(100vh-8rem)] w-full flex items-center justify-center dark:bg-background overflow-hidden">
       <div className="w-full max-w-4xl">
         <h1 className="text-3xl font-bold mb-4 text-center text-primary">
           Rate Calculator
@@ -148,17 +187,47 @@ const RateCalculator = () => {
               </div>
             </div>
 
-            <Button className="w-full mt-6 text-lg" onClick={calculateRate}>
+            <Button className="w-full mt-6 text-lg" onClick={handleCalculate}>
               Calculate Rate
             </Button>
 
             {error && (
-              <div className="text-red-500 text-center mt-2 font-medium">{error}</div>
+              <div className="text-red-500 text-center mt-2 font-medium">
+                {error}
+              </div>
             )}
 
-            {rate !== null && !error && (
-              <div className="text-xl font-semibold text-green-600 text-center mt-4">
-                Estimated Shipping Rate: Rs. {rate}
+            {rates && (
+              <div className="mt-6 flex justify-center">
+                <Card className="w-full max-w-md bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-700 shadow-md">
+                  <CardContent className="p-6 space-y-4 text-center">
+                    <h2 className="text-2xl font-bold text-green-700 dark:text-green-300">
+                      Estimated Shipping Rates
+                    </h2>
+
+                    {rates.doc !== undefined && (
+                      <div className="text-lg flex items-center justify-between px-4">
+                        <span className="text-green-600 dark:text-green-300">
+                          📄 DHL Doc rate
+                        </span>
+                        <span className="font-semibold text-green-800 dark:text-green-100">
+                          Rs. {rates.doc}
+                        </span>
+                      </div>
+                    )}
+
+                    {rates.nonDoc !== undefined && (
+                      <div className="text-lg flex items-center justify-between px-4">
+                        <span className="text-green-600 dark:text-green-300">
+                          📦 DHL Non-Doc rate
+                        </span>
+                        <span className="font-semibold text-green-800 dark:text-green-100">
+                          Rs. {rates.nonDoc}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
           </CardContent>

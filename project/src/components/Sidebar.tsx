@@ -22,9 +22,10 @@ import { jwtDecode } from "jwt-decode";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+  { href: "/dashboard/add-shipment", label: "Add Shipment", icon: Plus },
+  { href: "/dashboard/shipments", label: "Shipments", icon: Package },
   { href: "/domestic", label: "Domestic", icon: Truck },
   { href: "/international", label: "International", icon: Globe },
-  { href: "/add-shipment", label: "Add Shipment", icon: Plus },
   { href: "/dashboard/rate-calculator", label: "Rate Calculator", icon: DollarSign },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/orders", label: "Orders", icon: ShoppingCart },

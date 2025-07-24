@@ -14,3 +14,18 @@ model User {
   password String
   createdAt DateTime @default(now())
 }
+
+model Shipment {
+  id              String   @id @default(cuid())
+  trackingId      String   @unique
+  senderName      String
+  senderAddress   String
+  recipientName   String
+  recipientAddress String
+  destination     String
+  paymentMethod   String
+  totalCost       Float
+  status          String
+  invoiceStatus   String
+  createdAt       DateTime @default(now())
+}

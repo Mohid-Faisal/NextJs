@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 
 const getPasswordStrength = (password: string) => {
   const strong = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -20,40 +19,50 @@ const getPasswordStrength = (password: string) => {
   return "weak";
 };
 
-const SignupPage = () => {
+const ResetPasswordPage = () => {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSignup = async () => {
-    if (!form.name || !form.email || !form.password) {
+  const handleReset = async () => {
+    if (!form.email || !form.password || !form.confirmPassword) {
       toast.error("Please fill in all fields.");
       return;
     }
 
+    if (form.password !== form.confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
     try {
-      const response = await fetch("/api/signup", {
-        method: "POST",
+      const response = await fetch("/api/reset-password", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
       });
 
       const data = await response.json();
-
+      
       if (response.ok && data.success) {
-        toast.success("Signup successful! Redirecting to login...");
-        setTimeout(() => {
-          router.push("/auth/login");
-        }, 1500);
+        toast.success("Password reset successful!");
+        router.push("/auth/login");
       } else {
-        toast.error(data.message || "Signup failed. Try again.");
+        toast.error(data.message || "Failed to reset password.");
       }
     } catch (err) {
-      console.error("Signup error:", err);
+      console.error("Reset error:", err);
       toast.error("An unexpected error occurred.");
     }
   };
@@ -75,23 +84,11 @@ const SignupPage = () => {
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
         <h1 className="text-3xl font-bold text-center text-primary mb-6">
-          Sign Up
+          Reset Password
         </h1>
 
         <Card>
           <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Your Name"
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -100,12 +97,12 @@ const SignupPage = () => {
                 type="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="you@example.com"
+                placeholder="Enter your registered email"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">New Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -119,7 +116,7 @@ const SignupPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+                  className="absolute right-2 top-2.5 text-muted-foreground hover:text-primary"
                 >
                   {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
                 </button>
@@ -140,7 +137,7 @@ const SignupPage = () => {
                             : "33%",
                       }}
                       transition={{ duration: 0.4 }}
-                    />
+                    ></motion.div>
                   </div>
                   <p
                     className={`text-sm font-medium ${
@@ -153,8 +150,7 @@ const SignupPage = () => {
                   >
                     Password strength: {strength}
                   </p>
-
-                  <ul className="text-xs text-muted-foreground mt-1 space-y-1 list-disc pl-5">
+                  <ul className="text-xs text-muted-foreground list-disc ml-4 space-y-1">
                     <li>Minimum 8 characters</li>
                     <li>At least one letter and one number</li>
                     <li>Include a special character (for strong password)</li>
@@ -163,37 +159,30 @@ const SignupPage = () => {
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                placeholder="Re-enter your password"
+              />
+            </div>
+
             <Button
-              onClick={handleSignup}
+              onClick={handleReset}
               className="w-full mt-2 text-lg"
               disabled={strength === "weak"}
             >
-              Sign Up
+              Reset Password
             </Button>
 
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <div className="h-px bg-gray-300 w-full" />
-              or
-              <div className="h-px bg-gray-300 w-full" />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full flex items-center gap-2"
-              >
-                <FcGoogle size={20} />
-                Continue with Google
-              </Button>
-            </div>
-
-            <div className="text-sm text-center mt-4 space-y-1">
-              <p className="text-muted-foreground">
-                Already a user?{" "}
-                <a href="/auth/login" className="text-primary hover:underline">
-                  Log in
-                </a>
-              </p>
+            <div className="text-sm text-center mt-4">
+              <a href="/auth/login" className="text-primary hover:underline">
+                Back to Login
+              </a>
             </div>
           </CardContent>
         </Card>
@@ -202,4 +191,4 @@ const SignupPage = () => {
   );
 };
 
-export default SignupPage;
+export default ResetPasswordPage;
