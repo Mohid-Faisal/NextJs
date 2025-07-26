@@ -27,6 +27,8 @@ const links = [
   { href: "/dashboard/add-shipment", label: "Add Shipment", icon: Plus },
   { href: "/dashboard/update-shipment", label: "Update Shipment", icon: Edit3 },
   { href: "/dashboard/rate-calculator", label: "Rate Calculator", icon: DollarSign },
+  { href: "/dashboard/customers", label: "Customers", icon: Users },
+  { href: "/dashboard/vendors", label: "Vendors", icon: Users },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
