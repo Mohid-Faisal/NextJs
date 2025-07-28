@@ -29,6 +29,7 @@ const links = [
   { href: "/dashboard/rate-calculator", label: "Rate Calculator", icon: DollarSign },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/vendors", label: "Vendors", icon: Users },
+  { href: "/dashboard/recipients", label: "Recipients", icon: Users },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

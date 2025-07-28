@@ -45,7 +45,7 @@ const LoginPage = () => {
 
       if (response.ok) {
         toast.success("Login successful!");
-        Cookies.set("token", data.token);
+        Cookies.set("token", data.token, { expires: 1 });
         router.push("/dashboard");
       } else {
         toast.error(data.message || "Login failed.");

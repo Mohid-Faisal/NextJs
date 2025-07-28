@@ -29,3 +29,41 @@ model Shipment {
   invoiceStatus   String
   createdAt       DateTime @default(now())
 }
+
+model Customers {
+  id               String   @id @default(cuid())
+  Company          String
+  Address          String
+  City             String
+  Country          String
+  Contact          String
+  Email            String @unique
+  ActiveStatus          String
+  SpecialInstructions   String
+  createdAt       DateTime @default(now())
+}
+
+model Vendors {
+    id               String   @id @default(cuid())
+  Company          String
+  Address          String
+  City             String
+  Country          String
+  Contact          String
+  Email            String @unique
+  ActiveStatus          String
+  createdAt       DateTime @default(now())
+}
+
+model Recipients {
+  id               String   @id @default(cuid())
+  Company          String
+  Address          String
+  City             String
+  Country          String
+  Contact          String
+  Email            String @unique
+  ActiveStatus          String
+  SpecialInstructions   String
+  createdAt       DateTime @default(now())
+}

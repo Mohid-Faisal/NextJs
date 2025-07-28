@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
-const CustomersPage = () => {
+const RecipientsPage = () => {
   const [form, setForm] = useState({
     Company: "",
     Address: "",
@@ -28,14 +28,14 @@ const CustomersPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log(form);
-    const res = await fetch("/api/add-customers", {
+    const res = await fetch("/api/add-recipients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
     const data = await res.json();
     if (data.success) {
-      toast.success("Customer added successfully!");
+      toast.success("Recipient added successfully!");
       setForm({
         Company: "",
         Address: "",
@@ -62,7 +62,7 @@ const CustomersPage = () => {
           <Card className="w-full shadow-none border-none bg-white">
             <CardContent className="p-6">
               <h1 className="text-2xl font-semibold mb-8 text-center text-primary tracking-tight">
-                Add Customer
+                Add Recipient
               </h1>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                 <div className="space-y-1">
@@ -166,7 +166,7 @@ const CustomersPage = () => {
                     Cancel
                   </Button>
                   <Button type="submit" className="text-sm px-4">
-                    Add Customer
+                    Add Recipient
                   </Button>
                 </div>
               </form>
@@ -178,4 +178,4 @@ const CustomersPage = () => {
   );
 };
 
-export default CustomersPage;
+export default RecipientsPage;
