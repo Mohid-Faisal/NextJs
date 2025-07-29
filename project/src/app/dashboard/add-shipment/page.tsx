@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import AddCustomerDialog from "@/components/AddCustomerDialog";
+import AddRecipientDialog from "@/components/AddRecipientDialog";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,11 +26,109 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import countries from "../../../../data/countries.json";
 
+// Add type for sender/recipient
+interface Party {
+  id: number;
+  Company: string;
+  Address: string;
+}
+
 const AddShipmentPage = () => {
   const router = useRouter();
+
+  const [senderQuery, setSenderQuery] = useState("");
+  const [recipientQuery, setRecipientQuery] = useState("");
+  const [senderResults, setSenderResults] = useState<Party[]>([]);
+  const [recipientResults, setRecipientResults] = useState<Party[]>([]);
+  const [selectedSender, setSelectedSender] = useState<Party | null>(null);
+  const [selectedRecipient, setSelectedRecipient] = useState<Party | null>(
+    null
+  );
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const endpoints = [
+        { fn: setDeliveryTimes, url: "/api/settings/deliveryTime" },
+        { fn: setPaymentMethods, url: "/api/settings/paymentMethod" },
+        { fn: setDeliveryStatuses, url: "/api/settings/deliveryStatus" },
+        { fn: setShippingModes, url: "/api/settings/shippingMode" },
+        { fn: setPackagingTypes, url: "/api/settings/packagingType" },
+        { fn: setCourierCompanies, url: "/api/settings/courierCompany" },
+        { fn: setServiceModes, url: "/api/settings/serviceMode" },
+      ];
+
+      for (const { fn, url } of endpoints) {
+        const res = await fetch(url);
+        const data = await res.json();
+        fn(data);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch senders
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (senderQuery.length > 0) {
+        fetch(`/api/search/customers?query=${senderQuery}`)
+          .then((res) => res.json())
+          .then((data) =>
+            setSenderResults(
+              data.map((item: Party) => ({
+                id: item.id,
+                Company: item.Company, // map from 'Company'
+                Address: item.Address, // map from 'Address'
+              }))
+            )
+          );
+        // console.log(senderResults)
+      } else {
+        setSenderResults([]);
+      }
+    }, 300); // Debounce
+
+    return () => clearTimeout(delayDebounce);
+  }, [senderQuery]);
+
+  // Fetch recipients
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (recipientQuery.length > 0) {
+        fetch(`/api/search/recipients?query=${recipientQuery}`)
+          .then((res) => res.json())
+          .then((data) =>
+            setRecipientResults(
+              data.map((item: Party) => ({
+                id: item.id,
+                Company: item.Company, // map from 'Company'
+                Address: item.Address, // map from 'Address'
+              }))
+            )
+          );
+        // console.log(recipientResults)
+      } else {
+        setRecipientResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [recipientQuery]);
+
+  // Types
+  type Option = { id: string; name: string };
+
+  const [deliveryTimes, setDeliveryTimes] = useState<Option[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<Option[]>([]);
+  const [deliveryStatuses, setDeliveryStatuses] = useState<Option[]>([]);
+  const [shippingModes, setShippingModes] = useState<Option[]>([]);
+  const [packagingTypes, setPackagingTypes] = useState<Option[]>([]);
+  const [courierCompanies, setCourierCompanies] = useState<Option[]>([]);
+  const [serviceModes, setServiceModes] = useState<Option[]>([]);
+
   const [form, setForm] = useState({
     shippingPrefix: "AWB",
-    awbNumber: "5401789837",
+    awbNumber: "",
     agency: "Deprixa Miami",
     office: "Deprixa Group",
     senderName: "",
@@ -86,7 +186,7 @@ const AddShipmentPage = () => {
       toast.success("Shipment added successfully!");
       setForm({
         shippingPrefix: "AWB",
-        awbNumber: "5401789837",
+        awbNumber: "",
         agency: "Deprixa Miami",
         office: "Deprixa Group",
         senderName: "",
@@ -125,13 +225,34 @@ const AddShipmentPage = () => {
     }
   };
 
-  
+  const renderSelect = (
+    label: string,
+    placeholder: string,
+    options: Option[]
+  ) => (
+    <div>
+      <Label className="mb-1 block">{label}</Label>
+      <Select>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.id} value={option.name}>
+              {option.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   // Example country list
   const countryList = countries.map((country) => ({
     code: country.code,
     name: country.name,
   }));
-  
+
   const selectItems = useMemo(
     () =>
       countryList.map((country) => (
@@ -141,7 +262,7 @@ const AddShipmentPage = () => {
       )),
     [countryList]
   );
-  
+
   const [isChecked, setIsChecked] = useState(false);
 
   return (
@@ -197,9 +318,7 @@ const AddShipmentPage = () => {
                         <SelectTrigger className="w-32">
                           <SelectValue placeholder="Select Country" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {selectItems}
-                        </SelectContent>
+                        <SelectContent>{selectItems}</SelectContent>
                       </Select>
                     )}
                   </div>
@@ -211,10 +330,12 @@ const AddShipmentPage = () => {
                     Tracking ID
                   </Label>
                   <Input
+                    id="awbNumber"
+                    name="awbNumber"
                     value={form.awbNumber}
-                    readOnly
-                    className="bg-gray-50 w-64"
                     onChange={handleChange}
+                    required
+                    className="bg-gray-50"
                   />
                 </div>
               </div>
@@ -232,19 +353,14 @@ const AddShipmentPage = () => {
                   </Label>
                   <Select
                     defaultValue={form.agency}
-                    onValueChange={(value) =>
-                      handleSelect("agency", value)
-                    }
+                    onValueChange={(value) => handleSelect("agency", value)}
                     value={form.agency}
                   >
                     <SelectTrigger className="bg-gray-50 w-full">
                       <SelectValue placeholder="Select agency" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Deprixa Miami">
-                        Deprixa Miami
-                      </SelectItem>
-                      <SelectItem value="Deprixa NY">Deprixa NY</SelectItem>
+                      <SelectItem value="PSS">PSS</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -256,19 +372,14 @@ const AddShipmentPage = () => {
                   </Label>
                   <Select
                     defaultValue={form.office}
-                    onValueChange={(value) =>
-                      handleSelect("office", value)
-                    }
+                    onValueChange={(value) => handleSelect("office", value)}
                     value={form.office}
                   >
                     <SelectTrigger className="bg-gray-50 w-full">
                       <SelectValue placeholder="Select office" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Deprixa Group">
-                        Deprixa Group
-                      </SelectItem>
-                      <SelectItem value="Deprixa UK">Deprixa UK</SelectItem>
+                      <SelectItem value="Lahore PK">Lahore PK</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -279,73 +390,148 @@ const AddShipmentPage = () => {
 
         {/* Sender/Recipient Info Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Sender Card */}
           <Card className="bg-white border border-gray-100 shadow-sm">
             <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-2">
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-4">
                 <FaInfoCircle className="text-primary" />
                 <span className="font-medium">Sender Information</span>
               </div>
-              <div className="space-y-4">
-                <div className="flex flex-col mb-4">
+
+              <div className="space-y-6">
+                {/* Sender Name with Add Button */}
+                <div className="flex flex-col text-black">
                   <Label className="mb-1">Sender/Customer</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Search sender name"
-                      className="flex-1"
-                      onChange={handleChange}
-                    />
-                    <Button type="button" className="bg-blue-500">
-                      +
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Select
+                        onValueChange={(val) => {
+                          const selected = senderResults.find(
+                            (s) => s.id === Number(val)
+                          );
+                          setSelectedSender(selected ?? null);
+                          setSenderQuery(selected?.Company ?? "");
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Search sender name..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="px-2 py-1">
+                            <Input
+                              className="w-full text-sm"
+                              placeholder="Type to search"
+                              value={senderQuery}
+                              onChange={(e) => setSenderQuery(e.target.value)}
+                            />
+                          </div>
+                          {senderResults.length > 0 ? (
+                            senderResults.map((s) => (
+                              <SelectItem key={s.id} value={String(s.id)}>
+                                {s.Company}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-gray-500 text-sm">
+                              {senderQuery.length >= 2
+                                ? "No matches found."
+                                : "Type at least 2 characters"}
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <AddCustomerDialog triggerLabel="+" />
                   </div>
                 </div>
-                <div className="flex flex-col mb-4">
+
+                {/* Sender Address */}
+                <div className="flex flex-col text-black">
                   <Label className="mb-1">Sender/Customer Address</Label>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Search sender address"
-                      className="flex-1"
-                      onChange={handleChange}
+                      value={selectedSender?.Address ?? ""}
+                      readOnly
+                      placeholder="Sender address"
+                      className="flex-1 bg-gray-100"
                     />
-                    <Button type="button" className="bg-blue-500">
-                      +
-                    </Button>
+                    <AddCustomerDialog triggerLabel="+" />
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Recipient Card */}
           <Card className="bg-white border border-gray-100 shadow-sm">
             <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-2">
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-4">
                 <FaInfoCircle className="text-primary" />
                 <span className="font-medium">Recipient Information</span>
               </div>
-              <div className="space-y-4">
-                <div className="flex flex-col mb-4">
+
+              <div className="space-y-6">
+                {/* Recipient Name with Add Button */}
+                <div className="flex flex-col text-black">
                   <Label className="mb-1">Recipient/Client</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Search Recipient Name"
-                      className="flex-1"
-                      onChange={handleChange}
-                    />
-                    <Button type="button" className="bg-blue-500">
-                      +
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Select
+                        onValueChange={(val) => {
+                          const selected = recipientResults.find(
+                            (r) => r.id === Number(val)
+                          );
+                          setSelectedRecipient(selected ?? null);
+                          setRecipientQuery(selected?.Company ?? "");
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Search recipient name..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="px-2 py-1">
+                            <Input
+                              className="w-full text-sm"
+                              placeholder="Type to search"
+                              value={recipientQuery}
+                              onChange={(e) =>
+                                setRecipientQuery(e.target.value)
+                              }
+                            />
+                          </div>
+                          {recipientResults.length > 0 ? (
+                            recipientResults.map((r) => (
+                              <SelectItem key={r.id} value={String(r.id)}>
+                                {r.Company}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-gray-500 text-sm">
+                              {recipientQuery.length >= 2
+                                ? "No matches found."
+                                : "Type at least 2 characters"}
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <AddRecipientDialog triggerLabel="+" />
                   </div>
                 </div>
-                <div className="flex flex-col mb-4">
+
+                {/* Recipient Address */}
+                <div className="flex flex-col text-black">
                   <Label className="mb-1">Recipient/Client Address</Label>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Search recipient address"
-                      className="flex-1"
-                      onChange={handleChange}
+                      value={selectedRecipient?.Address ?? ""}
+                      readOnly
+                      placeholder="Recipient address"
+                      className="flex-1 bg-gray-100"
                     />
-                    <Button type="button" className="bg-blue-500">
-                      +
-                    </Button>
+                    <AddRecipientDialog triggerLabel="+" />
                   </div>
                 </div>
               </div>
@@ -356,83 +542,52 @@ const AddShipmentPage = () => {
         {/* Shipping Information Section */}
         <Card className="bg-white border border-gray-100 shadow-sm mb-4">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-4">
               <FaTruck className="text-primary" />
               <span className="font-medium">Shipping information:</span>
             </div>
+
+            {/* First Row */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <div>
-                <Label>Delivery time</Label>
-                <Input
-                  value={form.deliveryTime}
-                  readOnly
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label>Payment Methods</Label>
-                <Input
-                  value={form.paymentMethod}
-                  readOnly
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label>Delivery Status</Label>
-                <Input
-                  value={form.deliveryStatus}
-                  readOnly
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label>Shipping mode</Label>
-                <Input
-                  value={form.shippingMode}
-                  readOnly
-                  onChange={handleChange}
-                />
-              </div>
+              {renderSelect(
+                "Delivery Time",
+                "Select delivery time",
+                deliveryTimes
+              )}
+              {renderSelect(
+                "Payment Methods",
+                "Select payment method",
+                paymentMethods
+              )}
+              {renderSelect(
+                "Delivery Status",
+                "Select delivery status",
+                deliveryStatuses
+              )}
+              {renderSelect(
+                "Shipping Mode",
+                "Select shipping mode",
+                shippingModes
+              )}
             </div>
+
+            {/* Second Row */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <Label>Type of packaging</Label>
-                <Input
-                  value={form.packaging}
-                  readOnly
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label>Courier company</Label>
-                <Input
-                  value={form.courier}
-                  readOnly
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label>Service Mode</Label>
-                <Input
-                  value={form.serviceMode}
-                  readOnly
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label>Assign Driver</Label>
-                <Input
-                  placeholder="--Select driver or delivery person--"
-                  readOnly
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-            <div className="mt-2">
-              <Label>Attach Files</Label>
-              <Button type="button" className="bg-blue-500 mt-2">
-                Upload files
-              </Button>
+              {renderSelect(
+                "Type of Packaging",
+                "Select packaging type",
+                packagingTypes
+              )}
+              {renderSelect(
+                "Courier Company",
+                "Select courier company",
+                courierCompanies
+              )}
+              {renderSelect(
+                "Service Mode",
+                "Select service mode",
+                serviceModes
+              )}
             </div>
           </CardContent>
         </Card>
@@ -487,7 +642,9 @@ const AddShipmentPage = () => {
                       />
                     </td>
                     <td className="border px-2 py-1">
-                      <Input value={form.length} className="w-16"
+                      <Input
+                        value={form.length}
+                        className="w-16"
                         onChange={handleChange}
                       />
                     </td>
@@ -499,7 +656,9 @@ const AddShipmentPage = () => {
                       />
                     </td>
                     <td className="border px-2 py-1">
-                      <Input value={form.height} className="w-16"
+                      <Input
+                        value={form.height}
+                        className="w-16"
                         onChange={handleChange}
                       />
                     </td>
@@ -511,7 +670,9 @@ const AddShipmentPage = () => {
                       />
                     </td>
                     <td className="border px-2 py-1">
-                      <Input value={form.fixedCharge} className="w-16"
+                      <Input
+                        value={form.fixedCharge}
+                        className="w-16"
                         onChange={handleChange}
                       />
                     </td>
@@ -629,8 +790,8 @@ const AddShipmentPage = () => {
               <Button type="button" className="bg-blue-500">
                 Price list calculation
               </Button>
-              <Button type="submit" className="bg-green-500" onClick={handleSubmit}>
-                Save
+              <Button type="submit" className="bg-green-500">
+                Saveeeee
               </Button>
             </div>
           </CardContent>

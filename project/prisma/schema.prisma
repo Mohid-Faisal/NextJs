@@ -8,62 +8,103 @@ datasource db {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  name     String
-  email    String @unique
-  password String
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
   createdAt DateTime @default(now())
 }
 
 model Shipment {
-  id              String   @id @default(cuid())
-  trackingId      String   @unique
-  senderName      String
-  senderAddress   String
-  recipientName   String
-  recipientAddress String
-  destination     String
-  paymentMethod   String
-  totalCost       Float
-  status          String
-  invoiceStatus   String
-  createdAt       DateTime @default(now())
+  id                Int   @id @default(autoincrement())
+  trackingId        String   @unique
+  senderName        String
+  senderAddress     String
+  recipientName     String
+  recipientAddress  String
+  destination       String
+  totalCost         Float
+  status            String
+  invoiceStatus     String
+  createdAt          DateTime @default(now())
 }
 
 model Customers {
-  id               String   @id @default(cuid())
-  Company          String
-  Address          String
-  City             String
-  Country          String
-  Contact          String
-  Email            String @unique
-  ActiveStatus          String
-  SpecialInstructions   String
-  createdAt       DateTime @default(now())
+  id                  Int   @id @default(autoincrement())
+  Company             String
+  Address             String
+  City                String
+  Country             String
+  Contact             String
+  Email               String   @unique
+  ActiveStatus        String
+  SpecialInstructions String
+  createdAt           DateTime @default(now())
 }
 
 model Vendors {
-    id               String   @id @default(cuid())
-  Company          String
-  Address          String
-  City             String
-  Country          String
-  Contact          String
-  Email            String @unique
-  ActiveStatus          String
-  createdAt       DateTime @default(now())
+  id           Int   @id @default(autoincrement())
+  Company      String
+  Address      String
+  City         String
+  Country      String
+  Contact      String
+  Email        String   @unique
+  ActiveStatus String
+  createdAt    DateTime @default(now())
 }
 
 model Recipients {
-  id               String   @id @default(cuid())
-  Company          String
-  Address          String
-  City             String
-  Country          String
-  Contact          String
-  Email            String @unique
-  ActiveStatus          String
-  SpecialInstructions   String
-  createdAt       DateTime @default(now())
+  id                  Int   @id @default(autoincrement())
+  Company             String
+  Address             String
+  City                String
+  Country             String
+  Contact             String
+  Email               String   @unique
+  ActiveStatus        String
+  SpecialInstructions String
+  createdAt           DateTime @default(now())
+}
+
+model DeliveryTime {
+  id        Int   @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model PaymentMethod {
+  id        Int   @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model DeliveryStatus {
+  id        Int   @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model ShippingMode {
+  id        Int   @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model PackagingType {
+  id        Int   @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model CourierCompany {
+  id        Int   @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model ServiceMode {
+  id        Int   @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
 }
