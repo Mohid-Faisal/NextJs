@@ -58,7 +58,6 @@ export async function POST(req: NextRequest) {
         Contact,
         Email,
         ActiveStatus,
-        SpecialInstructions,
       },
     });
 
