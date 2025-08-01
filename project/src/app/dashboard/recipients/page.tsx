@@ -1,212 +1,135 @@
 "use client";
 
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { Recipients } from "@prisma/client";
+import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Plus } from "lucide-react";
+import Link from "next/link";
 
-const RecipientsPage = () => {
-  const [form, setForm] = useState({
-    Company: "",
-    Address: "",
-    City: "",
-    Country: "",
-    Contact: "",
-    Email: "",
-    ActiveStatus: "",
-    SpecialInstructions: "",
-  });
+const LIMIT = 10;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setForm({ ...form, [e.target.name]: value });
-  };
+export default function RecipientsPage() {
+  const [recipients, setRecipients] = useState<Recipients[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log(form);
-    const res = await fetch("/api/add-recipients", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast.success("Recipient added successfully!");
-      setForm({
-        Company: "",
-        Address: "",
-        City: "",
-        Country: "",
-        Contact: "",
-        Email: "",
-        ActiveStatus: "",
-        SpecialInstructions: "",
+  const totalPages = Math.ceil(total / LIMIT);
+
+  useEffect(() => {
+    const fetchRecipients = async () => {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(LIMIT),
+        ...(searchTerm && { search: searchTerm }),
       });
-    } else {
-      toast.error(data.message);
-    }
-  };
+
+      const res = await fetch(`/api/recipients?${params}`);
+      const { recipients, total } = await res.json();
+      setRecipients(recipients);
+      setTotal(total);
+    };
+
+    fetchRecipients();
+  }, [page, searchTerm]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto px-4"
-    >
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
-        <Card className="w-full border border-gray-100 shadow-sm bg-white rounded-2xl">
-          <CardContent className="p-6 md:p-8">
-            <h1 className="text-2xl font-semibold mb-8 text-center text-primary">
-              Add Recipient
-            </h1>
-            <form
-              onSubmit={handleSubmit}
-              className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"
-            >
-              {/* Company */}
-              <div className="space-y-1">
-                <Label htmlFor="Company">Company Name</Label>
-                <Input
-                  id="Company"
-                  name="Company"
-                  value={form.Company}
-                  onChange={handleChange}
-                  required
-                  className="text-sm"
-                />
-              </div>
+    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
+      <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">All Recipients</h2>
 
-              {/* Address */}
-              <div className="space-y-1">
-                <Label htmlFor="Address">Address</Label>
-                <Input
-                  id="Address"
-                  name="Address"
-                  value={form.Address}
-                  onChange={handleChange}
-                  required
-                  className="text-sm"
-                />
-              </div>
-
-              {/* City */}
-              <div className="space-y-1">
-                <Label htmlFor="City">City</Label>
-                <Input
-                  id="City"
-                  name="City"
-                  value={form.City}
-                  onChange={handleChange}
-                  required
-                  className="text-sm"
-                />
-              </div>
-
-              {/* Country */}
-              <div className="space-y-1">
-                <Label htmlFor="Country">Country</Label>
-                <Input
-                  id="Country"
-                  name="Country"
-                  value={form.Country}
-                  onChange={handleChange}
-                  required
-                  className="text-sm"
-                />
-              </div>
-
-              {/* Contact */}
-              <div className="space-y-1">
-                <Label htmlFor="Contact">Contact</Label>
-                <Input
-                  id="Contact"
-                  name="Contact"
-                  value={form.Contact}
-                  onChange={handleChange}
-                  required
-                  className="text-sm"
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1">
-                <Label htmlFor="Email">Email</Label>
-                <Input
-                  id="Email"
-                  name="Email"
-                  type="email"
-                  value={form.Email}
-                  onChange={handleChange}
-                  required
-                  className="text-sm"
-                />
-              </div>
-
-              {/* Active Status */}
-              <div className="space-y-1">
-                <Label htmlFor="ActiveStatus">Active Status</Label>
-                <Select
-                  value={form.ActiveStatus}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({ ...prev, ActiveStatus: value }))
-                  }
-                  required
-                >
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Special Instructions */}
-              <div className="space-y-1">
-                <Label htmlFor="SpecialInstructions">
-                  Special Instructions
-                </Label>
-                <Input
-                  id="SpecialInstructions"
-                  name="SpecialInstructions"
-                  value={form.SpecialInstructions}
-                  onChange={handleChange}
-                  placeholder="Any special instructions..."
-                  className="text-sm"
-                />
-              </div>
-
-              {/* Buttons */}
-              <div className="col-span-1 md:col-span-2 flex justify-end gap-3 pt-6">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-sm px-6 rounded-xl"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="text-sm px-6 rounded-xl">
-                  Add Recipient
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+      {/* Filters */}
+      <div className="mb-6 flex flex-wrap gap-4 items-center">
+        <div className="flex-1">
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Search</span>
+          <Input
+            placeholder="Search by recipient..."
+            value={searchTerm}
+            onChange={(e) => {
+              setPage(1);
+              setSearchTerm(e.target.value);
+            }}
+            className="w-full max-w-sm"
+          />
+        </div>
+      <div className="flex justify-end">
+        <Button asChild>
+          <Link href="/dashboard/recipients/add-recipients">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Recipient
+          </Link>
+        </Button>
       </div>
-    </motion.div>
-  );
-};
+      </div>
 
-export default RecipientsPage;
+
+      {/* Shipments Table */}
+      <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <CardContent className="p-6 overflow-x-auto">
+          {recipients.length === 0 ? (
+            <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">No recipients found.</p>
+          ) : (
+            <table className="min-w-full table-auto border-separate border-spacing-y-4">
+              <thead>
+                <tr className="text-sm text-gray-500 dark:text-gray-300 uppercase">
+                  <th className="px-4 py-2 text-left">ID</th>
+                  <th className="px-4 py-2 text-left">Company Name</th>
+                  <th className="px-4 py-2 text-left">Contact Person</th>
+                  <th className="px-4 py-2 text-left">Phone</th>
+                  <th className="px-4 py-2 text-left">City</th>
+                  <th className="px-4 py-2 text-left">Country</th>
+                </tr>
+              </thead>
+              <AnimatePresence>
+                <tbody className="text-sm text-gray-700 dark:text-gray-200 font-light">
+                  {recipients.map((recipient) => (
+                    <motion.tr
+                      key={recipient.id}
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <td className="px-4 py-3 font-medium">{recipient.id}</td>
+                      <td className="px-4 py-3">{recipient.CompanyName}</td>
+                      <td className="px-4 py-3">{recipient.PersonName}</td>
+                      <td className="px-4 py-3">{recipient.Phone}</td>
+                      <td className="px-4 py-3">{recipient.City}</td>
+                      <td className="px-4 py-3">{recipient.Country}</td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </AnimatePresence>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
+          <Button
+            disabled={page <= 1}
+            onClick={() => setPage((prev) => prev - 1)}
+            className="hover:scale-105 transition-transform"
+          >
+            ← Prev
+          </Button>
+          <span>
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            disabled={page >= totalPages}
+            onClick={() => setPage((prev) => prev + 1)}
+            className="hover:scale-105 transition-transform"
+          >
+            Next →
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

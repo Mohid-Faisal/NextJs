@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    console.log(customerData);
+    // console.log(customerData);
     const newCustomer = await prisma.customers.create({
       data: customerData,
     });

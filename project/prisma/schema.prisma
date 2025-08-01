@@ -31,7 +31,7 @@ model Shipment {
 
 model Customers {
   id                Int      @id @default(autoincrement()) 
-  CompanyName       String
+  CompanyName       String  @unique
   PersonName        String
   Email             String   @unique
   Phone             String
@@ -49,28 +49,31 @@ model Customers {
 
 
 model Vendors {
-  id           Int   @id @default(autoincrement())
-  Company      String
-  Address      String
-  City         String
-  Country      String
-  Contact      String
-  Email        String   @unique
-  ActiveStatus String
-  createdAt    DateTime @default(now())
+  id                Int      @id @default(autoincrement()) 
+  CompanyName       String  @unique
+  PersonName        String
+  Email             String   @unique
+  Phone             String
+  Country           String
+  State             String
+  City              String
+  Zip               String
+  Address           String
+  createdAt         DateTime @default(now())
 }
 
 model Recipients {
-  id                  Int   @id @default(autoincrement())
-  Company             String
-  Address             String
-  City                String
-  Country             String
-  Contact             String
-  Email               String   @unique
-  ActiveStatus        String
-  SpecialInstructions String
-  createdAt           DateTime @default(now())
+  id                Int      @id @default(autoincrement()) 
+  CompanyName       String  @unique
+  PersonName        String
+  Email             String   @unique
+  Phone             String
+  Country           String
+  State             String
+  City              String
+  Zip               String
+  Address           String
+  createdAt         DateTime @default(now())
 }
 
 model DeliveryTime {

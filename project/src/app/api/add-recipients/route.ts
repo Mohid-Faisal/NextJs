@@ -4,32 +4,36 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   try {
     const {
-      Company,
-      Address,
-      City,
-      Country,
-      Contact,
-      Email,
-      ActiveStatus,
-      SpecialInstructions,
+      companyname,
+      personname,
+      email,
+      phone,
+      country,
+      state,
+      city,
+      zip,
+      address,
     } = await req.json();
 
-    console.log(Email);
+    // console.log(companyname, personname, email, phone, country, state, city, zip, address);
+
+    // console.log(Email);
     // Basic validation
     const requiredFields = [
-      "Company",
-      "Address",
-      "City",
-      "Country",
-      "Contact",
-      "Email",
-      "ActiveStatus",
-      "SpecialInstructions",
+      "companyname",
+      "personname",
+      "email",
+      "phone",
+      "country", 
+      "state",
+      "city",
+      "zip",
+      "address"
     ];
 
     const existingRecipient = await prisma.recipients.findUnique({
       where: {
-        Email: Email,
+        CompanyName: companyname,
       },
     });
     
@@ -52,14 +56,15 @@ export async function POST(req: NextRequest) {
     // Store shipment in the database
     const recipient = await prisma.recipients.create({
       data: {
-        Company,
-        Address,
-        City,
-        Country,
-        Contact,
-        Email,
-        ActiveStatus,
-        SpecialInstructions,
+        CompanyName: companyname,
+        PersonName: personname,
+        Email: email,
+        Phone: phone,
+        Country: country,
+        State: state,
+        City: city,
+        Zip: zip,
+        Address: address,
       },
     });
 
