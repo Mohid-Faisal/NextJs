@@ -93,8 +93,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       icon: Plus,
     },
     {
-      href: "/dashboard/settings/manage-zone",
-      label: "Manage Zone",
+      href: "/dashboard/settings/manage-zones",
+      label: "Manage Zones",
       icon: Plus,
     },
     {

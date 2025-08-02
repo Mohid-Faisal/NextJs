@@ -117,3 +117,11 @@ model ServiceMode {
   name      String   @unique
   createdAt DateTime @default(now())
 }
+
+model Zone {
+  id        Int   @id @default(autoincrement())
+  code      String
+  country   String
+  zone      String
+  company   String 
+}
