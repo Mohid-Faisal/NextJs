@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Paperclip } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Paperclip, Search } from "lucide-react";
 import {
   Select,
   SelectTrigger,
@@ -15,93 +15,91 @@ import {
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
-const ManageZonesPage = () => {
-  const [selectedCompany, setSelectedCompany] = useState<string>("");
-  const [selectedCompanyName, setSelectedCompanyName] = useState<string>("");
-  const [zones, setZones] = useState<any[] | null>(null);
-  const [filteredZones, setFilteredZones] = useState<any[] | null>(null);
+const ManageRateListPage = () => {
+  const [selectedService, setSelectedService] = useState<string>("");
+  const [selectedServiceName, setSelectedServiceName] = useState<string>("");
+  const [rates, setRates] = useState<any[] | null>(null);
+  const [filteredRates, setFilteredRates] = useState<any[] | null>(null);
   const [search, setSearch] = useState("");
   const [courierCompanies, setCourierCompanies] = useState<
     { id: string; name: string }[]
   >([]);
 
-  // Fetch companies on mount
+  // Fetch services on mount
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchServices = async () => {
       try {
-        const res = await fetch("/api/settings/courierCompany");
+        const res = await fetch("/api/settings/serviceMode");
         const data = await res.json();
         setCourierCompanies(data || []);
       } catch (error) {
-        console.error("Failed to fetch courier companies", error);
+        console.error("Failed to fetch service modes", error);
       }
     };
-    fetchCompanies();
+    fetchServices();
   }, []);
 
   // Upload Excel
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedCompanyName) {
-      toast.error("Please select a company and upload a file.");
+    if (!file || !selectedServiceName) {
+      toast.error("Please select a service and upload a file.");
       return;
     }
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("company", selectedCompanyName); // Send name, not ID
+    formData.append("service", selectedServiceName); // Send name, not ID
 
-    const res = await fetch("/api/zones", {
+    const res = await fetch("/api/rates", {
       method: "POST",
       body: formData,
     });
 
     const result = await res.json();
     if (result.success) {
-      toast.success("Zone list uploaded successfully!");
-      fetchZones(selectedCompanyName);
+      toast.success("Rate list uploaded successfully!");
+      fetchRates(selectedServiceName);
     } else {
       toast.error(result.message || "Upload failed");
     }
   };
 
-  // Fetch zones by company name
-  const fetchZones = async (companyName: string) => {
-    const res = await fetch(
-      `/api/zones?company=${encodeURIComponent(companyName)}`
-    );
+  // Fetch rates by company name
+  const fetchRates = async (serviceName: string) => {
+    const res = await fetch(`/api/rates?service=${encodeURIComponent(serviceName)}`);
     const result = await res.json();
     if (result.success) {
-      setZones(result.data);
-      setFilteredZones(result.data);
+      setRates(result.data);
+      setFilteredRates(result.data);
     } else {
-      setZones([]);
-      setFilteredZones([]);
+      setRates([]);
+      setFilteredRates([]);
     }
   };
 
-  // Refetch zones when company changes
+  // Refetch rates when company changes
   useEffect(() => {
-    if (selectedCompanyName) {
-      fetchZones(selectedCompanyName);
+    if (selectedServiceName) {
+      fetchRates(selectedServiceName);
     }
-  }, [selectedCompanyName]);
+  }, [selectedServiceName]);
 
-  // Filter zones by search
+  // Filter by search
   useEffect(() => {
     if (!search) {
-      setFilteredZones(zones);
+      setFilteredRates(rates);
     } else {
       const term = search.toLowerCase();
-      const filtered = zones?.filter(
-        (z) =>
-          z.zone?.toLowerCase().includes(term) ||
-          z.country?.toLowerCase().includes(term) ||
-          z.code?.toLowerCase().includes(term)
+      const filtered = rates?.filter(
+        (r) =>
+          r.zone?.toLowerCase().includes(term) ||
+          r.weight?.toString().includes(term) ||
+          r.rate?.toString().includes(term)
       );
-      setFilteredZones(filtered || []);
+      setFilteredRates(filtered || []);
     }
-  }, [search, zones]);
+  }, [search, rates]);
 
   return (
     <motion.div
@@ -111,30 +109,28 @@ const ManageZonesPage = () => {
     >
       <Card className="bg-white border shadow-sm rounded-2xl">
         <CardContent className="p-8 space-y-8">
+          {/* Heading */}
           <h1 className="text-2xl font-semibold text-primary text-center">
-            Manage Company Zones
+            Manage Rate List
           </h1>
 
           {/* Company + Search row */}
           <div className="flex flex-col md:flex-row items-end justify-between gap-4">
             {/* Select + Search Side by Side */}
-            <div className="flex flex-col md:flex-row gap-4 flex-grow">
+            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
               {/* Select Company */}
               <div className="space-y-1.5 w-full md:w-60">
-                <Label htmlFor="company">Select Company</Label>
                 <Select
-                  onValueChange={(companyId) => {
-                    const company = courierCompanies.find(
-                      (c) => c.id === companyId
-                    );
-                    setSelectedCompany(companyId);
-                    setSelectedCompanyName(company?.name || "");
+                  onValueChange={(serviceId) => {
+                    const company = courierCompanies.find((c) => c.id === serviceId);
+                    setSelectedService(serviceId);
+                    setSelectedServiceName(company?.name || "");
                     setSearch("");
                   }}
-                  value={selectedCompany}
+                  value={selectedService}
                 >
-                  <SelectTrigger className="text-sm h-9">
-                    <SelectValue placeholder="Choose a company" />
+                  <SelectTrigger className="text-sm w-60 h-9">
+                    <SelectValue placeholder="Choose a Service" />
                   </SelectTrigger>
                   <SelectContent>
                     {courierCompanies.map((c) => (
@@ -146,17 +142,21 @@ const ManageZonesPage = () => {
                 </Select>
               </div>
 
-              {/* Search */}
-              <div className="space-y-1.5 w-full md:w-72">
-                <Label htmlFor="search">Search (Zone / Country / Code)</Label>
-                <Input
-                  id="search"
-                  placeholder="e.g. Zone 3, Ireland, IE"
-                  className="h-9 text-sm"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  disabled={!zones}
-                />
+              {/* Search input */}
+              <div className="space-y-1.5 w-full md:w-[320px]">
+                <div className="flex w-full">
+                  <Input
+                    id="search"
+                    placeholder="e.g. Zone 3, 0.5kg, 200"
+                    className="h-9 text-sm rounded-r-none"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    disabled={!rates}
+                  />
+                  <div className="flex items-center justify-center px-3 bg-blue-600 text-white rounded-r-md">
+                    <Search className="w-4 h-4" />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -174,14 +174,14 @@ const ManageZonesPage = () => {
                 type="file"
                 accept=".xlsx,.xls"
                 onChange={handleUpload}
-                disabled={!selectedCompanyName}
+                disabled={!selectedServiceName}
                 className="hidden"
               />
             </div>
           </div>
 
           {/* Table */}
-          {filteredZones && filteredZones.length > 0 && (
+          {filteredRates && filteredRates.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -190,20 +190,17 @@ const ManageZonesPage = () => {
               <table className="min-w-full bg-white text-sm border rounded shadow">
                 <thead className="bg-gray-100 text-left">
                   <tr>
-                    <th className="px-4 py-2 border w-24">Code</th>{" "}
-                    {/* Fixed width 96px */}
-                    <th className="px-4 py-2 border w-64">Country</th>{" "}
-                    {/* Fixed width 256px */}
-                    <th className="px-4 py-2 border w-40">Zone</th>{" "}
-                    {/* Fixed width 160px */}
+                    <th className="px-4 py-2 border w-24">Zone</th>
+                    <th className="px-4 py-2 border w-32">Weight (kg)</th>
+                    <th className="px-4 py-2 border w-32">Rate</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredZones.map((zone, idx) => (
+                  {filteredRates.map((rate, idx) => (
                     <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 border w-24">{zone.code}</td>
-                      <td className="px-4 py-2 border w-64">{zone.country}</td>
-                      <td className="px-4 py-2 border w-40">{zone.zone}</td>
+                      <td className="px-4 py-2 border w-24">{rate.zone}</td>
+                      <td className="px-4 py-2 border w-32">{rate.weight}</td>
+                      <td className="px-4 py-2 border w-32">{rate.rate}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -211,9 +208,10 @@ const ManageZonesPage = () => {
             </motion.div>
           )}
 
-          {zones?.length === 0 && (
+          {/* Empty state */}
+          {filteredRates?.length === 0 && (
             <p className="text-center text-gray-500 mt-4">
-              No zones found for selected company.
+              No rates found for selected company.
             </p>
           )}
         </CardContent>
@@ -222,4 +220,4 @@ const ManageZonesPage = () => {
   );
 };
 
-export default ManageZonesPage;
+export default ManageRateListPage;
