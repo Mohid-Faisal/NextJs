@@ -6,16 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Recipients } from "@prisma/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Plus, EllipsisVertical, Eye, Search } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Country as country } from "country-state-city";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import DeleteDialog from "@/components/DeleteDialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const LIMIT = 10;
 
 export default function RecipientsPage() {
+  const router = useRouter();
   const [recipients, setRecipients] = useState<Recipients[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   const totalPages = Math.ceil(total / LIMIT);
 
@@ -38,12 +50,15 @@ export default function RecipientsPage() {
 
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">All Recipients</h2>
+      <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">
+        All Recipients
+      </h2>
 
       {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-4 items-center">
-        <div className="flex-1">
-          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Search</span>
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
+        {/* Search bar with icon */}
+        <div className="flex w-full max-w-sm">
+          {/* Search input */}
           <Input
             placeholder="Search by recipient..."
             value={searchTerm}
@@ -51,25 +66,32 @@ export default function RecipientsPage() {
               setPage(1);
               setSearchTerm(e.target.value);
             }}
-            className="w-full max-w-sm"
+            className="rounded-r-none"
           />
+          {/* Icon box */}
+          <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
+            <Search className="text-white s w-5 h-5" />
+          </div>
         </div>
-      <div className="flex justify-end">
-        <Button asChild>
-          <Link href="/dashboard/recipients/add-recipients">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Recipient
-          </Link>
-        </Button>
-      </div>
-      </div>
 
-
+        {/* Add Recipient button aligned to far right */}
+        <div className="flex justify-end">
+          <Button asChild>
+            <Link href="/dashboard/recipients/add-recipients">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Recipient
+            </Link>
+          </Button>
+        </div>
+      </div>
+      
       {/* Shipments Table */}
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <CardContent className="p-6 overflow-x-auto">
           {recipients.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">No recipients found.</p>
+            <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
+              No recipients found.
+            </p>
           ) : (
             <table className="min-w-full table-auto border-separate border-spacing-y-4">
               <thead>
@@ -80,6 +102,7 @@ export default function RecipientsPage() {
                   <th className="px-4 py-2 text-left">Phone</th>
                   <th className="px-4 py-2 text-left">City</th>
                   <th className="px-4 py-2 text-left">Country</th>
+                  <th className="px-4 py-2 text-left">Action</th>
                 </tr>
               </thead>
               <AnimatePresence>
@@ -98,7 +121,49 @@ export default function RecipientsPage() {
                       <td className="px-4 py-3">{recipient.PersonName}</td>
                       <td className="px-4 py-3">{recipient.Phone}</td>
                       <td className="px-4 py-3">{recipient.City}</td>
-                      <td className="px-4 py-3">{recipient.Country}</td>
+                      <td className="px-4 py-3">
+                        {country.getCountryByCode(recipient.Country)?.name}
+                      </td>
+                      <td className="px-4 py-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="p-2 hover:bg-gray-100 rounded">
+                              <EllipsisVertical />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-36">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push("recipients/add-recipients")
+                              }
+                            >
+                              ✏️ Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setOpenDeleteDialog(true)}
+                            >
+                              🗑️ Delete
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Dialog
+                          open={openDeleteDialog}
+                          onOpenChange={setOpenDeleteDialog}
+                        >
+                          <DialogContent className="max-w-md w-full">
+                            <DeleteDialog
+                              onDelete={() => {
+                                console.log("Deleted!");
+                              }}
+                              onClose={() => setOpenDeleteDialog(false)}
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      </td>
                     </motion.tr>
                   ))}
                 </tbody>

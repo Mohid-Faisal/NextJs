@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     const existingCustomer = await prisma.vendors.findUnique({
       where: {
-        Email: customerData.Email,
+        CompanyName: customerData.CompanyName,
       },
     });
     

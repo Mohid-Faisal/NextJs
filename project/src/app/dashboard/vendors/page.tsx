@@ -13,19 +13,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Plus, Eye, EllipsisVertical, Search } from "lucide-react";
 import Link from "next/link";
+import {Country as country}  from "country-state-city";
+import { useRouter } from "next/navigation";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import DeleteDialog from "@/components/DeleteDialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const LIMIT = 10;
 const STATUSES = ["All", "Active", "Inactive"];
 const SORT_OPTIONS = ["Newest", "Oldest"];
 
 export default function VendorsPage() {
+  const router = useRouter()
   const [vendors, setVendors] = useState<Vendors[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   const totalPages = Math.ceil(total / LIMIT);
 
@@ -52,44 +64,34 @@ export default function VendorsPage() {
       <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">All Vendors</h2>
 
       {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-4 items-center">
-        <div>
-          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Status</span>
-          <Select value={statusFilter} onValueChange={(value) => {
-            setPage(1);
-            setStatusFilter(value);
-          }}>
-            <SelectTrigger className="w-[160px]" />
-            <SelectContent>
-              {STATUSES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex-1">
-          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Search</span>
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
+        {/* Search bar with icon */}
+        <div className="flex w-full max-w-sm">
+          {/* Search input */}
           <Input
-            placeholder="Search by vendor..."
+            placeholder="Search by recipient..."
             value={searchTerm}
             onChange={(e) => {
               setPage(1);
               setSearchTerm(e.target.value);
             }}
-            className="w-full max-w-sm"
+            className="rounded-r-none"
           />
+          {/* Icon box */}
+          <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
+            <Search className="text-white s w-5 h-5" />
+          </div>
         </div>
-      <div className="flex justify-end">
-        <Button asChild>
-          <Link href="/dashboard/vendors/add-vendors">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Vendor
-          </Link>
-        </Button>
-      </div>
+
+        {/* Add Recipient button aligned to far right */}
+        <div className="flex justify-end">
+          <Button asChild>
+            <Link href="/dashboard/recipients/add-recipients">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Recipient
+            </Link>
+          </Button>
+        </div>
       </div>
 
 
@@ -108,6 +110,7 @@ export default function VendorsPage() {
                   <th className="px-4 py-2 text-left">Phone</th>
                   <th className="px-4 py-2 text-left">City</th>
                   <th className="px-4 py-2 text-left">Country</th>
+                  <th className="px-4 py-2 text-left">Action</th>
                 </tr>
               </thead>
               <AnimatePresence>
@@ -126,7 +129,47 @@ export default function VendorsPage() {
                       <td className="px-4 py-3">{vendor.PersonName}</td>
                       <td className="px-4 py-3">{vendor.Phone}</td>
                       <td className="px-4 py-3">{vendor.City}</td>
-                      <td className="px-4 py-3">{vendor.Country}</td>
+                      <td className="px-4 py-3">{country.getCountryByCode(vendor.Country)?.name}</td>
+                      <td className="px-4 py-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="p-2 hover:bg-gray-100 rounded">
+                              <EllipsisVertical />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-36">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push("vendors/add-vendors")
+                              }
+                            >
+                              ✏️ Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                            onClick={() => setOpenDeleteDialog(true)}
+                            >
+                              🗑️ Delete
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Dialog
+                          open={openDeleteDialog}
+                          onOpenChange={setOpenDeleteDialog}
+                        >
+                          <DialogContent className="max-w-md w-full">
+                            <DeleteDialog
+                              onDelete={() => {
+                                console.log("Deleted!");
+                              }}
+                              onClose={() => setOpenDeleteDialog(false)}
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      </td>
                     </motion.tr>
                   ))}
                 </tbody>

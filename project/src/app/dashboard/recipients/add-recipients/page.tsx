@@ -127,7 +127,7 @@ const RecipientsPage = () => {
                   name="personname"
                   value={form.personname}
                   onChange={handleChange}
-                  required
+                  
                 />
               </div>
               <div className="space-y-1.5">
@@ -138,7 +138,7 @@ const RecipientsPage = () => {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
-                  required
+                  
                 />
               </div>
               <div className="space-y-1.5">
@@ -149,7 +149,7 @@ const RecipientsPage = () => {
                   value={form.phone}
                   onChange={handleChange}
                   placeholder="0301 2345678"
-                  required
+                  
                 />
               </div>
             </div>
@@ -171,7 +171,7 @@ const RecipientsPage = () => {
                   <SelectContent>
                     {countries.map((country) => (
                       <SelectItem key={country.isoCode} value={country.isoCode}>
-                        {country.name}
+                        {country.name} ({country.isoCode})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -255,7 +255,7 @@ const RecipientsPage = () => {
                 variant="ghost"
                 onClick={() => router.back()}
               >
-                Close
+                Back
               </Button>
               <Button type="submit">Save</Button>
             </div>

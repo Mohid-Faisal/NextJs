@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 const LIMIT = 10;
 const STATUSES = ["All", "Pending", "In Transit", "Delivered", "Cancelled"];
@@ -77,17 +78,27 @@ export default function ShipmentsPage() {
 
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">📦 All Shipments</h2>
+      <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">
+        📦 All Shipments
+      </h2>
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-4 items-center">
+        {/* Status Filter */}
         <div>
-          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Status</span>
-          <Select value={statusFilter} onValueChange={(value) => {
-            setPage(1);
-            setStatusFilter(value);
-          }}>
-            <SelectTrigger className="w-[160px]" />
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
+            Status
+          </span>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setPage(1);
+              setStatusFilter(value);
+            }}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
             <SelectContent>
               {STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
@@ -98,10 +109,18 @@ export default function ShipmentsPage() {
           </Select>
         </div>
 
+        {/* Sort by Date Filter */}
         <div>
-          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Sort by Date</span>
-          <Select value={sortOrder} onValueChange={(value) => setSortOrder(value)}>
-            <SelectTrigger className="w-[140px]" />
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
+            Sort by Date
+          </span>
+          <Select
+            value={sortOrder}
+            onValueChange={(value) => setSortOrder(value)}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Select order" />
+            </SelectTrigger>
             <SelectContent>
               {SORT_OPTIONS.map((option) => (
                 <SelectItem key={option} value={option}>
@@ -112,17 +131,25 @@ export default function ShipmentsPage() {
           </Select>
         </div>
 
+        {/* Search Input with Blue Icon Button */}
         <div className="flex-1">
-          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">Search</span>
-          <Input
-            placeholder="Search by tracking ID, sender, or receiver..."
-            value={searchTerm}
-            onChange={(e) => {
-              setPage(1);
-              setSearchTerm(e.target.value);
-            }}
-            className="w-full max-w-sm"
-          />
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
+            Search
+          </span>
+          <div className="flex w-full max-w-sm">
+            <Input
+              placeholder="Search by tracking ID, sender, or receiver..."
+              value={searchTerm}
+              onChange={(e) => {
+                setPage(1);
+                setSearchTerm(e.target.value);
+              }}
+              className="rounded-r-none"
+            />
+            <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
+              <Search className="text-white w-5 h-5" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -130,7 +157,9 @@ export default function ShipmentsPage() {
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <CardContent className="p-6 overflow-x-auto">
           {shipments.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">No shipments found.</p>
+            <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
+              No shipments found.
+            </p>
           ) : (
             <table className="min-w-full table-auto border-separate border-spacing-y-4">
               <thead>
@@ -157,23 +186,35 @@ export default function ShipmentsPage() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <td className="px-4 py-3 font-medium">{shipment.trackingId}</td>
+                      <td className="px-4 py-3 font-medium">
+                        {shipment.trackingId}
+                      </td>
                       <td className="px-4 py-3">{shipment.senderName}</td>
                       <td className="px-4 py-3">{shipment.recipientName}</td>
                       <td className="px-4 py-3">{shipment.destination}</td>
                       <td className="px-4 py-3">{shipment.paymentMethod}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(shipment.invoiceStatus)}`}>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(
+                            shipment.invoiceStatus
+                          )}`}
+                        >
                           {shipment.invoiceStatus}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(shipment.status)}`}>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
+                            shipment.status
+                          )}`}
+                        >
                           {shipment.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">Rs. {shipment.totalCost}</td>
-                      <td className="px-4 py-3">{new Date(shipment.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3">
+                        {new Date(shipment.createdAt).toLocaleDateString()}
+                      </td>
                     </motion.tr>
                   ))}
                 </tbody>

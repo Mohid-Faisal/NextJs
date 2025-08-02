@@ -127,7 +127,6 @@ const VendorsPage = () => {
                   name="personname"
                   value={form.personname}
                   onChange={handleChange}
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -138,7 +137,6 @@ const VendorsPage = () => {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -149,7 +147,6 @@ const VendorsPage = () => {
                   value={form.phone}
                   onChange={handleChange}
                   placeholder="0301 2345678"
-                  required
                 />
               </div>
             </div>
@@ -171,7 +168,7 @@ const VendorsPage = () => {
                   <SelectContent>
                     {countries.map((country) => (
                       <SelectItem key={country.isoCode} value={country.isoCode}>
-                        {country.name}
+                        {country.name} ({country.isoCode})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -248,10 +245,14 @@ const VendorsPage = () => {
                 />
               </div>
             </div>
-            
+
             <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="ghost" onClick={() => router.back()}>
-                Close
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => router.back()}
+              >
+                Back
               </Button>
               <Button type="submit">Save</Button>
             </div>

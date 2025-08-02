@@ -20,6 +20,7 @@ import {
   Edit3,
   User,
   Building2,
+  Search,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -27,10 +28,9 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const links = [
   { href: "/dashboard/customers", label: "Customers", icon: User },
-  { href: "/dashboard/vendors", label: "Vendors", icon: Building2 },
   { href: "/dashboard/recipients", label: "Recipients", icon: Users },
+  { href: "/dashboard/vendors", label: "Vendors", icon: Building2 },
 ];
-
 
 interface DecodedToken {
   name: string;
@@ -49,7 +49,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/dashboard/shipment-settings")
   );
-  
+
   useEffect(() => {
     const token = Cookies.get("token");
     if (token) {
@@ -67,12 +67,39 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     router.push("/auth/login");
   };
 
-  const subLinks = [
+  const subLinksShipment = [
     { href: "/dashboard/shipments", label: "All Shipments", icon: Package },
     { href: "/dashboard/add-shipment", label: "Add Shipment", icon: Plus },
     {
       href: "/dashboard/rate-calculator",
       label: "Rate Calculator",
+      icon: DollarSign,
+    },
+    {
+      href: "/dashboard/remote-area-lookup",
+      label: "Remote Area Lookup",
+      icon: Search,
+    },
+  ];
+  const subLinksSettings = [
+    {
+      href: "/dashboard/settings/shipment-info-settings",
+      label: "Shipment Info Settings",
+      icon: Edit3,
+    },
+    {
+      href: "/dashboard/settings/general-settings",
+      label: "General Settings",
+      icon: Plus,
+    },
+    {
+      href: "/dashboard/settings/manage-zone",
+      label: "Manage Zone",
+      icon: Plus,
+    },
+    {
+      href: "/dashboard/settings/manage-rate-list",
+      label: "Manage Rate List",
       icon: DollarSign,
     },
   ];
@@ -85,6 +112,22 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     >
       <div className="flex flex-col h-full">
         <nav className="flex-1 px-2 py-6 space-y-2">
+          {/* Add Shipment */}
+          {/* <Link
+            href="/dashboard/add-shipment"
+            className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group 
+    bg-rose-700 hover:bg-rose-900 text-white`}
+          >
+            <Plus className="w-5 h-5 flex-shrink-0" />
+            <span
+              className={`whitespace-nowrap transition-all duration-200 ${
+                isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+              }`}
+            >
+              Add Shipment
+            </span>
+          </Link> */}
+
           {/* Dashboard */}
           <Link
             href="/dashboard"
@@ -142,7 +185,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                   exit={{ height: 0, opacity: 0 }}
                   className="pl-10 mt-2 space-y-1"
                 >
-                  {subLinks.map(({ href, label, icon: Icon }) => (
+                  {subLinksShipment.map(({ href, label, icon: Icon }) => (
                     <Link
                       key={href}
                       href={href}
@@ -183,60 +226,62 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                   {label}
                 </span>
               </Link>
-              
             );
           })}
-           {/* Settings Collapsible */}
-      <div>
-        <button
-          onClick={() => setSettingsOpen(!settingsOpen)}
-          className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-            pathname.startsWith("/dashboard/shipment-settings")
-              ? "bg-black text-white dark:bg-gray-800 dark:text-white"
-              : "text-gray-900 hover:bg-black hover:text-white dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <Settings className="w-5 h-5 flex-shrink-0" />
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          {/* Settings Collapsible */}
+          <div>
+            <button
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                pathname.startsWith("/dashboard/shipment-settings")
+                  ? "bg-black text-white dark:bg-gray-800 dark:text-white"
+                  : "text-gray-900 hover:bg-black hover:text-white dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
               }`}
             >
-              Settings
-            </span>
-          </div>
-          {isOpen &&
-            (settingsOpen ? (
-              <ChevronUp className="w-4 h-4 ml-auto" />
-            ) : (
-              <ChevronDown className="w-4 h-4 ml-auto" />
-            ))}
-        </button>
+              <div className="flex items-center gap-4">
+                <Settings className="w-5 h-5 flex-shrink-0" />
+                <span
+                  className={`whitespace-nowrap transition-all duration-200 ${
+                    isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                  }`}
+                >
+                  Settings
+                </span>
+              </div>
+              {isOpen &&
+                (settingsOpen ? (
+                  <ChevronUp className="w-4 h-4 ml-auto" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 ml-auto" />
+                ))}
+            </button>
 
-        <AnimatePresence>
-          {settingsOpen && isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="pl-10 mt-2 space-y-1"
-            >
-              <Link
-                href="/dashboard/settings/shipment-info-settings"
-                className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                  pathname === "/dashboard/shipment-settings"
-                    ? "bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                }`}
-              >
-                <Edit3 className="w-4 h-4 flex-shrink-0" />
-                Shipment Info Settings
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            <AnimatePresence>
+              {settingsOpen && isOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="pl-10 mt-2 space-y-1"
+                >
+                  {subLinksSettings.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                        pathname === href
+                          ? "bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      {label}
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </nav>
 
         {/* User Info + Logout */}

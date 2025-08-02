@@ -147,7 +147,6 @@ const CustomersPage = () => {
                   name="personname"
                   value={form.personname}
                   onChange={handleChange}
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -158,7 +157,6 @@ const CustomersPage = () => {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -169,7 +167,6 @@ const CustomersPage = () => {
                   value={form.phone}
                   onChange={handleChange}
                   placeholder="0301 2345678"
-                  required
                 />
               </div>
 
@@ -187,9 +184,11 @@ const CustomersPage = () => {
                   <SelectContent>
                     <SelectItem value="CNIC">CNIC</SelectItem>
                     <SelectItem value="Passport">Passport</SelectItem>
+                    <SelectItem value="NTN">NTN</SelectItem>
                     <SelectItem value="DriverLicense">
                       Driver License
                     </SelectItem>
+                    <SelectItem value="others">others</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -200,7 +199,6 @@ const CustomersPage = () => {
                   name="documentNumber"
                   value={form.documentNumber}
                   onChange={handleChange}
-                  required
                 />
               </div>
             </div>
@@ -288,7 +286,7 @@ const CustomersPage = () => {
                   <SelectContent>
                     {countries.map((country) => (
                       <SelectItem key={country.isoCode} value={country.isoCode}>
-                        {country.name}
+                        {country.name} ({country.isoCode})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -388,7 +386,7 @@ const CustomersPage = () => {
 
             <div className="flex justify-end gap-4 pt-4">
               <Button type="button" variant="ghost" onClick={() => router.back()}>
-                Close
+                Back
               </Button>
               <Button type="submit">Save</Button>
             </div>

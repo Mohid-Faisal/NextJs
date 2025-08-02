@@ -16,24 +16,14 @@ export async function POST(req: NextRequest) {
     } = await req.json();
     // console.log(Company, Address, City, Country, Contact, Email, ActiveStatus, SpecialInstructions);
     // Basic validation
-    const requiredFields = [
-      "companyname",
-      "personname",
-      "address",
-      "city",
-      "country",
-      "state",
-      "city",
-      "zip",
-      "address",
-    ];
+    const requiredFields = ["companyname", "country"];
 
     const existingVendor = await prisma.vendors.findUnique({
       where: {
         CompanyName: companyname,
       },
     });
-    
+
     if (existingVendor) {
       return NextResponse.json(
         { success: false, message: "Vendor already exists." },

@@ -21,14 +21,7 @@ export async function POST(req: NextRequest) {
     // Basic validation
     const requiredFields = [
       "companyname",
-      "personname",
-      "email",
-      "phone",
       "country", 
-      "state",
-      "city",
-      "zip",
-      "address"
     ];
 
     const existingRecipient = await prisma.recipients.findUnique({
