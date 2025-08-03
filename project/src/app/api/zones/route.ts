@@ -108,13 +108,31 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const zones = await prisma.zone.findMany({
+  // Get zones with vendor information from rates table
+  const zonesWithVendors = await prisma.zone.findMany({
     where: {
       service: service.toLowerCase(),
     },
   });
 
-  if (zones.length === 0) {
+  // Get unique vendors for this service from rates table
+  const vendorsForService = await prisma.rate.findMany({
+    where: {
+      service: service.toLowerCase(),
+    },
+    select: {
+      vendor: true,
+    },
+    distinct: ['vendor'],
+  });
+
+  // Combine zone data with vendor information
+  const zonesWithVendorInfo = zonesWithVendors.map(zone => ({
+    ...zone,
+    vendors: vendorsForService.map(v => v.vendor)
+  }));
+
+  if (zonesWithVendorInfo.length === 0) {
     return NextResponse.json({
       success: false,
       message: "No zones found for service",
@@ -122,5 +140,9 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ success: true, data: zones });
+  return NextResponse.json({ 
+    success: true, 
+    data: zonesWithVendorInfo,
+    vendors: vendorsForService.map(v => v.vendor)
+  });
 }

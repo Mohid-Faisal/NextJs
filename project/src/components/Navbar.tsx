@@ -42,13 +42,17 @@ const Navbar = ({
 
         <Link
           href="/dashboard"
-          className={`text-xl font-semibold text-gray-800 dark:text-white absolute left-10 transition-all duration-300 ease-in-out ${
+          className={`transition-all duration-300 ease-in-out ${
             isSidebarOpen
               ? "opacity-100 translate-x-0"
               : "opacity-0 -translate-x-4 pointer-events-none"
           }`}
         >
-          PSS
+          <img 
+            src="/logo.jpg" 
+            alt="PSS Logo" 
+            className="h-10 w-auto object-contain"
+          />
         </Link>
       </div>
 

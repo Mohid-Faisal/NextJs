@@ -33,7 +33,7 @@ model Customers {
   id                Int      @id @default(autoincrement()) 
   CompanyName       String  @unique
   PersonName        String
-  Email             String   @unique
+  Email             String   
   Phone             String
   DocumentType      String
   DocumentNumber    String
@@ -52,7 +52,7 @@ model Vendors {
   id                Int      @id @default(autoincrement()) 
   CompanyName       String  @unique
   PersonName        String
-  Email             String   @unique
+  Email             String   
   Phone             String
   Country           String
   State             String
@@ -64,9 +64,9 @@ model Vendors {
 
 model Recipients {
   id                Int      @id @default(autoincrement()) 
-  CompanyName       String  @unique
+  CompanyName       String   @unique
   PersonName        String
-  Email             String   @unique
+  Email             String   
   Phone             String
   Country           String
   State             String
@@ -129,8 +129,16 @@ model Zone {
 model Rate {
   id         Int     @id @default(autoincrement())
   weight     Float
-  vendors    String
+  vendor    String
+  service   String
   zone       Int
   price      Int
   docType    String
+}
+
+model filename {
+  id Int @id @default(autoincrement())
+  filename String
+  vendor String
+  service String
 }

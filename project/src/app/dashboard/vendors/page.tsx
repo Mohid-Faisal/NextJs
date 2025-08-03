@@ -86,9 +86,9 @@ export default function VendorsPage() {
         {/* Add Recipient button aligned to far right */}
         <div className="flex justify-end">
           <Button asChild>
-            <Link href="/dashboard/recipients/add-recipients">
+            <Link href="/dashboard/vendors/add-vendors">
               <Plus className="w-4 h-4 mr-2" />
-              Add Recipient
+              Add Vendors
             </Link>
           </Button>
         </div>
