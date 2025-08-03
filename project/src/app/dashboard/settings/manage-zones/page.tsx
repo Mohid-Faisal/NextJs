@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Paperclip, Search } from "lucide-react";
+import { Paperclip, Search, Trash2 } from "lucide-react";
 import {
   Select,
   SelectTrigger,
@@ -195,6 +195,39 @@ const ManageZonesPage = () => {
     }
   }, [search, zones, sortConfig]);
 
+  // Delete zones function
+  const handleDelete = async () => {
+    if (!selectedServiceName) {
+      toast.error("Please select a service first");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete all zone data for "${selectedServiceName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/zones?service=${encodeURIComponent(selectedServiceName)}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(`All zone data for "${selectedServiceName}" has been deleted successfully!`);
+        setZones([]);
+        setFilteredZones([]);
+        setFormattedTime('');
+        setSearch('');
+      } else {
+        toast.error(result.message || "Failed to delete zone data");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete zone data");
+    }
+  };
+
   // Download file function
   const handleDownload = async (filename: string) => {
     if (!filename || filename === 'Unknown') {
@@ -377,24 +410,33 @@ const ManageZonesPage = () => {
               </div>
             </div>
 
-            {/* Upload Button */}
-            <div className="flex justify-end">
-              <label
-                htmlFor="file"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-blue-700 transition"
-              >
-                <Paperclip className="w-4 h-4" />
-                Upload Excel file
-              </label>
-              <input
-                id="file"
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleUpload}
-                disabled={!selectedServiceName}
-                className="hidden"
-              />
-            </div>
+                         {/* Action Buttons */}
+             <div className="flex justify-end gap-2">
+               <button
+                 onClick={handleDelete}
+                 disabled={!selectedServiceName || !zones || zones.length === 0}
+                 className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                 title="Delete all zone data for selected service"
+               >
+                 <Trash2 className="w-4 h-4" />
+                 Delete All
+               </button>
+               <label
+                 htmlFor="file"
+                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-blue-700 transition"
+               >
+                 <Paperclip className="w-4 h-4" />
+                 Upload Excel file
+               </label>
+               <input
+                 id="file"
+                 type="file"
+                 accept=".xlsx,.xls"
+                 onChange={handleUpload}
+                 disabled={!selectedServiceName}
+                 className="hidden"
+               />
+             </div>
           </div>
 
           {/* Table */}

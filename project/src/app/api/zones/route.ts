@@ -223,3 +223,60 @@ export async function GET(req: NextRequest) {
     vendors: vendorsForService.map(v => v.vendor)
   });
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const service = searchParams.get("service");
+
+    if (!service) {
+      return NextResponse.json({
+        success: false,
+        message: "Service not specified",
+      }, { status: 400 });
+    }
+
+    console.log(`🗑️ Deleting all zone data for service: ${service}`);
+
+    // Delete all zones for the service
+    const deletedZones = await prisma.zone.deleteMany({
+      where: {
+        service: service.toLowerCase(),
+      },
+    });
+
+    // Delete upload time record
+    try {
+      await prisma.$executeRaw`
+        DELETE FROM "ZoneUpload" WHERE "service" = ${service.toLowerCase()}
+      `;
+    } catch (error) {
+      console.log("Failed to delete upload time record:", error);
+    }
+
+    // Delete filename record
+    try {
+      await prisma.$executeRaw`
+        DELETE FROM "filename" WHERE "service" = ${service.toLowerCase()} AND "fileType" = 'zone'
+      `;
+    } catch (error) {
+      console.log("Failed to delete filename record:", error);
+    }
+
+    console.log(`✅ Deleted ${deletedZones.count} zones for service: ${service}`);
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully deleted all zone data for ${service}`,
+      deletedCount: deletedZones.count,
+    });
+
+  } catch (error) {
+    console.error("❌ Error deleting zone data:", error);
+    return NextResponse.json({
+      success: false,
+      message: "Error deleting zone data",
+      error: (error as Error).message,
+    }, { status: 500 });
+  }
+}
