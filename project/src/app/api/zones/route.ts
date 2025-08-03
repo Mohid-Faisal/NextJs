@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const service = formData.get("service") as string;
+    const filename = file.name;
 
     if (!file || !service) {
       return NextResponse.json(
@@ -43,8 +44,19 @@ export async function POST(req: NextRequest) {
       country: string;
       zone: string;
       service: string;
+      phoneCode: string;
     }[] = [];
     const allCountries = Country.getAllCountries();
+    
+    // Log all countries with their ISO codes
+    // console.log("=== ALL COUNTRIES WITH ISO CODES ===");
+    // allCountries.forEach(country => {
+    //   console.log(`${country.name}: ${country.isoCode} (Phone: +${country.phonecode})`);
+    // });
+    // console.log("=== END COUNTRIES LIST ===");
+    // const allIsoCodes = allCountries.map((c) => c.isoCode);
+    // console.log("allCountries", allCountries);
+    // console.log("allIsoCodes", allIsoCodes);
 
     for (let col = 0; col < headerRow.length; col++) {
       const zoneName = headerRow[col]?.toString().trim();
@@ -58,12 +70,20 @@ export async function POST(req: NextRequest) {
           (c) => c.name.toLowerCase() === country.toLowerCase()
         );
 
+        // // Log country matching process
+        // if (matchedCountry) {
+        //   console.log(`✅ Matched: "${country}" -> ${matchedCountry.name} (${matchedCountry.isoCode}, +${matchedCountry.phonecode})`);
+        // } else {
+        //   console.log(`❌ No match found for: "${country}"`);
+        // }
+
         // Try to lookup country code from `country-to-iso` (optional improvement)
         parsedZones.push({
           code: matchedCountry?.isoCode || "", // optional: lookup country code here if needed
           country,
           zone: zoneName,
           service: service.toLowerCase(),
+          phoneCode: matchedCountry?.phonecode || "",
         });
       }
     }
@@ -77,6 +97,31 @@ export async function POST(req: NextRequest) {
       data: parsedZones,
       skipDuplicates: true,
     });
+
+    // Track upload time for this service using raw SQL
+    const uploadTime = new Date();
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO "ZoneUpload" ("service", "uploadedAt") 
+        VALUES (${service.toLowerCase()}, ${uploadTime})
+        ON CONFLICT ("service") 
+        DO UPDATE SET "uploadedAt" = ${uploadTime}
+      `;
+    } catch (error) {
+      console.log("Upload time tracking failed, but zones were saved:", error);
+    }
+
+    // Store filename information using raw SQL
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO "filename" ("filename", "vendor", "service", "fileType", "uploadedAt")
+        VALUES (${filename}, '', ${service.toLowerCase()}, 'zone', ${uploadTime})
+        ON CONFLICT ("service", "fileType")
+        DO UPDATE SET "filename" = ${filename}, "uploadedAt" = ${uploadTime}
+      `;
+    } catch (error) {
+      console.log("Filename tracking failed, but zones were saved:", error);
+    }
 
     return NextResponse.json({
       success: true,
@@ -126,10 +171,42 @@ export async function GET(req: NextRequest) {
     distinct: ['vendor'],
   });
 
+  // Get upload time and filename for this service
+  let uploadTime = null;
+  let filename = null;
+  try {
+    const uploadResult = await prisma.$queryRaw`
+      SELECT "uploadedAt" FROM "ZoneUpload" WHERE "service" = ${service.toLowerCase()}
+    `;
+    if (uploadResult && Array.isArray(uploadResult) && uploadResult.length > 0) {
+      uploadTime = uploadResult[0].uploadedAt;
+    }
+  } catch (error) {
+    console.log("Failed to fetch upload time:", error);
+  }
+  // console.log("uploadTime", uploadTime);
+
+  try {
+    const filenameResult = await prisma.$queryRaw`
+      SELECT "filename", "uploadedAt" FROM "filename" WHERE "service" = ${service.toLowerCase()} AND "fileType" = 'zone'
+    `;
+    if (filenameResult && Array.isArray(filenameResult) && filenameResult.length > 0) {
+      filename = filenameResult[0].filename;
+      // Use filename upload time if available, otherwise use zone upload time
+      if (filenameResult[0].uploadedAt) {
+        uploadTime = filenameResult[0].uploadedAt;
+      }
+    }
+  } catch (error) {
+    console.log("Failed to fetch filename:", error);
+  }
+
   // Combine zone data with vendor information
   const zonesWithVendorInfo = zonesWithVendors.map(zone => ({
     ...zone,
-    vendors: vendorsForService.map(v => v.vendor)
+    vendors: vendorsForService.map(v => v.vendor),
+    uploadedAt: uploadTime,
+    filename: filename
   }));
 
   if (zonesWithVendorInfo.length === 0) {

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "public"."Zone" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

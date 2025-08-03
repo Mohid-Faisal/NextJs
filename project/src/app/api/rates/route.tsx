@@ -176,21 +176,16 @@ export async function POST(req: NextRequest) {
       skipDuplicates: true,
     });
 
-    // Store filename in database
-    const filenameResponse = await fetch(`${req.nextUrl.origin}/api/filenames`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        filename: file.name,
-        vendor: vendor,
-        service: service,
-      }),
-    });
-
-    if (!filenameResponse.ok) {
-      console.warn("⚠️ Failed to store filename, but rates were uploaded successfully");
+    // Store filename in database using raw SQL
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO "filename" ("filename", "vendor", "service", "fileType", "uploadedAt")
+        VALUES (${file.name}, ${vendor}, ${service}, 'rate', ${new Date()})
+        ON CONFLICT ("service", "fileType")
+        DO UPDATE SET "filename" = ${file.name}, "uploadedAt" = ${new Date()}
+      `;
+    } catch (error) {
+      console.warn("⚠️ Failed to store filename, but rates were uploaded successfully:", error);
     }
 
     console.log(`✅ Parsed ${parsedRates.length} rate entries for vendor: ${vendor}, service: ${service}`);

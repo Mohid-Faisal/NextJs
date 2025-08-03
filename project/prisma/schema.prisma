@@ -123,7 +123,14 @@ model Zone {
   code      String
   country   String
   zone      String
-  service   String 
+  service   String
+  phoneCode String?
+}
+
+model ZoneUpload {
+  id        Int      @id @default(autoincrement())
+  service   String   @unique
+  uploadedAt DateTime @default(now())
 }
 
 model Rate {
@@ -141,4 +148,8 @@ model filename {
   filename String
   vendor String
   service String
+  fileType String // "rate" or "zone"
+  uploadedAt DateTime @default(now())
+  
+  @@unique([service, fileType])
 }
