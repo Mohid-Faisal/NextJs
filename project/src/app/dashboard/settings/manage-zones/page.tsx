@@ -16,18 +16,8 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 const ManageZonesPage = () => {
-  const [selectedService, setSelectedService] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('selectedService') || "";
-    }
-    return "";
-  });
-  const [selectedServiceName, setSelectedServiceName] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('selectedServiceName') || "";
-    }
-    return "";
-  });
+  const [selectedService, setSelectedService] = useState<string>("");
+  const [selectedServiceName, setSelectedServiceName] = useState<string>("");
   const [zones, setZones] = useState<any[] | null>(null);
   const [filteredZones, setFilteredZones] = useState<any[] | null>(null);
   const [search, setSearch] = useState("");
@@ -49,14 +39,6 @@ const ManageZonesPage = () => {
         const res = await fetch("/api/settings/serviceMode");
         const data = await res.json();
         setCourierCompanies(data || []);
-        
-        // If we have a selected service ID but no name, try to find the name
-        if (selectedService && !selectedServiceName) {
-          const company = data?.find((c: any) => c.id === selectedService);
-          if (company) {
-            setSelectedServiceName(company.name);
-          }
-        }
       } catch (error) {
         console.error("Failed to fetch service modes", error);
       } finally {
@@ -64,7 +46,7 @@ const ManageZonesPage = () => {
       }
     };
     fetchServices();
-  }, [selectedService, selectedServiceName]);
+  }, []);
 
   // Upload Excel
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,27 +109,6 @@ const ManageZonesPage = () => {
   useEffect(() => {
     if (selectedServiceName) {
       fetchZones(selectedServiceName);
-    }
-  }, [selectedServiceName]);
-
-  // Save selected service to localStorage when it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (selectedService) {
-        localStorage.setItem('selectedService', selectedService);
-      } else {
-        localStorage.removeItem('selectedService');
-      }
-    }
-  }, [selectedService]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (selectedServiceName) {
-        localStorage.setItem('selectedServiceName', selectedServiceName);
-      } else {
-        localStorage.removeItem('selectedServiceName');
-      }
     }
   }, [selectedServiceName]);
 
@@ -484,18 +445,6 @@ const ManageZonesPage = () => {
                        </div>
                      </th>
                      <th 
-                       className="px-4 py-2 border w-32 cursor-pointer hover:bg-gray-200 select-none"
-                       onClick={() => handleSort('phoneCode')}
-                     >
-                       <div className="flex items-center justify-between">
-                         <span>Phone Code</span>
-                         <div className="flex flex-col">
-                           <span className={`text-xs ${sortConfig?.key === 'phoneCode' && sortConfig?.direction === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}>▲</span>
-                           <span className={`text-xs ${sortConfig?.key === 'phoneCode' && sortConfig?.direction === 'desc' ? 'text-blue-600' : 'text-gray-400'}`}>▼</span>
-                         </div>
-                       </div>
-                     </th>
-                     <th 
                        className="px-4 py-2 border w-40 cursor-pointer hover:bg-gray-200 select-none"
                        onClick={() => handleSort('zone')}
                      >
@@ -507,6 +456,18 @@ const ManageZonesPage = () => {
                          </div>
                        </div>
                      </th>
+                     <th 
+                       className="px-4 py-2 border w-32 cursor-pointer hover:bg-gray-200 select-none"
+                       onClick={() => handleSort('phoneCode')}
+                     >
+                       <div className="flex items-center justify-between">
+                         <span>Phone Code</span>
+                         <div className="flex flex-col">
+                           <span className={`text-xs ${sortConfig?.key === 'phoneCode' && sortConfig?.direction === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}>▲</span>
+                           <span className={`text-xs ${sortConfig?.key === 'phoneCode' && sortConfig?.direction === 'desc' ? 'text-blue-600' : 'text-gray-400'}`}>▼</span>
+                         </div>
+                       </div>
+                     </th>
                    </tr>
                  </thead>
                 <tbody>
@@ -514,8 +475,8 @@ const ManageZonesPage = () => {
                     <tr key={idx} className="hover:bg-gray-50">
                       <td className="px-4 py-2 border w-24">{zone.code}</td>
                       <td className="px-4 py-2 border w-64">{zone.country}</td>
-                      <td className="px-4 py-2 border w-32">{zone.phoneCode || "-"}</td>
                       <td className="px-4 py-2 border w-40">{zone.zone}</td>
+                      <td className="px-4 py-2 border w-32">{zone.phoneCode || "-"}</td>
                     </tr>
                   ))}
                 </tbody>

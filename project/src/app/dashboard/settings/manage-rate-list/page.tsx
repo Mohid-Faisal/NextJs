@@ -296,14 +296,9 @@ const ManageRateListPage = () => {
                 <div className="space-y-1.5 w-full md:w-48">
                   <Select
                     onValueChange={(vendorId) => {
-                      if (vendorId === "all") {
-                        setSelectedVendor("");
-                        setSelectedVendorName("");
-                      } else {
-                        const vendor = vendors.find((v) => v.id === vendorId);
-                        setSelectedVendor(vendorId);
-                        setSelectedVendorName(vendor?.name || "");
-                      }
+                      const vendor = vendors.find((v) => v.id === vendorId);
+                      setSelectedVendor(vendorId);
+                      setSelectedVendorName(vendor?.name || "");
                       setSearch("");
                       setCurrentPage(1);
                     }}
@@ -313,9 +308,6 @@ const ManageRateListPage = () => {
                       <SelectValue placeholder="Choose a Vendor" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all" className="text-sm">
-                        Show All Vendors
-                      </SelectItem>
                       {vendors.map((v) => (
                         <SelectItem key={v.id} value={v.id} className="text-sm">
                           {v.name}
@@ -355,10 +347,7 @@ const ManageRateListPage = () => {
                   <div className="flex w-full">
                     <Input
                       id="search"
-                      placeholder={selectedVendorName 
-                        ? "Search by zone, weight, price, or doc type..." 
-                        : "Search by zone, weight, price, vendor, or doc type..."
-                      }
+                      placeholder="Search by zone, weight, price, or doc type..."
                       className="h-9 text-sm rounded-r-none"
                       value={search}
                       onChange={handleSearchChange}
@@ -395,7 +384,7 @@ const ManageRateListPage = () => {
                  className="hidden"
                />
                
-                                                             {/* Display uploaded filename for current vendor-service combination */}
+                {/* Display uploaded filename for current vendor-service combination */}
                  {(() => {
                    const fileKey = `${selectedVendorName}-${selectedServiceName}`;
                    const currentFileInfo = uploadedFiles[fileKey];
@@ -415,7 +404,6 @@ const ManageRateListPage = () => {
                    ) : null;
                  })()}
                
-               {/* Commented out delete button
                <Button
                  onClick={handleDeleteRates}
                  disabled={!selectedVendorName || !selectedServiceName}
@@ -424,7 +412,6 @@ const ManageRateListPage = () => {
                  <Trash2 className="w-4 h-4" />
                  Delete Rates
                </Button>
-               */}
              </div>
            </div>
 
@@ -442,9 +429,6 @@ const ManageRateListPage = () => {
                       <th className="px-4 py-2 border w-24">Zone</th>
                       <th className="px-4 py-2 border w-32">Weight (kg)</th>
                       <th className="px-4 py-2 border w-32">Price</th>
-                      {!selectedVendorName && (
-                        <th className="px-4 py-2 border w-32">Vendor</th>
-                      )}
                       <th className="px-4 py-2 border w-32">Service</th>
                       <th className="px-4 py-2 border w-32">Doc Type</th>
                     </tr>
@@ -455,9 +439,6 @@ const ManageRateListPage = () => {
                         <td className="px-4 py-2 border">{rate.zone}</td>
                         <td className="px-4 py-2 border">{rate.weight}</td>
                         <td className="px-4 py-2 border">{rate.price}</td>
-                        {!selectedVendorName && (
-                          <td className="px-4 py-2 border">{rate.vendor}</td>
-                        )}
                         <td className="px-4 py-2 border">{rate.service}</td>
                         <td className="px-4 py-2 border">{rate.docType}</td>
                       </tr>
@@ -524,12 +505,9 @@ const ManageRateListPage = () => {
           )}
 
           {/* Empty state */}
-          {!loading && rates?.length === 0 && selectedServiceName && (
+          {!loading && rates?.length === 0 && selectedServiceName && selectedVendorName && (
             <p className="text-center text-gray-500 mt-4">
-              {selectedVendorName 
-                ? `No rates found for ${selectedVendorName} - ${selectedServiceName}.`
-                : `No rates found for service: ${selectedServiceName}.`
-              }
+              No rates found for {selectedVendorName} - {selectedServiceName}.
             </p>
           )}
 

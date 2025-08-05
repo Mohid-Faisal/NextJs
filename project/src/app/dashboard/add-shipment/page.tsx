@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import AddCustomerDialog from "@/components/AddCustomerDialog";
 import AddRecipientDialog from "@/components/AddRecipientDialog";
 import { useRouter } from "next/navigation";
@@ -22,15 +22,30 @@ import {
   FaInfoCircle,
   FaTruck,
   FaFileInvoice,
+  FaTrash,
 } from "react-icons/fa";
 import { Checkbox } from "@/components/ui/checkbox";
-import countries from "../../../../data/countries.json";
+import { Country } from "country-state-city";
 
 // Add type for sender/recipient
 interface Party {
   id: number;
   Company: string;
   Address: string;
+}
+
+// Add type for package/box
+interface Package {
+  id: string;
+  amount: number;
+  packageDescription: string;
+  weight: number;
+  length: number;
+  width: number;
+  height: number;
+  weightVol: number;
+  fixedCharge: number;
+  decValue: number;
 }
 
 const AddShipmentPage = () => {
@@ -44,6 +59,133 @@ const AddShipmentPage = () => {
   const [selectedRecipient, setSelectedRecipient] = useState<Party | null>(
     null
   );
+
+  // Refs for search inputs
+  const senderSearchRef = useRef<HTMLInputElement>(null);
+  const recipientSearchRef = useRef<HTMLInputElement>(null);
+
+  // State to track dropdown open status
+  const [senderDropdownOpen, setSenderDropdownOpen] = useState(false);
+  const [recipientDropdownOpen, setRecipientDropdownOpen] = useState(false);
+
+  // State for packages/boxes
+  const [packages, setPackages] = useState<Package[]>([
+    {
+      id: "1",
+      amount: 1,
+      packageDescription: "",
+      weight: 0,
+      length: 0,
+      width: 0,
+      height: 0,
+      weightVol: 0,
+      fixedCharge: 0,
+      decValue: 0,
+    },
+  ]);
+
+  // Focus search input when sender dropdown opens
+  useEffect(() => {
+    if (senderDropdownOpen && senderSearchRef.current) {
+      setTimeout(() => {
+        senderSearchRef.current?.focus();
+      }, 100);
+    }
+  }, [senderDropdownOpen]);
+
+  // Focus search input when recipient dropdown opens
+  useEffect(() => {
+    if (recipientDropdownOpen && recipientSearchRef.current) {
+      setTimeout(() => {
+        recipientSearchRef.current?.focus();
+      }, 100);
+    }
+  }, [recipientDropdownOpen]);
+
+  // Calculate totals
+  const totals = useMemo(() => {
+    return packages.reduce(
+      (acc, pkg) => ({
+        amount: acc.amount + pkg.amount,
+        weight: acc.weight + pkg.weight,
+        weightVol: acc.weightVol + pkg.weightVol,
+        fixedCharge: acc.fixedCharge + pkg.fixedCharge,
+        decValue: acc.decValue + pkg.decValue,
+      }),
+      {
+        amount: 0,
+        weight: 0,
+        weightVol: 0,
+        fixedCharge: 0,
+        decValue: 0,
+      }
+    );
+  }, [packages]);
+
+  // Add new package/box
+  const addPackage = () => {
+    const newPackage: Package = {
+      id: Date.now().toString(),
+      amount: 1,
+      packageDescription: "",
+      weight: 0,
+      length: 0,
+      width: 0,
+      height: 0,
+      weightVol: 0,
+      fixedCharge: 0,
+      decValue: 0,
+    };
+    setPackages([...packages, newPackage]);
+  };
+
+  // Remove package/box
+  const removePackage = (id: string) => {
+    if (packages.length > 1) {
+      setPackages(packages.filter((pkg) => pkg.id !== id));
+    }
+  };
+
+  // Update package
+  const updatePackage = (id: string, field: keyof Package, value: any) => {
+    setPackages(
+      packages.map((pkg) =>
+        pkg.id === id ? { ...pkg, [field]: value } : pkg
+      )
+    );
+  };
+
+  // Calculate rate when manual rate is off
+  const calculateRate = async () => {
+    if (!form.manualRate) {
+      try {
+        const response = await fetch("/api/rates/calc", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            weight: totals.weight,
+            // Add other required parameters for rate calculation
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setForm(prev => ({
+            ...prev,
+            price: data.price || prev.price,
+          }));
+          toast.success("Rate calculated successfully!");
+        } else {
+          toast.error("Failed to calculate rate");
+        }
+      } catch (error) {
+        console.error("Error calculating rate:", error);
+        toast.error("Error calculating rate");
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,19 +212,18 @@ const AddShipmentPage = () => {
   // Fetch senders
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
-      if (senderQuery.length > 0) {
-        fetch(`/api/search/customers?query=${senderQuery}`)
+      if (senderQuery.length >= 2) {
+        fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
           .then((res) => res.json())
-          .then((data) =>
-            setSenderResults(
-              data.map((item: Party) => ({
-                id: item.id,
-                Company: item.Company, // map from 'Company'
-                Address: item.Address, // map from 'Address'
-              }))
-            )
-          );
-        // console.log(senderResults)
+          .then((data) => {
+            console.log("Sender search results:", data);
+            // Ensure data is an array before setting it
+            setSenderResults(Array.isArray(data) ? data : []);
+          })
+          .catch((error) => {
+            console.error("Error fetching senders:", error);
+            setSenderResults([]);
+          });
       } else {
         setSenderResults([]);
       }
@@ -94,19 +235,18 @@ const AddShipmentPage = () => {
   // Fetch recipients
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
-      if (recipientQuery.length > 0) {
-        fetch(`/api/search/recipients?query=${recipientQuery}`)
+      if (recipientQuery.length >= 2) {
+        fetch(`/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`)
           .then((res) => res.json())
-          .then((data) =>
-            setRecipientResults(
-              data.map((item: Party) => ({
-                id: item.id,
-                Company: item.Company, // map from 'Company'
-                Address: item.Address, // map from 'Address'
-              }))
-            )
-          );
-        // console.log(recipientResults)
+          .then((data) => {
+            console.log("Recipient search results:", data);
+            // Ensure data is an array before setting it
+            setRecipientResults(Array.isArray(data) ? data : []);
+          })
+          .catch((error) => {
+            console.error("Error fetching recipients:", error);
+            setRecipientResults([]);
+          });
       } else {
         setRecipientResults([]);
       }
@@ -247,9 +387,9 @@ const AddShipmentPage = () => {
     </div>
   );
 
-  // Example country list
-  const countryList = countries.map((country) => ({
-    code: country.code,
+  // Get countries using country-state-city library
+  const countryList = Country.getAllCountries().map((country) => ({
+    code: country.isoCode,
     name: country.name,
   }));
 
@@ -269,7 +409,7 @@ const AddShipmentPage = () => {
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-7xl mx-auto px-2 py-6 text-gray-900"
+      className="max-w-7xl mx-auto px-2 py-6 text-gray-900 h-[calc(100vh-64px)] overflow-y-auto"
     >
       <form onSubmit={handleSubmit}>
         {/* Record shipment header */}
@@ -406,39 +546,53 @@ const AddShipmentPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <Select
-                        onValueChange={(val) => {
-                          const selected = senderResults.find(
-                            (s) => s.id === Number(val)
-                          );
-                          setSelectedSender(selected ?? null);
-                          setSenderQuery(selected?.Company ?? "");
+                        value={selectedSender?.id?.toString() || ""}
+                        onValueChange={(value) => {
+                          const sender = senderResults.find(s => s.id.toString() === value);
+                          if (sender) {
+                            setSelectedSender(sender);
+                            setSenderQuery(sender.Company);
+                            setForm(prev => ({
+                              ...prev,
+                              senderName: sender.Company,
+                              senderAddress: sender.Address
+                            }));
+                          }
                         }}
+                        onOpenChange={setSenderDropdownOpen}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Search sender name..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <div className="px-2 py-1">
+                          <div className="p-2">
                             <Input
-                              className="w-full text-sm"
-                              placeholder="Type to search"
+                              ref={senderSearchRef}
+                              placeholder="Search sender..."
                               value={senderQuery}
                               onChange={(e) => setSenderQuery(e.target.value)}
+                              className="mb-2"
                             />
+                            {Array.isArray(senderResults) && senderResults.length > 0 && (
+                              <div className="max-h-60 overflow-y-auto">
+                                {senderResults.map((s) => (
+                                  <SelectItem key={s.id} value={s.id.toString()}>
+                                    {s.Company}
+                                  </SelectItem>
+                                ))}
+                              </div>
+                            )}
+                            {senderQuery.length > 0 && senderQuery.length < 2 && (
+                              <div className="px-2 py-1 text-gray-500 text-sm">
+                                Type at least 2 characters
+                              </div>
+                            )}
+                            {senderQuery.length >= 2 && Array.isArray(senderResults) && senderResults.length === 0 && (
+                              <div className="px-2 py-1 text-gray-500 text-sm">
+                                No matches found
+                              </div>
+                            )}
                           </div>
-                          {senderResults.length > 0 ? (
-                            senderResults.map((s) => (
-                              <SelectItem key={s.id} value={String(s.id)}>
-                                {s.Company}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="px-4 py-2 text-gray-500 text-sm">
-                              {senderQuery.length >= 2
-                                ? "No matches found."
-                                : "Type at least 2 characters"}
-                            </div>
-                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -451,7 +605,7 @@ const AddShipmentPage = () => {
                   <Label className="mb-1">Sender/Customer Address</Label>
                   <div className="flex gap-2">
                     <Input
-                      value={selectedSender?.Address ?? ""}
+                      value={form.senderAddress}
                       readOnly
                       placeholder="Sender address"
                       className="flex-1 bg-gray-100"
@@ -479,41 +633,53 @@ const AddShipmentPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <Select
-                        onValueChange={(val) => {
-                          const selected = recipientResults.find(
-                            (r) => r.id === Number(val)
-                          );
-                          setSelectedRecipient(selected ?? null);
-                          setRecipientQuery(selected?.Company ?? "");
+                        value={selectedRecipient?.id?.toString() || ""}
+                        onValueChange={(value) => {
+                          const recipient = recipientResults.find(r => r.id.toString() === value);
+                          if (recipient) {
+                            setSelectedRecipient(recipient);
+                            setRecipientQuery(recipient.Company);
+                            setForm(prev => ({
+                              ...prev,
+                              recipientName: recipient.Company,
+                              recipientAddress: recipient.Address
+                            }));
+                          }
                         }}
+                        onOpenChange={setRecipientDropdownOpen}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Search recipient name..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <div className="px-2 py-1">
+                          <div className="p-2">
                             <Input
-                              className="w-full text-sm"
-                              placeholder="Type to search"
+                              ref={recipientSearchRef}
+                              placeholder="Search recipient..."
                               value={recipientQuery}
-                              onChange={(e) =>
-                                setRecipientQuery(e.target.value)
-                              }
+                              onChange={(e) => setRecipientQuery(e.target.value)}
+                              className="mb-2"
                             />
+                            {Array.isArray(recipientResults) && recipientResults.length > 0 && (
+                              <div className="max-h-60 overflow-y-auto">
+                                {recipientResults.map((r) => (
+                                  <SelectItem key={r.id} value={r.id.toString()}>
+                                    {r.Company}
+                                  </SelectItem>
+                                ))}
+                              </div>
+                            )}
+                            {recipientQuery.length > 0 && recipientQuery.length < 2 && (
+                              <div className="px-2 py-1 text-gray-500 text-sm">
+                                Type at least 2 characters
+                              </div>
+                            )}
+                            {recipientQuery.length >= 2 && Array.isArray(recipientResults) && recipientResults.length === 0 && (
+                              <div className="px-2 py-1 text-gray-500 text-sm">
+                                No matches found
+                              </div>
+                            )}
                           </div>
-                          {recipientResults.length > 0 ? (
-                            recipientResults.map((r) => (
-                              <SelectItem key={r.id} value={String(r.id)}>
-                                {r.Company}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="px-4 py-2 text-gray-500 text-sm">
-                              {recipientQuery.length >= 2
-                                ? "No matches found."
-                                : "Type at least 2 characters"}
-                            </div>
-                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -526,7 +692,7 @@ const AddShipmentPage = () => {
                   <Label className="mb-1">Recipient/Client Address</Label>
                   <div className="flex gap-2">
                     <Input
-                      value={selectedRecipient?.Address ?? ""}
+                      value={form.recipientAddress}
                       readOnly
                       placeholder="Recipient address"
                       className="flex-1 bg-gray-100"
@@ -600,10 +766,15 @@ const AddShipmentPage = () => {
               <span className="font-medium">Package Information</span>
               <span className="ml-auto flex items-center gap-2">
                 <Label className="mr-2">Manual rate</Label>
-                <Input type="checkbox" className="w-4 h-4" />
-                <Button type="button" className="bg-blue-500 ml-4">
-                  [s] Add shipping fee
-                </Button>
+                <Checkbox
+                  checked={form.manualRate}
+                  onCheckedChange={(checked) => {
+                    setForm(prev => ({ ...prev, manualRate: !!checked }));
+                    if (!checked) {
+                      calculateRate();
+                    }
+                  }}
+                />
               </span>
             </div>
             <div className="overflow-x-auto">
@@ -619,78 +790,100 @@ const AddShipmentPage = () => {
                     <th className="px-2 py-1 border">Weight Vol.</th>
                     <th className="px-2 py-1 border">Fixed charge</th>
                     <th className="px-2 py-1 border">DecValue</th>
+                    <th className="px-2 py-1 border">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="border px-2 py-1">
-                      <Input value={form.amount} className="w-12" readOnly />
-                    </td>
-                    <td className="border px-2 py-1">
-                      <Input
-                        value={form.packageDescription}
-                        placeholder="Package Description"
-                        className="w-40"
-                        onChange={handleChange}
-                      />
-                    </td>
-                    <td className="border px-2 py-1">
-                      <Input
-                        value={form.weight}
-                        className="w-16"
-                        onChange={handleChange}
-                      />
-                    </td>
-                    <td className="border px-2 py-1">
-                      <Input
-                        value={form.length}
-                        className="w-16"
-                        onChange={handleChange}
-                      />
-                    </td>
-                    <td className="border px-2 py-1">
-                      <Input
-                        value={form.width}
-                        className="w-16"
-                        onChange={handleChange}
-                      />
-                    </td>
-                    <td className="border px-2 py-1">
-                      <Input
-                        value={form.height}
-                        className="w-16"
-                        onChange={handleChange}
-                      />
-                    </td>
-                    <td className="border px-2 py-1">
-                      <Input
-                        value={form.weightVol}
-                        className="w-16"
-                        onChange={handleChange}
-                      />
-                    </td>
-                    <td className="border px-2 py-1">
-                      <Input
-                        value={form.fixedCharge}
-                        className="w-16"
-                        onChange={handleChange}
-                      />
-                    </td>
-                    <td className="border px-2 py-1">
-                      <Input
-                        value={form.decValue}
-                        className="w-16"
-                        onChange={handleChange}
-                      />
-                    </td>
-                  </tr>
+                  {packages.map((pkg) => (
+                    <tr key={pkg.id}>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.amount}
+                          onChange={(e) => updatePackage(pkg.id, "amount", parseInt(e.target.value) || 0)}
+                          className="w-12"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.packageDescription}
+                          placeholder="Package Description"
+                          onChange={(e) => updatePackage(pkg.id, "packageDescription", e.target.value)}
+                          className="w-40"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.weight}
+                          onChange={(e) => updatePackage(pkg.id, "weight", parseFloat(e.target.value) || 0)}
+                          className="w-16"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.length}
+                          onChange={(e) => updatePackage(pkg.id, "length", parseFloat(e.target.value) || 0)}
+                          className="w-16"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.width}
+                          onChange={(e) => updatePackage(pkg.id, "width", parseFloat(e.target.value) || 0)}
+                          className="w-16"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.height}
+                          onChange={(e) => updatePackage(pkg.id, "height", parseFloat(e.target.value) || 0)}
+                          className="w-16"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.weightVol}
+                          onChange={(e) => updatePackage(pkg.id, "weightVol", parseFloat(e.target.value) || 0)}
+                          className="w-16"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.fixedCharge}
+                          onChange={(e) => updatePackage(pkg.id, "fixedCharge", parseFloat(e.target.value) || 0)}
+                          className="w-16"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <Input
+                          value={pkg.decValue}
+                          onChange={(e) => updatePackage(pkg.id, "decValue", parseFloat(e.target.value) || 0)}
+                          className="w-16"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        {packages.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removePackage(pkg.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <FaTrash className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
               <div className="flex items-center gap-2 mt-2">
                 <span className="font-medium">TOTALS</span>
-                <span className="ml-auto">0.00</span>
+                <span className="ml-auto">
+                  Amount: {totals.amount} | Weight: {totals.weight} | Weight Vol: {totals.weightVol} | Fixed Charge: {totals.fixedCharge} | DecValue: {totals.decValue}
+                </span>
               </div>
-              <Button type="button" variant="outline" className="mt-2">
+              <Button type="button" variant="outline" className="mt-2" onClick={addPackage}>
                 + Add Box or Packages
               </Button>
             </div>
@@ -708,6 +901,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Price kg</Label>
                 <Input
+                  name="price"
                   value={form.price}
                   className="w-full"
                   onChange={handleChange}
@@ -716,6 +910,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Discount %</Label>
                 <Input
+                  name="discount"
                   value={form.discount}
                   className="w-full"
                   onChange={handleChange}
@@ -724,6 +919,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Value assured</Label>
                 <Input
+                  name="valueAssured"
                   value={form.valueAssured}
                   className="w-full"
                   onChange={handleChange}
@@ -732,6 +928,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Shipping Insurance %</Label>
                 <Input
+                  name="insurance"
                   value={form.insurance}
                   className="w-full"
                   onChange={handleChange}
@@ -740,6 +937,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Customs Duties %</Label>
                 <Input
+                  name="customs"
                   value={form.customs}
                   className="w-full"
                   onChange={handleChange}
@@ -748,6 +946,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Tax %</Label>
                 <Input
+                  name="tax"
                   value={form.tax}
                   className="w-full"
                   onChange={handleChange}
@@ -756,6 +955,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Declared value %</Label>
                 <Input
+                  name="declaredValue"
                   value={form.declaredValue}
                   className="w-full"
                   onChange={handleChange}
@@ -764,6 +964,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Reissue</Label>
                 <Input
+                  name="reissue"
                   value={form.reissue}
                   className="w-full"
                   onChange={handleChange}
@@ -772,6 +973,7 @@ const AddShipmentPage = () => {
               <div>
                 <Label>Fixed charge</Label>
                 <Input
+                  name="fixedCharge"
                   value={form.fixedCharge}
                   className="w-full"
                   onChange={handleChange}
@@ -787,11 +989,11 @@ const AddShipmentPage = () => {
               </div>
             </div>
             <div className="flex justify-end gap-4 mt-6">
-              <Button type="button" className="bg-blue-500">
+              <Button type="button" className="bg-blue-500" onClick={calculateRate}>
                 Price list calculation
               </Button>
               <Button type="submit" className="bg-green-500">
-                Saveeeee
+                Save
               </Button>
             </div>
           </CardContent>

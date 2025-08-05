@@ -63,9 +63,15 @@ export async function POST(req: NextRequest) {
 
       const firstCell = row[0]?.toString().trim().toLowerCase();
       
-      // Check if this is a section header (Document or Non Document)
-      if (firstCell === "document" || firstCell === "non document") {
-        currentDocType = firstCell === "document" ? "Document" : "Non Document";
+      // Check if this is a section header (Document, Non Document, or FedEx Pak)
+      if (firstCell === "document" || firstCell === "non document" || firstCell === "fedex pak") {
+        if (firstCell === "document") {
+          currentDocType = "Document";
+        } else if (firstCell === "non document") {
+          currentDocType = "Non Document";
+        } else if (firstCell === "fedex pak") {
+          currentDocType = "FedEx Pak";
+        }
         inDataSection = false;
         currentHeaders = [];
         console.log(`📋 Found section: ${currentDocType}`);
@@ -156,7 +162,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "No valid rate data found in Excel file. Please ensure the file contains 'Document' and 'Non Document' sections with proper headers.",
+          message: "No valid rate data found in Excel file. Please ensure the file contains 'Document', 'Non Document', or 'FedEx Pak' sections with proper headers.",
         },
         { status: 400 }
       );
@@ -202,7 +208,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message: "Error processing file. Please ensure the Excel file has the correct format with 'Document' and 'Non Document' sections.",
+        message: "Error processing file. Please ensure the Excel file has the correct format with 'Document', 'Non Document', or 'FedEx Pak' sections.",
         error: (error as Error).message,
       },
       { status: 500 }

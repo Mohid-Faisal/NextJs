@@ -9,20 +9,32 @@ export async function GET(req: Request) {
     return NextResponse.json([]);
   }
 
-  const customers = await prisma.customers.findMany({
-    where: {
-      Company: {
-        contains: query,
-        mode: "insensitive",
+  try {
+    const customers = await prisma.customers.findMany({
+      where: {
+        CompanyName: {
+          contains: query,
+          mode: "insensitive",
+        },
       },
-    },
-    take: 10,
-    select: {
+      take: 10,
+      select: {
         id: true,
-        Company: true,
+        CompanyName: true,
         Address: true,
       }
-  });
+    });
 
-  return NextResponse.json(customers);
+    // Transform the data to match frontend expectations
+    const transformedCustomers = customers.map(customer => ({
+      id: customer.id,
+      Company: customer.CompanyName, // Map CompanyName to Company
+      Address: customer.Address,
+    }));
+
+    return NextResponse.json(transformedCustomers);
+  } catch (error) {
+    console.error("Error fetching customers:", error);
+    return NextResponse.json([]);
+  }
 }
