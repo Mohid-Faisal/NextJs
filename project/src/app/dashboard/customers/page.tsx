@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table } from "lucide-react";
 import Link from "next/link";
 import { Country as country } from "country-state-city";
 import { useRouter } from "next/navigation";
@@ -46,6 +46,7 @@ export default function CustomersPage() {
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const totalPages = Math.ceil(total / LIMIT);
 
@@ -89,11 +90,232 @@ export default function CustomersPage() {
     );
   };
 
+  // Export functions
+  const exportToExcel = (data: any[], headers: string[], filename: string) => {
+    const csvContent = [headers, ...data]
+      .map(row => row.map((cell: any) => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPrint = (data: any[], headers: string[], title: string, total: number) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const tableHTML = `
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              h1 { color: #333; }
+            </style>
+          </head>
+          <body>
+            <h1>${title}</h1>
+            <p>Total: ${total}</p>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  ${headers.map(header => `<th>${header}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${data.map(row => `<tr>${row.map((cell: any) => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      
+      printWindow.document.write(tableHTML);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const exportToPDF = async (data: any[], headers: string[], title: string, total: number) => {
+    setIsGeneratingPDF(true);
+    try {
+      console.log('Starting PDF generation...');
+      
+      // Use @react-pdf/renderer for PDF generation
+      const { Document, Page, Text, View, StyleSheet, pdf } = await import('@react-pdf/renderer');
+      
+      // Create styles
+      const styles = StyleSheet.create({
+        page: {
+          flexDirection: 'column',
+          backgroundColor: '#ffffff',
+          padding: 30,
+        },
+        title: {
+          fontSize: 24,
+          marginBottom: 10,
+          textAlign: 'center',
+          color: '#333',
+        },
+        subtitle: {
+          fontSize: 12,
+          marginBottom: 5,
+          color: '#666',
+        },
+        table: {
+          width: 'auto',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderRightWidth: 0,
+          borderBottomWidth: 0,
+          borderColor: '#bfbfbf',
+        },
+        tableRow: {
+          margin: 'auto',
+          flexDirection: 'row',
+        },
+        tableColHeader: {
+          width: '14.28%',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderLeftWidth: 0,
+          borderTopWidth: 0,
+          borderColor: '#bfbfbf',
+          backgroundColor: '#4285f4',
+        },
+        tableCol: {
+          width: '14.28%',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderLeftWidth: 0,
+          borderTopWidth: 0,
+          borderColor: '#bfbfbf',
+        },
+        tableCellHeader: {
+          margin: 'auto',
+          marginTop: 5,
+          fontSize: 10,
+          fontWeight: 'bold',
+          color: '#ffffff',
+        },
+        tableCell: {
+          margin: 'auto',
+          marginTop: 5,
+          fontSize: 10,
+          color: '#333',
+        },
+      });
+
+      // Create PDF document
+      const MyDocument = () => {
+        return (
+          <Document>
+            <Page size="A4" style={styles.page}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>Total: {total}</Text>
+              <Text style={styles.subtitle}>Generated on: {new Date().toLocaleDateString()}</Text>
+              
+              <View style={styles.table}>
+                {/* Header Row */}
+                <View style={styles.tableRow}>
+                  {headers.map((header, index) => (
+                    <View key={index} style={styles.tableColHeader}>
+                      <Text style={styles.tableCellHeader}>{header}</Text>
+                    </View>
+                  ))}
+                </View>
+                
+                {/* Data Rows */}
+                {data.map((row, rowIndex) => (
+                  <View key={rowIndex} style={styles.tableRow}>
+                    {row.map((cell: any, cellIndex: number) => (
+                      <View key={cellIndex} style={styles.tableCol}>
+                        <Text style={styles.tableCell}>{String(cell || '')}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            </Page>
+          </Document>
+        );
+      };
+
+      // Generate and download PDF
+      const blob = await pdf(<MyDocument />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log('PDF generated successfully using @react-pdf/renderer');
+    } catch (error: any) {
+      console.error('PDF generation error:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      });
+      alert(`Error generating PDF: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const getCustomerExportData = (customers: any[]) => {
+    const headers = ["ID", "Company Name", "Contact Person", "Phone", "City", "Country", "Status"];
+    const data = customers.map(customer => [
+      customer.id,
+      customer.CompanyName,
+      customer.PersonName,
+      customer.Phone,
+      customer.City,
+      country.getCountryByCode(customer.Country)?.name || customer.Country,
+      customer.ActiveStatus
+    ]);
+    return { headers, data };
+  };
+
+  const handleExportExcel = () => {
+    const { headers, data } = getCustomerExportData(customers);
+    exportToExcel(data, headers, 'customers');
+  };
+
+  const handleExportPrint = () => {
+    const { headers, data } = getCustomerExportData(customers);
+    exportToPrint(data, headers, 'Customers Report', total);
+  };
+
+  const handleExportPDF = () => {
+    const { headers, data } = getCustomerExportData(customers);
+    exportToPDF(data, headers, 'Customers Report', total);
+  };
+
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">
-        All Customers
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-4xl font-bold text-gray-800 dark:text-white">
+          All Customers
+        </h2>
+        <div className="text-right">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{total}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Total Customers</div>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap items-center w-full gap-4">
@@ -122,7 +344,7 @@ export default function CustomersPage() {
         {/* Search bar */}
         <div className="flex w-full max-w-sm">
           <Input
-            placeholder="Search by recipient..."
+            placeholder="Search by customer..."
             value={searchTerm}
             onChange={(e) => {
               setPage(1);
@@ -135,8 +357,28 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {/* Push button to the very right */}
-        <div className="ml-auto">
+        {/* Export and Add buttons */}
+        <div className="ml-auto flex gap-2">
+          {/* Export buttons */}
+          <Button variant="outline" onClick={handleExportExcel} className="flex items-center gap-2">
+            <Table className="w-4 h-4" />
+            Excel
+          </Button>
+          <Button variant="outline" onClick={handleExportPrint} className="flex items-center gap-2">
+            <Printer className="w-4 h-4" />
+            Print
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleExportPDF} 
+            disabled={isGeneratingPDF}
+            className="flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            {isGeneratingPDF ? 'Generating...' : 'PDF'}
+          </Button>
+
+          {/* Add Customer button */}
           <Button asChild>
             <Link href="/dashboard/customers/add-customers">
               <Plus className="w-4 h-4 mr-2" />
