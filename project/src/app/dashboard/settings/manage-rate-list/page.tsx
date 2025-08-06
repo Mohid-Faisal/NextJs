@@ -58,7 +58,7 @@ const ManageRateListPage = () => {
         setVendors(transformedVendors);
 
         // Fetch vendor services
-        const vendorServiceRes = await fetch("/api/settings/vendorservice");
+        const vendorServiceRes = await fetch("/api/settings/vendorService");
         const vendorServiceData = await vendorServiceRes.json();
 
         if (vendorServiceData && Array.isArray(vendorServiceData)) {
