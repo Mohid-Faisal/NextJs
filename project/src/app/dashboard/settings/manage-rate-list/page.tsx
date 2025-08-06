@@ -25,6 +25,7 @@ const ManageRateListPage = () => {
   const [rates, setRates] = useState<any[] | null>(null);
   const [search, setSearch] = useState("");
   const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+  const [allVendorServices, setAllVendorServices] = useState<any[]>([]);
   const [services, setServices] = useState<{ id: string; name: string }[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<{
     [key: string]: {
@@ -56,16 +57,24 @@ const ManageRateListPage = () => {
         
         setVendors(transformedVendors);
 
-        // Fetch services
-        const serviceRes = await fetch("/api/services");
-        const serviceData = await serviceRes.json();
+        // Fetch vendor services
+        const vendorServiceRes = await fetch("/api/settings/vendorservice");
+        const vendorServiceData = await vendorServiceRes.json();
 
-        if (serviceData.success) {
-          const transformedServices = serviceData.data.map((service: any) => ({
-            id: service.id.toString(),
-            name: service.name,
-          }));
-          setServices(transformedServices);
+        if (vendorServiceData && Array.isArray(vendorServiceData)) {
+          setAllVendorServices(vendorServiceData);
+          
+          // Extract unique services from vendor services
+          const uniqueServices = new Map();
+          vendorServiceData.forEach((item: any) => {
+            if (item.service && !uniqueServices.has(item.service)) {
+              uniqueServices.set(item.service, {
+                id: item.service, // Use service name as ID
+                name: item.service,
+              });
+            }
+          });
+          setServices(Array.from(uniqueServices.values()));
         }
         
       } catch (error) {
@@ -193,6 +202,40 @@ const ManageRateListPage = () => {
     }
   }, [selectedVendorName, selectedServiceName]);
 
+  // Filter services based on selected vendor
+  const filterServicesByVendor = (vendorName: string) => {
+    if (!vendorName) {
+      // If no vendor selected, show all services
+      const uniqueServices = new Map();
+      allVendorServices.forEach((item: any) => {
+        if (item.service && !uniqueServices.has(item.service)) {
+          uniqueServices.set(item.service, {
+            id: item.service,
+            name: item.service,
+          });
+        }
+      });
+      setServices(Array.from(uniqueServices.values()));
+      return;
+    }
+
+    // Filter services for the selected vendor
+    const vendorServices = allVendorServices.filter(
+      (item: any) => item.vendor === vendorName
+    );
+    
+    const uniqueServices = new Map();
+    vendorServices.forEach((item: any) => {
+      if (item.service && !uniqueServices.has(item.service)) {
+        uniqueServices.set(item.service, {
+          id: item.service,
+          name: item.service,
+        });
+      }
+    });
+    setServices(Array.from(uniqueServices.values()));
+  };
+
   // Handle search
   const handleSearch = () => {
     if (selectedServiceName) {
@@ -297,10 +340,18 @@ const ManageRateListPage = () => {
                   <Select
                     onValueChange={(vendorId) => {
                       const vendor = vendors.find((v) => v.id === vendorId);
+                      const vendorName = vendor?.name || "";
                       setSelectedVendor(vendorId);
-                      setSelectedVendorName(vendor?.name || "");
+                      setSelectedVendorName(vendorName);
                       setSearch("");
                       setCurrentPage(1);
+                      
+                      // Filter services based on selected vendor
+                      filterServicesByVendor(vendorName);
+                      
+                      // Clear selected service when vendor changes
+                      setSelectedService("");
+                      setSelectedServiceName("");
                     }}
                     value={selectedVendor}
                   >

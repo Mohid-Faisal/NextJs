@@ -78,10 +78,10 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Check if this row contains headers (Weight From, Weight To, Zone 1, etc.)
+      // Check if this row contains headers (Weight, Zone 1, etc.)
       if (row.some((cell: any) => 
         typeof cell === "string" && 
-        (cell.toLowerCase().includes("weight from") || 
+        (cell.toLowerCase().includes("weight") || 
          cell.toLowerCase().includes("zone"))
       )) {
         currentHeaders = row.map((cell: any) => cell?.toString() || "");
@@ -93,11 +93,8 @@ export async function POST(req: NextRequest) {
       // Process data rows
       if (inDataSection && currentDocType && currentHeaders.length > 0) {
         // Find column indices
-        const weightFromIndex = currentHeaders.findIndex((h: string) => 
-          h.toLowerCase().includes("weight from")
-        );
-        const weightToIndex = currentHeaders.findIndex((h: string) => 
-          h.toLowerCase().includes("weight to")
+        const weightIndex = currentHeaders.findIndex((h: string) => 
+          h.toLowerCase().includes("weight")
         );
         
         // Find zone columns
@@ -112,15 +109,15 @@ export async function POST(req: NextRequest) {
             return aNum - bNum;
           });
 
-        if (weightToIndex === -1 || zoneColumns.length === 0) {
+        if (weightIndex === -1 || zoneColumns.length === 0) {
           console.log(`⚠️ Skipping row - missing required columns:`, row);
           continue;
         }
 
-        // Parse weight - use Weight To as the representative weight
-        const weightTo = parseFloat(row[weightToIndex]);
-        if (isNaN(weightTo)) {
-          console.log(`⚠️ Invalid weight to: ${row[weightToIndex]}`);
+        // Parse weight - use single weight column
+        const weight = parseFloat(row[weightIndex]);
+        if (isNaN(weight)) {
+          console.log(`⚠️ Invalid weight: ${row[weightIndex]}`);
           continue;
         }
 
@@ -148,7 +145,7 @@ export async function POST(req: NextRequest) {
 
           parsedRates.push({
             docType: currentDocType,
-            weight: weightTo,
+            weight: weight,
             vendor: vendor,
             service: service,
             zone: zoneNum,

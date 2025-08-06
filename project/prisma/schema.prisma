@@ -153,3 +153,9 @@ model filename {
   
   @@unique([service, fileType])
 }
+
+model vendorservice{
+  id Int @id @default(autoincrement())
+  vendor String
+  service String
+}
