@@ -38,6 +38,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { type: str
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
 
-  await model.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  try {
+    await model.delete({ where: { id: parseInt(id) } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error(`Error deleting ${type} with id ${id}:`, error);
+    return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+  }
 }
