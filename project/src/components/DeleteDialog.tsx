@@ -12,29 +12,81 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useState } from "react";
 
+interface DeleteDialogProps {
+  onDelete?: () => void;
+  onClose?: () => void;
+  entityType: "vendor" | "recipient" | "customer";
+  entityId: number;
+}
+
 const DeleteDialog = ({
   onDelete,
   onClose,
-}: {
-  onDelete?: () => void;
-  onClose?: () => void;
-}) => {
+  entityType,
+  entityId,
+}: DeleteDialogProps) => {
   const [password, setPassword] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    setIsDeleting(true);
-
-    if (password === "admin123") {
-      toast.success("Customer deleted!");
-      onDelete?.();
-      onClose?.(); // Close the dialog from parent
-      setPassword("");
-    } else {
-      toast.error("Incorrect password!");
+    if (!password.trim()) {
+      toast.error("Please enter your password");
+      return;
     }
 
-    setIsDeleting(false);
+    setIsDeleting(true);
+
+    try {
+      // Get the token from cookies
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+
+      // Make the delete API call
+      const response = await fetch(`/api/${entityType}s/${entityId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} deleted successfully!`);
+        onDelete?.();
+        onClose?.();
+        setPassword("");
+      } else {
+        toast.error(data.error || "Failed to delete");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("An error occurred while deleting");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const getEntityDisplayName = () => {
+    switch (entityType) {
+      case "vendor":
+        return "vendor";
+      case "recipient":
+        return "recipient";
+      case "customer":
+        return "customer";
+      default:
+        return "item";
+    }
   };
 
   return (
@@ -49,7 +101,7 @@ const DeleteDialog = ({
         </DialogTitle>
       </DialogHeader>
       <div className="text-sm text-gray-700 mb-4 text-center">
-        Are you sure you want to delete this customer? This action cannot be
+        Are you sure you want to delete this {getEntityDisplayName()}? This action cannot be
         undone.
       </div>
 
@@ -63,6 +115,11 @@ const DeleteDialog = ({
           placeholder="Your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === "Enter") {
+              handleDelete();
+            }
+          }}
         />
       </div>
 

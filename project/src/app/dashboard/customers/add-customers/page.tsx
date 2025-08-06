@@ -17,10 +17,14 @@ import {
 } from "@/components/ui/select";
 import { Country, State, City } from "country-state-city";
 import { Paperclip } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const CustomersPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("id");
+  const isEditMode = !!customerId;
+  
   const [form, setForm] = useState({
     companyname: "",
     personname: "",
@@ -47,41 +51,104 @@ const CustomersPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Fetch customer data when in edit mode
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      if (customerId) {
+        try {
+          const res = await fetch(`/api/customers/${customerId}`);
+          const data = await res.json();
+          
+          if (data.customer) {
+            const customer = data.customer;
+            setForm({
+              companyname: customer.CompanyName || "",
+              personname: customer.PersonName || "",
+              email: customer.Email || "",
+              phone: customer.Phone || "",
+              username: "",
+              password: "",
+              documentType: customer.DocumentType || "",
+              documentNumber: customer.DocumentNumber || "",
+              country: customer.Country || "",
+              state: customer.State || "",
+              city: customer.City || "",
+              zip: customer.Zip || "",
+              address: customer.Address || "",
+              activestatus: customer.ActiveStatus || ""
+            });
+            
+            // Set the selected values for dropdowns
+            setSelectedCountry(customer.Country || "");
+            setSelectedState(customer.State || "");
+            setSelectedCity(customer.City || "");
+          }
+        } catch (error) {
+          console.error("Error fetching customer:", error);
+          toast.error("Failed to load customer data");
+        }
+      }
+    };
+
+    fetchCustomer();
+  }, [customerId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const formData = new FormData();
-    formData.append("file", file as File); // file is assumed to be a File | null
-    formData.append("form", JSON.stringify(form)); // send form as JSON string
-
-    const res = await fetch("/api/add-customers", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      toast.success("Customer added successfully!");
-      setForm({
-        companyname: "",
-        personname: "",
-        email: "",
-        phone: "",
-        username: "",
-        password: "",
-        documentType: "",
-        documentNumber: "",
-        country: "",
-        state: "",
-        city: "",
-        zip: "",
-        address: "",
-        activestatus: ""
+    if (isEditMode) {
+      // For edit mode, send JSON data
+      const res = await fetch(`/api/customers/${customerId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
       });
-      setRegisterAccount(false);
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Customer updated successfully!");
+        router.push("/dashboard/customers");
+      } else {
+        toast.error(data.message);
+      }
     } else {
-      toast.error(data.message);
+      // For create mode, send FormData with file
+      const formData = new FormData();
+      formData.append("file", file as File);
+      formData.append("form", JSON.stringify(form));
+
+      const res = await fetch("/api/add-customers", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Customer added successfully!");
+        setForm({
+          companyname: "",
+          personname: "",
+          email: "",
+          phone: "",
+          username: "",
+          password: "",
+          documentType: "",
+          documentNumber: "",
+          country: "",
+          state: "",
+          city: "",
+          zip: "",
+          address: "",
+          activestatus: ""
+        });
+        setRegisterAccount(false);
+      } else {
+        toast.error(data.message);
+      }
     }
   };
 
@@ -95,24 +162,19 @@ const CustomersPage = () => {
 
   const countries = Country.getAllCountries();
 
+  // Load states when country is selected (including from edit mode)
   useEffect(() => {
     if (selectedCountry) {
       const fetchedStates = State.getStatesOfCountry(selectedCountry);
       setStates(fetchedStates);
-      setSelectedState("");
-      setSelectedCity("");
-      setCities([]);
     }
   }, [selectedCountry]);
 
+  // Load cities when state is selected (including from edit mode)
   useEffect(() => {
     if (selectedCountry && selectedState) {
-      const fetchedCities = City.getCitiesOfState(
-        selectedCountry,
-        selectedState
-      );
+      const fetchedCities = City.getCitiesOfState(selectedCountry, selectedState);
       setCities(fetchedCities);
-      setSelectedCity("");
     }
   }, [selectedState, selectedCountry]);
 
@@ -125,7 +187,7 @@ const CustomersPage = () => {
       <Card className="w-full bg-white border border-gray-100 shadow-sm rounded-2xl">
         <CardContent className="p-8">
           <h1 className="text-2xl font-semibold text-primary mb-6 text-center">
-            Add Customer
+            {isEditMode ? "Edit Customer" : "Add Customer"}
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-8">

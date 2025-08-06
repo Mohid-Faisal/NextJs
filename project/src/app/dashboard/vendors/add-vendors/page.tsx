@@ -15,10 +15,14 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Country, State, City } from "country-state-city";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const VendorsPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const vendorId = searchParams.get("id");
+  const isEditMode = !!vendorId;
+  
   const [form, setForm] = useState({
     companyname: "",
     personname: "",
@@ -38,33 +42,42 @@ const VendorsPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Fetch vendor data when in edit mode
+  useEffect(() => {
+    const fetchVendor = async () => {
+      if (vendorId) {
+        try {
+          const res = await fetch(`/api/vendors/${vendorId}`);
+          const data = await res.json();
+          
+          if (data.vendor) {
+            const vendor = data.vendor;
+            setForm({
+              companyname: vendor.CompanyName || "",
+              personname: vendor.PersonName || "",
+              email: vendor.Email || "",
+              phone: vendor.Phone || "",
+              country: vendor.Country || "",
+              state: vendor.State || "",
+              city: vendor.City || "",
+              zip: vendor.Zip || "",
+              address: vendor.Address || "",
+            });
+            
+            // Set the selected values for dropdowns
+            setSelectedCountry(vendor.Country || "");
+            setSelectedState(vendor.State || "");
+            setSelectedCity(vendor.City || "");
+          }
+        } catch (error) {
+          console.error("Error fetching vendor:", error);
+          toast.error("Failed to load vendor data");
+        }
+      }
+    };
 
-    const res = await fetch("/api/add-vendors", {
-      method: "POST",
-      body: JSON.stringify(form),
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      toast.success("Vendor added successfully!");
-      setForm({
-        companyname: "",
-        personname: "",
-        email: "",
-        phone: "",
-        country: "",
-        state: "",
-        city: "",
-        zip: "",
-        address: "",
-      });
-    } else {
-      toast.error(data.message);
-    }
-  };
+    fetchVendor();
+  }, [vendorId]);
 
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedState, setSelectedState] = useState<string>("");
@@ -75,26 +88,58 @@ const VendorsPage = () => {
 
   const countries = Country.getAllCountries();
 
+  // Load states when country is selected (including from edit mode)
   useEffect(() => {
     if (selectedCountry) {
       const fetchedStates = State.getStatesOfCountry(selectedCountry);
       setStates(fetchedStates);
-      setSelectedState("");
-      setSelectedCity("");
-      setCities([]);
     }
   }, [selectedCountry]);
 
+  // Load cities when state is selected (including from edit mode)
   useEffect(() => {
     if (selectedCountry && selectedState) {
-      const fetchedCities = City.getCitiesOfState(
-        selectedCountry,
-        selectedState
-      );
+      const fetchedCities = City.getCitiesOfState(selectedCountry, selectedState);
       setCities(fetchedCities);
-      setSelectedCity("");
     }
   }, [selectedState, selectedCountry]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const url = isEditMode ? `/api/vendors/${vendorId}` : "/api/add-vendors";
+    const method = isEditMode ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(form),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      toast.success(isEditMode ? "Vendor updated successfully!" : "Vendor added successfully!");
+      if (!isEditMode) {
+        setForm({
+          companyname: "",
+          personname: "",
+          email: "",
+          phone: "",
+          country: "",
+          state: "",
+          city: "",
+          zip: "",
+          address: "",
+        });
+      }
+      router.push("/dashboard/vendors");
+    } else {
+      toast.error(data.message);
+    }
+  };
 
   return (
     <motion.div
@@ -105,7 +150,7 @@ const VendorsPage = () => {
       <Card className="w-full bg-white border border-gray-100 shadow-sm rounded-2xl">
         <CardContent className="p-8">
           <h1 className="text-2xl font-semibold text-primary mb-6 text-center">
-            Add Vendor
+            {isEditMode ? "Edit Vendor" : "Add Vendor"}
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-8">

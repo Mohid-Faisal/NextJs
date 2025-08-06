@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Recipients } from "@prisma/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
-import { Plus, EllipsisVertical, Eye, Search } from "lucide-react";
+import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Country as country } from "country-state-city";
@@ -17,9 +17,13 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import DeleteDialog from "@/components/DeleteDialog";
+import ViewRecipientDialog from "@/components/ViewRecipientDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const LIMIT = 10;
+
+type SortField = "id" | "CompanyName" | "PersonName" | "Phone" | "City" | "Country";
+type SortOrder = "asc" | "desc";
 
 export default function RecipientsPage() {
   const router = useRouter();
@@ -28,25 +32,52 @@ export default function RecipientsPage() {
   const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
+  const [recipientToDelete, setRecipientToDelete] = useState<any>(null);
+  const [sortField, setSortField] = useState<SortField>("id");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const totalPages = Math.ceil(total / LIMIT);
 
+  const fetchRecipients = async () => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(LIMIT),
+      ...(searchTerm && { search: searchTerm }),
+      sortField: sortField,
+      sortOrder: sortOrder,
+    });
+
+    const res = await fetch(`/api/recipients?${params}`);
+    const { recipients, total } = await res.json();
+    setRecipients(recipients);
+    setTotal(total);
+  };
+
   useEffect(() => {
-    const fetchRecipients = async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(LIMIT),
-        ...(searchTerm && { search: searchTerm }),
-      });
-
-      const res = await fetch(`/api/recipients?${params}`);
-      const { recipients, total } = await res.json();
-      setRecipients(recipients);
-      setTotal(total);
-    };
-
     fetchRecipients();
-  }, [page, searchTerm]);
+  }, [page, searchTerm, sortField, sortOrder]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortOrder === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
 
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
@@ -95,13 +126,55 @@ export default function RecipientsPage() {
           ) : (
             <table className="min-w-full table-auto border-separate border-spacing-y-4">
               <thead>
-                <tr className="text-sm text-gray-500 dark:text-gray-300 uppercase">
-                  <th className="px-4 py-2 text-left">ID</th>
-                  <th className="px-4 py-2 text-left">Company Name</th>
-                  <th className="px-4 py-2 text-left">Contact Person</th>
-                  <th className="px-4 py-2 text-left">Phone</th>
-                  <th className="px-4 py-2 text-left">City</th>
-                  <th className="px-4 py-2 text-left">Country</th>
+                <tr className="text-sm text-gray-500 dark:text-gray-300">
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("id")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      ID {getSortIcon("id")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("CompanyName")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Company Name {getSortIcon("CompanyName")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("PersonName")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Contact Person {getSortIcon("PersonName")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("Phone")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Phone {getSortIcon("Phone")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("City")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      City {getSortIcon("City")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("Country")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Country {getSortIcon("Country")}
+                    </button>
+                  </th>
                   <th className="px-4 py-2 text-left">Action</th>
                 </tr>
               </thead>
@@ -134,17 +207,25 @@ export default function RecipientsPage() {
                           <DropdownMenuContent className="w-36">
                             <DropdownMenuItem
                               onClick={() =>
-                                router.push("recipients/add-recipients")
+                                router.push(`recipients/add-recipients?id=${recipient.id}`)
                               }
                             >
                               ✏️ Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => setOpenDeleteDialog(true)}
+                              onClick={() => {
+                                setRecipientToDelete(recipient);
+                                setOpenDeleteDialog(true);
+                              }}
                             >
                               🗑️ Delete
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedRecipient(recipient);
+                                setOpenViewDialog(true);
+                              }}
+                            >
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
@@ -156,10 +237,16 @@ export default function RecipientsPage() {
                         >
                           <DialogContent className="max-w-md w-full">
                             <DeleteDialog
+                              entityType="recipient"
+                              entityId={recipientToDelete?.id || 0}
                               onDelete={() => {
-                                console.log("Deleted!");
+                                fetchRecipients();
+                                setRecipientToDelete(null);
                               }}
-                              onClose={() => setOpenDeleteDialog(false)}
+                              onClose={() => {
+                                setOpenDeleteDialog(false);
+                                setRecipientToDelete(null);
+                              }}
                             />
                           </DialogContent>
                         </Dialog>
@@ -172,6 +259,13 @@ export default function RecipientsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* View Recipient Dialog */}
+      <ViewRecipientDialog
+        recipient={selectedRecipient}
+        open={openViewDialog}
+        onOpenChange={setOpenViewDialog}
+      />
 
       {/* Pagination */}
       {totalPages > 1 && (

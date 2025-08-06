@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Plus, Eye, EllipsisVertical, Search } from "lucide-react";
+import { Plus, Eye, EllipsisVertical, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import Link from "next/link";
 import {Country as country}  from "country-state-city";
 import { useRouter } from "next/navigation";
@@ -24,11 +24,15 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import DeleteDialog from "@/components/DeleteDialog";
+import ViewVendorDialog from "@/components/ViewVendorDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const LIMIT = 10;
 const STATUSES = ["All", "Active", "Inactive"];
 const SORT_OPTIONS = ["Newest", "Oldest"];
+
+type SortField = "id" | "CompanyName" | "PersonName" | "Phone" | "City" | "Country";
+type SortOrder = "asc" | "desc";
 
 export default function VendorsPage() {
   const router = useRouter()
@@ -38,26 +42,53 @@ export default function VendorsPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [vendorToDelete, setVendorToDelete] = useState<any>(null);
+  const [sortField, setSortField] = useState<SortField>("id");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const totalPages = Math.ceil(total / LIMIT);
 
+  const fetchVendors = async () => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(LIMIT),
+      ...(statusFilter !== "All" && { status: statusFilter }),
+      ...(searchTerm && { search: searchTerm }),
+      sortField: sortField,
+      sortOrder: sortOrder,
+    });
+
+    const res = await fetch(`/api/vendors?${params}`);
+    const { vendors, total } = await res.json();
+    setVendors(vendors);
+    setTotal(total);
+  };
+
   useEffect(() => {
-    const fetchVendors = async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(LIMIT),
-        ...(statusFilter !== "All" && { status: statusFilter }),
-        ...(searchTerm && { search: searchTerm }),
-      });
-
-      const res = await fetch(`/api/vendors?${params}`);
-      const { vendors, total } = await res.json();
-      setVendors(vendors);
-      setTotal(total);
-    };
-
     fetchVendors();
-  }, [page, statusFilter, searchTerm]);
+  }, [page, statusFilter, searchTerm, sortField, sortOrder]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortOrder === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  };
 
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
@@ -69,7 +100,7 @@ export default function VendorsPage() {
         <div className="flex w-full max-w-sm">
           {/* Search input */}
           <Input
-            placeholder="Search by recipient..."
+            placeholder="Search by vendor..."
             value={searchTerm}
             onChange={(e) => {
               setPage(1);
@@ -103,13 +134,55 @@ export default function VendorsPage() {
           ) : (
             <table className="min-w-full table-auto border-separate border-spacing-y-4">
               <thead>
-                <tr className="text-sm text-gray-500 dark:text-gray-300 uppercase">
-                  <th className="px-4 py-2 text-left">ID</th>
-                  <th className="px-4 py-2 text-left">Company Name</th>
-                  <th className="px-4 py-2 text-left">Contact Person</th>
-                  <th className="px-4 py-2 text-left">Phone</th>
-                  <th className="px-4 py-2 text-left">City</th>
-                  <th className="px-4 py-2 text-left">Country</th>
+                <tr className="text-sm text-gray-500 dark:text-gray-300">
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("id")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      ID {getSortIcon("id")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("CompanyName")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Company Name {getSortIcon("CompanyName")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("PersonName")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Contact Person {getSortIcon("PersonName")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("Phone")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Phone {getSortIcon("Phone")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("City")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      City {getSortIcon("City")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("Country")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Country {getSortIcon("Country")}
+                    </button>
+                  </th>
                   <th className="px-4 py-2 text-left">Action</th>
                 </tr>
               </thead>
@@ -140,17 +213,25 @@ export default function VendorsPage() {
                           <DropdownMenuContent className="w-36">
                             <DropdownMenuItem
                               onClick={() =>
-                                router.push("vendors/add-vendors")
+                                router.push(`vendors/add-vendors?id=${vendor.id}`)
                               }
                             >
                               ✏️ Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                            onClick={() => setOpenDeleteDialog(true)}
+                              onClick={() => {
+                                setVendorToDelete(vendor);
+                                setOpenDeleteDialog(true);
+                              }}
                             >
                               🗑️ Delete
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedVendor(vendor);
+                                setOpenViewDialog(true);
+                              }}
+                            >
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
@@ -162,10 +243,16 @@ export default function VendorsPage() {
                         >
                           <DialogContent className="max-w-md w-full">
                             <DeleteDialog
+                              entityType="vendor"
+                              entityId={vendorToDelete?.id || 0}
                               onDelete={() => {
-                                console.log("Deleted!");
+                                fetchVendors();
+                                setVendorToDelete(null);
                               }}
-                              onClose={() => setOpenDeleteDialog(false)}
+                              onClose={() => {
+                                setOpenDeleteDialog(false);
+                                setVendorToDelete(null);
+                              }}
                             />
                           </DialogContent>
                         </Dialog>
@@ -178,6 +265,13 @@ export default function VendorsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* View Vendor Dialog */}
+      <ViewVendorDialog
+        vendor={selectedVendor}
+        open={openViewDialog}
+        onOpenChange={setOpenViewDialog}
+      />
 
       {/* Pagination */}
       {totalPages > 1 && (

@@ -12,6 +12,8 @@ export async function GET(req: Request) {
 
   const status = searchParams.get("status") || undefined;
   const search = searchParams.get("search")?.trim() || "";
+  const sortField = searchParams.get("sortField") || "id";
+  const sortOrder = searchParams.get("sortOrder") || "desc";
 
   const where: any = {};
 
@@ -28,20 +30,19 @@ export async function GET(req: Request) {
     ];
   }
 
+  // Validate sort field
+  const validSortFields = ["id", "CompanyName", "PersonName", "Phone", "City", "Country", "createdAt"];
+  const validSortOrder = ["asc", "desc"];
+  
+  const finalSortField = validSortFields.includes(sortField) ? sortField : "id";
+  const finalSortOrder = validSortOrder.includes(sortOrder) ? sortOrder : "desc";
+
   const [vendors, total] = await Promise.all([
     prisma.vendors.findMany({
       skip,
       take: limit,
       where,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        CompanyName: true,
-        PersonName: true,
-        Phone: true,
-        City: true,
-        Country: true,
-      },
+      orderBy: { [finalSortField]: finalSortOrder },
     }),
     prisma.vendors.count({ where }),
   ]);

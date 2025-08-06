@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Select,
   SelectTrigger,
@@ -19,6 +19,10 @@ import { Country, State, City } from "country-state-city";
 
 const RecipientsPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const recipientId = searchParams.get("id");
+  const isEditMode = !!recipientId;
+  
   const [form, setForm] = useState({
     companyname: "",
     personname: "",
@@ -38,29 +42,75 @@ const RecipientsPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Fetch recipient data when in edit mode
+  useEffect(() => {
+    const fetchRecipient = async () => {
+      if (recipientId) {
+        try {
+          const res = await fetch(`/api/recipients/${recipientId}`);
+          const data = await res.json();
+          
+          if (data.recipient) {
+            const recipient = data.recipient;
+            setForm({
+              companyname: recipient.CompanyName || "",
+              personname: recipient.PersonName || "",
+              email: recipient.Email || "",
+              phone: recipient.Phone || "",
+              country: recipient.Country || "",
+              state: recipient.State || "",
+              city: recipient.City || "",
+              zip: recipient.Zip || "",
+              address: recipient.Address || "",
+            });
+            
+            // Set the selected values for dropdowns
+            setSelectedCountry(recipient.Country || "");
+            setSelectedState(recipient.State || "");
+            setSelectedCity(recipient.City || "");
+          }
+        } catch (error) {
+          console.error("Error fetching recipient:", error);
+          toast.error("Failed to load recipient data");
+        }
+      }
+    };
+
+    fetchRecipient();
+  }, [recipientId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch("/api/add-recipients", {
-      method: "POST",
+    const url = isEditMode ? `/api/recipients/${recipientId}` : "/api/add-recipients";
+    const method = isEditMode ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(form),
     });
 
     const data = await res.json();
 
     if (data.success) {
-      toast.success("Recipient added successfully!");
-      setForm({
-        companyname: "",
-        personname: "",
-        email: "",
-        phone: "",
-        country: "",
-        state: "",
-        city: "",
-        zip: "",
-        address: "",
-      });
+      toast.success(isEditMode ? "Recipient updated successfully!" : "Recipient added successfully!");
+      if (!isEditMode) {
+        setForm({
+          companyname: "",
+          personname: "",
+          email: "",
+          phone: "",
+          country: "",
+          state: "",
+          city: "",
+          zip: "",
+          address: "",
+        });
+      }
+      router.push("/dashboard/recipients");
     } else {
       toast.error(data.message);
     }
@@ -75,24 +125,19 @@ const RecipientsPage = () => {
 
   const countries = Country.getAllCountries();
 
+  // Load states when country is selected (including from edit mode)
   useEffect(() => {
     if (selectedCountry) {
       const fetchedStates = State.getStatesOfCountry(selectedCountry);
       setStates(fetchedStates);
-      setSelectedState("");
-      setSelectedCity("");
-      setCities([]);
     }
   }, [selectedCountry]);
 
+  // Load cities when state is selected (including from edit mode)
   useEffect(() => {
     if (selectedCountry && selectedState) {
-      const fetchedCities = City.getCitiesOfState(
-        selectedCountry,
-        selectedState
-      );
+      const fetchedCities = City.getCitiesOfState(selectedCountry, selectedState);
       setCities(fetchedCities);
-      setSelectedCity("");
     }
   }, [selectedState, selectedCountry]);
 
@@ -105,7 +150,7 @@ const RecipientsPage = () => {
       <Card className="w-full bg-white border border-gray-100 shadow-sm rounded-2xl">
         <CardContent className="p-8">
           <h1 className="text-2xl font-semibold text-primary mb-6 text-center">
-            Add Recipient
+            {isEditMode ? "Edit Recipient" : "Add Recipient"}
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-8">
