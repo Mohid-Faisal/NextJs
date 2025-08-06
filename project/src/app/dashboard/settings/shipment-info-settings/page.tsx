@@ -34,11 +34,11 @@ const settingTypes = [
   "packagingType",
   "courierCompany",
   "serviceMode",
-  "vendorservice",
+  "vendorService",
 ];
 
 function formatLabel(label: string) {
-  if (label === "vendorservice") {
+  if (label === "vendorService") {
     return "Vendor Service";
   }
   return label.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
@@ -56,7 +56,7 @@ export default function ShipmentSettingsPage() {
   const fetchOptions = async () => {
     const all: any = {};
     for (const type of settingTypes) {
-      if (type === "vendorservice") {
+      if (type === "vendorService") {
         const res = await fetch(`/api/settings/${type}`);
         all[type] = await res.json();
       } else {
@@ -87,7 +87,7 @@ export default function ShipmentSettingsPage() {
   }, []);
 
   const handleAdd = async () => {
-    if (currentTab === "vendorservice") {
+    if (currentTab === "vendorService") {
       const vendor = selectedVendor?.trim();
       const service = selectedService?.trim();
       
@@ -164,7 +164,7 @@ export default function ShipmentSettingsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                {type === "vendorservice" ? (
+                {type === "vendorService" ? (
                   // Vendor Service Tab
                   <>
                     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
