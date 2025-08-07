@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, Bell, Sun, Moon } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
+import { ThemeToggle } from "./theme-toggle";
 
 const Navbar = ({
   onToggleSidebar,
@@ -11,24 +12,8 @@ const Navbar = ({
   onToggleSidebar: () => void;
   isSidebarOpen: boolean;
 }) => {
-  const [isDark, setIsDark] = useState(false);
-
-  // Sync with localStorage
-  useEffect(() => {
-    const isDarkStored = localStorage.getItem("theme") === "dark";
-    setIsDark(isDarkStored);
-    document.documentElement.classList.toggle("dark", isDarkStored);
-  }, []);
-
-  const toggleTheme = () => {
-    const newDarkMode = !isDark;
-    setIsDark(newDarkMode);
-    // document.documentElement.classList.toggle("dark", newDarkMode);
-    // localStorage.setItem("theme", newDarkMode ? "dark" : "light");
-  };
-
   return (
-    <header className="w-full h-16 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700 px-6 flex items-center justify-between shadow-sm z-50 transition-all duration-300 ease-in-out">
+    <header className="w-full h-16 bg-white dark:bg-card border-b border-gray-200 dark:border-zinc-700 px-6 flex items-center justify-between shadow-sm z-50 transition-all duration-300 ease-in-out">
       {/* Left section */}
       <div className="flex items-center gap-4 relative">
         <button
@@ -65,13 +50,8 @@ const Navbar = ({
           </span>
         </button>
 
-        {/* Dark mode toggle */}
-        <button
-          onClick={toggleTheme}
-          className="text-gray-700 dark:text-gray-300 hover:text-gray-900 transition"
-        >
-          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </button>
+        {/* Theme toggle */}
+        <ThemeToggle />
       </div>
     </header>
   );

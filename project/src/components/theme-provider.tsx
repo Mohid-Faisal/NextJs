@@ -8,11 +8,16 @@ interface ThemeProviderProps {
   attribute?: "class" | "style" | Array<"class" | "style">;
   defaultTheme?: string;
   enableSystem?: boolean;
+  disableTransitionOnChange?: boolean;
 }
 
 export function ThemeProvider({
   children,
   ...props
 }: ThemeProviderProps) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+  return (
+    <NextThemesProvider {...props}>
+      {children}
+    </NextThemesProvider>
+  );
 }

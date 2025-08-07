@@ -49,7 +49,7 @@ const DashboardPage = () => {
   }, []);
 
   return (
-    <div className="w-full px-4 md:px-8 py-6 bg-white dark:bg-[#111827]">
+    <div className="w-full px-4 md:px-8 py-6 bg-white dark:bg-card">
       <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
         Dashboard
       </h1>
@@ -94,7 +94,7 @@ const DashboardPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow border border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-card p-6 rounded-xl shadow border border-gray-200 dark:border-gray-700"
       >
         <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-100 mb-4 flex items-center gap-2">
           <Package className="w-5 h-5 text-indigo-500" />

@@ -534,7 +534,7 @@ const AddShipmentPage = () => {
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-7xl mx-auto px-2 py-6 text-gray-900 h-[calc(100vh-64px)] overflow-y-auto"
+      className="max-w-7xl mx-auto px-2 py-6 text-foreground h-[calc(100vh-64px)] overflow-y-auto"
     >
       <form onSubmit={handleSubmit}>
         {/* Record shipment header */}
@@ -546,7 +546,7 @@ const AddShipmentPage = () => {
         {/* Shipment Info Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Left Section: Shipping Prefix + AWB */}
-          <Card className="bg-white border border-gray-100 shadow-sm">
+          <Card className="bg-white dark:bg-background border border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-end gap-6">
                 {/* Shipping Prefix + Checkbox */}
@@ -562,14 +562,14 @@ const AddShipmentPage = () => {
                     />
                     <Label
                       htmlFor="countryCode"
-                      className="text-sm text-gray-600"
+                      className="text-sm text-muted-foreground"
                     >
                       Country code
                     </Label>
 
                     {!isChecked ? (
                       <Input
-                        className="w-24 bg-gray-100 text-center border-none"
+                        className="w-24 bg-muted text-center border-none"
                         readOnly
                         value="AWB"
                       />
@@ -600,7 +600,7 @@ const AddShipmentPage = () => {
                     value={form.awbNumber}
                     onChange={handleChange}
                     required
-                    className="bg-gray-50"
+                    className="bg-muted"
                   />
                 </div>
               </div>
@@ -608,7 +608,7 @@ const AddShipmentPage = () => {
           </Card>
 
           {/* Right Section: List of Agencies + Office of origin */}
-          <Card className="bg-white border border-gray-100 shadow-sm">
+          <Card className="bg-card border border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-end gap-6">
                 {/* List of Agencies */}
@@ -621,7 +621,7 @@ const AddShipmentPage = () => {
                     onValueChange={(value) => handleSelect("agency", value)}
                     value={form.agency}
                   >
-                    <SelectTrigger className="bg-gray-50 w-full">
+                    <SelectTrigger className="bg-muted w-full">
                       <SelectValue placeholder="Select agency" />
                     </SelectTrigger>
                     <SelectContent>
@@ -640,7 +640,7 @@ const AddShipmentPage = () => {
                     onValueChange={(value) => handleSelect("office", value)}
                     value={form.office}
                   >
-                    <SelectTrigger className="bg-gray-50 w-full">
+                    <SelectTrigger className="bg-muted w-full">
                       <SelectValue placeholder="Select office" />
                     </SelectTrigger>
                     <SelectContent>
@@ -656,7 +656,7 @@ const AddShipmentPage = () => {
         {/* Sender/Recipient Info Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Sender Card */}
-          <Card className="bg-white border border-gray-100 shadow-sm">
+          <Card className="bg-card border border-border shadow-sm">
             <CardContent className="p-6">
               {/* Header */}
               <div className="flex items-center gap-2 mb-4">
@@ -666,7 +666,7 @@ const AddShipmentPage = () => {
 
               <div className="space-y-6">
                 {/* Sender Name with Add Button */}
-                <div className="flex flex-col text-black">
+                <div className="flex flex-col text-foreground">
                   <Label className="mb-2">Sender/Customer</Label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
@@ -708,12 +708,12 @@ const AddShipmentPage = () => {
                               </div>
                             )}
                             {senderQuery.length > 0 && senderQuery.length < 2 && (
-                              <div className="px-2 py-1 text-gray-500 text-sm">
+                              <div className="px-2 py-1 text-muted-foreground text-sm">
                                 Type at least 2 characters
                               </div>
                             )}
                             {senderQuery.length >= 2 && Array.isArray(senderResults) && senderResults.length === 0 && (
-                              <div className="px-2 py-1 text-gray-500 text-sm">
+                              <div className="px-2 py-1 text-muted-foreground text-sm">
                                 No matches found
                               </div>
                             )}
@@ -726,14 +726,14 @@ const AddShipmentPage = () => {
                 </div>
 
                 {/* Sender Address */}
-                <div className="flex flex-col text-black">
+                <div className="flex flex-col text-foreground">
                   <Label className="mb-2">Sender/Customer Address</Label>
                   <div className="flex gap-2">
                     <Input
                       value={form.senderAddress}
                       readOnly
                       placeholder="Sender address"
-                      className="flex-1 bg-gray-100"
+                      className="flex-1 bg-muted"
                     />
                     <AddCustomerDialog triggerLabel="+" />
                   </div>
@@ -743,7 +743,7 @@ const AddShipmentPage = () => {
           </Card>
 
           {/* Recipient Card */}
-          <Card className="bg-white border border-gray-100 shadow-sm">
+          <Card className="bg-card border border-border shadow-sm">
             <CardContent className="p-6">
               {/* Header */}
               <div className="flex items-center gap-2 mb-4">
@@ -753,7 +753,7 @@ const AddShipmentPage = () => {
 
               <div className="space-y-6">
                 {/* Recipient Name with Add Button */}
-                <div className="flex flex-col text-black">
+                <div className="flex flex-col text-foreground">
                   <Label className="mb-2">Recipient/Client</Label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
@@ -795,12 +795,12 @@ const AddShipmentPage = () => {
                               </div>
                             )}
                             {recipientQuery.length > 0 && recipientQuery.length < 2 && (
-                              <div className="px-2 py-1 text-gray-500 text-sm">
+                              <div className="px-2 py-1 text-muted-foreground text-sm">
                                 Type at least 2 characters
                               </div>
                             )}
                             {recipientQuery.length >= 2 && Array.isArray(recipientResults) && recipientResults.length === 0 && (
-                              <div className="px-2 py-1 text-gray-500 text-sm">
+                              <div className="px-2 py-1 text-muted-foreground text-sm">
                                 No matches found
                               </div>
                             )}
@@ -813,14 +813,14 @@ const AddShipmentPage = () => {
                 </div>
 
                 {/* Recipient Address */}
-                <div className="flex flex-col text-black">
+                <div className="flex flex-col text-foreground">
                   <Label className="mb-2">Recipient/Client Address</Label>
                   <div className="flex gap-2">
                     <Input
                       value={form.recipientAddress}
                       readOnly
                       placeholder="Recipient address"
-                      className="flex-1 bg-gray-100"
+                      className="flex-1 bg-muted"
                     />
                     <AddRecipientDialog triggerLabel="+" />
                   </div>
@@ -831,7 +831,7 @@ const AddShipmentPage = () => {
         </div>
 
         {/* Shipping Information Section */}
-        <Card className="bg-white border border-gray-100 shadow-sm mb-4">
+        <Card className="bg-card border border-border shadow-sm mb-4">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
               <FaTruck className="text-primary" />
@@ -898,7 +898,7 @@ const AddShipmentPage = () => {
         </Card>
 
         {/* Package Information Section */}
-        <Card className="bg-white border border-gray-100 shadow-sm mb-4">
+        <Card className="bg-card border border-border shadow-sm mb-4">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
               <FaBoxOpen className="text-primary" />
@@ -917,34 +917,34 @@ const AddShipmentPage = () => {
               </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border border-gray-200">
+              <table className="min-w-full text-sm border border-border">
                 <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-2 py-1 border">Amount</th>
-                    <th className="px-2 py-1 border">Package Description</th>
-                    <th className="px-2 py-1 border">Weight</th>
-                    <th className="px-2 py-1 border">Length</th>
-                    <th className="px-2 py-1 border">Width</th>
-                    <th className="px-2 py-1 border">Height</th>
-                    <th className="px-2 py-1 border">
+                  <tr className="bg-muted">
+                    <th className="px-2 py-1 border border-border">Amount</th>
+                    <th className="px-2 py-1 border border-border">Package Description</th>
+                    <th className="px-2 py-1 border border-border">Weight</th>
+                    <th className="px-2 py-1 border border-border">Length</th>
+                    <th className="px-2 py-1 border border-border">Width</th>
+                    <th className="px-2 py-1 border border-border">Height</th>
+                    <th className="px-2 py-1 border border-border">
                       Weight Vol.
                     </th>
-                    <th className="px-2 py-1 border">Fixed charge</th>
-                    <th className="px-2 py-1 border">DecValue</th>
-                    <th className="px-2 py-1 border">Action</th>
+                    <th className="px-2 py-1 border border-border">Fixed charge</th>
+                    <th className="px-2 py-1 border border-border">DecValue</th>
+                    <th className="px-2 py-1 border border-border">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {packages.map((pkg) => (
                     <tr key={pkg.id}>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.amount}
                           onChange={(e) => updatePackage(pkg.id, "amount", parseInt(e.target.value) || 0)}
                           className="w-12"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.packageDescription}
                           placeholder="Package Description"
@@ -952,57 +952,57 @@ const AddShipmentPage = () => {
                           className="w-40"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.weight}
                           onChange={(e) => updatePackage(pkg.id, "weight", parseFloat(e.target.value) || 0)}
                           className="w-16"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.length}
                           onChange={(e) => updatePackage(pkg.id, "length", parseFloat(e.target.value) || 0)}
                           className="w-16"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.width}
                           onChange={(e) => updatePackage(pkg.id, "width", parseFloat(e.target.value) || 0)}
                           className="w-16"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.height}
                           onChange={(e) => updatePackage(pkg.id, "height", parseFloat(e.target.value) || 0)}
                           className="w-16"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.weightVol}
                           readOnly
-                          className="w-16 bg-gray-50"
+                          className="w-16 bg-muted"
                           title="Auto-calculated: (L × W × H) ÷ 5000, rounded up"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.fixedCharge}
                           onChange={(e) => updatePackage(pkg.id, "fixedCharge", parseFloat(e.target.value) || 0)}
                           className="w-16"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         <Input
                           value={pkg.decValue}
                           onChange={(e) => updatePackage(pkg.id, "decValue", parseFloat(e.target.value) || 0)}
                           className="w-16"
                         />
                       </td>
-                      <td className="border px-2 py-1">
+                      <td className="border border-border px-2 py-1">
                         {packages.length > 1 && (
                           <Button
                             type="button"
@@ -1033,7 +1033,7 @@ const AddShipmentPage = () => {
         </Card>
 
         {/* Rate & Taxes Information Section */}
-        <Card className="bg-white border border-gray-100 shadow-sm mb-4">
+        <Card className="bg-card border border-border shadow-sm mb-4">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
               <FaFileInvoice className="text-primary" />

@@ -22,14 +22,14 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
         <aside
           className={`${
             sidebarOpen ? "w-64" : "w-20"
-          } transition-all duration-300 ease-in-out h-[calc(100vh-64px)] fixed top-[64px] left-0 bg-white border-r border-gray-200 z-40`}
+          } transition-all duration-300 ease-in-out h-[calc(100vh-64px)] fixed top-[64px] left-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-40`}
         >
           <Sidebar isOpen={sidebarOpen} />
         </aside>
 
         {/* Page content */}
         <main
-          className={`w-full flex-1 bg-gray-100 overflow-y-auto h-[calc(100vh-64px)] transition-all duration-300 ease-in-out ${
+          className={`w-full flex-1 bg-gray-100 dark:bg-gray-900 overflow-y-auto h-[calc(100vh-64px)] transition-all duration-300 ease-in-out ${
             sidebarOpen ? "ml-64" : "ml-20"
           }`}
         >

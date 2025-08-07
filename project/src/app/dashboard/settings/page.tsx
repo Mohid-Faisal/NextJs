@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { motion, Variants } from "framer-motion";
+import { useTheme } from "next-themes";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 40 },
@@ -27,29 +28,12 @@ const fadeInUp = {
 };
 
 export default function SettingsPage() {
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") {
-      setDarkMode(true);
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (darkMode) {
-      root.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      root.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [darkMode]);
+  const { theme, setTheme } = useTheme();
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [smsAlerts, setSmsAlerts] = useState(false);
 
   return (
-    <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-8">
+    <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-8 bg-white dark:bg-card">
       <motion.h1
         className="text-3xl font-bold mb-4 text-foreground"
         initial={{ opacity: 0, y: -20 }}
@@ -107,7 +91,10 @@ export default function SettingsPage() {
                     Receive updates via email
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={emailAlerts} 
+                  onCheckedChange={setEmailAlerts}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div>
@@ -116,7 +103,10 @@ export default function SettingsPage() {
                     Receive updates via text
                   </p>
                 </div>
-                <Switch />
+                <Switch 
+                  checked={smsAlerts} 
+                  onCheckedChange={setSmsAlerts}
+                />
               </div>
             </div>
           ),
@@ -124,14 +114,41 @@ export default function SettingsPage() {
         {
           title: "Appearance",
           content: (
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Dark Mode</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enable dark theme
-                </p>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Theme</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Choose your preferred theme
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={theme === "light" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTheme("light")}
+                  >
+                    Light
+                  </Button>
+                  <Button
+                    variant={theme === "dark" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTheme("dark")}
+                  >
+                    Dark
+                  </Button>
+                  <Button
+                    variant={theme === "system" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTheme("system")}
+                  >
+                    System
+                  </Button>
+                </div>
               </div>
-              {/* <Switch checked={darkMode} onCheckedChange={setDarkMode} /> */}
+              <div className="text-sm text-muted-foreground">
+                Current theme: <span className="font-medium capitalize">{theme}</span>
+              </div>
             </div>
           ),
         },

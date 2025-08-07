@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeInitializer } from "@/components/theme-initializer";
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 
@@ -21,9 +22,16 @@ export default function RootLayout({
       <body
         className={`min-h-screen font-sans antialiased ${inter.className}`}
       >
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
-          <Toaster position="top-center" richColors />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ThemeInitializer>
+            {children}
+            <Toaster position="top-center" richColors />
+          </ThemeInitializer>
         </ThemeProvider>
       </body>
     </html>

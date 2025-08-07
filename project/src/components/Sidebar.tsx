@@ -88,7 +88,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       icon: Edit3,
     },
     {
-      href: "/dashboard/settings/general-settings",
+      href: "/dashboard/settings",
       label: "General Settings",
       icon: Plus,
     },
@@ -106,7 +106,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
 
   return (
     <aside
-      className={`h-full bg-white dark:bg-[#111827] border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out ${
+      className={`h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out ${
         isOpen ? "w-64" : "w-20"
       }`}
     >
@@ -133,8 +133,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             href="/dashboard"
             className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
               pathname === "/dashboard"
-                ? "bg-black text-white dark:bg-gray-800 dark:text-white"
-                : "text-gray-900 hover:bg-black hover:text-white dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
             <LayoutGrid className="w-5 h-5 flex-shrink-0" />
@@ -155,8 +155,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 pathname.startsWith("/dashboard/shipments") ||
                 pathname.startsWith("/dashboard/add-shipment") ||
                 pathname.startsWith("/dashboard/rate-calculator")
-                  ? "bg-black text-white dark:bg-gray-800 dark:text-white"
-                  : "text-gray-900 hover:bg-black hover:text-white dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
             >
               <div className="flex items-center gap-4">
@@ -191,8 +191,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       href={href}
                       className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
                         pathname === href
-                          ? "bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
@@ -213,8 +213,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 href={href}
                 className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
                   isActive
-                    ? "bg-black text-white dark:bg-gray-800 dark:text-white"
-                    : "text-gray-900 hover:bg-black hover:text-white dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
@@ -234,8 +234,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               onClick={() => setSettingsOpen(!settingsOpen)}
               className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
                 pathname.startsWith("/dashboard/shipment-settings")
-                  ? "bg-black text-white dark:bg-gray-800 dark:text-white"
-                  : "text-gray-900 hover:bg-black hover:text-white dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
             >
               <div className="flex items-center gap-4">
@@ -270,8 +270,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       href={href}
                       className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
                         pathname === href
-                          ? "bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
@@ -288,7 +288,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
         <div className="px-3 mt-auto pb-6 space-y-2">
           <button
             type="button"
-            className="flex items-center gap-3 w-full text-sm font-medium text-gray-900 dark:text-gray-300 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
+            className="flex items-center gap-3 w-full text-sm font-medium text-sidebar-foreground rounded-lg px-3 py-2 hover:bg-sidebar-accent transition-all duration-200"
           >
             <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-white flex-shrink-0">
               {isOpen ? userName[0]?.toUpperCase() : ""}

@@ -46,14 +46,14 @@ export default function ViewVendorDialog({ vendor, open, onOpenChange }: ViewVen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center text-gray-800">
+          <DialogTitle className="text-2xl font-bold text-center text-foreground">
             Vendor Details
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -61,8 +61,8 @@ export default function ViewVendorDialog({ vendor, open, onOpenChange }: ViewVen
                     <Building className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{vendor.CompanyName}</h3>
-                    <p className="text-sm text-gray-600">Vendor ID: #{vendor.id}</p>
+                    <h3 className="text-xl font-semibold text-foreground">{vendor.CompanyName}</h3>
+                    <p className="text-sm text-muted-foreground">Vendor ID: #{vendor.id}</p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-sm">
@@ -82,32 +82,32 @@ export default function ViewVendorDialog({ vendor, open, onOpenChange }: ViewVen
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <User className="w-4 h-4 text-gray-500" />
+                    <User className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Contact Person</p>
+                      <p className="text-sm text-muted-foreground">Contact Person</p>
                       <p className="font-medium">{vendor.PersonName || "Not specified"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-gray-500" />
+                    <Phone className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Phone</p>
+                      <p className="text-sm text-muted-foreground">Phone</p>
                       <p className="font-medium">{vendor.Phone || "Not specified"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-gray-500" />
+                    <Mail className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Email</p>
+                      <p className="text-sm text-muted-foreground">Email</p>
                       <p className="font-medium">{vendor.Email || "Not specified"}</p>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Created On</p>
+                      <p className="text-sm text-muted-foreground">Created On</p>
                       <p className="font-medium">{formatDate(vendor.createdAt)}</p>
                     </div>
                   </div>
@@ -126,39 +126,39 @@ export default function ViewVendorDialog({ vendor, open, onOpenChange }: ViewVen
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <Globe className="w-4 h-4 text-gray-500" />
+                    <Globe className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Country</p>
+                      <p className="text-sm text-muted-foreground">Country</p>
                       <p className="font-medium">{getCountryName(vendor.Country)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">State/Province</p>
+                      <p className="text-sm text-muted-foreground">State/Province</p>
                       <p className="font-medium">{vendor.State || "Not specified"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">City</p>
+                      <p className="text-sm text-muted-foreground">City</p>
                       <p className="font-medium">{vendor.City || "Not specified"}</p>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Zip Code</p>
+                      <p className="text-sm text-muted-foreground">Zip Code</p>
                       <p className="font-medium">{vendor.Zip || "Not specified"}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <MapPin className="w-4 h-4 text-gray-500 mt-1" />
+                    <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
                     <div>
-                      <p className="text-sm text-gray-600">Address</p>
+                      <p className="text-sm text-muted-foreground">Address</p>
                       <p className="font-medium">{vendor.Address || "Not specified"}</p>
                     </div>
                   </div>
@@ -168,31 +168,31 @@ export default function ViewVendorDialog({ vendor, open, onOpenChange }: ViewVen
           </Card>
 
           {/* Summary */}
-          <Card className="bg-gray-50">
-            <CardContent className="p-6">
-              <h4 className="text-lg font-semibold mb-3 text-gray-800">Summary</h4>
+          <Card className="bg-muted">
+            <CardContent className="p-4">
+              <h4 className="text-lg font-semibold mb-3 text-foreground">Summary</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="bg-white p-3 rounded-lg">
+                <div className="bg-card p-3 rounded-lg border">
                   <p className="text-2xl font-bold text-blue-600">{vendor.id}</p>
-                  <p className="text-xs text-gray-600">Vendor ID</p>
+                  <p className="text-xs text-muted-foreground">Vendor ID</p>
                 </div>
-                <div className="bg-white p-3 rounded-lg">
+                <div className="bg-card p-3 rounded-lg border">
                   <p className="text-2xl font-bold text-green-600">
                     {vendor.CompanyName ? "✓" : "✗"}
                   </p>
-                  <p className="text-xs text-gray-600">Company</p>
+                  <p className="text-xs text-muted-foreground">Company</p>
                 </div>
-                <div className="bg-white p-3 rounded-lg">
+                <div className="bg-card p-3 rounded-lg border">
                   <p className="text-2xl font-bold text-purple-600">
                     {vendor.Phone ? "✓" : "✗"}
                   </p>
-                  <p className="text-xs text-gray-600">Phone</p>
+                  <p className="text-xs text-muted-foreground">Phone</p>
                 </div>
-                <div className="bg-white p-3 rounded-lg">
+                <div className="bg-card p-3 rounded-lg border">
                   <p className="text-2xl font-bold text-orange-600">
                     {vendor.Email ? "✓" : "✗"}
                   </p>
-                  <p className="text-xs text-gray-600">Email</p>
+                  <p className="text-xs text-muted-foreground">Email</p>
                 </div>
               </div>
             </CardContent>

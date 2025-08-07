@@ -29,21 +29,33 @@ const RateCalculator = () => {
     origin: "",
     destination: "",
     docType: "",
+    profitPercentage: "",
   });
 
   const [countries, setCountries] = useState<any[]>([]);
   const [results, setResults] = useState<{
+    profitPercentage: number;
     zones: Array<{
       zone: number;
       country: string;
       service: string;
-      bestRate: { weight: number; price: number; vendor: string };
+      bestRate: { 
+        weight: number; 
+        price: number; 
+        vendor: string;
+        originalPrice: number;
+      };
     }>;
     bestOverallRate: {
       zone: number;
       country: string;
       service: string;
-      bestRate: { weight: number; price: number; vendor: string };
+      bestRate: { 
+        weight: number; 
+        price: number; 
+        vendor: string;
+        originalPrice: number;
+      };
     };
     allRates: Array<{
       zone: number;
@@ -51,6 +63,7 @@ const RateCalculator = () => {
       price: number;
       vendor: string;
       service: string;
+      originalPrice: number;
     }>;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,11 +88,12 @@ const RateCalculator = () => {
   };
 
   const handleCalculate = async () => {
-    const { weight, length, width, height, origin, destination, docType } = form;
+    const { weight, length, width, height, origin, destination, docType, profitPercentage } = form;
     const w = parseFloat(weight);
     const l = parseFloat(length);
     const wd = parseFloat(width);
     const h = parseFloat(height);
+    const profit = parseFloat(profitPercentage);
     console.log(`📍 Weight:`, w);
 
     if ([w, l, wd, h].some((v) => isNaN(v) || v <= 0)) {
@@ -90,6 +104,12 @@ const RateCalculator = () => {
 
     if (!origin || !destination || !docType) {
       setError("Please fill in all required fields: Origin, Destination, and Document Type.");
+      setResults(null);
+      return;
+    }
+
+    if (isNaN(profit) || profit < 0) {
+      setError("Please enter a valid profit percentage (0 or greater).");
       setResults(null);
       return;
     }
@@ -108,7 +128,8 @@ const RateCalculator = () => {
           docType,
           height: h,
           width: wd,
-          length: l
+          length: l,
+          profitPercentage: profit
         }),
       });
 
@@ -184,6 +205,20 @@ const RateCalculator = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profitPercentage">Profit Percentage (%)</Label>
+                  <Input
+                    id="profitPercentage"
+                    name="profitPercentage"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={form.profitPercentage}
+                    onChange={handleChange}
+                    placeholder="10"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -271,6 +306,11 @@ const RateCalculator = () => {
                           <p className="text-sm text-green-600 dark:text-green-300">
                             Country: {results.bestOverallRate.country} | Zone: {results.bestOverallRate.zone} | Service: {results.bestOverallRate.service}
                           </p>
+                          {results.profitPercentage > 0 && (
+                            <p className="text-xs text-green-500 dark:text-green-400">
+                              Profit: +{results.profitPercentage}% | Original: Rs. {results.bestOverallRate.bestRate.originalPrice}
+                            </p>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-green-800 dark:text-green-200">
@@ -308,6 +348,11 @@ const RateCalculator = () => {
                                 <p className="text-xs text-gray-600 dark:text-gray-400">
                                   {zone.service} • {zone.bestRate.vendor}
                                 </p>
+                                {results.profitPercentage > 0 && (
+                                  <p className="text-xs text-blue-500 dark:text-blue-400">
+                                    +{results.profitPercentage}% | Orig: Rs. {zone.bestRate.originalPrice}
+                                  </p>
+                                )}
                               </div>
                               <div className="text-right">
                                 <p className="font-bold text-sm">
@@ -338,7 +383,8 @@ const RateCalculator = () => {
                               <th className="text-left py-2 px-4">Zone</th>
                               <th className="text-left py-2 px-4">Vendor</th>
                               <th className="text-left py-2 px-4">Weight (kg)</th>
-                              <th className="text-left py-2 px-4">Price (Rs.)</th>
+                              <th className="text-left py-2 px-4">Original Price (Rs.)</th>
+                              <th className="text-left py-2 px-4">Final Price (Rs.)</th>
                               <th className="text-left py-2 px-4">Status</th>
                             </tr>
                           </thead>
@@ -357,6 +403,7 @@ const RateCalculator = () => {
                                 <td className="py-2 px-4">{rate.zone}</td>
                                 <td className="py-2 px-4">{rate.vendor}</td>
                                 <td className="py-2 px-4">{rate.weight}</td>
+                                <td className="py-2 px-4 text-gray-600 dark:text-gray-400">{rate.originalPrice}</td>
                                 <td className="py-2 px-4 font-medium">{rate.price}</td>
                                 <td className="py-2 px-4">
                                   {rate.zone === results.bestOverallRate.zone && 

@@ -32,7 +32,7 @@ export default function ShipmentInfoSection({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
       {/* Left Section: Shipping Prefix + AWB */}
-      <Card className="bg-white border border-gray-100 shadow-sm">
+      <Card className="bg-card border border-border shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-end gap-6">
             {/* Shipping Prefix + Checkbox */}
@@ -48,14 +48,14 @@ export default function ShipmentInfoSection({
                 />
                 <Label
                   htmlFor="countryCode"
-                  className="text-sm text-gray-600"
+                  className="text-sm text-muted-foreground"
                 >
                   Country code
                 </Label>
 
                 {!isChecked ? (
                   <Input
-                    className="w-24 bg-gray-100 text-center border-none"
+                    className="w-24 bg-muted text-center border-none"
                     readOnly
                     value="AWB"
                   />
@@ -80,7 +80,7 @@ export default function ShipmentInfoSection({
               <Label className="text-sm font-medium mb-1">Tracking ID</Label>
               <Input
                 value={form.awbNumber}
-                className="bg-gray-50"
+                className="bg-muted"
                 onChange={handleChange}
               />
             </div>
@@ -89,7 +89,7 @@ export default function ShipmentInfoSection({
       </Card>
 
       {/* Right Section: List of Agencies + Office of origin */}
-      <Card className="bg-white border border-gray-100 shadow-sm">
+      <Card className="bg-card border border-border shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-end gap-6">
             {/* List of Agencies */}
@@ -102,7 +102,7 @@ export default function ShipmentInfoSection({
                 onValueChange={(value) => handleSelect("agency", value)}
                 value={form.agency}
               >
-                <SelectTrigger className="bg-gray-50 w-full">
+                <SelectTrigger className="bg-muted w-full">
                   <SelectValue placeholder="Select agency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -121,7 +121,7 @@ export default function ShipmentInfoSection({
                 onValueChange={(value) => handleSelect("office", value)}
                 value={form.office}
               >
-                <SelectTrigger className="bg-gray-50 w-full">
+                <SelectTrigger className="bg-muted w-full">
                   <SelectValue placeholder="Select office" />
                 </SelectTrigger>
                 <SelectContent>

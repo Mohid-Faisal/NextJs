@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { origin, destination, weight, docType, height, width, length } =
+    const { origin, destination, weight, docType, height, width, length, profitPercentage } =
       body;
     // console.log(`📍 Body:`, body);
     if (!origin || !destination || !weight || !docType) {
@@ -15,6 +15,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const profitPercent = profitPercentage || 0;
+    const profitMultiplier = 1 + (profitPercent / 100);
 
     let volume = (height * width * length) / 5000;
     let weightNumber;
@@ -244,11 +247,17 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      profitPercentage: profitPercent,
       zones: zones.map((zone) => ({
         zone: zone.zone,
         country: zone.country,
         service: zone.service,
-        bestRate: zone.bestRate,
+        bestRate: {
+          weight: zone.bestRate.weight,
+          price: Math.round(zone.bestRate.price * profitMultiplier),
+          vendor: zone.bestRate.vendor,
+          originalPrice: zone.bestRate.price,
+        },
       })),
       bestOverallRate: {
         zone: bestOverallRate.zone,
@@ -256,16 +265,18 @@ export async function POST(req: NextRequest) {
         service: bestOverallRate.service,
         bestRate: {
           weight: bestOverallRate.weight,
-          price: bestOverallRate.price,
+          price: Math.round(bestOverallRate.price * profitMultiplier),
           vendor: bestOverallRate.vendor,
+          originalPrice: bestOverallRate.price,
         },
       },
       allRates: filteredRates.map((rate) => ({
         zone: rate.zone,
         weight: rate.weight,
-        price: rate.price,
+        price: Math.round(rate.price * profitMultiplier),
         vendor: rate.vendor,
         service: rate.service,
+        originalPrice: rate.price,
       })),
     });
   } catch (error) {
