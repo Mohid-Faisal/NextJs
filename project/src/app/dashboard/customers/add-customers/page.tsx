@@ -200,6 +200,7 @@ const CustomersPage = () => {
                   value={form.companyname}
                   onChange={handleChange}
                   required
+                  autoFocus
                 />
               </div>
               <div className="space-y-1.5">

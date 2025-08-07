@@ -22,6 +22,7 @@ export async function GET(req: Request) {
         id: true,
         CompanyName: true,
         Address: true,
+        Country: true,
       }
     });
     
@@ -30,6 +31,7 @@ export async function GET(req: Request) {
       id: recipient.id,
       Company: recipient.CompanyName, // Map CompanyName to Company
       Address: recipient.Address,
+      Country: recipient.Country,
     }));
 
 //   console.log(recipients)

@@ -66,7 +66,7 @@ export default function ViewRecipientDialog({ recipient, open, onOpenChange }: V
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-sm">
-                  Active Recipient
+                  Recipient
                 </Badge>
               </div>
             </CardContent>

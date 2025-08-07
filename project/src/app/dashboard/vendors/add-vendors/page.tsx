@@ -135,7 +135,6 @@ const VendorsPage = () => {
           address: "",
         });
       }
-      router.push("/dashboard/vendors");
     } else {
       toast.error(data.message);
     }
@@ -163,6 +162,7 @@ const VendorsPage = () => {
                   value={form.companyname}
                   onChange={handleChange}
                   required
+                  autoFocus
                 />
               </div>
               <div className="space-y-1.5">

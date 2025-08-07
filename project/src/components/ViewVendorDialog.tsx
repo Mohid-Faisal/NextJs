@@ -66,7 +66,7 @@ export default function ViewVendorDialog({ vendor, open, onOpenChange }: ViewVen
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-sm">
-                  Active Vendor
+                  Vendor
                 </Badge>
               </div>
             </CardContent>

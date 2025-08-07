@@ -110,7 +110,6 @@ const RecipientsPage = () => {
           address: "",
         });
       }
-      router.push("/dashboard/recipients");
     } else {
       toast.error(data.message);
     }
@@ -163,6 +162,7 @@ const RecipientsPage = () => {
                   value={form.companyname}
                   onChange={handleChange}
                   required
+                  autoFocus
                 />
               </div>
               <div className="space-y-1.5">

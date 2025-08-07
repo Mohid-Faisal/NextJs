@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit3, Save, X } from "lucide-react";
 
 const settingTypes = [
   "deliveryTime",
@@ -32,7 +32,6 @@ const settingTypes = [
   "deliveryStatus",
   "shippingMode",
   "packagingType",
-  "courierCompany",
   "serviceMode",
   "vendorService",
 ];
@@ -52,6 +51,11 @@ export default function ShipmentSettingsPage() {
   const [services, setServices] = useState<any[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("");
+  
+  // Inline editing states
+  const [editingItem, setEditingItem] = useState<{ id: string; type: string } | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchOptions = async () => {
     const all: any = {};
@@ -142,6 +146,128 @@ export default function ShipmentSettingsPage() {
     }
   };
 
+  // Inline editing functions
+  const startEditing = (id: string, type: string, currentValue: string) => {
+    setEditingItem({ id, type });
+    setEditValue(currentValue);
+  };
+
+  const cancelEditing = () => {
+    setEditingItem(null);
+    setEditValue("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingItem || !editValue.trim()) {
+      toast.error("Please enter a valid value");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/settings/${editingItem.type}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: editingItem.id,
+          name: editValue.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Updated successfully!");
+        setEditingItem(null);
+        setEditValue("");
+        fetchOptions();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update");
+      }
+    } catch (error) {
+      toast.error("Failed to update");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      saveEdit();
+    } else if (e.key === "Escape") {
+      cancelEditing();
+    }
+  };
+
+  const EditableItem = ({ 
+    item, 
+    type 
+  }: { 
+    item: any; 
+    type: string; 
+  }) => {
+    const isEditing = editingItem?.id === item.id && editingItem?.type === type;
+    const displayValue = item.name || "Not specified";
+
+    if (isEditing) {
+      return (
+        <li className="flex justify-between items-center border px-4 py-2 rounded shadow-sm">
+          <div className="flex items-center gap-2 flex-1">
+            <Input
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+              className="flex-1"
+              autoFocus
+              placeholder="Enter value"
+            />
+            <Button
+              size="sm"
+              onClick={saveEdit}
+              disabled={isUpdating}
+              className="h-8 px-2"
+            >
+              <Save className="w-3 h-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={cancelEditing}
+              className="h-8 px-2"
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+        </li>
+      );
+    }
+
+    return (
+      <li className="flex justify-between items-center border px-4 py-2 rounded shadow-sm group hover:bg-gray-50 transition-colors">
+        <span className="font-medium">{displayValue}</span>
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => startEditing(item.id, type, item.name || "")}
+            className="h-8 w-8"
+          >
+            <Edit3 className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDelete(item.id)}
+            className="h-8 w-8"
+          >
+            <Trash2 className="w-4 h-4 text-red-500" />
+          </Button>
+        </div>
+      </li>
+    );
+  };
+
   return (
     <Card className="m-4 md:m-8 shadow-xl border rounded-lg">
       <CardHeader>
@@ -197,30 +323,51 @@ export default function ShipmentSettingsPage() {
                       <Button onClick={handleAdd}>Add Vendor Service</Button>
                     </div>
 
-                    {options[type]?.length > 0 ? (
-                      <ul className="space-y-3">
-                        {options[type].map((item: any) => (
-                          <li
-                            key={item.id}
-                            className="flex justify-between items-center border px-4 py-2 rounded shadow-sm"
-                          >
-                            <div className="flex flex-col">
-                              <span className="font-medium">{item.vendor}</span>
-                              <span className="text-sm text-gray-500">{item.service}</span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(item.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground">No vendor services yet.</p>
-                    )}
+                                         {options[type]?.length > 0 ? (
+                       <ul className="space-y-3">
+                         {(() => {
+                           // Group vendor services by vendor
+                           const groupedVendors: Record<string, any[]> = {};
+                           options[type].forEach((item: any) => {
+                             if (!groupedVendors[item.vendor]) {
+                               groupedVendors[item.vendor] = [];
+                             }
+                             groupedVendors[item.vendor].push(item);
+                           });
+
+                           return Object.entries(groupedVendors).map(([vendor, services]) => (
+                             <li
+                               key={vendor}
+                               className="flex justify-between items-center border px-4 py-3 rounded shadow-sm"
+                             >
+                               <div className="flex flex-col">
+                                 <span className="font-medium text-lg">{vendor}</span>
+                                 <div className="flex flex-wrap gap-2 mt-2">
+                                   {services.map((service) => (
+                                     <span
+                                       key={service.id}
+                                       className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                                     >
+                                       {service.service}
+                                       <Button
+                                         variant="ghost"
+                                         size="sm"
+                                         onClick={() => handleDelete(service.id)}
+                                         className="h-4 w-4 p-0 ml-1 hover:bg-blue-200"
+                                       >
+                                         <Trash2 className="w-3 h-3 text-red-500" />
+                                       </Button>
+                                     </span>
+                                   ))}
+                                 </div>
+                               </div>
+                             </li>
+                           ));
+                         })()}
+                       </ul>
+                     ) : (
+                       <p className="text-muted-foreground">No vendor services yet.</p>
+                     )}
                   </>
                 ) : (
                   // Regular Settings Tab
@@ -240,27 +387,19 @@ export default function ShipmentSettingsPage() {
                       <Button onClick={handleAdd}>Add</Button>
                     </div>
 
-                    {options[type]?.length > 0 ? (
-                      <ul className="space-y-3">
-                        {options[type].map((item: any) => (
-                          <li
-                            key={item.id}
-                            className="flex justify-between items-center border px-4 py-2 rounded shadow-sm"
-                          >
-                            <span>{item.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(item.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground">No entries yet.</p>
-                    )}
+                                         {options[type]?.length > 0 ? (
+                       <ul className="space-y-3">
+                         {options[type].map((item: any) => (
+                           <EditableItem
+                             key={item.id}
+                             item={item}
+                             type={type}
+                           />
+                         ))}
+                       </ul>
+                     ) : (
+                       <p className="text-muted-foreground">No entries yet.</p>
+                     )}
                   </>
                 )}
               </motion.div>

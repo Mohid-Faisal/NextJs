@@ -302,6 +302,14 @@ const ManageRateListPage = () => {
         setTotal(0);
         setTotalPages(0);
         setCurrentPage(1);
+        
+        // Remove the filename for this vendor-service combination
+        const fileKey = `${selectedVendorName}-${selectedServiceName}`;
+        setUploadedFiles(prev => {
+          const newFiles = { ...prev };
+          delete newFiles[fileKey];
+          return newFiles;
+        });
       } else {
         toast.error(result.message || "Failed to delete rates");
       }

@@ -28,7 +28,6 @@ import ViewVendorDialog from "@/components/ViewVendorDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 
-const LIMIT = 10;
 const STATUSES = ["All", "Active", "Inactive"];
 const SORT_OPTIONS = ["Newest", "Oldest"];
 
@@ -49,13 +48,14 @@ export default function VendorsPage() {
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
 
-  const totalPages = Math.ceil(total / LIMIT);
+  const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
   const fetchVendors = async () => {
     const params = new URLSearchParams({
       page: String(page),
-      limit: String(LIMIT),
+      limit: pageSize === 'all' ? 'all' : String(pageSize),
       ...(statusFilter !== "All" && { status: statusFilter }),
       ...(searchTerm && { search: searchTerm }),
       sortField: sortField,
@@ -70,7 +70,7 @@ export default function VendorsPage() {
 
   useEffect(() => {
     fetchVendors();
-  }, [page, statusFilter, searchTerm, sortField, sortOrder]);
+  }, [page, statusFilter, searchTerm, sortField, sortOrder, pageSize]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -318,21 +318,47 @@ export default function VendorsPage() {
 
       {/* Filters */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        {/* Search bar with icon */}
-        <div className="flex w-full max-w-sm">
-          {/* Search input */}
-          <Input
-            placeholder="Search by vendor..."
-            value={searchTerm}
-            onChange={(e) => {
-              setPage(1);
-              setSearchTerm(e.target.value);
-            }}
-            className="rounded-r-none"
-          />
-          {/* Icon box */}
-          <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-            <Search className="text-white s w-5 h-5" />
+        {/* Page size and Search bar */}
+        <div className="flex items-center gap-4 w-full max-w-md">
+          {/* Page size select */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Show:</span>
+            <Select
+              value={pageSize.toString()}
+              onValueChange={(value) => {
+                setPageSize(value === 'all' ? 'all' : parseInt(value));
+                setPage(1); // Reset to first page when changing page size
+              }}
+            >
+              <SelectTrigger className="w-20 h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Search bar with icon */}
+          <div className="flex flex-1">
+            {/* Search input */}
+            <Input
+              placeholder="Search by vendor..."
+              value={searchTerm}
+              onChange={(e) => {
+                setPage(1);
+                setSearchTerm(e.target.value);
+              }}
+              className="rounded-r-none"
+            />
+            {/* Icon box */}
+            <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
+              <Search className="text-white s w-5 h-5" />
+            </div>
           </div>
         </div>
 
@@ -515,28 +541,37 @@ export default function VendorsPage() {
         onOpenChange={setOpenViewDialog}
       />
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform"
-          >
-            ← Prev
-          </Button>
-          <span>
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform"
-          >
-            Next →
-          </Button>
+      {/* Pagination and Total Count */}
+      <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
+        <div>
+          {pageSize === 'all' 
+            ? `Showing all ${total} vendors`
+            : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} vendors`
+          }
         </div>
-      )}
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button
+              disabled={page <= 1}
+              onClick={() => setPage((prev) => prev - 1)}
+              className="hover:scale-105 transition-transform"
+            >
+              ← Prev
+            </Button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              disabled={page >= totalPages}
+              onClick={() => setPage((prev) => prev + 1)}
+              className="hover:scale-105 transition-transform"
+            >
+              Next →
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -7,8 +7,10 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
   const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "10");
-  const skip = (page - 1) * limit;
+  const limitParam = searchParams.get("limit") || "10";
+  const isAll = limitParam === "all";
+  const limit = isAll ? undefined : parseInt(limitParam);
+  const skip = isAll ? 0 : (page - 1) * (limit || 10);
 
   const status = searchParams.get("status") || undefined;
   const search = searchParams.get("search")?.trim() || "";
@@ -37,13 +39,19 @@ export async function GET(req: Request) {
   const finalSortField = validSortFields.includes(sortField) ? sortField : "id";
   const finalSortOrder = validSortOrder.includes(sortOrder) ? sortOrder : "desc";
   
+  const findManyOptions: any = {
+    where,
+    orderBy: { [finalSortField]: finalSortOrder },
+  };
+
+  // Only add skip and take if not fetching all
+  if (!isAll) {
+    findManyOptions.skip = skip;
+    findManyOptions.take = limit;
+  }
+
   const [customers, total] = await Promise.all([
-    prisma.customers.findMany({
-      skip,
-      take: limit,
-      where,
-      orderBy: { [finalSortField]: finalSortOrder },
-    }),
+    prisma.customers.findMany(findManyOptions),
     prisma.customers.count({ where }),
   ]);
 

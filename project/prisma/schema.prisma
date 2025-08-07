@@ -106,11 +106,6 @@ model PackagingType {
   createdAt DateTime @default(now())
 }
 
-model CourierCompany {
-  id        Int   @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
-}
 
 model ServiceMode {
   id        Int   @id @default(autoincrement())

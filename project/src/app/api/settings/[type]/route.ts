@@ -7,7 +7,6 @@ const modelMap: Record<string, any> = {
   deliveryStatus: prisma.deliveryStatus,
   shippingMode: prisma.shippingMode,
   packagingType: prisma.packagingType,
-  courierCompany: prisma.courierCompany,
   serviceMode: prisma.serviceMode,
 };
 
@@ -28,6 +27,31 @@ export async function POST(req: NextRequest, { params }: { params: { type: strin
   const { name } = await req.json();
   const created = await model.create({ data: { name } });
   return NextResponse.json(created);
+}
+
+export async function PUT(req: NextRequest, { params }: { params: { type: string } }) {
+  const {type} = await params
+  const model = modelMap[type];
+  if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
+
+  try {
+    const body = await req.json();
+    const { id, name } = body;
+    
+    if (!id || !name) {
+      return NextResponse.json({ error: "Missing ID or name" }, { status: 400 });
+    }
+
+    const updated = await model.update({
+      where: { id: parseInt(id) },
+      data: { name }
+    });
+    
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error(`Error updating ${type}:`, error);
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { type: string } }) {

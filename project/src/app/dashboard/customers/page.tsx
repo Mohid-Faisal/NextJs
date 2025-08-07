@@ -27,7 +27,6 @@ import DeleteDialog from "@/components/DeleteDialog";
 import ViewCustomerDialog from "@/components/ViewCustomerDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
-const LIMIT = 10;
 const STATUSES = ["All", "Active", "Inactive"];
 
 type SortField = "id" | "CompanyName" | "PersonName" | "Phone" | "City" | "Country" | "ActiveStatus";
@@ -47,13 +46,14 @@ export default function CustomersPage() {
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
 
-  const totalPages = Math.ceil(total / LIMIT);
+  const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
   const fetchCustomers = async () => {
     const params = new URLSearchParams({
       page: String(page),
-      limit: String(LIMIT),
+      limit: pageSize === 'all' ? 'all' : String(pageSize),
       ...(statusFilter !== "All" && { status: statusFilter }),
       ...(searchTerm && { search: searchTerm }),
       sortField: sortField,
@@ -68,7 +68,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetchCustomers();
-  }, [page, statusFilter, searchTerm, sortField, sortOrder]);
+  }, [page, statusFilter, searchTerm, sortField, sortOrder, pageSize]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -319,6 +319,30 @@ export default function CustomersPage() {
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap items-center w-full gap-4">
+
+        {/* Page size select */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Show:</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => {
+              setPageSize(value === 'all' ? 'all' : parseInt(value));
+              setPage(1); // Reset to first page when changing page size
+            }}
+          >
+            <SelectTrigger className="w-20 h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Status filter */}
         <div>
           <Select
@@ -340,7 +364,6 @@ export default function CustomersPage() {
             </SelectContent>
           </Select>
         </div>
-
         {/* Search bar */}
         <div className="flex w-full max-w-sm">
           <Input
@@ -558,28 +581,37 @@ export default function CustomersPage() {
         onOpenChange={setOpenViewDialog}
       />
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform"
-          >
-            ← Prev
-          </Button>
-          <span>
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform"
-          >
-            Next →
-          </Button>
+      {/* Pagination and Total Count */}
+      <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
+        <div>
+          {pageSize === 'all' 
+            ? `Showing all ${total} customers`
+            : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} customers`
+          }
         </div>
-      )}
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button
+              disabled={page <= 1}
+              onClick={() => setPage((prev) => prev - 1)}
+              className="hover:scale-105 transition-transform"
+            >
+              ← Prev
+            </Button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              disabled={page >= totalPages}
+              onClick={() => setPage((prev) => prev + 1)}
+              className="hover:scale-105 transition-transform"
+            >
+              Next →
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

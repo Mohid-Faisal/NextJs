@@ -32,6 +32,7 @@ interface Party {
   id: number;
   Company: string;
   Address: string;
+  Country: string;
 }
 
 // Add type for package/box
@@ -105,13 +106,18 @@ const AddShipmentPage = () => {
   // Calculate totals
   const totals = useMemo(() => {
     return packages.reduce(
-      (acc, pkg) => ({
-        amount: acc.amount + pkg.amount,
-        weight: acc.weight + pkg.weight,
-        weightVol: acc.weightVol + pkg.weightVol,
-        fixedCharge: acc.fixedCharge + pkg.fixedCharge,
-        decValue: acc.decValue + pkg.decValue,
-      }),
+      (acc, pkg) => {
+        // For total weight, pick the higher value between weight and weightVol for each package
+        const packageWeight = Math.max(pkg.weight, pkg.weightVol);
+        
+        return {
+          amount: acc.amount + pkg.amount,
+          weight: acc.weight + packageWeight, // Use the higher value for total weight
+          weightVol: acc.weightVol + pkg.weightVol,
+          fixedCharge: acc.fixedCharge + pkg.fixedCharge,
+          decValue: acc.decValue + pkg.decValue,
+        };
+      },
       {
         amount: 0,
         weight: 0,
@@ -149,9 +155,24 @@ const AddShipmentPage = () => {
   // Update package
   const updatePackage = (id: string, field: keyof Package, value: any) => {
     setPackages(
-      packages.map((pkg) =>
-        pkg.id === id ? { ...pkg, [field]: value } : pkg
-      )
+      packages.map((pkg) => {
+        if (pkg.id === id) {
+          const updatedPackage = { ...pkg, [field]: value };
+          
+          // Auto-calculate weight volume when length, width, or height changes
+          if (field === 'length' || field === 'width' || field === 'height') {
+            const { length, width, height } = updatedPackage;
+            if (length > 0 && width > 0 && height > 0) {
+              // Calculate weight volume: (length * width * height) / 5000, then ceil
+              const calculatedWeightVol = Math.ceil((length * width * height) / 5000);
+              updatedPackage.weightVol = calculatedWeightVol;
+            }
+          }
+          
+          return updatedPackage;
+        }
+        return pkg;
+      })
     );
   };
 
@@ -159,31 +180,98 @@ const AddShipmentPage = () => {
   const calculateRate = async () => {
     if (!form.manualRate) {
       try {
+        // Get recipient country from selected recipient
+        if (!selectedRecipient || !selectedRecipient.Country) {
+          toast.error("Please select a recipient with a valid country");
+          return;
+        }
+        
+        const recipientCountry = selectedRecipient.Country;
+        let recipientCountryName: string;
+        
+        // Convert country code to full country name using country-state-city
+        try {
+          const countries = Country.getAllCountries();
+          const countryData = countries.find(country => 
+            country.isoCode === recipientCountry || 
+            country.name === recipientCountry
+          );
+          
+          if (countryData) {
+            recipientCountryName = countryData.name;
+            console.log(`Converted country code '${recipientCountry}' to country name '${recipientCountryName}'`);
+          } else {
+            toast.error(`Country code '${recipientCountry}' not found. Please check recipient country.`);
+            return;
+          }
+        } catch (error) {
+          console.error('Error converting country code to name:', error);
+          toast.error("Error processing country information");
+          return;
+        }
+        
+        // Validate required form fields
+        if (!form.vendor || !form.serviceMode) {
+          toast.error("Please select both vendor and service mode");
+          return;
+        }
+        
+        if (totals.weight <= 0) {
+          toast.error("Please add package weight information");
+          return;
+        }
+        
+        // Prepare the request payload with all required data
+        const requestPayload = {
+          weight: totals.weight, // Total weight from packages
+          vendor: form.vendor, // Selected vendor
+          serviceMode: form.serviceMode, // Selected service mode
+          destination: recipientCountryName, // Recipient country name as destination
+        };
+        
+        console.log('Rate calculation request payload:', requestPayload);
+        console.log('Additional context:', {
+          totalWeight: totals.weight,
+          selectedVendor: form.vendor,
+          selectedServiceMode: form.serviceMode,
+          recipientCountryCode: recipientCountry,
+          recipientCountryName: recipientCountryName,
+          recipientCompany: selectedRecipient?.Company,
+          recipientAddress: selectedRecipient?.Address
+        });
+        
         const response = await fetch("/api/rates/calc", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            weight: totals.weight,
-            // Add other required parameters for rate calculation
-          }),
+          body: JSON.stringify(requestPayload),
         });
         
         if (response.ok) {
           const data = await response.json();
-          setForm(prev => ({
-            ...prev,
-            price: data.price || prev.price,
-          }));
-          toast.success("Rate calculated successfully!");
+          console.log('Rate calculation API response:', data);
+          
+          if (data.success && data.price) {
+            setForm(prev => ({
+              ...prev,
+              price: data.price,
+            }));
+            toast.success(`Rate calculated successfully! Price: $${data.price}`);
+          } else {
+            toast.error(data.error || "Failed to calculate rate");
+          }
         } else {
-          toast.error("Failed to calculate rate");
+          const errorData = await response.json();
+          console.error('Rate calculation API error:', errorData);
+          toast.error(errorData.error || "Failed to calculate rate");
         }
       } catch (error) {
         console.error("Error calculating rate:", error);
         toast.error("Error calculating rate");
       }
+    } else {
+      toast.info("Manual rate is enabled. Please enter the price manually.");
     }
   };
 
@@ -195,14 +283,38 @@ const AddShipmentPage = () => {
         { fn: setDeliveryStatuses, url: "/api/settings/deliveryStatus" },
         { fn: setShippingModes, url: "/api/settings/shippingMode" },
         { fn: setPackagingTypes, url: "/api/settings/packagingType" },
-        { fn: setCourierCompanies, url: "/api/settings/courierCompany" },
+        { fn: setVendors, url: "/api/vendors?limit=all" },
         { fn: setServiceModes, url: "/api/settings/serviceMode" },
       ];
 
       for (const { fn, url } of endpoints) {
-        const res = await fetch(url);
-        const data = await res.json();
-        fn(data);
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          // Handle vendors API response differently
+          if (url.includes("/api/vendors")) {
+            if (!data.vendors || !Array.isArray(data.vendors)) {
+              toast.error("Invalid vendors data received from server");
+              return;
+            }
+            const vendorOptions = data.vendors.map((vendor: any) => ({
+              id: vendor.id.toString(),
+              name: vendor.CompanyName
+            }));
+            fn(vendorOptions);
+          } else {
+            // Validate data is an array
+            if (!Array.isArray(data)) {
+              toast.error(`Invalid data format received from ${url.split('/').pop()}`);
+              return;
+            }
+            fn(data);
+          }
+        } catch (error) {
+          console.error(`Error fetching data from ${url}:`, error);
+          toast.error(`Failed to load ${url.split('/').pop()} data. Please try again.`);
+        }
       }
     };
 
@@ -217,12 +329,15 @@ const AddShipmentPage = () => {
           .then((res) => res.json())
           .then((data) => {
             console.log("Sender search results:", data);
-            // Ensure data is an array before setting it
-            setSenderResults(Array.isArray(data) ? data : []);
+            if (!Array.isArray(data)) {
+              toast.error("Invalid sender search results");
+              return;
+            }
+            setSenderResults(data);
           })
           .catch((error) => {
             console.error("Error fetching senders:", error);
-            setSenderResults([]);
+            toast.error("Failed to search senders");
           });
       } else {
         setSenderResults([]);
@@ -240,12 +355,15 @@ const AddShipmentPage = () => {
           .then((res) => res.json())
           .then((data) => {
             console.log("Recipient search results:", data);
-            // Ensure data is an array before setting it
-            setRecipientResults(Array.isArray(data) ? data : []);
+            if (!Array.isArray(data)) {
+              toast.error("Invalid recipient search results");
+              return;
+            }
+            setRecipientResults(data);
           })
           .catch((error) => {
             console.error("Error fetching recipients:", error);
-            setRecipientResults([]);
+            toast.error("Failed to search recipients");
           });
       } else {
         setRecipientResults([]);
@@ -263,25 +381,25 @@ const AddShipmentPage = () => {
   const [deliveryStatuses, setDeliveryStatuses] = useState<Option[]>([]);
   const [shippingModes, setShippingModes] = useState<Option[]>([]);
   const [packagingTypes, setPackagingTypes] = useState<Option[]>([]);
-  const [courierCompanies, setCourierCompanies] = useState<Option[]>([]);
+  const [vendors, setVendors] = useState<Option[]>([]);
   const [serviceModes, setServiceModes] = useState<Option[]>([]);
 
   const [form, setForm] = useState({
     shippingPrefix: "AWB",
     awbNumber: "",
-    agency: "Deprixa Miami",
-    office: "Deprixa Group",
+    agency: "",
+    office: "",
     senderName: "",
     senderAddress: "",
     recipientName: "",
     recipientAddress: "",
-    deliveryTime: "24 - 48 Hours",
-    paymentMethod: "Postpaid 15 day",
-    deliveryStatus: "In_Warehouse",
-    shippingMode: "Ocean Freight",
-    packaging: "Small",
-    courier: "Deprixa Express",
-    serviceMode: "After 2 Days",
+    deliveryTime: "",
+    paymentMethod: "",
+    deliveryStatus: "",
+    shippingMode: "",
+    packaging: "",
+    vendor: "",
+    serviceMode: "",
     driver: "",
     amount: 1,
     packageDescription: "",
@@ -292,7 +410,7 @@ const AddShipmentPage = () => {
     weightVol: 0,
     fixedCharge: 0,
     decValue: 0,
-    price: 3.55,
+    price: 0,
     discount: 0,
     valueAssured: 100,
     insurance: 2,
@@ -308,7 +426,12 @@ const AddShipmentPage = () => {
   };
 
   const handleSelect = (name: string, value: string) => {
-    setForm({ ...form, [name]: value });
+    console.log('handleSelect called:', { name, value });
+    setForm(prev => {
+      const newForm = { ...prev, [name]: value };
+      console.log('Updated form state:', newForm);
+      return newForm;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -333,13 +456,13 @@ const AddShipmentPage = () => {
         senderAddress: "",
         recipientName: "",
         recipientAddress: "",
-        deliveryTime: "24 - 48 Hours",
-        paymentMethod: "Postpaid 15 day",
-        deliveryStatus: "In_Warehouse",
-        shippingMode: "Ocean Freight",
-        packaging: "Small",
-        courier: "Deprixa Express",
-        serviceMode: "After 2 Days",
+        deliveryTime: "",
+        paymentMethod: "",
+        deliveryStatus: "",
+        shippingMode: "",
+        packaging: "",
+        vendor: "",
+        serviceMode: "",
         driver: "",
         amount: 1,
         packageDescription: "",
@@ -350,7 +473,7 @@ const AddShipmentPage = () => {
         weightVol: 0,
         fixedCharge: 0,
         decValue: 0,
-        price: 3.55,
+        price: 0,
         discount: 0,
         valueAssured: 100,
         insurance: 2,
@@ -368,20 +491,22 @@ const AddShipmentPage = () => {
   const renderSelect = (
     label: string,
     placeholder: string,
-    options: Option[]
+    options: Option[],
+    value: string,
+    onValueChange: (value: string) => void
   ) => (
     <div>
-      <Label className="mb-1 block">{label}</Label>
-      <Select>
+      <Label className="mb-2 block">{label}</Label>
+      <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.id} value={option.name}>
-              {option.name}
-            </SelectItem>
-          ))}
+                  {options.map((option) => (
+          <SelectItem key={option.id} value={option.name}>
+            {option.name}
+          </SelectItem>
+        ))}
         </SelectContent>
       </Select>
     </div>
@@ -542,7 +667,7 @@ const AddShipmentPage = () => {
               <div className="space-y-6">
                 {/* Sender Name with Add Button */}
                 <div className="flex flex-col text-black">
-                  <Label className="mb-1">Sender/Customer</Label>
+                  <Label className="mb-2">Sender/Customer</Label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <Select
@@ -602,7 +727,7 @@ const AddShipmentPage = () => {
 
                 {/* Sender Address */}
                 <div className="flex flex-col text-black">
-                  <Label className="mb-1">Sender/Customer Address</Label>
+                  <Label className="mb-2">Sender/Customer Address</Label>
                   <div className="flex gap-2">
                     <Input
                       value={form.senderAddress}
@@ -629,7 +754,7 @@ const AddShipmentPage = () => {
               <div className="space-y-6">
                 {/* Recipient Name with Add Button */}
                 <div className="flex flex-col text-black">
-                  <Label className="mb-1">Recipient/Client</Label>
+                  <Label className="mb-2">Recipient/Client</Label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <Select
@@ -689,7 +814,7 @@ const AddShipmentPage = () => {
 
                 {/* Recipient Address */}
                 <div className="flex flex-col text-black">
-                  <Label className="mb-1">Recipient/Client Address</Label>
+                  <Label className="mb-2">Recipient/Client Address</Label>
                   <div className="flex gap-2">
                     <Input
                       value={form.recipientAddress}
@@ -718,22 +843,30 @@ const AddShipmentPage = () => {
               {renderSelect(
                 "Delivery Time",
                 "Select delivery time",
-                deliveryTimes
+                deliveryTimes,
+                form.deliveryTime,
+                (value) => handleSelect("deliveryTime", value)
               )}
               {renderSelect(
                 "Payment Methods",
                 "Select payment method",
-                paymentMethods
+                paymentMethods,
+                form.paymentMethod,
+                (value) => handleSelect("paymentMethod", value)
               )}
               {renderSelect(
                 "Delivery Status",
                 "Select delivery status",
-                deliveryStatuses
+                deliveryStatuses,
+                form.deliveryStatus,
+                (value) => handleSelect("deliveryStatus", value)
               )}
               {renderSelect(
                 "Shipping Mode",
                 "Select shipping mode",
-                shippingModes
+                shippingModes,
+                form.shippingMode,
+                (value) => handleSelect("shippingMode", value)
               )}
             </div>
 
@@ -742,17 +875,23 @@ const AddShipmentPage = () => {
               {renderSelect(
                 "Type of Packaging",
                 "Select packaging type",
-                packagingTypes
+                packagingTypes,
+                form.packaging,
+                (value) => handleSelect("packaging", value)
               )}
               {renderSelect(
-                "Courier Company",
-                "Select courier company",
-                courierCompanies
+                "Vendor",
+                "Select vendor",
+                vendors,
+                form.vendor,
+                (value) => handleSelect("vendor", value)
               )}
               {renderSelect(
                 "Service Mode",
                 "Select service mode",
-                serviceModes
+                serviceModes,
+                form.serviceMode,
+                (value) => handleSelect("serviceMode", value)
               )}
             </div>
           </CardContent>
@@ -787,7 +926,9 @@ const AddShipmentPage = () => {
                     <th className="px-2 py-1 border">Length</th>
                     <th className="px-2 py-1 border">Width</th>
                     <th className="px-2 py-1 border">Height</th>
-                    <th className="px-2 py-1 border">Weight Vol.</th>
+                    <th className="px-2 py-1 border">
+                      Weight Vol.
+                    </th>
                     <th className="px-2 py-1 border">Fixed charge</th>
                     <th className="px-2 py-1 border">DecValue</th>
                     <th className="px-2 py-1 border">Action</th>
@@ -842,8 +983,9 @@ const AddShipmentPage = () => {
                       <td className="border px-2 py-1">
                         <Input
                           value={pkg.weightVol}
-                          onChange={(e) => updatePackage(pkg.id, "weightVol", parseFloat(e.target.value) || 0)}
-                          className="w-16"
+                          readOnly
+                          className="w-16 bg-gray-50"
+                          title="Auto-calculated: (L × W × H) ÷ 5000, rounded up"
                         />
                       </td>
                       <td className="border px-2 py-1">
@@ -899,7 +1041,7 @@ const AddShipmentPage = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <Label>Price kg</Label>
+                <Label className="mb-2 block">Price kg</Label>
                 <Input
                   name="price"
                   value={form.price}
@@ -908,7 +1050,7 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label>Discount %</Label>
+                <Label className="mb-2 block">Discount %</Label>
                 <Input
                   name="discount"
                   value={form.discount}
@@ -917,7 +1059,7 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label>Value assured</Label>
+                <Label className="mb-2 block">Value assured</Label>
                 <Input
                   name="valueAssured"
                   value={form.valueAssured}
@@ -926,7 +1068,7 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label>Shipping Insurance %</Label>
+                <Label className="mb-2 block">Shipping Insurance %</Label>
                 <Input
                   name="insurance"
                   value={form.insurance}
@@ -935,7 +1077,7 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label>Customs Duties %</Label>
+                <Label className="mb-2 block">Customs Duties %</Label>
                 <Input
                   name="customs"
                   value={form.customs}
@@ -944,7 +1086,7 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label>Tax %</Label>
+                <Label className="mb-2 block">Tax %</Label>
                 <Input
                   name="tax"
                   value={form.tax}
@@ -953,7 +1095,7 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label>Declared value %</Label>
+                <Label className="mb-2 block">Declared value %</Label>
                 <Input
                   name="declaredValue"
                   value={form.declaredValue}
@@ -962,7 +1104,7 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label>Reissue</Label>
+                <Label className="mb-2 block">Reissue</Label>
                 <Input
                   name="reissue"
                   value={form.reissue}
@@ -971,7 +1113,7 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label>Fixed charge</Label>
+                <Label className="mb-2 block">Fixed charge</Label>
                 <Input
                   name="fixedCharge"
                   value={form.fixedCharge}
@@ -979,14 +1121,14 @@ const AddShipmentPage = () => {
                   onChange={handleChange}
                 />
               </div>
-              <div className="col-span-2 flex flex-col justify-end">
-                <div className="flex items-center gap-4 mt-4">
-                  <span className="font-medium">Subtotal</span>
-                  <span className="text-green-600">$ 0.00</span>
-                  <span className="font-medium ml-8">TOTAL</span>
-                  <span className="text-green-600">$ 0.00</span>
-                </div>
-              </div>
+                             <div className="col-span-2 flex flex-col justify-end">
+                 <div className="flex items-center gap-4 mt-4">
+                   <span className="font-medium">Subtotal</span>
+                   <span className="text-green-600">$ {form.price ? form.price.toFixed(2) : '0.00'}</span>
+                   <span className="font-medium ml-8">TOTAL</span>
+                   <span className="text-green-600">$ {form.price ? form.price.toFixed(2) : '0.00'}</span>
+                 </div>
+               </div>
             </div>
             <div className="flex justify-end gap-4 mt-6">
               <Button type="button" className="bg-blue-500" onClick={calculateRate}>

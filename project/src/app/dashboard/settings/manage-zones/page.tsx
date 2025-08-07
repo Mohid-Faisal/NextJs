@@ -26,23 +26,23 @@ const ManageZonesPage = () => {
     key: string;
     direction: 'asc' | 'desc';
   } | null>(null);
-  const [courierCompanies, setCourierCompanies] = useState<
+  const [serviceModes, setServiceModes] = useState<
     { id: string; name: string }[]
   >([]);
-  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
 
   // Fetch services on mount
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        setIsLoadingCompanies(true);
+        setIsLoadingServices(true);
         const res = await fetch("/api/settings/serviceMode");
         const data = await res.json();
-        setCourierCompanies(data || []);
+        setServiceModes(data || []);
       } catch (error) {
         console.error("Failed to fetch service modes", error);
       } finally {
-        setIsLoadingCompanies(false);
+        setIsLoadingServices(false);
       }
     };
     fetchServices();
@@ -330,23 +330,23 @@ const ManageZonesPage = () => {
               <div className="space-y-1.5 w-full md:w-60">
                                  <Select
                    onValueChange={(serviceId) => {
-                     const company = courierCompanies.find(
-                       (c) => c.id === serviceId
-                     );
+                                        const service = serviceModes.find(
+                     (s) => s.id === serviceId
+                   );
                      setSelectedService(serviceId);
-                     setSelectedServiceName(company?.name || "");
+                     setSelectedServiceName(service?.name || "");
                      setSearch("");
                    }}
                    value={selectedService}
-                   disabled={isLoadingCompanies}
+                   disabled={isLoadingServices}
                  >
                    <SelectTrigger className="text-sm w-60 h-9">
-                     <SelectValue placeholder={isLoadingCompanies ? "Loading..." : "Choose a Service"} />
+                     <SelectValue placeholder={isLoadingServices ? "Loading..." : "Choose a Service"} />
                    </SelectTrigger>
                   <SelectContent>
-                    {courierCompanies.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="text-sm">
-                        {c.name}
+                    {serviceModes.map((s) => (
+                      <SelectItem key={s.id} value={s.id} className="text-sm">
+                        {s.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
