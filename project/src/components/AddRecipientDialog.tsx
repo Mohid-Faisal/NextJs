@@ -127,7 +127,9 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient" }: { triggerLabel?:
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline">{triggerLabel}</Button>
+        <Button type="button" variant="outline" onClick={(e) => e.preventDefault()}>
+          {triggerLabel}
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <motion.div

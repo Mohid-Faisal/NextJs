@@ -28,7 +28,7 @@ import { Trash2, Edit3, Save, X } from "lucide-react";
 
 const settingTypes = [
   "deliveryTime",
-  "paymentMethod",
+  "invoiceStatus",
   "deliveryStatus",
   "shippingMode",
   "packagingType",

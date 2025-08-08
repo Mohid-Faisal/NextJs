@@ -4,17 +4,17 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { weight, vendor, serviceMode, destination } = body;
+    const { weight, vendor, serviceMode, destination, fuelSurcharge = 0, discount = 0 } = body;
 
     console.log('Rate calculation API received request:', {
       weight,
       vendor,
       serviceMode,
       destination,
+      fuelSurcharge,
+      discount,
       fullBody: body
     });
-
-
 
     if (!weight) {
       return NextResponse.json(
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
           contains: finalDestination,
           mode: "insensitive",
         },
-        service: serviceMode
+        service: serviceMode.toLowerCase()
       },
       select: {
         zone: true,
@@ -226,13 +226,33 @@ export async function POST(req: NextRequest) {
       return current.price < best.price ? current : best;
     });
 
+    // Calculate the total with fuel surcharge and percentage discount
+    const originalPrice = bestOverallRate.price;
+    const fuelSurchargeAmount = parseFloat(fuelSurcharge) || 0;
+    const discountPercentage = parseFloat(discount) || 0;
+    
+    // Calculate discount amount as percentage of original price
+    const discountAmount = (originalPrice * discountPercentage) / 100;
+    const totalCost = originalPrice + fuelSurchargeAmount - discountAmount;
+
     const result = {
       success: true,
-      price: bestOverallRate.price,
+      price: originalPrice,
       weight: bestOverallRate.weight,
       service: bestOverallRate.service,
       vendor: bestOverallRate.vendor,
       zone: bestOverallRate.zone,
+      fuelSurcharge: fuelSurchargeAmount,
+      discountPercentage: discountPercentage,
+      discountAmount: discountAmount,
+      totalCost: totalCost,
+      calculation: {
+        originalPrice,
+        fuelSurcharge: fuelSurchargeAmount,
+        discountPercentage: discountPercentage,
+        discountAmount: discountAmount,
+        totalCost,
+      },
     };
 
     console.log('Rate calculation result:', result);

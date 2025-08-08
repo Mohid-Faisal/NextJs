@@ -15,7 +15,7 @@ import { useState } from "react";
 interface DeleteDialogProps {
   onDelete?: () => void;
   onClose?: () => void;
-  entityType: "vendor" | "recipient" | "customer";
+  entityType: "vendor" | "recipient" | "customer" | "shipment";
   entityId: number;
 }
 
@@ -84,6 +84,8 @@ const DeleteDialog = ({
         return "recipient";
       case "customer":
         return "customer";
+      case "shipment":
+        return "shipment";
       default:
         return "item";
     }

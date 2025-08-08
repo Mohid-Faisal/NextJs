@@ -24,10 +24,9 @@ const UpdateShipmentPage = () => {
     senderName: "",
     recipientName: "",
     destination: "",
-    paymentMethod: "",
+    invoiceStatus: "",
     totalCost: "",
     status: "",
-    invoiceStatus: "",
   });
 
   const handleSearch = async () => {
@@ -44,10 +43,9 @@ const UpdateShipmentPage = () => {
         senderName: s.senderName || "",
         recipientName: s.recipientName || "",
         destination: s.destination || "",
-        paymentMethod: s.paymentMethod || "",
+        invoiceStatus: s.invoiceStatus || "",
         totalCost: s.totalCost || "",
         status: s.status || "",
-        invoiceStatus: s.invoiceStatus || "",
       });
     } else {
       toast.error("Shipment not found");
@@ -136,19 +134,19 @@ const UpdateShipmentPage = () => {
                 </div>
               ))}
 
-              {/* Payment Method */}
+              {/* Invoice Status */}
               <div className="flex flex-col space-y-2">
-                <Label>Payment Method</Label>
+                <Label>Invoice Status</Label>
                 <Select
-                  value={form.paymentMethod}
-                  onValueChange={(val) => handleSelect("paymentMethod", val)}
+                  value={form.invoiceStatus}
+                  onValueChange={(val) => handleSelect("invoiceStatus", val)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select method" />
+                    <SelectValue placeholder="Select invoice status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Online">Online</SelectItem>
+                    <SelectItem value="Unpaid">Unpaid</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

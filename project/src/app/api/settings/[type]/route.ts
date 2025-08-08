@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const modelMap: Record<string, any> = {
   deliveryTime: prisma.deliveryTime,
-  paymentMethod: prisma.paymentMethod,
+  invoiceStatus: prisma.invoiceStatus,
   deliveryStatus: prisma.deliveryStatus,
   shippingMode: prisma.shippingMode,
   packagingType: prisma.packagingType,

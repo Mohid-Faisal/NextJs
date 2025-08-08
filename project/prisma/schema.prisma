@@ -16,17 +16,65 @@ model User {
 }
 
 model Shipment {
-  id                Int   @id @default(autoincrement())
+  id                Int      @id @default(autoincrement())
   trackingId        String   @unique
+  
+  // Basic form fields
+  awbNumber         String
+  agency            String?
+  office            String?
   senderName        String
   senderAddress     String
   recipientName     String
   recipientAddress  String
   destination       String
+  
+  // Shipping details
+  deliveryTime      String?
+  invoiceStatus     String?
+  deliveryStatus    String?
+  shippingMode      String?
+  packaging         String?
+  vendor            String?
+  serviceMode       String?
+  
+  // Package information
+  amount            Int      @default(1)
+  packageDescription String?
+  weight            Float    @default(0)
+  length            Float    @default(0)
+  width             Float    @default(0)
+  height            Float    @default(0)
+  weightVol         Float    @default(0)
+  fixedCharge       Float    @default(0)
+  decValue          Float    @default(0)
+  
+  // Pricing information
+  price             Float    @default(0)
+  discount          Float    @default(0)
+  fuelSurcharge     Float    @default(0)
+  insurance         Float    @default(0)
+  customs           Float    @default(0)
+  tax               Float    @default(0)
+  declaredValue     Float    @default(0)
+  reissue           Float    @default(0)
+  
+  // Calculated values
   totalCost         Float
-  status            String
-  invoiceStatus     String
-  createdAt          DateTime @default(now())
+  subtotal          Float    @default(0)
+
+  // Metadata
+  manualRate        Boolean  @default(false)
+  totalPackages     Int      @default(0)
+  totalWeight       Float    @default(0)
+  totalWeightVol    Float    @default(0)
+  
+  // JSON fields for complex data
+  packages          Json?    // Array of package objects
+  packageTotals     Json?    // Totals object
+  calculatedValues  Json?    // Calculated values object
+  
+  createdAt         DateTime @default(now())
 }
 
 model Customers {
@@ -82,7 +130,7 @@ model DeliveryTime {
   createdAt DateTime @default(now())
 }
 
-model PaymentMethod {
+model InvoiceStatus {
   id        Int   @id @default(autoincrement())
   name      String   @unique
   createdAt DateTime @default(now())

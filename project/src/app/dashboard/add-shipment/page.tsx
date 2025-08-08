@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import AddCustomerDialog from "@/components/AddCustomerDialog";
 import AddRecipientDialog from "@/components/AddRecipientDialog";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,6 +51,8 @@ interface Package {
 
 const AddShipmentPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
 
   const [senderQuery, setSenderQuery] = useState("");
   const [recipientQuery, setRecipientQuery] = useState("");
@@ -221,12 +223,14 @@ const AddShipmentPage = () => {
           return;
         }
         
-        // Prepare the request payload with all required data
+        // Prepare the request payload with all required data including fuel surcharge and discount
         const requestPayload = {
           weight: totals.weight, // Total weight from packages
           vendor: form.vendor, // Selected vendor
           serviceMode: form.serviceMode, // Selected service mode
           destination: recipientCountryName, // Recipient country name as destination
+          fuelSurcharge: form.fuelSurcharge, // Fuel surcharge from form
+          discount: form.discount, // Discount from form
         };
         
         console.log('Rate calculation request payload:', requestPayload);
@@ -237,7 +241,9 @@ const AddShipmentPage = () => {
           recipientCountryCode: recipientCountry,
           recipientCountryName: recipientCountryName,
           recipientCompany: selectedRecipient?.Company,
-          recipientAddress: selectedRecipient?.Address
+          recipientAddress: selectedRecipient?.Address,
+          fuelSurcharge: form.fuelSurcharge,
+          discount: form.discount,
         });
         
         const response = await fetch("/api/rates/calc", {
@@ -253,11 +259,19 @@ const AddShipmentPage = () => {
           console.log('Rate calculation API response:', data);
           
           if (data.success && data.price) {
+            // Update the form with the calculated values from backend
             setForm(prev => ({
               ...prev,
               price: data.price,
             }));
-            toast.success(`Rate calculated successfully! Price: $${data.price}`);
+            
+            // Store the backend-calculated values
+            setCalculatedValues({
+              subtotal: data.price,
+              total: data.totalCost || data.price,
+            });
+            
+            toast.success(`Rate calculated successfully! Price: $${data.price}, Total: $${(data.totalCost || data.price).toFixed(2)}`);
           } else {
             toast.error(data.error || "Failed to calculate rate");
           }
@@ -279,7 +293,7 @@ const AddShipmentPage = () => {
     const fetchData = async () => {
       const endpoints = [
         { fn: setDeliveryTimes, url: "/api/settings/deliveryTime" },
-        { fn: setPaymentMethods, url: "/api/settings/paymentMethod" },
+        { fn: setInvoiceStatuses, url: "/api/settings/invoiceStatus" },
         { fn: setDeliveryStatuses, url: "/api/settings/deliveryStatus" },
         { fn: setShippingModes, url: "/api/settings/shippingMode" },
         { fn: setPackagingTypes, url: "/api/settings/packagingType" },
@@ -377,7 +391,7 @@ const AddShipmentPage = () => {
   type Option = { id: string; name: string };
 
   const [deliveryTimes, setDeliveryTimes] = useState<Option[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<Option[]>([]);
+  const [invoiceStatuses, setInvoiceStatuses] = useState<Option[]>([]);
   const [deliveryStatuses, setDeliveryStatuses] = useState<Option[]>([]);
   const [shippingModes, setShippingModes] = useState<Option[]>([]);
   const [packagingTypes, setPackagingTypes] = useState<Option[]>([]);
@@ -394,13 +408,12 @@ const AddShipmentPage = () => {
     recipientName: "",
     recipientAddress: "",
     deliveryTime: "",
-    paymentMethod: "",
+    invoiceStatus: "",
     deliveryStatus: "",
     shippingMode: "",
     packaging: "",
     vendor: "",
     serviceMode: "",
-    driver: "",
     amount: 1,
     packageDescription: "",
     weight: 0,
@@ -412,14 +425,32 @@ const AddShipmentPage = () => {
     decValue: 0,
     price: 0,
     discount: 0,
-    valueAssured: 100,
-    insurance: 2,
-    customs: 0.1,
-    tax: 19,
-    declaredValue: 3,
+    fuelSurcharge: 0,
+    insurance: 0,
+    customs: 0,
+    tax: 0,
+    declaredValue: 0,
     reissue: 0,
     manualRate: false,
   });
+
+  // Store backend-calculated values
+  const [calculatedValues, setCalculatedValues] = useState({
+    subtotal: 0,
+    total: 0,
+  });
+
+  // Remove the real-time totalCost calculation
+  // const totalCost = useMemo(() => {
+  //   // Only calculate if we have a price from the backend calculation
+  //   if (form.price > 0) {
+  //     const originalPrice = form.price || 0;
+  //     const fuelSurchargeAmount = form.fuelSurcharge || 0;
+  //     const discountAmount = form.discount || 0;
+  //     return originalPrice + fuelSurchargeAmount - discountAmount;
+  //   }
+  //   return 0;
+  // }, [form.price, form.fuelSurcharge, form.discount]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -436,18 +467,70 @@ const AddShipmentPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(form);
+    
+    // Validate required fields
+    if (!form.awbNumber || form.awbNumber.trim() === '') {
+      toast.error("Please enter an AWB number");
+      return;
+    }
+    
+    if (!selectedRecipient || !selectedRecipient.Country) {
+      toast.error("Please select a recipient with a valid country");
+      return;
+    }
+    
+    // Construct tracking ID: awbPrefix + awbNumber
+    const trackingId = form.shippingPrefix + form.awbNumber;
+    
+    // Get destination from recipient's country
+    const destination = selectedRecipient.Country;
+    
+    // Prepare all collected data
+    const shipmentData = {
+      // Basic form data with constructed tracking ID and destination
+      ...form,
+      trackingId: trackingId,
+      destination: destination,
+      
+      // Package information
+      packages: packages,
+      packageTotals: totals,
+      
+      // Selected sender and recipient data
+      selectedSender: selectedSender,
+      selectedRecipient: selectedRecipient,
+      
+      // Calculated values from backend
+      calculatedValues: calculatedValues,
+      
+      // Additional metadata
+      submissionTimestamp: new Date().toISOString(),
+      totalPackages: packages.length,
+      totalWeight: totals.weight,
+      totalWeightVol: totals.weightVol,
+    };
+    
+    console.log('Sending complete shipment data to backend:', shipmentData);
+    console.log('Constructed Tracking ID:', trackingId);
+    console.log('Destination (Recipient Country):', destination);
 
-    const res = await fetch("/api/add-shipment", {
-      method: "POST",
+    const isEditing = Boolean(editId);
+    const res = await fetch(isEditing ? 
+      "/api/update-shipment" : 
+      "/api/add-shipment", {
+      method: isEditing ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify(isEditing ? { id: Number(editId), ...shipmentData } : shipmentData),
     });
 
     const data = await res.json();
+    console.log('Backend response:', data);
+    
     if (data.success) {
-      toast.success("Shipment added successfully!");
-      setForm({
+      toast.success(isEditing ? "Shipment updated successfully!" : "Shipment added successfully!");
+      console.log('Shipment saved successfully with data:', data.receivedData);
+      if (!isEditing) {
+        setForm({
         shippingPrefix: "AWB",
         awbNumber: "",
         agency: "Deprixa Miami",
@@ -457,13 +540,12 @@ const AddShipmentPage = () => {
         recipientName: "",
         recipientAddress: "",
         deliveryTime: "",
-        paymentMethod: "",
+        invoiceStatus: "",
         deliveryStatus: "",
         shippingMode: "",
         packaging: "",
         vendor: "",
         serviceMode: "",
-        driver: "",
         amount: 1,
         packageDescription: "",
         weight: 0,
@@ -475,18 +557,92 @@ const AddShipmentPage = () => {
         decValue: 0,
         price: 0,
         discount: 0,
-        valueAssured: 100,
-        insurance: 2,
-        customs: 0.1,
-        tax: 19,
-        declaredValue: 3,
+        fuelSurcharge: 0,
+        insurance: 0,
+        customs: 0,
+        tax: 0,
+        declaredValue: 0,
         reissue: 0,
         manualRate: false,
-      });
+        });
+        // Reset calculated values
+        setCalculatedValues({
+          subtotal: 0,
+          total: 0,
+        });
+      }
     } else {
       toast.error(data.message || "Failed to add shipment.");
     }
   };
+
+  // Prefill in edit mode
+  useEffect(() => {
+    const loadForEdit = async () => {
+      if (!editId) return;
+      try {
+        const res = await fetch(`/api/shipments/${editId}`);
+        const data = await res.json();
+        if (res.ok && data.shipment) {
+          const s = data.shipment;
+          setForm((prev) => ({
+            ...prev,
+            shippingPrefix: (s.awbNumber || "AWB").slice(0, 3),
+            awbNumber: s.awbNumber?.replace(/^.{3}/, "") || "",
+            agency: s.agency || prev.agency,
+            office: s.office || prev.office,
+            senderName: s.senderName || "",
+            senderAddress: s.senderAddress || "",
+            recipientName: s.recipientName || "",
+            recipientAddress: s.recipientAddress || "",
+            deliveryTime: s.deliveryTime || "",
+            invoiceStatus: s.invoiceStatus || "",
+            deliveryStatus: s.deliveryStatus || "",
+            shippingMode: s.shippingMode || "",
+            packaging: s.packaging || "",
+            vendor: s.vendor || "",
+            serviceMode: s.serviceMode || "",
+            amount: s.amount || 1,
+            packageDescription: s.packageDescription || "",
+            weight: s.weight || 0,
+            length: s.length || 0,
+            width: s.width || 0,
+            height: s.height || 0,
+            weightVol: s.weightVol || 0,
+            fixedCharge: s.fixedCharge || 0,
+            decValue: s.decValue || 0,
+            price: s.price || 0,
+            discount: s.discount || 0,
+            fuelSurcharge: s.fuelSurcharge || 0,
+            insurance: s.insurance || 0,
+            customs: s.customs || 0,
+            tax: s.tax || 0,
+            declaredValue: s.declaredValue || 0,
+            reissue: s.reissue || 0,
+            manualRate: s.manualRate || false,
+          }));
+
+          // Prefill selected sender/recipient if you have embedded data (keeping simple here)
+          // Packages and calculated values stored as JSON strings in DB; parse if available
+          try {
+            if (s.packages) {
+              const parsed = typeof s.packages === 'string' ? JSON.parse(s.packages) : s.packages;
+              if (Array.isArray(parsed)) setPackages(parsed);
+            }
+            if (s.calculatedValues) {
+              const parsedCalc = typeof s.calculatedValues === 'string' ? JSON.parse(s.calculatedValues) : s.calculatedValues;
+              if (parsedCalc && typeof parsedCalc === 'object') setCalculatedValues(parsedCalc);
+            }
+          } catch (e) {
+            console.error('Failed to parse stored JSON fields', e);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load shipment for edit', e);
+      }
+    };
+    loadForEdit();
+  }, [editId]);
 
   const renderSelect = (
     label: string,
@@ -847,13 +1003,13 @@ const AddShipmentPage = () => {
                 form.deliveryTime,
                 (value) => handleSelect("deliveryTime", value)
               )}
-              {renderSelect(
-                "Payment Methods",
-                "Select payment method",
-                paymentMethods,
-                form.paymentMethod,
-                (value) => handleSelect("paymentMethod", value)
-              )}
+                              {renderSelect(
+                  "Invoice Status",
+                  "Select invoice status",
+                  invoiceStatuses,
+                  form.invoiceStatus,
+                  (value) => handleSelect("invoiceStatus", value)
+                )}
               {renderSelect(
                 "Delivery Status",
                 "Select delivery status",
@@ -1059,10 +1215,10 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label className="mb-2 block">Value assured</Label>
+                <Label className="mb-2 block">Fuel surcharge</Label>
                 <Input
-                  name="valueAssured"
-                  value={form.valueAssured}
+                  name="fuelSurcharge"
+                  value={form.fuelSurcharge}
                   className="w-full"
                   onChange={handleChange}
                 />
@@ -1124,9 +1280,9 @@ const AddShipmentPage = () => {
                              <div className="col-span-2 flex flex-col justify-end">
                  <div className="flex items-center gap-4 mt-4">
                    <span className="font-medium">Subtotal</span>
-                   <span className="text-green-600">$ {form.price ? form.price.toFixed(2) : '0.00'}</span>
+                   <span className="text-green-600">$ {calculatedValues.subtotal > 0 ? calculatedValues.subtotal.toFixed(2) : '0.00'}</span>
                    <span className="font-medium ml-8">TOTAL</span>
-                   <span className="text-green-600">$ {form.price ? form.price.toFixed(2) : '0.00'}</span>
+                   <span className="text-green-600">$ {calculatedValues.total > 0 ? calculatedValues.total.toFixed(2) : '0.00'}</span>
                  </div>
                </div>
             </div>

@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "public"."Shipment" ALTER COLUMN "customs" SET DEFAULT 0,
+ALTER COLUMN "declaredValue" SET DEFAULT 0,
+ALTER COLUMN "insurance" SET DEFAULT 0,
+ALTER COLUMN "tax" SET DEFAULT 0;

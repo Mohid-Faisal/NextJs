@@ -11,7 +11,7 @@ interface ShippingInfoSectionProps {
     options: string[]
   ) => ReactNode;
   deliveryTimes: string[];
-  paymentMethods: string[];
+  invoiceStatuses: string[];
   deliveryStatuses: string[];
   shippingModes: string[];
   packagingTypes: string[];
@@ -22,7 +22,7 @@ interface ShippingInfoSectionProps {
 export default function ShippingInfoSection({
   renderSelect,
   deliveryTimes,
-  paymentMethods,
+  invoiceStatuses,
   deliveryStatuses,
   shippingModes,
   packagingTypes,
@@ -41,9 +41,9 @@ export default function ShippingInfoSection({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {renderSelect("Delivery Time", "Select delivery time", deliveryTimes)}
           {renderSelect(
-            "Payment Methods",
-            "Select payment method",
-            paymentMethods
+            "Invoice Status",
+            "Select invoice status",
+            invoiceStatuses
           )}
           {renderSelect(
             "Delivery Status",

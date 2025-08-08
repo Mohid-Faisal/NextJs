@@ -3,6 +3,32 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
+    // Robust body parsing to support JSON, form-urlencoded and multipart
+    const contentType = req.headers.get("content-type") || "";
+    let body: any = {};
+    try {
+      if (contentType.includes("application/json")) {
+        body = await req.json();
+      } else if (contentType.includes("application/x-www-form-urlencoded")) {
+        const text = await req.text();
+        body = Object.fromEntries(new URLSearchParams(text));
+      } else if (contentType.includes("multipart/form-data")) {
+        const form = await req.formData();
+        body = Object.fromEntries(form.entries());
+      } else {
+        const text = await req.text();
+        try {
+          body = JSON.parse(text || "{}");
+        } catch {
+          // fallback to query-like parsing
+          body = Object.fromEntries(new URLSearchParams(text));
+        }
+      }
+    } catch (e) {
+      // If parsing fails, ensure body is at least an empty object
+      body = {};
+    }
+
     const {
       companyname,
       personname,
@@ -13,16 +39,13 @@ export async function POST(req: NextRequest) {
       city,
       zip,
       address,
-    } = await req.json();
+    } = body;
 
     // console.log(companyname, personname, email, phone, country, state, city, zip, address);
 
     // console.log(Email);
     // Basic validation
-    const requiredFields = [
-      "companyname",
-      "country", 
-    ];
+    const requiredFields = ["companyname", "country"] as const;
 
     const existingRecipient = await prisma.recipients.findUnique({
       where: {
@@ -38,7 +61,7 @@ export async function POST(req: NextRequest) {
     }
 
     for (const field of requiredFields) {
-      if (!eval(field)) {
+      if (!body[field] || String(body[field]).trim() === "") {
         return NextResponse.json(
           { success: false, message: `${field} is required.` },
           { status: 400 }

@@ -1,0 +1,46 @@
+/*
+  Warnings:
+
+  - Added the required column `awbNumber` to the `Shipment` table without a default value. This is not possible if the table is not empty.
+
+*/
+-- AlterTable
+ALTER TABLE "public"."Shipment" ADD COLUMN     "agency" TEXT,
+ADD COLUMN     "amount" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN     "awbNumber" TEXT NOT NULL,
+ADD COLUMN     "calculatedValues" JSONB,
+ADD COLUMN     "customs" DOUBLE PRECISION NOT NULL DEFAULT 0.1,
+ADD COLUMN     "decValue" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "declaredValue" DOUBLE PRECISION NOT NULL DEFAULT 3,
+ADD COLUMN     "deliveryStatus" TEXT,
+ADD COLUMN     "deliveryTime" TEXT,
+ADD COLUMN     "discount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "fixedCharge" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "fuelSurcharge" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "height" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "insurance" DOUBLE PRECISION NOT NULL DEFAULT 2,
+ADD COLUMN     "length" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "manualRate" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "office" TEXT,
+ADD COLUMN     "packageDescription" TEXT,
+ADD COLUMN     "packageTotals" JSONB,
+ADD COLUMN     "packages" JSONB,
+ADD COLUMN     "packaging" TEXT,
+ADD COLUMN     "paymentMethod" TEXT,
+ADD COLUMN     "price" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "reissue" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "selectedRecipient" JSONB,
+ADD COLUMN     "selectedSender" JSONB,
+ADD COLUMN     "serviceMode" TEXT,
+ADD COLUMN     "shippingMode" TEXT,
+ADD COLUMN     "shippingPrefix" TEXT NOT NULL DEFAULT 'AWB',
+ADD COLUMN     "submissionTimestamp" TIMESTAMP(3),
+ADD COLUMN     "subtotal" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "tax" DOUBLE PRECISION NOT NULL DEFAULT 19,
+ADD COLUMN     "totalPackages" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "totalWeight" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "totalWeightVol" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "vendor" TEXT,
+ADD COLUMN     "weight" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "weightVol" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "width" DOUBLE PRECISION NOT NULL DEFAULT 0;
