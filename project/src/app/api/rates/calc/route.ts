@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const origin = "US";
     const finalDestination = destination;
     const docType = "Non Document";
 
