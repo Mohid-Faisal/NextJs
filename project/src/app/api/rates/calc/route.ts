@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
           contains: finalDestination,
           mode: "insensitive",
         },
+        service: serviceMode
       },
       select: {
         zone: true,
