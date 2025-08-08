@@ -17,7 +17,8 @@ import { Country } from "country-state-city";
 
 const documentTypes = [
   "Document",
-  "Non Document"
+  "Non Document",
+  "FedEx Pak"
 ];
 
 const RateCalculator = () => {
@@ -166,13 +167,18 @@ const RateCalculator = () => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="origin">Origin</Label>
-                  <Input
-                    id="origin"
-                    name="origin"
-                    value={form.origin}
-                    onChange={handleChange}
-                    placeholder="e.g., Pakistan"
-                  />
+                  <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select an origin" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {countries.map((country) => (
+                        <SelectItem key={country.isoCode} value={country.name}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">

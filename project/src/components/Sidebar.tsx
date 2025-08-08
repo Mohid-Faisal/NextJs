@@ -88,11 +88,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       icon: Edit3,
     },
     {
-      href: "/dashboard/settings",
-      label: "General Settings",
-      icon: Plus,
-    },
-    {
       href: "/dashboard/settings/manage-zones",
       label: "Manage Zones",
       icon: Plus,
@@ -102,6 +97,11 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       label: "Manage Rate List",
       icon: DollarSign,
     },
+    {
+      href: "/dashboard/settings",
+      label: "General Settings",
+      icon: Plus,
+    }
   ];
 
   return (

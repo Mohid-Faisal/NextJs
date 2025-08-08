@@ -226,7 +226,7 @@ const ManageZonesPage = () => {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-6xl mx-auto px-4 mt-10"
     >
-      <Card className="bg-white border shadow-sm rounded-2xl">
+      <Card className="bg-white dark:bg-gray-900 border shadow-sm rounded-2xl">
         <CardContent className="p-8 space-y-8">
           <h1 className="text-2xl font-semibold text-primary text-center">
             Manage Company Zones
@@ -417,54 +417,54 @@ const ManageZonesPage = () => {
                   Showing {filteredZones.length} of {zones?.length || 0} countries
                 </div>
               </div>
-                             <table className="min-w-full bg-white text-sm border rounded shadow">
-                 <thead className="bg-gray-100 text-left">
+                             <table className="min-w-full bg-white dark:bg-gray-800 text-sm border rounded shadow">
+                 <thead className="bg-gray-100 dark:bg-gray-700 text-left">
                    <tr>
                      <th 
-                       className="px-4 py-2 border w-24 cursor-pointer hover:bg-gray-200 select-none"
+                       className="px-4 py-2 border w-24 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 select-none"
                        onClick={() => handleSort('code')}
                      >
                        <div className="flex items-center justify-between">
                          <span>Code</span>
                          <div className="flex flex-col">
-                           <span className={`text-xs ${sortConfig?.key === 'code' && sortConfig?.direction === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}>▲</span>
-                           <span className={`text-xs ${sortConfig?.key === 'code' && sortConfig?.direction === 'desc' ? 'text-blue-600' : 'text-gray-400'}`}>▼</span>
+                           <span className={`text-xs ${sortConfig?.key === 'code' && sortConfig?.direction === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>▲</span>
+                           <span className={`text-xs ${sortConfig?.key === 'code' && sortConfig?.direction === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>▼</span>
                          </div>
                        </div>
                      </th>
                      <th 
-                       className="px-4 py-2 border w-64 cursor-pointer hover:bg-gray-200 select-none"
+                       className="px-4 py-2 border w-64 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 select-none"
                        onClick={() => handleSort('country')}
                      >
                        <div className="flex items-center justify-between">
                          <span>Country</span>
                          <div className="flex flex-col">
-                           <span className={`text-xs ${sortConfig?.key === 'country' && sortConfig?.direction === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}>▲</span>
-                           <span className={`text-xs ${sortConfig?.key === 'country' && sortConfig?.direction === 'desc' ? 'text-blue-600' : 'text-gray-400'}`}>▼</span>
+                           <span className={`text-xs ${sortConfig?.key === 'country' && sortConfig?.direction === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>▲</span>
+                           <span className={`text-xs ${sortConfig?.key === 'country' && sortConfig?.direction === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>▼</span>
                          </div>
                        </div>
                      </th>
                      <th 
-                       className="px-4 py-2 border w-40 cursor-pointer hover:bg-gray-200 select-none"
+                       className="px-4 py-2 border w-40 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 select-none"
                        onClick={() => handleSort('zone')}
                      >
                        <div className="flex items-center justify-between">
                          <span>Zone</span>
                          <div className="flex flex-col">
-                           <span className={`text-xs ${sortConfig?.key === 'zone' && sortConfig?.direction === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}>▲</span>
-                           <span className={`text-xs ${sortConfig?.key === 'zone' && sortConfig?.direction === 'desc' ? 'text-blue-600' : 'text-gray-400'}`}>▼</span>
+                           <span className={`text-xs ${sortConfig?.key === 'zone' && sortConfig?.direction === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>▲</span>
+                           <span className={`text-xs ${sortConfig?.key === 'zone' && sortConfig?.direction === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>▼</span>
                          </div>
                        </div>
                      </th>
                      <th 
-                       className="px-4 py-2 border w-32 cursor-pointer hover:bg-gray-200 select-none"
+                       className="px-4 py-2 border w-32 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 select-none"
                        onClick={() => handleSort('phoneCode')}
                      >
                        <div className="flex items-center justify-between">
                          <span>Phone Code</span>
                          <div className="flex flex-col">
-                           <span className={`text-xs ${sortConfig?.key === 'phoneCode' && sortConfig?.direction === 'asc' ? 'text-blue-600' : 'text-gray-400'}`}>▲</span>
-                           <span className={`text-xs ${sortConfig?.key === 'phoneCode' && sortConfig?.direction === 'desc' ? 'text-blue-600' : 'text-gray-400'}`}>▼</span>
+                           <span className={`text-xs ${sortConfig?.key === 'phoneCode' && sortConfig?.direction === 'asc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>▲</span>
+                           <span className={`text-xs ${sortConfig?.key === 'phoneCode' && sortConfig?.direction === 'desc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>▼</span>
                          </div>
                        </div>
                      </th>
@@ -472,7 +472,7 @@ const ManageZonesPage = () => {
                  </thead>
                 <tbody>
                   {filteredZones.map((zone, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
+                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-4 py-2 border w-24">{zone.code}</td>
                       <td className="px-4 py-2 border w-64">{zone.country}</td>
                       <td className="px-4 py-2 border w-40">{zone.zone}</td>
@@ -485,7 +485,7 @@ const ManageZonesPage = () => {
           )}
 
           {zones?.length === 0 && (
-            <p className="text-center text-gray-500 mt-4">
+            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
               No zones found for selected company.
             </p>
           )}

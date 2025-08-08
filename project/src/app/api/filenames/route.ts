@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
         filename: filename,
         vendor: vendor,
         service: service,
+        fileType: "rate",
       },
     });
 
@@ -53,10 +54,28 @@ export async function GET(req: NextRequest) {
     const vendor = searchParams.get("vendor");
     const service = searchParams.get("service");
 
+    // If no vendor and service provided, return all filenames
+    if (!vendor && !service) {
+      const allFilenames = await prisma.filename.findMany({
+        where: {
+          fileType: "rate"
+        },
+        orderBy: {
+          vendor: 'asc'
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: allFilenames,
+      });
+    }
+
+    // If vendor and service are provided, return specific filename
     if (!vendor || !service) {
       return NextResponse.json({
         success: false,
-        message: "Vendor and service are required",
+        message: "Both vendor and service are required when querying specific filename",
         data: null,
       });
     }
@@ -65,6 +84,7 @@ export async function GET(req: NextRequest) {
       where: {
         vendor: vendor,
         service: service,
+        fileType: "rate"
       },
     });
 

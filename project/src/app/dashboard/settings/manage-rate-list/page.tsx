@@ -76,6 +76,25 @@ const ManageRateListPage = () => {
           });
           setServices(Array.from(uniqueServices.values()));
         }
+
+        // Fetch all available rate lists
+        const filenamesRes = await fetch("/api/filenames");
+        const filenamesData = await filenamesRes.json();
+        
+        if (filenamesData.success && filenamesData.data && Array.isArray(filenamesData.data)) {
+          const allFiles: { [key: string]: { fileName: string; vendor: string; service: string } } = {};
+          
+          filenamesData.data.forEach((fileInfo: any) => {
+            const fileKey = `${fileInfo.vendor}-${fileInfo.service}`;
+            allFiles[fileKey] = {
+              fileName: fileInfo.filename,
+              vendor: fileInfo.vendor,
+              service: fileInfo.service
+            };
+          });
+          
+          setUploadedFiles(allFiles);
+        }
         
       } catch (error) {
         console.error("Failed to fetch data", error);
@@ -84,29 +103,7 @@ const ManageRateListPage = () => {
     fetchData();
   }, []);
 
-  // Fetch filename for current vendor-service combination
-  const fetchFilename = async (vendorName: string, serviceName: string) => {
-    if (!vendorName || !serviceName) return;
-    
-    try {
-      const response = await fetch(`/api/filenames?vendor=${encodeURIComponent(vendorName)}&service=${encodeURIComponent(serviceName)}`);
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        const fileKey = `${vendorName}-${serviceName}`;
-        setUploadedFiles(prev => ({
-          ...prev,
-          [fileKey]: {
-            fileName: result.data.filename,
-            vendor: result.data.vendor,
-            service: result.data.service
-          }
-        }));
-      }
-    } catch (error) {
-      console.error("Failed to fetch filename:", error);
-    }
-  };
+
 
   // Upload Excel
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,8 +194,6 @@ const ManageRateListPage = () => {
   useEffect(() => {
     if (selectedServiceName) {
       fetchRates(selectedVendorName, selectedServiceName, 1, search);
-      // Also fetch the filename for this vendor-service combination
-      fetchFilename(selectedVendorName, selectedServiceName);
     }
   }, [selectedVendorName, selectedServiceName]);
 
@@ -334,7 +329,7 @@ const ManageRateListPage = () => {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-6xl mx-auto px-4 mt-10"
     >
-      <Card className="bg-white border shadow-sm rounded-2xl">
+      <Card className="bg-white dark:bg-gray-900 border shadow-sm rounded-2xl">
         <CardContent className="p-8 space-y-8">
           <h1 className="text-2xl font-semibold text-primary text-center">
             Manage Rate List
@@ -482,8 +477,8 @@ const ManageRateListPage = () => {
               className="space-y-4"
             >
               <div className="overflow-auto">
-                <table className="min-w-full bg-white text-sm border rounded shadow">
-                  <thead className="bg-gray-100 text-left">
+                <table className="min-w-full bg-white dark:bg-gray-800 text-sm border rounded shadow">
+                  <thead className="bg-gray-100 dark:bg-gray-700 text-left">
                     <tr>
                       <th className="px-4 py-2 border w-24">Zone</th>
                       <th className="px-4 py-2 border w-32">Weight (kg)</th>
@@ -494,7 +489,7 @@ const ManageRateListPage = () => {
                   </thead>
                   <tbody>
                     {rates.map((rate, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-4 py-2 border">{rate.zone}</td>
                         <td className="px-4 py-2 border">{rate.weight}</td>
                         <td className="px-4 py-2 border">{rate.price}</td>
@@ -509,7 +504,7 @@ const ManageRateListPage = () => {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, total)} of {total} results
                   </div>
                   <div className="flex items-center gap-2">
@@ -559,23 +554,77 @@ const ManageRateListPage = () => {
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading rates...</p>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">Loading rates...</p>
             </div>
           )}
 
           {/* Empty state */}
           {!loading && rates?.length === 0 && selectedServiceName && selectedVendorName && (
-            <p className="text-center text-gray-500 mt-4">
+            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
               No rates found for {selectedVendorName} - {selectedServiceName}.
             </p>
           )}
 
           {/* No service selected */}
           {!selectedServiceName && (
-            <p className="text-center text-gray-500 mt-4">
+            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
               Please select a service to view rates.
             </p>
           )}
+
+          {/* Available Rate Lists Section */}
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+              Available Rate Lists
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {Object.entries(uploadedFiles).map(([fileKey, fileInfo]) => (
+                <div
+                  key={fileKey}
+                  className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setSelectedVendorName(fileInfo.vendor);
+                    setSelectedServiceName(fileInfo.service);
+                    // Find vendor ID from name
+                    const vendor = vendors.find(v => v.name === fileInfo.vendor);
+                    if (vendor) {
+                      setSelectedVendor(vendor.id);
+                    }
+                    // Find service ID from name
+                    const service = services.find(s => s.name === fileInfo.service);
+                    if (service) {
+                      setSelectedService(service.id);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-green-800 dark:text-green-200">
+                        {fileInfo.vendor}
+                      </p>
+                      <p className="text-xs text-green-600 dark:text-green-300">
+                        {fileInfo.service}
+                      </p>
+                      <p className="text-xs text-green-500 dark:text-green-400 mt-1">
+                        {fileInfo.fileName}
+                      </p>
+                    </div>
+                    <div className="text-green-600 dark:text-green-400">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {Object.keys(uploadedFiles).length === 0 && (
+              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                No rate lists have been uploaded yet. Upload your first rate list above.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </motion.div>
