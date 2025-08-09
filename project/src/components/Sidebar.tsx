@@ -21,6 +21,9 @@ import {
   User,
   Building2,
   Search,
+  FileText,
+  CreditCard,
+  Book,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -45,6 +48,9 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     pathname.startsWith("/dashboard/shipments") ||
       pathname.startsWith("/dashboard/add-shipment") ||
       pathname.startsWith("/dashboard/rate-calculator")
+  );
+  const [accountsOpen, setAccountsOpen] = useState(
+    pathname.startsWith("/dashboard/accounts")
   );
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/dashboard/shipment-settings")
@@ -102,6 +108,12 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       label: "General Settings",
       icon: Plus,
     }
+  ];
+
+  const subLinksAccounts = [
+    { href: "/dashboard/accounts/invoices", label: "Invoices", icon: FileText },
+    { href: "/dashboard/accounts/payments", label: "Payments", icon: CreditCard },
+    { href: "/dashboard/accounts/ledger", label: "Ledger", icon: Book },
   ];
 
   return (
@@ -228,6 +240,60 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               </Link>
             );
           })}
+
+          {/* Accounts Collapsible */}
+          <div>
+            <button
+              onClick={() => setAccountsOpen(!accountsOpen)}
+              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                pathname.startsWith("/dashboard/accounts")
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <DollarSign className="w-5 h-5 flex-shrink-0" />
+                <span
+                  className={`whitespace-nowrap transition-all duration-200 ${
+                    isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                  }`}
+                >
+                  Accounts
+                </span>
+              </div>
+              {isOpen && (accountsOpen ? (
+                <ChevronUp className="w-4 h-4 ml-auto" />
+              ) : (
+                <ChevronDown className="w-4 h-4 ml-auto" />
+              ))}
+            </button>
+
+            <AnimatePresence>
+              {accountsOpen && isOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="pl-10 mt-2 space-y-1"
+                >
+                  {subLinksAccounts.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                        pathname === href
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      {label}
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           {/* Settings Collapsible */}
           <div>
             <button

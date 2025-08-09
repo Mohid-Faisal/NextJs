@@ -1,6 +1,8 @@
+// /app/api/receipt/[id]/route.ts
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import React from "react";
+import { pdf, Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer";
+import bwipjs from "bwip-js";
 
 export async function GET(
   req: Request,
@@ -17,68 +19,179 @@ export async function GET(
       return NextResponse.json({ error: "Shipment not found" }, { status: 404 });
     }
 
-    const { Document, Page, Text, View, StyleSheet, pdf } = await import("@react-pdf/renderer");
+    // Generate barcode PNG from AWB number
+    const barcodePng = await new Promise<Buffer>((resolve, reject) => {
+      bwipjs.toBuffer(
+        {
+          bcid: "code128", // Barcode type
+          text: shipment.awbNumber || "000000000000", // Text to encode
+          scale: 3,
+          height: 10,
+          includetext: false,
+        },
+        (err: Error | null, png: Buffer) => {
+          if (err) reject(err);
+          else resolve(png);
+        }
+      );
+    });
+    const barcodeBase64 = `data:image/png;base64,${barcodePng.toString("base64")}`;
 
     const styles = StyleSheet.create({
-      page: { padding: 28, fontSize: 11 },
-      header: { textAlign: "center", marginBottom: 12 },
-      company: { fontSize: 18, fontWeight: 700 },
-      awb: { textAlign: "center", fontSize: 20, fontWeight: 700, marginVertical: 10 },
-      section: { marginTop: 10, padding: 8, borderWidth: 1, borderStyle: "solid", borderColor: "#ddd", borderRadius: 4 },
-      row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-      label: { color: "#666" },
-      value: { fontWeight: 600 },
-      title: { fontSize: 12, fontWeight: 700, marginBottom: 6 },
-      center: { textAlign: "center" },
+      page: {
+        fontSize: 8,
+        padding: 10,
+        fontFamily: "Helvetica",
+      },
+      headerRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+      },
+      logo: { width: 100, height: 25 },
+      svp: {
+        fontSize: 24,
+        fontWeight: "bold",
+        backgroundColor: "#000",
+        color: "#fff",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+      },
+      sectionRow: {
+        flexDirection: "row",
+        borderWidth: 1,
+        borderStyle: "solid",
+        borderColor: "#000",
+      },
+      sectionNumber: {
+        backgroundColor: "#d32f2f",
+        color: "#fff",
+        fontWeight: "bold",
+        width: 15,
+        textAlign: "center",
+        paddingVertical: 2,
+      },
+      sectionContent: { flex: 1, padding: 4 },
+      bold: { fontWeight: "bold" },
+      barcode: { width: 180, height: 40, alignSelf: "center", marginTop: 4 },
+      tableRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+      },
     });
 
-    const formatMoney = (num?: number | null) =>
-      new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(num || 0));
+    // Map schema fields to layout requirements (fallbacks used for missing fields)
+    const accountName = shipment.agency || shipment.vendor || "PSS";
+    const senderCity = ""; // not in schema
+    const senderState = ""; // not in schema
+    const senderZip = ""; // not in schema
+    const senderCountry = ""; // not in schema
+    const senderPhone = ""; // not in schema
+    const senderId = ""; // not in schema
+
+    const recipientCity = ""; // not in schema
+    const recipientState = ""; // not in schema
+    const recipientZip = ""; // not in schema
+    const recipientCountry = shipment.destination || ""; // destination represents country
+    const recipientPhone = ""; // not in schema
+
+    const serviceType = shipment.serviceMode || shipment.shippingMode || "N/A";
+    const description = shipment.packageDescription || "N/A";
+    const specialInstructions = shipment.packaging || "N/A";
+    const pieces = shipment.totalPackages || shipment.amount || 1;
+    const weightKg = (shipment.totalWeight || shipment.weight || 0).toFixed(2);
+    const currency = "USD";
 
     const MyDocument = (
       <Document>
         <Page size="A4" style={styles.page}>
-          <View style={styles.header}>
-            <Text style={styles.company}>PSS</Text>
-            <Text>Shipment Receipt</Text>
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <Image style={styles.logo} src="/skynet-logo.png" />
+            <Text style={styles.svp}>SVP</Text>
           </View>
 
-          <View style={styles.awb}>
-            <Text>{shipment.awbNumber}</Text>
+          {/* Shipper */}
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionNumber}>1</Text>
+            <View style={styles.sectionContent}>
+              <Text style={styles.bold}>ACCOUNT NAME</Text>
+              <Text>{accountName}</Text>
+              <Text>{shipment.senderName}</Text>
+              <Text>{shipment.senderAddress}</Text>
+              <Text>{senderCity}{senderCity && ", "}{senderState}{senderState && ", "}{senderZip}</Text>
+              <Text>{senderCountry}</Text>
+              <Text>{senderPhone}</Text>
+              <Text>{senderId}</Text>
+            </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.title}>Summary</Text>
-            <View style={styles.row}><Text style={styles.label}>Tracking ID</Text><Text style={styles.value}>{shipment.trackingId}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Created</Text><Text style={styles.value}>{new Date(shipment.createdAt).toLocaleString()}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Delivery Status</Text><Text style={styles.value}>{shipment.deliveryStatus || "N/A"}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Invoice Status</Text><Text style={styles.value}>{shipment.invoiceStatus || "N/A"}</Text></View>
+          {/* Consignee */}
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionNumber}>2</Text>
+            <View style={styles.sectionContent}>
+              <Text>{shipment.recipientName}</Text>
+              <Text>{shipment.recipientAddress}</Text>
+              <Text>{recipientCity}{recipientCity && ", "}{recipientState}{recipientState && ", "}{recipientZip}</Text>
+              <Text>{recipientCountry}</Text>
+              <Text>Attn.: {shipment.recipientName}</Text>
+              <Text>{recipientPhone}</Text>
+            </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.title}>Sender</Text>
-            <View style={styles.row}><Text style={styles.label}>Name</Text><Text style={styles.value}>{shipment.senderName}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Address</Text><Text style={styles.value}>{shipment.senderAddress}</Text></View>
+          {/* Sender Authorization */}
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionNumber}>3</Text>
+            <View style={styles.sectionContent}>
+              <Text>SENDER'S AUTHORIZATION & SIGNATURE</Text>
+              <Text>
+                I/We agree that the carriers standard terms and conditions apply...
+              </Text>
+              <Text>Sender's Signature ____________________</Text>
+              <Text>Date: {new Date().toLocaleString()}</Text>
+            </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.title}>Recipient</Text>
-            <View style={styles.row}><Text style={styles.label}>Name</Text><Text style={styles.value}>{shipment.recipientName}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Address</Text><Text style={styles.value}>{shipment.recipientAddress}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Destination</Text><Text style={styles.value}>{shipment.destination}</Text></View>
+          {/* Proof of Delivery */}
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionNumber}>4</Text>
+            <View style={styles.sectionContent}>
+              <Text>PROOF OF DELIVERY (POD)</Text>
+              <Text>Receiver's Signature: ____________________</Text>
+              <Text>Date: __________ AM/PM</Text>
+              <Text>Print Name: ____________________</Text>
+            </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.title}>Charges</Text>
-            <View style={styles.row}><Text style={styles.label}>Price / kg</Text><Text style={styles.value}>{formatMoney(shipment.price)}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Fuel Surcharge</Text><Text style={styles.value}>{formatMoney(shipment.fuelSurcharge)}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Discount %</Text><Text style={styles.value}>{shipment.discount ?? 0}%</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Subtotal</Text><Text style={styles.value}>{formatMoney(shipment.subtotal)}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>Total</Text><Text style={styles.value}>{formatMoney(shipment.totalCost)}</Text></View>
+          {/* Service Type */}
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionNumber}>5</Text>
+            <View style={styles.sectionContent}>
+              <Text>SERVICE TYPE: {serviceType}</Text>
+              <Text>Full Description: {description}</Text>
+              <Text>Special Instructions: {specialInstructions}</Text>
+            </View>
           </View>
 
-          <View style={{ marginTop: 16 }}>
-            <Text style={styles.center}>Thank you for shipping with PSS</Text>
+          {/* Size & Weight */}
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionNumber}>6</Text>
+            <View style={styles.sectionContent}>
+              <View style={styles.tableRow}>
+                <Text>No. of Pieces: {pieces}</Text>
+                <Text>Weight: {weightKg} KGS</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* DAP + Barcode */}
+          <View style={{ marginTop: 10, alignItems: "center" }}>
+            <Text style={{ fontWeight: "bold" }}>** DAP **</Text>
+            <Text>
+              Declared Value for Customs: {shipment.declaredValue} {currency}
+            </Text>
+            <Image style={styles.barcode} src={barcodeBase64} />
+            <Text>*{shipment.awbNumber}*</Text>
           </View>
         </Page>
       </Document>
@@ -98,5 +211,3 @@ export async function GET(
     return NextResponse.json({ error: "Failed to generate receipt" }, { status: 500 });
   }
 }
-
-

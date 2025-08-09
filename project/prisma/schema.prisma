@@ -202,3 +202,50 @@ model vendorservice{
   vendor String
   service String
 }
+
+/// Accounts module: Payments
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum PartyType {
+  US
+  CUSTOMER
+  VENDOR
+}
+
+enum PaymentMode {
+  CASH
+  BANK_TRANSFER
+  CARD
+  CHEQUE
+}
+
+model Payment {
+  id              Int              @id @default(autoincrement())
+  transactionType TransactionType
+  category        String
+  date            DateTime
+  currency        String
+  amount          Float
+
+  // From: Customer or Us
+  fromPartyType   PartyType
+  fromCustomerId  Int?
+  fromCustomer    String
+
+  // To: Vendor or Us
+  toPartyType     PartyType
+  toVendorId      Int?
+  toVendor        String
+
+  mode            PaymentMode?
+  reference       String?
+  dueDate         DateTime?
+  description     String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
