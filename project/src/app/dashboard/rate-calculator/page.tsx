@@ -325,6 +325,9 @@ const RateCalculator = () => {
                           <p className="text-sm text-green-600 dark:text-green-300">
                             Weight: {results.bestOverallRate.bestRate.weight}kg | Vendor: {results.bestOverallRate.bestRate.vendor}
                           </p>
+                          <p className="text-xs text-green-500 dark:text-green-400">
+                            Price per kg: Rs. {(results.bestOverallRate.bestRate.price / results.bestOverallRate.bestRate.weight).toFixed(2)}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
@@ -367,6 +370,9 @@ const RateCalculator = () => {
                                 <p className="text-xs text-gray-600 dark:text-gray-400">
                                   {zone.bestRate.weight}kg
                                 </p>
+                                <p className="text-xs text-blue-500 dark:text-blue-400">
+                                  Rs. {(zone.bestRate.price / zone.bestRate.weight).toFixed(2)}/kg
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -391,6 +397,7 @@ const RateCalculator = () => {
                               <th className="text-left py-2 px-4">Weight (kg)</th>
                               <th className="text-left py-2 px-4">Original Price (Rs.)</th>
                               <th className="text-left py-2 px-4">Final Price (Rs.)</th>
+                              <th className="text-left py-2 px-4">Price per kg (Rs.)</th>
                               <th className="text-left py-2 px-4">Status</th>
                             </tr>
                           </thead>
@@ -411,6 +418,7 @@ const RateCalculator = () => {
                                 <td className="py-2 px-4">{rate.weight}</td>
                                 <td className="py-2 px-4 text-gray-600 dark:text-gray-400">{rate.originalPrice}</td>
                                 <td className="py-2 px-4 font-medium">{rate.price}</td>
+                                <td className="py-2 px-4 text-blue-600 dark:text-blue-400">{(rate.price / rate.weight).toFixed(2)}</td>
                                 <td className="py-2 px-4">
                                   {rate.zone === results.bestOverallRate.zone && 
                                    rate.weight === results.bestOverallRate.bestRate.weight && 

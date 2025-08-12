@@ -41,12 +41,26 @@ export async function GET(req: Request) {
     }
   }
 
-  // Fuzzy search
+  // Fuzzy search across all relevant columns
   if (search) {
     where.OR = [
       { awbNumber: { contains: search, mode: "insensitive" } },
+      { trackingId: { contains: search, mode: "insensitive" } },
+      { agency: { contains: search, mode: "insensitive" } },
+      { office: { contains: search, mode: "insensitive" } },
       { senderName: { contains: search, mode: "insensitive" } },
+      { senderAddress: { contains: search, mode: "insensitive" } },
       { recipientName: { contains: search, mode: "insensitive" } },
+      { recipientAddress: { contains: search, mode: "insensitive" } },
+      { destination: { contains: search, mode: "insensitive" } },
+      { deliveryTime: { contains: search, mode: "insensitive" } },
+      { invoiceStatus: { contains: search, mode: "insensitive" } },
+      { deliveryStatus: { contains: search, mode: "insensitive" } },
+      { shippingMode: { contains: search, mode: "insensitive" } },
+      { packaging: { contains: search, mode: "insensitive" } },
+      { vendor: { contains: search, mode: "insensitive" } },
+      { serviceMode: { contains: search, mode: "insensitive" } },
+      { packageDescription: { contains: search, mode: "insensitive" } },
     ];
   }
 

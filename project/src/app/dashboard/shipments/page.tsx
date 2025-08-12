@@ -186,7 +186,7 @@ export default function ShipmentsPage() {
            </span>
            <div className="flex w-full max-w-sm">
              <Input
-               placeholder="Search by AWB number, sender, or receiver..."
+               placeholder="Search all fields (AWB, tracking, sender, receiver, destination, etc.)"
                value={searchTerm}
                onChange={(e) => {
                  setPage(1);
