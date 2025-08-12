@@ -46,8 +46,8 @@ const styles = StyleSheet.create({
   clientInfo: { fontSize: 10, lineHeight: 1.4 },
   invoiceInfo: { fontSize: 10, lineHeight: 1.4, textAlign: "right" },
 
-  // Invoice title
-  invoiceTitle: {
+  // Receipt title
+  receiptTitle: {
     textAlign: "center",
     fontSize: 14,
     fontWeight: "bold",
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   contactText: { fontSize: 8, color: "#fff" },
 });
 
-const InvoicePDF = ({ shipment, assets }: any) => (
+const ReceiptPDF = ({ invoice, assets }: any) => (
   <Document>
     <Page size="A4" style={styles.page}>
       {/* Header Row */}
@@ -155,16 +155,16 @@ const InvoicePDF = ({ shipment, assets }: any) => (
       {/* Client + Invoice Info */}
       <View style={styles.infoRow}>
         <View style={styles.clientInfo}>
-          <Text>{shipment.senderName}</Text>
-          <Text>Attn: {shipment.recipientName}</Text>
-          <Text>{shipment.senderAddress}</Text>
-          <Text>{shipment.destination}</Text>
+          <Text>{invoice.customer?.CompanyName || "N/A"}</Text>
+          <Text>Attn: {invoice.customer?.PersonName || "N/A"}</Text>
+          <Text>{invoice.customer?.Address || "N/A"}</Text>
+          <Text>{invoice.destination}</Text>
         </View>
         <View style={styles.invoiceInfo}>
-          <Text>Invoice: {shipment.id}</Text>
-          <Text>Account Id: {shipment.vendor || "-"}</Text>
+          <Text>Receipt: {invoice.receiptNumber || invoice.invoiceNumber}</Text>
+          <Text>Invoice #: {invoice.invoiceNumber}</Text>
           <Text>
-            Date: {new Date(shipment.createdAt).toLocaleDateString("en-GB")}
+            Date: {new Date(invoice.invoiceDate).toLocaleDateString("en-GB")}
           </Text>
         </View>
       </View>
@@ -172,15 +172,15 @@ const InvoicePDF = ({ shipment, assets }: any) => (
       {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Payment Invoice Title */}
-      <Text style={styles.invoiceTitle}>Payment Invoice</Text>
+      {/* Receipt Title */}
+      <Text style={styles.receiptTitle}>Receipt</Text>
 
       <View style={styles.divider} />
 
-      {/* Shipment Table */}
+      {/* Invoice Table */}
       <View style={styles.table}>
         <View style={styles.tableHeader}>
-          {["Date", "Receipt #", "Tracking #", "Reference #", "Dest", "D/W", "Wight"].map(
+          {["Date", "Receipt #", "Tracking #", "Reference #", "Dest", "D/W", "Weight"].map(
             (h, i) => (
               <Text key={i} style={styles.tableHeaderText}>{h}</Text>
             )
@@ -188,15 +188,15 @@ const InvoicePDF = ({ shipment, assets }: any) => (
         </View>
         <View style={styles.tableRow}>
           <Text style={styles.tableCell}>
-            {new Date(shipment.createdAt).toLocaleDateString("en-GB")}
+            {new Date(invoice.invoiceDate).toLocaleDateString("en-GB")}
           </Text>
-          <Text style={styles.tableCell}>{shipment.id}</Text>
-          <Text style={styles.tableCell}>{shipment.trackingId}</Text>
-          <Text style={styles.tableCell}>{shipment.awbNumber}</Text>
-          <Text style={styles.tableCell}>{shipment.destination || "-"}</Text>
-          <Text style={styles.tableCell}>{shipment.deliveryStatus || "-"}</Text>
+          <Text style={styles.tableCell}>{invoice.receiptNumber || invoice.invoiceNumber}</Text>
+          <Text style={styles.tableCell}>{invoice.trackingNumber || "N/A"}</Text>
+          <Text style={styles.tableCell}>{invoice.referenceNumber || "N/A"}</Text>
+          <Text style={styles.tableCell}>{invoice.destination}</Text>
+          <Text style={styles.tableCell}>{invoice.dayWeek || "N/A"}</Text>
           <Text style={styles.tableCell}>
-            {(shipment.totalWeight ?? shipment.weight ?? 0).toFixed(2)}
+            {invoice.weight.toFixed(2)}
           </Text>
         </View>
       </View>
@@ -211,14 +211,16 @@ const InvoicePDF = ({ shipment, assets }: any) => (
             Value
           </Text>
         </View>
-        <View style={styles.descRow}>
-          <Text style={styles.descCellLeft}>
-            {shipment.packageDescription || "Fabric Hangers"}
-          </Text>
-          <Text style={styles.descCellRight}>
-            {Number(shipment.totalCost || 0).toLocaleString()}
-          </Text>
-        </View>
+        {Array.isArray(invoice.lineItems) && invoice.lineItems.map((item: any, index: number) => (
+          <View key={index} style={styles.descRow}>
+            <Text style={styles.descCellLeft}>
+              {item.description || "N/A"}
+            </Text>
+            <Text style={styles.descCellRight}>
+              {Number(item.value || 0).toLocaleString()}
+            </Text>
+          </View>
+        ))}
       </View>
 
       {/* Note */}
@@ -233,24 +235,19 @@ const InvoicePDF = ({ shipment, assets }: any) => (
       <View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Fsc Charges</Text>
-          <Text style={styles.summaryValue}>0.00</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Discount</Text>
-          <Text style={styles.summaryValue}>0.00</Text>
+          <Text style={styles.summaryValue}>{invoice.fscCharges.toFixed(2)}</Text>
         </View>
         <View style={styles.summaryTotal}>
           <Text style={styles.summaryLabel}>Total</Text>
           <Text style={styles.summaryValue}>
-            {Number(shipment.totalCost || 0).toLocaleString()}
+            {Number(invoice.totalAmount).toLocaleString()}
           </Text>
         </View>
       </View>
 
       {/* Disclaimer */}
       <Text style={styles.disclaimer}>
-        No cash, Cash equivalent, Gold jewelry or Dangerous goods accepted. Insurance is
-        compulsory from shipper side, PSS is not responsible for any loss and damage goods.
+        {invoice.disclaimer || "No cash, Cash equivalent, Gold jewelry or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods."}
       </Text>
 
       {/* Blue Footer Bar */}
@@ -279,8 +276,15 @@ export async function GET(
   try {
     const { id: idParam } = await params;
     const id = Number(idParam);
-    const shipment = await prisma.shipment.findUnique({ where: { id } });
-    if (!shipment) return new Response("Shipment not found", { status: 404 });
+    const invoice = await prisma.invoice.findUnique({ 
+      where: { id },
+      include: {
+        customer: true,
+        vendor: true,
+        shipment: true,
+      }
+    });
+    if (!invoice) return new Response("Invoice not found", { status: 404 });
 
     const isValidPng = (buf: Buffer) =>
       buf.length >= 8 &&
@@ -319,15 +323,15 @@ export async function GET(
       email: toSafeDataUri(["email.png"]),
     };
 
-    const blob = await pdf(<InvoicePDF shipment={shipment} assets={assets} />).toBlob();
+    const blob = await pdf(<ReceiptPDF invoice={invoice} assets={assets} />).toBlob();
     const unit8Body = new Uint8Array(await blob.arrayBuffer());
     const headers = new Headers({
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=invoice-${id}.pdf`,
+      "Content-Disposition": `attachment; filename=receipt-${id}.pdf`,
     });
     return new Response(unit8Body, { status: 200, headers });
   } catch (err) {
-    console.error("Invoice generation error:", err);
-    return new Response("Failed to generate invoice", { status: 500 });
+    console.error("Receipt generation error:", err);
+    return new Response("Failed to generate receipt", { status: 500 });
   }
 }

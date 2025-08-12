@@ -75,6 +75,9 @@ model Shipment {
   calculatedValues  Json?    // Calculated values object
   
   createdAt         DateTime @default(now())
+  
+  // Relations
+  invoices          Invoice[]
 }
 
 model Customers {
@@ -93,6 +96,9 @@ model Customers {
   ActiveStatus      String
   FilePath          String   
   createdAt         DateTime @default(now())
+  
+  // Relations
+  invoices          Invoice[]
 }
 
 
@@ -108,6 +114,9 @@ model Vendors {
   Zip               String
   Address           String
   createdAt         DateTime @default(now())
+  
+  // Relations
+  invoices          Invoice[]
 }
 
 model Recipients {
@@ -248,4 +257,40 @@ model Payment {
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+}
+
+model Invoice {
+  id              Int      @id @default(autoincrement())
+  invoiceNumber   String   @unique
+  invoiceDate     DateTime
+  receiptNumber   String?
+  trackingNumber  String?
+  referenceNumber String?
+  destination     String
+  dayWeek         String?  // D/W field
+  weight          Float
+  profile         String   // Profile dropdown
+  fscCharges      Float    @default(0)
+  
+  // Line items as JSON
+  lineItems       Json     // Array of { description: string, value: number }
+  
+  // Customer, vendor and shipment info
+  customerId      Int?
+  customer        Customers? @relation(fields: [customerId], references: [id])
+  vendorId        Int?
+  vendor          Vendors? @relation(fields: [vendorId], references: [id])
+  shipmentId      Int?
+  shipment        Shipment? @relation(fields: [shipmentId], references: [id])
+  
+  // Additional fields
+  disclaimer      String?  // Editable disclaimer text
+  
+  // Status and metadata
+  status          String   @default("Pending") // Pending, Paid, Overdue, Cancelled
+  totalAmount     Float
+  currency        String   @default("USD")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

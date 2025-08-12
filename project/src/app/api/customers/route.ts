@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { Country } from "country-state-city";
 
 export async function GET(req: Request) {
     // console.log("working");
@@ -21,15 +22,35 @@ export async function GET(req: Request) {
 
   if (status) where.ActiveStatus = status;
 
-  // Fuzzy search
+  // Fuzzy search across all columns
   if (search) {
+    // First, try to find country codes that match the search term
+    const matchingCountries = Country.getAllCountries().filter(country =>
+      country.name.toLowerCase().includes(search.toLowerCase()) ||
+      country.isoCode.toLowerCase().includes(search.toLowerCase())
+    );
+    
+    const countryCodes = matchingCountries.map(country => country.isoCode);
+    
     where.OR = [
       { CompanyName: { contains: search, mode: "insensitive" } },
       { PersonName: { contains: search, mode: "insensitive" } },
       { Email: { contains: search, mode: "insensitive" } },
       { Phone: { contains: search, mode: "insensitive" } },
+      { DocumentType: { contains: search, mode: "insensitive" } },
+      { DocumentNumber: { contains: search, mode: "insensitive" } },
+      { Country: { contains: search, mode: "insensitive" } },
+      { State: { contains: search, mode: "insensitive" } },
+      { City: { contains: search, mode: "insensitive" } },
+      { Zip: { contains: search, mode: "insensitive" } },
       { Address: { contains: search, mode: "insensitive" } },
+      { ActiveStatus: { contains: search, mode: "insensitive" } },
     ];
+    
+    // If we found matching country codes, also search for those
+    if (countryCodes.length > 0) {
+      where.OR.push({ Country: { in: countryCodes } });
+    }
   }
 
   // Validate sort field

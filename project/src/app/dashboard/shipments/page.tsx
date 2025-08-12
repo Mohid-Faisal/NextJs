@@ -178,82 +178,61 @@ export default function ShipmentsPage() {
       </h2>
 
              {/* Filters */}
-       <div className="mb-6 flex flex-wrap gap-4 items-end">
-                  {/* Status Filter */}
-          <div>
-            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
-              Delivery Status
-            </span>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setPage(1);
-                setStatusFilter(value);
-              }}
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Select delivery status" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+       <div className="mb-6 flex justify-between items-end gap-4">
+         {/* Left side - Search field */}
+         <div>
+           <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
+             Search
+           </span>
+           <div className="flex w-full max-w-sm">
+             <Input
+               placeholder="Search by AWB number, sender, or receiver..."
+               value={searchTerm}
+               onChange={(e) => {
+                 setPage(1);
+                 setSearchTerm(e.target.value);
+               }}
+               className="rounded-r-none"
+             />
+             <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
+               <Search className="text-white w-5 h-5" />
+             </div>
+           </div>
+         </div>
 
-          {/* Search Input with Blue Icon Button */}
-          <div>
-            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
-              Search
-            </span>
-            <div className="flex w-full max-w-sm">
-              <Input
-                placeholder="Search by AWB number, sender, or receiver..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setPage(1);
-                  setSearchTerm(e.target.value);
-                }}
-                className="rounded-r-none"
-              />
-              <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-                <Search className="text-white w-5 h-5" />
-              </div>
-            </div>
-          </div>
+         {/* Right side - Delivery Status and Date Range */}
+         <div className="flex gap-4 items-end">
+           {/* Status Filter */}
 
-          {/* Date Range Filter */}
-          <div>
-            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
-              Date Range
-            </span>
+           {/* Date Range Filter */}
+           <div>
+             <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
+               Date Range
+             </span>
              <div className="relative">
-             <Button
-               variant="outline"
-                onClick={() => setShowDatePicker(!showDatePicker)}
-                className="min-w-[220px] max-w-[300px] w-auto justify-start text-left font-normal overflow-hidden"
-             >
-               <Calendar className="mr-2 h-4 w-4" />
-                <span className="truncate">{formatRangeLabelText(dateRange?.from, dateRange?.to)}</span>
-             </Button>
-              {showDatePicker && (
-                <div
-                  className="absolute left-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl overflow-hidden"
-                  style={{ width: 'min(360px, 95vw)' }}
-                >
-                  <div className="p-4">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        Select Date Range
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Choose a date range to filter shipments
-                      </p>
-                    </div>
-                    
+               <Button
+                 variant="outline"
+                 onClick={() => setShowDatePicker(!showDatePicker)}
+                 className="min-w-[220px] max-w-[300px] w-auto justify-start text-left font-normal overflow-hidden"
+               >
+                 <Calendar className="mr-2 h-4 w-4" />
+                 <span className="truncate">{formatRangeLabelText(dateRange?.from, dateRange?.to)}</span>
+               </Button>
+               {showDatePicker && (
+                 <div
+                   className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl overflow-hidden"
+                   style={{ width: 'min(360px, 95vw)' }}
+                 >
+                   <div className="p-4">
+                     <div className="mb-4">
+                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                         Select Date Range
+                       </h3>
+                       <p className="text-sm text-gray-600 dark:text-gray-400">
+                         Choose a date range to filter shipments
+                       </p>
+                     </div>
+                     
                      <DayPicker
                        mode="range"
                        selected={dateRange}
@@ -266,92 +245,116 @@ export default function ShipmentsPage() {
                        }}
                        numberOfMonths={1}
                        className="mb-4 w-full"
-                      styles={{
-                        months: { display: 'block' },
-                        caption: { color: 'inherit', fontSize: '1.1rem', fontWeight: '600' },
-                        head_cell: { color: 'inherit', fontWeight: '500' },
-                        day: { 
-                          color: 'inherit',
-                          borderRadius: '6px',
-                          margin: '2px',
-                          transition: 'all 0.2s'
-                        },
-                        day_selected: { 
-                          backgroundColor: '#3b82f6', 
-                          color: 'white',
-                          fontWeight: '600'
-                        },
-                        day_today: { 
-                          backgroundColor: '#e5e7eb', 
-                          color: 'inherit',
-                          fontWeight: '600'
-                        },
-                        day_range_start: { 
-                          backgroundColor: '#3b82f6', 
-                          color: 'white',
-                          fontWeight: '600'
-                        },
-                        day_range_end: { 
-                          backgroundColor: '#3b82f6', 
-                          color: 'white',
-                          fontWeight: '600'
-                        },
-                        day_range_middle: { 
-                          backgroundColor: '#dbeafe', 
-                          color: 'inherit'
-                        },
-                        nav_button: {
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '4px',
-                          transition: 'all 0.2s'
-                        },
-                        nav_button_previous: { marginRight: '8px' },
-                        nav_button_next: { marginLeft: '8px' }
-                      }}
-                    />
-                    
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center space-x-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            // Reset to default 2 months range
-                            const now = new Date();
-                            const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
-                            setDateRange({ from: twoMonthsAgo, to: now });
-                          }}
-                          className="text-gray-600 dark:text-gray-400"
-                        >
-                          Reset to Default
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowDatePicker(false)}
-                          className="text-gray-600 dark:text-gray-400"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setShowDatePicker(false);
-                          setPage(1);
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Apply Filter
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
+                       styles={{
+                         months: { display: 'block' },
+                         caption: { color: 'inherit', fontSize: '1.1rem', fontWeight: '600' },
+                         head_cell: { color: 'inherit', fontWeight: '500' },
+                         day: { 
+                           color: 'inherit',
+                           borderRadius: '6px',
+                           margin: '2px',
+                           transition: 'all 0.2s'
+                         },
+                         day_selected: { 
+                           backgroundColor: '#3b82f6', 
+                           color: 'white',
+                           fontWeight: '600'
+                         },
+                         day_today: { 
+                           backgroundColor: '#e5e7eb', 
+                           color: 'inherit',
+                           fontWeight: '600'
+                         },
+                         day_range_start: { 
+                           backgroundColor: '#3b82f6', 
+                           color: 'white',
+                           fontWeight: '600'
+                         },
+                         day_range_end: { 
+                           backgroundColor: '#3b82f6', 
+                           color: 'white',
+                           fontWeight: '600'
+                         },
+                         day_range_middle: { 
+                           backgroundColor: '#dbeafe', 
+                           color: 'inherit'
+                         },
+                         nav_button: {
+                           backgroundColor: 'transparent',
+                           border: 'none',
+                           borderRadius: '6px',
+                           padding: '4px',
+                           transition: 'all 0.2s'
+                         },
+                         nav_button_previous: { marginRight: '8px' },
+                         nav_button_next: { marginLeft: '8px' }
+                       }}
+                     />
+                     
+                     <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                       <div className="flex items-center space-x-4">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             // Reset to default 2 months range
+                             const now = new Date();
+                             const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
+                             setDateRange({ from: twoMonthsAgo, to: now });
+                           }}
+                           className="text-gray-600 dark:text-gray-400"
+                         >
+                           Reset to Default
+                         </Button>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => setShowDatePicker(false)}
+                           className="text-gray-600 dark:text-gray-400"
+                         >
+                           Cancel
+                         </Button>
+                       </div>
+                       <Button
+                         onClick={() => {
+                           setShowDatePicker(false);
+                           setPage(1);
+                         }}
+                         className="bg-blue-600 hover:bg-blue-700 text-white"
+                       >
+                         Apply Filter
+                       </Button>
+                     </div>
+                   </div>
+                 </div>
+               )}
+             </div>
+           </div>
+           <div>
+             <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
+               Delivery Status
+             </span>
+             <Select
+               value={statusFilter}
+               onValueChange={(value) => {
+                 setPage(1);
+                 setStatusFilter(value);
+               }}
+             >
+               <SelectTrigger className="w-[160px]">
+                 <SelectValue placeholder="Select delivery status" />
+               </SelectTrigger>
+               <SelectContent>
+                 {STATUSES.map((status) => (
+                   <SelectItem key={status} value={status}>
+                     {status}
+                   </SelectItem>
+                 ))}
+               </SelectContent>
+             </Select>
            </div>
          </div>
-      </div>
+       </div>
 
       {/* Shipments Table */}
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -472,16 +475,7 @@ export default function ShipmentsPage() {
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              window.location.href = `/api/shipments/${shipment.id}/receipt`;
-                            }}>
-                              📄 Download Receipt
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              window.location.href = `/api/shipments/${shipment.id}/invoice`;
-                            }}>
-                              🧾 Download Invoice
-                            </DropdownMenuItem>
+
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>

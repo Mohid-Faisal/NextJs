@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     
     const countryCodes = matchingCountries.map(country => country.isoCode);
     
-    const customers = await prisma.customers.findMany({
+    const vendors = await prisma.vendors.findMany({
       where: {
         OR: [
           { CompanyName: { contains: query, mode: "insensitive" } },
@@ -43,19 +43,19 @@ export async function GET(req: Request) {
     });
 
     // Transform the data to match frontend expectations
-    const transformedCustomers = customers.map(customer => ({
-      id: customer.id,
-      Company: customer.CompanyName, // Map CompanyName to Company
-      PersonName: customer.PersonName,
-      Email: customer.Email,
-      Phone: customer.Phone,
-      Address: customer.Address,
-      Country: customer.Country,
+    const transformedVendors = vendors.map(vendor => ({
+      id: vendor.id,
+      Company: vendor.CompanyName, // Map CompanyName to Company
+      PersonName: vendor.PersonName,
+      Email: vendor.Email,
+      Phone: vendor.Phone,
+      Address: vendor.Address,
+      Country: vendor.Country,
     }));
 
-    return NextResponse.json(transformedCustomers);
+    return NextResponse.json(transformedVendors);
   } catch (error) {
-    console.error("Error fetching customers:", error);
+    console.error("Error fetching vendors:", error);
     return NextResponse.json([]);
   }
 }

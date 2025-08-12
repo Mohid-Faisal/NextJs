@@ -12,8 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { Table, Plus } from "lucide-react";
+import { Table, Plus, Edit, Trash2 } from "lucide-react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Printer } from "lucide-react";
+import { toast } from "sonner";
+import DeleteDialog from "@/components/DeleteDialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 type Payment = {
   id: number;
@@ -47,6 +50,8 @@ export default function PaymentsPage() {
 
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -181,6 +186,50 @@ export default function PaymentsPage() {
     printWindow.print();
   };
 
+  const handleEdit = (payment: Payment) => {
+    // Navigate to add payment page with edit mode and payment data
+    const queryParams = new URLSearchParams({
+      mode: 'edit',
+      id: payment.id.toString(),
+      transactionType: payment.transactionType,
+      category: payment.category,
+      date: payment.date,
+      currency: payment.currency,
+      amount: payment.amount.toString(),
+      fromAccount: payment.fromAccount,
+      toAccount: payment.toAccount,
+      paymentMode: payment.mode, // Changed from 'mode' to 'paymentMode' to avoid conflict
+      reference: payment.reference || '',
+      dueDate: payment.dueDate || '',
+      description: payment.description || ''
+    });
+    
+    window.location.href = `/dashboard/accounts/payments/add?${queryParams.toString()}`;
+  };
+
+  const handleDelete = (payment: Payment) => {
+    setPaymentToDelete(payment);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleDeleteSuccess = async () => {
+    // Refresh the payments list
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: pageSize === "all" ? "all" : String(pageSize),
+      ...(typeFilter !== "All" && { type: typeFilter }),
+      ...(modeFilter !== "All" && { mode: modeFilter }),
+      ...(searchTerm && { search: searchTerm }),
+      sortField: sortField,
+      sortOrder: sortOrder,
+    });
+
+    const res = await fetch(`/api/accounts/payments?${params.toString()}`);
+    const json = await res.json();
+    setPayments(json.payments);
+    setTotal(json.total);
+  };
+
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
       <div className="flex justify-between items-center mb-6">
@@ -310,6 +359,7 @@ export default function PaymentsPage() {
                   <th className="px-4 py-2 text-left">
                     <button onClick={() => handleSort("dueDate")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">Due Date {getSortIcon("dueDate")}</button>
                   </th>
+                  <th className="px-4 py-2 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm text-gray-700 dark:text-gray-200 font-light">
@@ -326,6 +376,24 @@ export default function PaymentsPage() {
                     <td className="px-4 py-3">{p.mode}</td>
                     <td className="px-4 py-3">{p.reference}</td>
                     <td className="px-4 py-3">{p.dueDate ? new Date(p.dueDate).toLocaleDateString() : ""}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEdit(p)}
+                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                          title="Edit payment"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p)}
+                          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          title="Delete payment"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -355,6 +423,23 @@ export default function PaymentsPage() {
           </Button>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <DialogContent>
+          {paymentToDelete && (
+            <DeleteDialog
+              entityType="payment"
+              entityId={paymentToDelete.id}
+              onDelete={handleDeleteSuccess}
+              onClose={() => {
+                setOpenDeleteDialog(false);
+                setPaymentToDelete(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

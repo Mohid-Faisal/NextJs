@@ -123,7 +123,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       }`}
     >
       <div className="flex flex-col h-full">
-        <nav className="flex-1 px-2 py-6 space-y-2">
+        <nav className="flex-1 px-2 py-6 space-y-2 overflow-y-auto scrollbar-hide">
           {/* Add Shipment */}
           {/* <Link
             href="/dashboard/add-shipment"

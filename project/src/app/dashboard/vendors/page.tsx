@@ -347,7 +347,7 @@ export default function VendorsPage() {
           <div className="flex flex-1">
             {/* Search input */}
             <Input
-              placeholder="Search by vendor..."
+              placeholder="Search all fields (name, email, phone, country, etc.)"
               value={searchTerm}
               onChange={(e) => {
                 setPage(1);

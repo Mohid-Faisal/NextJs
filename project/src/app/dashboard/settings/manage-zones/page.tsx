@@ -30,22 +30,44 @@ const ManageZonesPage = () => {
     { id: string; name: string }[]
   >([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [availableZones, setAvailableZones] = useState<{[key: string]: {filename: string, uploadedAt: string}}>({});
 
-  // Fetch services on mount
+  // Fetch services and available zones on mount
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchServicesAndZones = async () => {
       try {
         setIsLoadingServices(true);
-        const res = await fetch("/api/settings/serviceMode");
-        const data = await res.json();
-        setServiceModes(data || []);
+        
+        // Fetch services
+        const servicesRes = await fetch("/api/settings/serviceMode");
+        const servicesData = await servicesRes.json();
+        setServiceModes(servicesData || []);
+        
+        // Fetch available zones
+        const zonesRes = await fetch("/api/zones/available");
+        const zonesData = await zonesRes.json();
+
+                 if (zonesData.success) {
+           const zonesMap: {[key: string]: {filename: string, uploadedAt: string}} = {};
+           zonesData.data.forEach((zone: any) => {
+             // Convert service name to lowercase for case-insensitive matching
+             const serviceKey = zone.service.toLowerCase();
+             zonesMap[serviceKey] = {
+               filename: zone.filename,
+               uploadedAt: zone.uploadedAt
+             };
+           });
+           console.log("zonesMap", zonesMap);
+           console.log("serviceModes", servicesData);
+           setAvailableZones(zonesMap);
+         }
       } catch (error) {
-        console.error("Failed to fetch service modes", error);
+        console.error("Failed to fetch services and zones", error);
       } finally {
         setIsLoadingServices(false);
       }
     };
-    fetchServices();
+    fetchServicesAndZones();
   }, []);
 
   // Upload Excel
@@ -69,6 +91,14 @@ const ManageZonesPage = () => {
     if (result.success) {
       toast.success("Zone list uploaded successfully!");
       fetchZones(selectedServiceName);
+      
+             // Update available zones
+       const updatedZones = { ...availableZones };
+       updatedZones[selectedServiceName.toLowerCase()] = {
+         filename: result.filename || file.name,
+         uploadedAt: new Date().toISOString()
+       };
+       setAvailableZones(updatedZones);
     } else {
       toast.error(result.message || "Upload failed");
     }
@@ -180,6 +210,11 @@ const ManageZonesPage = () => {
         setFilteredZones([]);
         setFormattedTime('');
         setSearch('');
+        
+                 // Remove from available zones
+         const updatedZones = { ...availableZones };
+         delete updatedZones[selectedServiceName.toLowerCase()];
+         setAvailableZones(updatedZones);
       } else {
         toast.error(result.message || "Failed to delete zone data");
       }
@@ -486,9 +521,85 @@ const ManageZonesPage = () => {
 
           {zones?.length === 0 && (
             <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
-              No zones found for selected company.
+              No zones found for selected service.
             </p>
           )}
+
+          {/* Available Zones Section */}
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+              Available Zones
+            </h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                               {serviceModes.map((service) => {
+                  // Check if this service has zones data from the filename table
+                  // Use lowercase for case-insensitive matching
+                  const hasZones = availableZones[service.name.toLowerCase()];
+                  const isSelected = selectedServiceName === service.name;
+                 
+                 return (
+                   <div
+                     key={service.id}
+                     className={`p-3 border rounded-lg transition-colors cursor-pointer ${
+                       hasZones
+                         ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900"
+                         : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                     } ${isSelected ? "ring-2 ring-blue-500" : ""}`}
+                     onClick={() => {
+                       setSelectedService(service.id);
+                       setSelectedServiceName(service.name);
+                       setSearch("");
+                     }}
+                   >
+                     <div className="flex items-center justify-between">
+                       <div className="flex-1">
+                         <p className={`font-medium text-sm ${
+                           hasZones 
+                             ? "text-green-800 dark:text-green-200" 
+                             : "text-gray-600 dark:text-gray-300"
+                         }`}>
+                           {service.name}
+                         </p>
+                         <p className={`text-xs ${
+                           hasZones 
+                             ? "text-green-600 dark:text-green-300" 
+                             : "text-gray-500 dark:text-gray-400"
+                         }`}>
+                           {hasZones ? "Zones uploaded" : "No zones uploaded"}
+                         </p>
+                         {hasZones && (
+                           <p className="text-xs text-green-500 dark:text-green-400 mt-1">
+                             {hasZones.filename}
+                           </p>
+                         )}
+                       </div>
+                       <div className={`${
+                         hasZones 
+                           ? "text-green-600 dark:text-green-400" 
+                           : "text-gray-400 dark:text-gray-500"
+                       }`}>
+                         {hasZones ? (
+                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                           </svg>
+                         ) : (
+                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                           </svg>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 );
+               })}
+             </div>
+            
+            {serviceModes.length === 0 && (
+              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                No services available. Please add services first.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </motion.div>

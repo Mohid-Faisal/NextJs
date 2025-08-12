@@ -15,7 +15,7 @@ import { useState } from "react";
 interface DeleteDialogProps {
   onDelete?: () => void;
   onClose?: () => void;
-  entityType: "vendor" | "recipient" | "customer" | "shipment";
+  entityType: "vendor" | "recipient" | "customer" | "shipment" | "invoice" | "payment";
   entityId: number;
 }
 
@@ -49,7 +49,13 @@ const DeleteDialog = ({
       }
 
       // Make the delete API call
-      const response = await fetch(`/api/${entityType}s/${entityId}`, {
+      const apiUrl = entityType === "invoice" 
+        ? `/api/accounts/invoices/${entityId}`
+        : entityType === "payment"
+        ? `/api/accounts/payments/${entityId}`
+        : `/api/${entityType}s/${entityId}`;
+        
+      const response = await fetch(apiUrl, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -86,6 +92,10 @@ const DeleteDialog = ({
         return "customer";
       case "shipment":
         return "shipment";
+      case "invoice":
+        return "invoice";
+      case "payment":
+        return "payment";
       default:
         return "item";
     }

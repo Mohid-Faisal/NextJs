@@ -11,10 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSearchParams } from "next/navigation";
 
 type Option = { label: string; value: string };
 
 export default function AddPaymentPage() {
+  const searchParams = useSearchParams();
+  const isEditMode = searchParams.get('mode') === 'edit';
+  const paymentId = searchParams.get('id');
   const [transactionType, setTransactionType] = useState<"Income" | "Expense" | "Transfer">("Income");
   const [category, setCategory] = useState("Receivable Statement");
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -46,9 +50,41 @@ export default function AddPaymentPage() {
         { label: "Us", value: "Us" },
         ...vendorsJson.vendors.map((v: any) => ({ label: v.CompanyName, value: String(v.id) })),
       ]);
+
+      // If in edit mode, populate form with existing data
+      if (isEditMode && paymentId) {
+        setTransactionType(searchParams.get('transactionType') as "Income" | "Expense" | "Transfer" || "Income");
+        setCategory(searchParams.get('category') || "Receivable Statement");
+        setDate(searchParams.get('date')?.slice(0, 10) || new Date().toISOString().slice(0, 10));
+        setCurrency(searchParams.get('currency') || "PKR");
+        setAmount(parseFloat(searchParams.get('amount') || '0'));
+        
+        // Handle from/to accounts based on party types
+        const fromPartyType = searchParams.get('fromPartyType');
+        const fromCustomerId = searchParams.get('fromCustomerId');
+        const toPartyType = searchParams.get('toPartyType');
+        const toVendorId = searchParams.get('toVendorId');
+        
+        if (fromPartyType === 'US') {
+          setFromAccount("Us");
+        } else if (fromCustomerId) {
+          setFromAccount(fromCustomerId);
+        }
+        
+        if (toPartyType === 'US') {
+          setToAccount("Us");
+        } else if (toVendorId) {
+          setToAccount(toVendorId);
+        }
+        
+        setMode(searchParams.get('paymentMode') || "Cash");
+        setReference(searchParams.get('reference') || "");
+        setDueDate(searchParams.get('dueDate')?.slice(0, 10) || "");
+        setDescription(searchParams.get('description') || "");
+      }
     };
     load();
-  }, []);
+  }, [isEditMode, paymentId, searchParams]);
 
   const handleSave = async () => {
     const payload: any = {
@@ -68,21 +104,28 @@ export default function AddPaymentPage() {
     payload.fromCustomerId = fromAccount === 'Us' ? undefined : Number(fromAccount);
     payload.toPartyType = toAccount === 'Us' ? 'US' : 'VENDOR';
     payload.toVendorId = toAccount === 'Us' ? undefined : Number(toAccount);
-    const res = await fetch(`/api/accounts/payments`, {
-      method: "POST",
+
+    const url = isEditMode && paymentId 
+      ? `/api/accounts/payments/${paymentId}`
+      : `/api/accounts/payments`;
+    
+    const method = isEditMode ? "PUT" : "POST";
+    
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    
     try {
       const json = await res.json();
       if (!res.ok || json?.success === false) {
-        // @ts-ignore - sonner is global Toaster
         const { toast } = await import("sonner");
-        toast.error(json?.message || "Failed to add payment.");
+        toast.error(json?.message || `Failed to ${isEditMode ? 'update' : 'add'} payment.`);
         return;
       }
       const { toast } = await import("sonner");
-      toast.success("Payment added successfully.");
+      toast.success(`Payment ${isEditMode ? 'updated' : 'added'} successfully.`);
       window.location.href = "/dashboard/accounts/payments";
     } catch (e: any) {
       const { toast } = await import("sonner");
@@ -92,7 +135,7 @@ export default function AddPaymentPage() {
 
   return (
     <div className="p-10 max-w-5xl mx-auto bg-white dark:bg-zinc-900">
-      <h2 className="text-3xl font-semibold mb-6">Add Payment</h2>
+      <h2 className="text-3xl font-semibold mb-6">{isEditMode ? 'Edit Payment' : 'Add Payment'}</h2>
       <Card className="border border-gray-200 dark:border-gray-700">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
@@ -212,7 +255,9 @@ export default function AddPaymentPage() {
 
           </div>
           <div className="mt-6">
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">Save</Button>
+            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+              {isEditMode ? 'Update Payment' : 'Save Payment'}
+            </Button>
           </div>
         </CardContent>
       </Card>
