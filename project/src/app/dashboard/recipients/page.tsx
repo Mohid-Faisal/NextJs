@@ -345,7 +345,7 @@ export default function RecipientsPage() {
           <div className="flex flex-1">
             {/* Search input */}
             <Input
-              placeholder="Search all fields (name, email, phone, country, etc.)"
+              placeholder="Search by company name, person name, phone, city, or country"
               value={searchTerm}
               onChange={(e) => {
                 setPage(1);

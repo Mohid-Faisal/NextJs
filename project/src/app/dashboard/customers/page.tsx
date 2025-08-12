@@ -367,7 +367,7 @@ export default function CustomersPage() {
         {/* Search bar */}
         <div className="flex w-full max-w-sm">
           <Input
-            placeholder="Search all fields (name, email, phone, country, etc.)"
+            placeholder="Search by company name, person name, phone, city, or country"
             value={searchTerm}
             onChange={(e) => {
               setPage(1);

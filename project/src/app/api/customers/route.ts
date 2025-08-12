@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
   if (status) where.ActiveStatus = status;
 
-  // Fuzzy search across all columns
+  // Fuzzy search across specific columns only
   if (search) {
     // First, try to find country codes that match the search term
     const matchingCountries = Country.getAllCountries().filter(country =>
@@ -35,16 +35,9 @@ export async function GET(req: Request) {
     where.OR = [
       { CompanyName: { contains: search, mode: "insensitive" } },
       { PersonName: { contains: search, mode: "insensitive" } },
-      { Email: { contains: search, mode: "insensitive" } },
       { Phone: { contains: search, mode: "insensitive" } },
-      { DocumentType: { contains: search, mode: "insensitive" } },
-      { DocumentNumber: { contains: search, mode: "insensitive" } },
-      { Country: { contains: search, mode: "insensitive" } },
-      { State: { contains: search, mode: "insensitive" } },
       { City: { contains: search, mode: "insensitive" } },
-      { Zip: { contains: search, mode: "insensitive" } },
-      { Address: { contains: search, mode: "insensitive" } },
-      { ActiveStatus: { contains: search, mode: "insensitive" } },
+      { Country: { contains: search, mode: "insensitive" } },
     ];
     
     // If we found matching country codes, also search for those

@@ -27,7 +27,7 @@ const RateCalculator = () => {
     length: "",
     width: "",
     height: "",
-    origin: "",
+    origin: "Pakistan",
     destination: "",
     docType: "",
     profitPercentage: "",
@@ -173,7 +173,15 @@ const RateCalculator = () => {
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
                       {countries.map((country) => (
-                        <SelectItem key={country.isoCode} value={country.name}>
+                                                 <SelectItem 
+                           key={country.isoCode} 
+                           value={country.name}
+                           className={`${
+                             form.origin === country.name 
+                               ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 font-medium' 
+                               : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                           }`}
+                         >
                           {country.name}
                         </SelectItem>
                       ))}
@@ -189,7 +197,15 @@ const RateCalculator = () => {
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
                       {countries.map((country) => (
-                        <SelectItem key={country.isoCode} value={country.name}>
+                                                 <SelectItem 
+                           key={country.isoCode} 
+                           value={country.name}
+                           className={`${
+                             form.destination === country.name 
+                               ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 font-medium' 
+                               : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                           }`}
+                         >
                           {country.name}
                         </SelectItem>
                       ))}
@@ -205,7 +221,15 @@ const RateCalculator = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {documentTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
+                                                 <SelectItem 
+                           key={type} 
+                           value={type}
+                           className={`${
+                             form.docType === type 
+                               ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 font-medium' 
+                               : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                           }`}
+                         >
                           {type}
                         </SelectItem>
                       ))}
