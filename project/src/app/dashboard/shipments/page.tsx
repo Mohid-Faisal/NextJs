@@ -47,7 +47,7 @@ export default function ShipmentsPage() {
   
 
   const totalPages = Math.ceil(total / LIMIT);
-  type SortField = "awbNumber" | "createdAt" | "senderName" | "recipientName" | "destination" | "deliveryStatus" | "totalCost" | "invoiceStatus";
+  type SortField = "trackingId" | "invoiceNumber" | "createdAt" | "senderName" | "recipientName" | "destination" | "deliveryStatus" | "totalCost" | "invoiceStatus";
   type SortOrder = "asc" | "desc";
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -368,8 +368,13 @@ export default function ShipmentsPage() {
                              <thead>
                  <tr className="text-sm text-gray-500 dark:text-gray-300">
                    <th className="px-4 py-2 text-left">
-                     <button onClick={() => handleSort("awbNumber")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                       AWB Number {getSortIcon("awbNumber")}
+                                     <button onClick={() => handleSort("trackingId")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                  Tracking ID {getSortIcon("trackingId")}
+                </button>
+                   </th>
+                   <th className="px-4 py-2 text-left">
+                     <button onClick={() => handleSort("invoiceNumber")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                       Invoice# {getSortIcon("invoiceNumber")}
                      </button>
                    </th>
                    <th className="px-4 py-2 text-left">
@@ -422,7 +427,10 @@ export default function ShipmentsPage() {
                       transition={{ duration: 0.3 }}
                                          >
                        <td className="px-4 py-3 font-medium">
-                         {shipment.awbNumber}
+                         {shipment.trackingId}
+                       </td>
+                       <td className="px-4 py-3 font-medium text-blue-600">
+                         {shipment.invoiceNumber}
                        </td>
                                                <td className="px-4 py-3">
                           {formatDate(shipment.createdAt)}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getCountryNameFromCode } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -39,7 +40,6 @@ type Invoice = {
   invoiceDate: string;
   receiptNumber?: string;
   trackingNumber?: string;
-  referenceNumber?: string;
   destination: string;
   dayWeek?: string;
   weight: number;
@@ -184,11 +184,10 @@ export default function InvoicesPage() {
       "Date",
       "Receipt #",
       "Tracking #",
-      "Reference #",
       "Destination",
-      "Weight",
       "Status",
       "Total Amount",
+      "Profile",
       "Customer/Vendor",
     ];
     const rows = invoices.map((i) => [
@@ -197,12 +196,11 @@ export default function InvoicesPage() {
       new Date(i.invoiceDate).toLocaleDateString(),
       i.receiptNumber || "",
       i.trackingNumber || "",
-      i.referenceNumber || "",
-      i.destination,
-      i.weight,
+      getCountryNameFromCode(i.destination),
       i.status,
       `${i.currency} ${i.totalAmount.toLocaleString()}`,
-             (i.customer?.PersonName || i.customer?.CompanyName) || (i.vendor?.PersonName || i.vendor?.CompanyName) || "",
+      i.profile,
+      (i.customer?.PersonName || i.customer?.CompanyName) || (i.vendor?.PersonName || i.vendor?.CompanyName) || "",
     ]);
     const csv = [headers, ...rows]
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
@@ -226,11 +224,10 @@ export default function InvoicesPage() {
           <td>${new Date(i.invoiceDate).toLocaleDateString()}</td>
           <td>${i.receiptNumber || ""}</td>
           <td>${i.trackingNumber || ""}</td>
-          <td>${i.referenceNumber || ""}</td>
-          <td>${i.destination}</td>
-          <td>${i.weight}</td>
+          <td>${getCountryNameFromCode(i.destination)}</td>
           <td>${i.status}</td>
           <td>${i.currency} ${i.totalAmount.toLocaleString()}</td>
+          <td>${i.profile}</td>
           <td>${(i.customer?.PersonName || i.customer?.CompanyName) || (i.vendor?.PersonName || i.vendor?.CompanyName) || ""}</td>
         </tr>`
       )
@@ -258,11 +255,10 @@ export default function InvoicesPage() {
                 <th>Date</th>
                 <th>Receipt #</th>
                 <th>Tracking #</th>
-                <th>Reference #</th>
                 <th>Destination</th>
-                <th>Weight</th>
                 <th>Status</th>
                 <th>Total Amount</th>
+                <th>Profile</th>
                 <th>Customer/Vendor</th>
               </tr>
             </thead>
@@ -363,6 +359,14 @@ export default function InvoicesPage() {
               <Plus className="w-4 h-4" /> Add Invoice
             </Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link
+              href="/dashboard/accounts/payments/process"
+              className="flex items-center gap-2"
+            >
+              💰 Process Payment
+            </Link>
+          </Button>
           <Button
             variant="outline"
             onClick={exportToCSV}
@@ -424,14 +428,6 @@ export default function InvoicesPage() {
                   </th>
                   <th className="px-4 py-2 text-left">
                     <button
-                      onClick={() => handleSort("referenceNumber")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      Reference# {getSortIcon("referenceNumber")}
-                    </button>
-                  </th>
-                  <th className="px-4 py-2 text-left">
-                    <button
                       onClick={() => handleSort("destination")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
@@ -439,14 +435,6 @@ export default function InvoicesPage() {
                     </button>
                   </th>
 
-                  <th className="px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("weight")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      Weight {getSortIcon("weight")}
-                    </button>
-                  </th>
                   <th className="px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("status")}
@@ -463,6 +451,7 @@ export default function InvoicesPage() {
                       Total Amount {getSortIcon("totalAmount")}
                     </button>
                   </th>
+                  <th className="px-4 py-2 text-left">Profile</th>
                   <th className="px-4 py-2 text-left">Customer/Vendor</th>
                   <th className="px-4 py-2 text-left">Actions</th>
                 </tr>
@@ -479,10 +468,8 @@ export default function InvoicesPage() {
                       {new Date(i.invoiceDate).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">{i.trackingNumber || "-"}</td>
-                    <td className="px-4 py-3">{i.referenceNumber || "-"}</td>
-                    <td className="px-4 py-3">{i.destination}</td>
+                    <td className="px-4 py-3">{getCountryNameFromCode(i.destination)}</td>
 
-                    <td className="px-4 py-3">{i.weight}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -500,6 +487,17 @@ export default function InvoicesPage() {
                     </td>
                     <td className="px-4 py-3">
                       {i.currency} {i.totalAmount.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          i.profile === "Customer"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                        }`}
+                      >
+                        {i.profile}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       {(() => {

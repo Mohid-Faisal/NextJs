@@ -14,7 +14,8 @@ export async function GET(req: Request) {
   const fromDate = searchParams.get("fromDate");
   const toDate = searchParams.get("toDate");
   const sortField = searchParams.get("sortField") as
-    | "awbNumber"
+    | "trackingId"
+    | "invoiceNumber"
     | "createdAt"
     | "senderName"
     | "recipientName"
@@ -44,8 +45,8 @@ export async function GET(req: Request) {
   // Fuzzy search across all relevant columns
   if (search) {
     where.OR = [
-      { awbNumber: { contains: search, mode: "insensitive" } },
       { trackingId: { contains: search, mode: "insensitive" } },
+      { invoiceNumber: { contains: search, mode: "insensitive" } },
       { agency: { contains: search, mode: "insensitive" } },
       { office: { contains: search, mode: "insensitive" } },
       { senderName: { contains: search, mode: "insensitive" } },

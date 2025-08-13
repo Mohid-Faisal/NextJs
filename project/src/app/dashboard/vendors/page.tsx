@@ -31,7 +31,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 const STATUSES = ["All", "Active", "Inactive"];
 const SORT_OPTIONS = ["Newest", "Oldest"];
 
-type SortField = "id" | "CompanyName" | "PersonName" | "Phone" | "City" | "Country";
+type SortField = "id" | "CompanyName" | "PersonName" | "Phone" | "City" | "Country" | "currentBalance";
 type SortOrder = "asc" | "desc";
 
 export default function VendorsPage() {
@@ -451,6 +451,14 @@ export default function VendorsPage() {
                       Country {getSortIcon("Country")}
                     </button>
                   </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("currentBalance")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Balance {getSortIcon("currentBalance")}
+                    </button>
+                  </th>
                   <th className="px-4 py-2 text-left">Action</th>
                 </tr>
               </thead>
@@ -471,6 +479,19 @@ export default function VendorsPage() {
                       <td className="px-4 py-3">{vendor.Phone}</td>
                       <td className="px-4 py-3">{vendor.City}</td>
                       <td className="px-4 py-3">{country.getCountryByCode(vendor.Country)?.name}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            vendor.currentBalance > 0
+                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                              : vendor.currentBalance < 0
+                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                          }`}
+                        >
+                          ${vendor.currentBalance?.toLocaleString() || '0.00'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -502,6 +523,13 @@ export default function VendorsPage() {
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                router.push(`/dashboard/accounts/transactions/vendor/${vendor.id}`);
+                              }}
+                            >
+                              💰 Transactions
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

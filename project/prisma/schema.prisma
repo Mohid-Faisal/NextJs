@@ -18,9 +18,9 @@ model User {
 model Shipment {
   id                Int      @id @default(autoincrement())
   trackingId        String   @unique
+  invoiceNumber     String   @unique
   
   // Basic form fields
-  awbNumber         String
   agency            String?
   office            String?
   senderName        String
@@ -97,8 +97,13 @@ model Customers {
   FilePath          String   
   createdAt         DateTime @default(now())
   
+  // Financial fields
+  currentBalance    Float    @default(0)
+  creditLimit       Float    @default(0)
+  
   // Relations
   invoices          Invoice[]
+  transactions      CustomerTransaction[]
 }
 
 
@@ -115,8 +120,13 @@ model Vendors {
   Address           String
   createdAt         DateTime @default(now())
   
+  // Financial fields
+  currentBalance    Float    @default(0)
+  creditLimit       Float    @default(0)
+  
   // Relations
   invoices          Invoice[]
+  transactions      VendorTransaction[]
 }
 
 model Recipients {
@@ -206,6 +216,81 @@ model filename {
   @@unique([service, fileType])
 }
 
+// Company Account for tracking our own balance
+model CompanyAccount {
+  id              Int      @id @default(autoincrement())
+  name            String   @default("Main Company Account")
+  currentBalance  Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  transactions    CompanyTransaction[]
+}
+
+// Customer Transaction History
+model CustomerTransaction {
+  id              Int      @id @default(autoincrement())
+  customerId      Int
+  customer        Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  type            String   // "CREDIT", "DEBIT"
+  amount          Float
+  description     String
+  reference       String?  // Invoice number, payment reference, etc.
+  
+  // Balance tracking
+  previousBalance Float
+  newBalance      Float
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+// Vendor Transaction History
+model VendorTransaction {
+  id              Int      @id @default(autoincrement())
+  vendorId        Int
+  vendor          Vendors @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  type            String   // "CREDIT", "DEBIT"
+  amount          Float
+  description     String
+  reference       String?  // Invoice number, payment reference, etc.
+  
+  // Balance tracking
+  previousBalance Float
+  newBalance      Float
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([vendorId])
+  @@index([createdAt])
+}
+
+// Company Transaction History
+model CompanyTransaction {
+  id              Int           @id @default(autoincrement())
+  accountId       Int
+  account         CompanyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  
+  type            String        // "CREDIT", "DEBIT"
+  amount          Float
+  description     String
+  reference       String?       // Invoice number, payment reference, etc.
+  
+  // Balance tracking
+  previousBalance Float
+  newBalance      Float
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([accountId])
+  @@index([createdAt])
+}
+
 model vendorservice{
   id Int @id @default(autoincrement())
   vendor String
@@ -265,7 +350,6 @@ model Invoice {
   invoiceDate     DateTime
   receiptNumber   String?
   trackingNumber  String?
-  referenceNumber String?
   destination     String
   dayWeek         String?  // D/W field
   weight          Float

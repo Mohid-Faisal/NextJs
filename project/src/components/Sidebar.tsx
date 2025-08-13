@@ -114,6 +114,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     { href: "/dashboard/accounts/invoices", label: "Invoices", icon: FileText },
     { href: "/dashboard/accounts/payments", label: "Payments", icon: CreditCard },
     { href: "/dashboard/accounts/ledger", label: "Ledger", icon: Book },
+    { href: "/dashboard/accounts/payments/process", label: "Process Payment", icon: CreditCard },
+    { href: "/dashboard/accounts/company", label: "Company Account", icon: Building2 },
   ];
 
   return (

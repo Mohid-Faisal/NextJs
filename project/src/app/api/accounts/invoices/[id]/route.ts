@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { updateInvoiceBalance } from "@/lib/utils";
 
 export async function GET(
   req: NextRequest,
@@ -44,6 +45,30 @@ export async function PUT(
     const invoiceId = parseInt(id);
     const body = await req.json();
 
+    // Get the current invoice to check if totalAmount, customerId, or vendorId is being changed
+    const currentInvoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { 
+        totalAmount: true,
+        customerId: true,
+        vendorId: true
+      }
+    });
+
+    if (!currentInvoice) {
+      return NextResponse.json(
+        { error: "Invoice not found" },
+        { status: 404 }
+      );
+    }
+
+    const oldAmount = currentInvoice.totalAmount;
+    const newAmount = body.totalAmount !== undefined ? parseFloat(body.totalAmount) : oldAmount;
+    const oldCustomerId = currentInvoice.customerId;
+    const newCustomerId = body.customerId !== undefined ? (body.customerId ? parseInt(body.customerId) : null) : oldCustomerId;
+    const oldVendorId = currentInvoice.vendorId;
+    const newVendorId = body.vendorId !== undefined ? (body.vendorId ? parseInt(body.vendorId) : null) : oldVendorId;
+
     // Build update data object with only provided fields
     const updateData: any = {};
     
@@ -51,7 +76,6 @@ export async function PUT(
     if (body.invoiceDate !== undefined) updateData.invoiceDate = new Date(body.invoiceDate);
     if (body.receiptNumber !== undefined) updateData.receiptNumber = body.receiptNumber;
     if (body.trackingNumber !== undefined) updateData.trackingNumber = body.trackingNumber;
-    if (body.referenceNumber !== undefined) updateData.referenceNumber = body.referenceNumber;
     if (body.destination !== undefined) updateData.destination = body.destination;
     if (body.dayWeek !== undefined) updateData.dayWeek = body.dayWeek;
     if (body.weight !== undefined) updateData.weight = parseFloat(body.weight);
@@ -62,10 +86,11 @@ export async function PUT(
     if (body.vendorId !== undefined) updateData.vendorId = body.vendorId ? parseInt(body.vendorId) : null;
     if (body.shipmentId !== undefined) updateData.shipmentId = body.shipmentId ? parseInt(body.shipmentId) : null;
     if (body.disclaimer !== undefined) updateData.disclaimer = body.disclaimer;
-    if (body.totalAmount !== undefined) updateData.totalAmount = parseFloat(body.totalAmount);
+    if (body.totalAmount !== undefined) updateData.totalAmount = newAmount;
     if (body.currency !== undefined) updateData.currency = body.currency;
     if (body.status !== undefined) updateData.status = body.status;
 
+    // Update the invoice
     const invoice = await prisma.invoice.update({
       where: { id: invoiceId },
       data: updateData,
@@ -76,7 +101,31 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ invoice });
+    // Update balances if totalAmount, customerId, or vendorId changed
+    let balanceUpdateResult = { customerUpdated: false, vendorUpdated: false };
+    if (oldAmount !== newAmount || oldCustomerId !== newCustomerId || oldVendorId !== newVendorId) {
+      try {
+        balanceUpdateResult = await updateInvoiceBalance(
+          prisma, 
+          invoiceId, 
+          oldAmount, 
+          newAmount,
+          oldCustomerId,
+          newCustomerId,
+          oldVendorId,
+          newVendorId
+        );
+      } catch (balanceError) {
+        console.error("Error updating balances:", balanceError);
+        // Continue with the response even if balance update fails
+      }
+    }
+
+    return NextResponse.json({ 
+      invoice,
+      balanceUpdated: oldAmount !== newAmount || oldCustomerId !== newCustomerId || oldVendorId !== newVendorId,
+      balanceUpdateResult
+    });
   } catch (error) {
     console.error("Error updating invoice:", error);
     return NextResponse.json(

@@ -25,7 +25,6 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Country } from "country-state-city";
 
 // Add type for sender/recipient
 interface Party {
@@ -191,26 +190,9 @@ const AddShipmentPage = () => {
         const recipientCountry = selectedRecipient.Country;
         let recipientCountryName: string;
         
-        // Convert country code to full country name using country-state-city
-        try {
-          const countries = Country.getAllCountries();
-          const countryData = countries.find(country => 
-            country.isoCode === recipientCountry || 
-            country.name === recipientCountry
-          );
-          
-          if (countryData) {
-            recipientCountryName = countryData.name;
-            console.log(`Converted country code '${recipientCountry}' to country name '${recipientCountryName}'`);
-          } else {
-            toast.error(`Country code '${recipientCountry}' not found. Please check recipient country.`);
-            return;
-          }
-        } catch (error) {
-          console.error('Error converting country code to name:', error);
-          toast.error("Error processing country information");
-          return;
-        }
+        // Use the country code directly as the country name
+        recipientCountryName = recipientCountry;
+        console.log(`Using country code '${recipientCountry}' as country name`);
         
         // Validate required form fields
         if (!form.vendor || !form.serviceMode) {
@@ -399,8 +381,7 @@ const AddShipmentPage = () => {
   const [serviceModes, setServiceModes] = useState<Option[]>([]);
 
   const [form, setForm] = useState({
-    shippingPrefix: "AWB",
-    awbNumber: "",
+    trackingId: "",
     agency: "",
     office: "",
     senderName: "",
@@ -469,8 +450,8 @@ const AddShipmentPage = () => {
     e.preventDefault();
     
     // Validate required fields
-    if (!form.awbNumber || form.awbNumber.trim() === '') {
-      toast.error("Please enter an AWB number");
+    if (!form.trackingId || form.trackingId.trim() === '') {
+      toast.error("Please enter a tracking ID");
       return;
     }
     
@@ -479,17 +460,13 @@ const AddShipmentPage = () => {
       return;
     }
     
-    // Construct tracking ID: awbPrefix + awbNumber
-    const trackingId = form.shippingPrefix + form.awbNumber;
-    
     // Get destination from recipient's country
     const destination = selectedRecipient.Country;
     
     // Prepare all collected data
     const shipmentData = {
-      // Basic form data with constructed tracking ID and destination
+      // Basic form data with tracking ID and destination
       ...form,
-      trackingId: trackingId,
       destination: destination,
       
       // Package information
@@ -511,7 +488,7 @@ const AddShipmentPage = () => {
     };
     
     console.log('Sending complete shipment data to backend:', shipmentData);
-    console.log('Constructed Tracking ID:', trackingId);
+    console.log('Tracking ID:', form.trackingId);
     console.log('Destination (Recipient Country):', destination);
 
     const isEditing = Boolean(editId);
@@ -531,8 +508,7 @@ const AddShipmentPage = () => {
       console.log('Shipment saved successfully with data:', data.receivedData);
       if (!isEditing) {
         setForm({
-        shippingPrefix: "AWB",
-        awbNumber: "",
+        trackingId: "",
         agency: "Deprixa Miami",
         office: "Deprixa Group",
         senderName: "",
@@ -587,8 +563,7 @@ const AddShipmentPage = () => {
           const s = data.shipment;
           setForm((prev) => ({
             ...prev,
-            shippingPrefix: (s.awbNumber || "AWB").slice(0, 3),
-            awbNumber: s.awbNumber?.replace(/^.{3}/, "") || "",
+            trackingId: s.trackingId || "",
             agency: s.agency || prev.agency,
             office: s.office || prev.office,
             senderName: s.senderName || "",
@@ -668,23 +643,7 @@ const AddShipmentPage = () => {
     </div>
   );
 
-  // Get countries using country-state-city library
-  const countryList = Country.getAllCountries().map((country) => ({
-    code: country.isoCode,
-    name: country.name,
-  }));
 
-  const selectItems = useMemo(
-    () =>
-      countryList.map((country) => (
-        <SelectItem key={country.code} value={country.code}>
-          {country.name} ({country.code})
-        </SelectItem>
-      )),
-    [countryList]
-  );
-
-  const [isChecked, setIsChecked] = useState(false);
 
   return (
     <motion.div
@@ -701,62 +660,23 @@ const AddShipmentPage = () => {
 
         {/* Shipment Info Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Left Section: Shipping Prefix + AWB */}
+          {/* Left Section: Tracking ID */}
           <Card className="bg-white dark:bg-background border border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-end gap-6">
-                {/* Shipping Prefix + Checkbox */}
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium mb-1">
-                    Shipping Prefix
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="countryCode"
-                      checked={isChecked}
-                      onCheckedChange={(checked) => setIsChecked(!!checked)}
-                    />
-                    <Label
-                      htmlFor="countryCode"
-                      className="text-sm text-muted-foreground"
-                    >
-                      Country code
-                    </Label>
-
-                    {!isChecked ? (
-                      <Input
-                        className="w-24 bg-muted text-center border-none"
-                        readOnly
-                        value="AWB"
-                      />
-                    ) : (
-                      <Select
-                        onValueChange={(value) =>
-                          handleSelect("shippingPrefix", value)
-                        }
-                        value={form.shippingPrefix}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="Select Country" />
-                        </SelectTrigger>
-                        <SelectContent>{selectItems}</SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                </div>
-
                 {/* Tracking ID */}
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium mb-1">
                     Tracking ID
                   </Label>
                   <Input
-                    id="awbNumber"
-                    name="awbNumber"
-                    value={form.awbNumber}
+                    id="trackingId"
+                    name="trackingId"
+                    value={form.trackingId}
                     onChange={handleChange}
                     required
                     className="bg-muted"
+                    placeholder="Enter tracking ID"
                   />
                 </div>
               </div>

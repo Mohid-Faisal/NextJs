@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
       where.OR = [
         { invoiceNumber: { contains: search, mode: "insensitive" } },
         { trackingNumber: { contains: search, mode: "insensitive" } },
-        { referenceNumber: { contains: search, mode: "insensitive" } },
         { destination: { contains: search, mode: "insensitive" } },
         { profile: { contains: search, mode: "insensitive" } },
         { customer: { 
@@ -84,7 +83,6 @@ export async function POST(req: NextRequest) {
       invoiceDate,
       receiptNumber,
       trackingNumber,
-      referenceNumber,
       destination,
       dayWeek,
       weight,
@@ -105,7 +103,6 @@ export async function POST(req: NextRequest) {
         invoiceDate: new Date(invoiceDate),
         receiptNumber,
         trackingNumber,
-        referenceNumber,
         destination,
         dayWeek,
         weight: parseFloat(weight),

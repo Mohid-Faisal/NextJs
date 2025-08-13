@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransaction, addVendorTransaction, addCompanyTransaction } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,8 +8,7 @@ export async function POST(req: NextRequest) {
     
     // Extract basic required fields
     const {
-      shippingPrefix,
-      awbNumber,
+      trackingId,
       agency,
       office,
       senderName,
@@ -52,8 +52,7 @@ export async function POST(req: NextRequest) {
     // Console log all the collected data
     console.log('=== SHIPMENT DATA RECEIVED ===');
     console.log('Basic Form Data:', {
-      shippingPrefix,
-      awbNumber,
+      trackingId,
       agency,
       office,
       senderName,
@@ -88,8 +87,8 @@ export async function POST(req: NextRequest) {
       manualRate,
     });
     
-    console.log('AWB Information:', {
-      awbNumber: shippingPrefix + awbNumber,
+    console.log('Tracking Information:', {
+      trackingId: trackingId,
     });
     
     console.log('Destination Information:', {
@@ -117,7 +116,7 @@ export async function POST(req: NextRequest) {
 
     // Basic validation
     const requiredFields = [
-      "awbNumber",
+      "trackingId",
       "senderName",
       "senderAddress",
       "recipientName",
@@ -125,16 +124,13 @@ export async function POST(req: NextRequest) {
       "destination",
     ];
 
-    // Validate AWB number
-    if (!awbNumber || awbNumber.trim() === '') {
+    // Validate tracking ID
+    if (!trackingId || trackingId.trim() === '') {
       return NextResponse.json(
-        { success: false, message: "AWB Number is required." },
+        { success: false, message: "Tracking ID is required." },
         { status: 400 }
       );
     }
-
-    // Combine shipping prefix and AWB number
-    const fullAwbNumber = (shippingPrefix || 'AWB') + awbNumber;
 
     // Validate destination
     if (!destination || destination.trim() === '') {
@@ -144,16 +140,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if shipment with this AWB number already exists
+    // Check if shipment with this tracking ID already exists
     const existingShipment = await prisma.shipment.findFirst({
       where: {
-        awbNumber: fullAwbNumber,
+        trackingId: trackingId,
       },
     });
     
     if (existingShipment) {
       return NextResponse.json(
-        { success: false, message: "Shipment with this AWB number already exists." },
+        { success: false, message: "Shipment with this tracking ID already exists." },
         { status: 400 }
       );
     }
@@ -179,15 +175,14 @@ export async function POST(req: NextRequest) {
     // Get subtotal from calculated values or use original price
     const subtotal = calculatedValues?.subtotal || originalPrice;
 
-    // Generate tracking ID (you can customize this logic)
-    const timestamp = Date.now();
-    const trackingId = `TRK${timestamp}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    // Generate invoice number
+    const invoiceNumber = await generateInvoiceNumber(prisma);
 
     // Store shipment in the database with all fields
     const shipment = await prisma.shipment.create({
       data: {
         trackingId,
-        awbNumber: fullAwbNumber,
+        invoiceNumber,
         agency,
         office,
         senderName,
@@ -234,7 +229,7 @@ export async function POST(req: NextRequest) {
     console.log('Shipment saved to database:', {
       id: shipment.id,
       trackingId: shipment.trackingId,
-      awbNumber: shipment.awbNumber,
+      invoiceNumber: shipment.invoiceNumber,
       destination: shipment.destination,
       totalCost: shipment.totalCost,
       subtotal: shipment.subtotal,
@@ -243,10 +238,160 @@ export async function POST(req: NextRequest) {
       createdAt: shipment.createdAt,
     });
 
+         // Create two invoices: one for customer and one for vendor
+     let customerInvoice = null;
+     let vendorInvoice = null;
+
+     try {
+       // Generate vendor invoice number (customer invoice + 5)
+       const vendorInvoiceNumber = generateVendorInvoiceNumber(invoiceNumber);
+
+       // Find customer and vendor IDs
+       let customerId = null;
+       let vendorId = null;
+
+       // Find customer by name
+       if (senderName) {
+         const customer = await prisma.customers.findFirst({
+           where: { CompanyName: senderName }
+         });
+         customerId = customer?.id || null;
+       }
+
+       // Find vendor by name
+       if (vendor) {
+         const vendorRecord = await prisma.vendors.findFirst({
+           where: { CompanyName: vendor }
+         });
+         vendorId = vendorRecord?.id || null;
+       }
+
+       // Create customer invoice using the existing accounts API
+       const customerLineItems = [
+         { description: "Shipping Service", value: originalPrice },
+         { description: "Fuel Surcharge", value: fuelSurchargeAmount },
+         { description: "Discount", value: -discountAmount }
+       ];
+
+       const customerInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           invoiceNumber: invoiceNumber,
+           invoiceDate: new Date().toISOString(),
+           trackingNumber: trackingId,
+           destination: destination,
+           weight: parseFloat(totalWeight) || 0,
+           profile: "Customer",
+           fscCharges: fuelSurchargeAmount,
+           lineItems: customerLineItems,
+           customerId: customerId,
+           vendorId: null,
+           shipmentId: shipment.id,
+           disclaimer: "Thank you for your business",
+           totalAmount: totalCost, // Use full shipment value for customer
+           currency: "USD"
+         })
+       });
+
+       if (customerInvoiceResponse.ok) {
+         customerInvoice = await customerInvoiceResponse.json();
+       }
+
+               // Create vendor invoice using the existing accounts API
+        // Vendor invoice starts at $0 - actual cost will be set later when we know vendor pricing
+        const vendorCost = 0; // Start at $0, will be updated when vendor cost is determined
+        const vendorLineItems = [
+          { description: "Vendor Service", value: 0 },
+          { description: "Fuel Surcharge", value: 0 }
+        ];
+
+        const vendorInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            invoiceNumber: vendorInvoiceNumber,
+            invoiceDate: new Date().toISOString(),
+            trackingNumber: trackingId,
+            destination: destination,
+            weight: parseFloat(totalWeight) || 0,
+            profile: "Vendor",
+            fscCharges: 0,
+            lineItems: vendorLineItems,
+            customerId: null,
+            vendorId: vendorId,
+            shipmentId: shipment.id,
+            disclaimer: "Vendor invoice - cost to be determined",
+            totalAmount: vendorCost, // Start at $0
+            currency: "USD"
+          })
+        });
+
+               if (vendorInvoiceResponse.ok) {
+          vendorInvoice = await vendorInvoiceResponse.json();
+        }
+
+        console.log('Invoices created successfully:', {
+          customerInvoice: customerInvoice?.invoiceNumber,
+          vendorInvoice: vendorInvoice?.invoiceNumber
+        });
+
+                 // Create financial transactions
+         try {
+                       // Business Logic:
+            // 1. Customer DEBIT: Customer owes us money for the shipment
+            // 2. Company DEBIT: We owe vendor money (our liability - decreases our balance)
+            //    Note: Since vendor cost is $0 initially, no company transaction created yet
+            // 3. No vendor transaction yet - vendor gets paid when we process payment
+            // 4. Vendor invoice starts at $0 - actual cost will be set later via invoice edit
+           
+           // Customer transaction (DEBIT - they owe us money)
+           if (customerId && totalCost > 0) {
+             await addCustomerTransaction(
+               prisma,
+               customerId,
+               'DEBIT',
+               totalCost,
+               `Invoice for shipment ${trackingId}`,
+               invoiceNumber
+             );
+           }
+
+                       // Company transaction (DEBIT - we owe vendor money)
+            // This represents our liability to pay the vendor (decreases our balance)
+            // Note: Since vendor cost is $0 initially, no company transaction is created yet
+            // Company transaction will be created when vendor cost is determined and invoice is updated
+            if (totalCost > 0) {
+              // For now, we only create customer transaction
+              // Company liability will be created when vendor invoice is updated with actual cost
+              console.log('Vendor cost is $0 initially - company transaction will be created when vendor cost is determined');
+            }
+
+          console.log('Financial transactions created successfully');
+
+        } catch (transactionError) {
+          console.error('Error creating financial transactions:', transactionError);
+          // Don't fail the shipment creation if transaction creation fails
+        }
+
+      } catch (invoiceError) {
+        console.error('Error creating invoices:', invoiceError);
+        // Don't fail the shipment creation if invoice creation fails
+        // The shipment is already saved, we just log the error
+      }
+
     return NextResponse.json({
       success: true,
       message: "Shipment added successfully.",
       shipment,
+      invoices: {
+        customer: customerInvoice,
+        vendor: vendorInvoice
+      },
       calculation: {
         originalPrice,
         fuelSurcharge: fuelSurchargeAmount,
@@ -257,7 +402,7 @@ export async function POST(req: NextRequest) {
       },
       receivedData: {
         trackingId: trackingId,
-        awbNumber: fullAwbNumber,
+        invoiceNumber: invoiceNumber,
         destination: destination,
         totalPackages: totalPackages,
         totalWeight: totalWeight,
