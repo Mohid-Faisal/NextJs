@@ -584,7 +584,7 @@ export default function ShipmentsPage() {
                 setDeliveryStatusFilter(value);
               }}
             >
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Select delivery status" />
               </SelectTrigger>
               <SelectContent>
