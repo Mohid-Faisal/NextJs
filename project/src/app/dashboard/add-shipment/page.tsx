@@ -626,6 +626,31 @@ const AddShipmentPage = () => {
           } catch (e) {
             console.error('Failed to parse stored JSON fields', e);
           }
+
+          // Set selected sender and recipient based on names
+          if (s.senderName) {
+            setSenderQuery(s.senderName);
+            // Create a mock sender object for the selected state
+            const mockSender: Party = {
+              id: 0, // We don't have the actual ID, so use 0
+              Company: s.senderName,
+              Address: s.senderAddress || '',
+              Country: ''
+            };
+            setSelectedSender(mockSender);
+          }
+
+          if (s.recipientName) {
+            setRecipientQuery(s.recipientName);
+            // Create a mock recipient object for the selected state
+            const mockRecipient: Party = {
+              id: 0, // We don't have the actual ID, so use 0
+              Company: s.recipientName,
+              Address: s.recipientAddress || '',
+              Country: ''
+            };
+            setSelectedRecipient(mockRecipient);
+          }
         }
       } catch (e) {
         console.error('Failed to load shipment for edit', e);
@@ -778,9 +803,9 @@ const AddShipmentPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <Select
-                        value={selectedSender?.id?.toString() || ""}
+                        value={selectedSender?.Company || ""}
                         onValueChange={(value) => {
-                          const sender = senderResults.find(s => s.id.toString() === value);
+                          const sender = senderResults.find(s => s.Company === value);
                           if (sender) {
                             setSelectedSender(sender);
                             setSenderQuery(sender.Company);
@@ -808,7 +833,7 @@ const AddShipmentPage = () => {
                             {Array.isArray(senderResults) && senderResults.length > 0 && (
                               <div className="max-h-60 overflow-y-auto">
                                 {senderResults.map((s) => (
-                                  <SelectItem key={s.id} value={s.id.toString()}>
+                                  <SelectItem key={s.id} value={s.Company}>
                                     {s.Company}
                                   </SelectItem>
                                 ))}
@@ -865,9 +890,9 @@ const AddShipmentPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <Select
-                        value={selectedRecipient?.id?.toString() || ""}
+                        value={selectedRecipient?.Company || ""}
                         onValueChange={(value) => {
-                          const recipient = recipientResults.find(r => r.id.toString() === value);
+                          const recipient = recipientResults.find(r => r.Company === value);
                           if (recipient) {
                             setSelectedRecipient(recipient);
                             setRecipientQuery(recipient.Company);
@@ -895,7 +920,7 @@ const AddShipmentPage = () => {
                             {Array.isArray(recipientResults) && recipientResults.length > 0 && (
                               <div className="max-h-60 overflow-y-auto">
                                 {recipientResults.map((r) => (
-                                  <SelectItem key={r.id} value={r.id.toString()}>
+                                  <SelectItem key={r.id} value={r.Company}>
                                     {r.Company}
                                   </SelectItem>
                                 ))}

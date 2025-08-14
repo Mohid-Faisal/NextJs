@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
          },
          body: JSON.stringify({
            invoiceNumber: invoiceNumber,
-           invoiceDate: new Date().toISOString(),
+           invoiceDate: shipmentDate ? new Date(shipmentDate).toISOString() : new Date().toISOString(),
            trackingNumber: trackingId,
            destination: destination,
            weight: parseFloat(totalWeight) || 0,
@@ -335,7 +335,7 @@ export async function POST(req: NextRequest) {
           },
           body: JSON.stringify({
             invoiceNumber: vendorInvoiceNumber,
-            invoiceDate: new Date().toISOString(),
+            invoiceDate: shipmentDate ? new Date(shipmentDate).toISOString() : new Date().toISOString(),
             trackingNumber: trackingId,
             destination: destination,
             weight: parseFloat(totalWeight) || 0,

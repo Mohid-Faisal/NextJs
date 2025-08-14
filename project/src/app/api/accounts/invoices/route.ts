@@ -8,6 +8,8 @@ export async function GET(req: NextRequest) {
     const limit = searchParams.get("limit");
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
+    const fromDate = searchParams.get("fromDate");
+    const toDate = searchParams.get("toDate");
     const sortField = searchParams.get("sortField") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
@@ -38,6 +40,17 @@ export async function GET(req: NextRequest) {
     }
     if (status && status !== "All") {
       where.status = status;
+    }
+
+    // Add date range filtering
+    if (fromDate || toDate) {
+      where.invoiceDate = {};
+      if (fromDate) {
+        where.invoiceDate.gte = new Date(fromDate);
+      }
+      if (toDate) {
+        where.invoiceDate.lte = new Date(toDate);
+      }
     }
 
     // Build order by clause
