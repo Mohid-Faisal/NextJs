@@ -14,7 +14,22 @@ export async function POST(req: NextRequest) {
         body = Object.fromEntries(new URLSearchParams(text));
       } else if (contentType.includes("multipart/form-data")) {
         const form = await req.formData();
-        body = Object.fromEntries(form.entries());
+        const formDataObj: any = {};
+        
+        // Handle both direct fields and nested form object
+        for (const [key, value] of form.entries()) {
+          if (key === "form" && typeof value === "string") {
+            try {
+              const parsedForm = JSON.parse(value);
+              Object.assign(formDataObj, parsedForm);
+            } catch (e) {
+              console.error("Failed to parse form JSON:", e);
+            }
+          } else {
+            formDataObj[key] = value;
+          }
+        }
+        body = formDataObj;
       } else {
         const text = await req.text();
         try {

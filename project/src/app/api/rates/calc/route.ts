@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { weight, vendor, serviceMode, destination, fuelSurcharge = 0, discount = 0 } = body;
+    const { weight, vendor, serviceMode, destination, fuelSurcharge = 0, discount = 0, packaging } = body;
 
     console.log('Rate calculation API received request:', {
       weight,
@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
       destination,
       fuelSurcharge,
       discount,
+      packaging,
       fullBody: body
     });
 
@@ -42,11 +43,20 @@ export async function POST(req: NextRequest) {
           error: "Destination is required.",
         },
         { status: 400 }
-      );
+      ); 
     }
 
     const finalDestination = destination;
-    const docType = "Non Document";
+    let docType = "Non Document";
+    if (packaging === "Document" || packaging === "doc" || packaging === "Doc"){
+      docType = "Document";
+    }
+    else if (packaging === "Non Document" || packaging === "non document" || packaging === "Non Document" || packaging === "non doc" || packaging === "non-doc"|| packaging === "wpx"|| packaging === "Wpx"){
+      docType = "Non Document";
+    }
+    else if (packaging === "FedEx Pak" || packaging === "fedex pak"){
+      docType = "FedEx Pak";
+    }
 
     // Step 1: Find all zones for the destination country
     const zoneInfos = await prisma.zone.findMany({

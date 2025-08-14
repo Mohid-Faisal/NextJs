@@ -1,5 +1,5 @@
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
 import { decodeToken } from "@/lib/utils";
 import bcrypt from "bcrypt";
 
@@ -177,6 +177,38 @@ export async function DELETE(
     console.error("Error deleting customer:", error);
     return NextResponse.json(
       { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+} 
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const id = parseInt(params.id);
+    const body = await req.json();
+
+    const updatedCustomer = await prisma.customers.update({
+      where: { id },
+      data: {
+        Address: body.Address,
+        City: body.City,
+        State: body.State,
+        Country: body.Country,
+        Zip: body.Zip,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      customer: updatedCustomer,
+    });
+  } catch (error) {
+    console.error("Error updating customer:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to update customer" },
       { status: 500 }
     );
   }

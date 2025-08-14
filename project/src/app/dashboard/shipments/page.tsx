@@ -23,6 +23,9 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Printer,
+  FileText,
+  Table,
 } from "lucide-react";
 import { Country } from "country-state-city";
 import {
@@ -58,7 +61,7 @@ export default function ShipmentsPage() {
   const [total, setTotal] = useState(0);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("All");
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("Processing");
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
     const twoMonthsAgo = new Date(
@@ -82,6 +85,7 @@ export default function ShipmentsPage() {
   const [shipmentToDelete, setShipmentToDelete] = useState<
     (Shipment & { invoices: { status: string }[] }) | null
   >(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const totalPages = Math.ceil(total / LIMIT);
   type SortField =
@@ -92,7 +96,10 @@ export default function ShipmentsPage() {
     | "recipientName"
     | "destination"
     | "totalCost"
-    | "invoiceStatus";
+    | "invoiceStatus"
+    | "packaging"
+    | "amount"
+    | "totalWeight";
   type SortOrder = "asc" | "desc";
   const [sortField, setSortField] = useState<SortField>("shipmentDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -291,6 +298,225 @@ export default function ShipmentsPage() {
     setOpenDeleteDialog(true);
   };
 
+  // Export functions
+  const exportToExcel = (data: any[], headers: string[], filename: string) => {
+    const csvContent = [headers, ...data]
+      .map(row => row.map((cell: any) => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPrint = (data: any[], headers: string[], title: string, total: number) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const tableHTML = `
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              h1 { color: #333; }
+            </style>
+          </head>
+          <body>
+            <h1>${title}</h1>
+            <p>Total: ${total}</p>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  ${headers.map(header => `<th>${header}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${data.map(row => `<tr>${row.map((cell: any) => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      
+      printWindow.document.write(tableHTML);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const exportToPDF = async (data: any[], headers: string[], title: string, total: number) => {
+    setIsGeneratingPDF(true);
+    try {
+      console.log('Starting PDF generation...');
+      
+      // Use @react-pdf/renderer for PDF generation
+      const { Document, Page, Text, View, StyleSheet, pdf } = await import('@react-pdf/renderer');
+      
+      // Create styles
+      const styles = StyleSheet.create({
+        page: {
+          flexDirection: 'column',
+          backgroundColor: '#ffffff',
+          padding: 30,
+        },
+        title: {
+          fontSize: 24,
+          marginBottom: 10,
+          textAlign: 'center',
+          color: '#333',
+        },
+        subtitle: {
+          fontSize: 12,
+          marginBottom: 5,
+          color: '#666',
+        },
+        table: {
+          width: 'auto',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderRightWidth: 0,
+          borderBottomWidth: 0,
+          borderColor: '#bfbfbf',
+        },
+        tableRow: {
+          margin: 'auto',
+          flexDirection: 'row',
+        },
+        tableColHeader: {
+          width: '8.33%',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderLeftWidth: 0,
+          borderTopWidth: 0,
+          borderColor: '#bfbfbf',
+          backgroundColor: '#4285f4',
+        },
+        tableCol: {
+          width: '8.33%',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderLeftWidth: 0,
+          borderTopWidth: 0,
+          borderColor: '#bfbfbf',
+        },
+        tableCellHeader: {
+          margin: 'auto',
+          marginTop: 5,
+          fontSize: 8,
+          fontWeight: 'bold',
+          color: '#ffffff',
+        },
+        tableCell: {
+          margin: 'auto',
+          marginTop: 5,
+          fontSize: 8,
+          color: '#333',
+        },
+      });
+
+      // Create PDF document
+      const MyDocument = () => {
+        return (
+          <Document>
+            <Page size="A4" style={styles.page}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>Total: {total}</Text>
+              <Text style={styles.subtitle}>Generated on: {new Date().toLocaleDateString()}</Text>
+              
+              <View style={styles.table}>
+                {/* Header Row */}
+                <View style={styles.tableRow}>
+                  {headers.map((header, index) => (
+                    <View key={index} style={styles.tableColHeader}>
+                      <Text style={styles.tableCellHeader}>{header}</Text>
+                    </View>
+                  ))}
+                </View>
+                
+                {/* Data Rows */}
+                {data.map((row, rowIndex) => (
+                  <View key={rowIndex} style={styles.tableRow}>
+                    {row.map((cell: any, cellIndex: number) => (
+                      <View key={cellIndex} style={styles.tableCol}>
+                        <Text style={styles.tableCell}>{String(cell || '')}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            </Page>
+          </Document>
+        );
+      };
+
+      // Generate and download PDF
+      const blob = await pdf(<MyDocument />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log('PDF generated successfully using @react-pdf/renderer');
+    } catch (error: any) {
+      console.error('PDF generation error:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      });
+      alert(`Error generating PDF: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const getShipmentExportData = (shipments: any[]) => {
+    const headers = ["Date", "Receipt #", "Sender Name", "Receiver Name", "Destination", "Package", "Pcs", "Weight", "Tracking", "Total Cost", "Invoice Status"];
+    const data = shipments.map(shipment => [
+      formatDate(shipment.shipmentDate || shipment.createdAt),
+      shipment.invoiceNumber,
+      shipment.senderName,
+      shipment.recipientName,
+      getCountryName(shipment.destination),
+      shipment.packaging || "N/A",
+      shipment.amount || 1,
+      `${shipment.totalWeight || shipment.weight || 0}`,
+      shipment.trackingId,
+      `Rs. ${shipment.totalCost}`,
+      shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
+    ]);
+    return { headers, data };
+  };
+
+  const handleExportExcel = () => {
+    const { headers, data } = getShipmentExportData(shipments);
+    exportToExcel(data, headers, 'shipments');
+  };
+
+  const handleExportPrint = () => {
+    const { headers, data } = getShipmentExportData(shipments);
+    exportToPrint(data, headers, 'Shipments Report', total);
+  };
+
+  const handleExportPDF = () => {
+    const { headers, data } = getShipmentExportData(shipments);
+    exportToPDF(data, headers, 'Shipments Report', total);
+  };
+
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
       <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">
@@ -301,9 +527,6 @@ export default function ShipmentsPage() {
       <div className="mb-6 flex justify-between items-end gap-4">
         {/* Left side - Search field */}
         <div>
-          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
-            Search
-          </span>
           <div className="flex w-full max-w-sm">
             <Input
               placeholder="Search all fields (AWB, tracking, sender, receiver, destination, etc.)"
@@ -320,13 +543,40 @@ export default function ShipmentsPage() {
           </div>
         </div>
 
-        {/* Right side - Delivery Status and Date Range */}
+        {/* Right side - Export, Delivery Status and Date Range */}
         <div className="flex gap-4 items-end">
+          {/* Export Dropdown */}
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-[120px] justify-between">
+                  Export
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[120px]">
+                <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
+                  <Table className="w-4 h-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
+                  <Printer className="w-4 h-4" />
+                  Print
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleExportPDF} 
+                  disabled={isGeneratingPDF}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  {isGeneratingPDF ? 'Generating...' : 'PDF'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           {/* Delivery Status Filter */}
           <div>
-            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
-              Delivery Status
-            </span>
             <Select
               value={deliveryStatusFilter}
               onValueChange={(value) => {
@@ -334,11 +584,11 @@ export default function ShipmentsPage() {
                 setDeliveryStatusFilter(value);
               }}
             >
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Select delivery status" />
               </SelectTrigger>
               <SelectContent>
-                {["All", "Pending", "In Transit", "Delivered", "Cancelled"].map((status) => (
+                {["All", "Processing", "Delivered", "Cancelled"].map((status) => (
                   <SelectItem key={status} value={status}>
                     {status}
                   </SelectItem>
@@ -349,9 +599,6 @@ export default function ShipmentsPage() {
 
                                            {/* Date Range Filter */}
             <div>
-              <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
-                Select Date
-              </span>
               <div className="relative">
                                  <Input
                    type="text"
@@ -526,18 +773,18 @@ export default function ShipmentsPage() {
                 <tr className="text-sm text-gray-500 dark:text-gray-300">
                   <th className="px-4 py-2 text-left">
                     <button
-                      onClick={() => handleSort("trackingId")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      Tracking ID {getSortIcon("trackingId")}
-                    </button>
-                  </th>
-                  <th className="px-4 py-2 text-left">
-                    <button
                       onClick={() => handleSort("shipmentDate")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
                       Date {getSortIcon("shipmentDate")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("invoiceNumber")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                    >
+                      Receipt {getSortIcon("invoiceNumber")}
                     </button>
                   </th>
                   <th className="px-4 py-2 text-left">
@@ -566,18 +813,34 @@ export default function ShipmentsPage() {
                   </th>
                   <th className="px-4 py-2 text-left">
                     <button
-                      onClick={() => handleSort("invoiceNumber")}
+                      onClick={() => handleSort("packaging")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Reciept # {getSortIcon("invoiceNumber")}
+                      Type {getSortIcon("packaging")}
                     </button>
                   </th>
                   <th className="px-4 py-2 text-left">
                     <button
-                      onClick={() => handleSort("invoiceStatus")}
+                      onClick={() => handleSort("amount")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Invoice Status {getSortIcon("invoiceStatus")}
+                      Pcs {getSortIcon("amount")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("totalWeight")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                    >
+                      Weight {getSortIcon("totalWeight")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("trackingId")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                    >
+                      Tracking {getSortIcon("trackingId")}
                     </button>
                   </th>
                   <th className="px-4 py-2 text-left">
@@ -586,6 +849,14 @@ export default function ShipmentsPage() {
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
                       Total Cost {getSortIcon("totalCost")}
+                    </button>
+                  </th>
+                  <th className="px-4 py-2 text-left">
+                    <button
+                      onClick={() => handleSort("invoiceStatus")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                    >
+                      Invoice Status {getSortIcon("invoiceStatus")}
                     </button>
                   </th>
                   <th className="px-4 py-2 text-left">Actions</th>
@@ -602,20 +873,24 @@ export default function ShipmentsPage() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <td className="px-4 py-3 font-medium">
-                        {shipment.trackingId}
-                      </td>
                       <td className="px-4 py-3">
                         {formatDate(shipment.shipmentDate || shipment.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-blue-600">
+                        {shipment.invoiceNumber}
                       </td>
                       <td className="px-4 py-3">{shipment.senderName}</td>
                       <td className="px-4 py-3">{shipment.recipientName}</td>
                       <td className="px-4 py-3">
                         {getCountryName(shipment.destination)}
                       </td>
-                      <td className="px-4 py-3 font-medium text-blue-600">
-                        {shipment.invoiceNumber}
+                      <td className="px-4 py-3">{shipment.packaging || "N/A"}</td>
+                      <td className="px-4 py-3">{shipment.amount || 1}</td>
+                      <td className="px-4 py-3">{shipment.totalWeight || shipment.weight || 0}</td>
+                      <td className="px-4 py-3 font-medium">
+                        {shipment.trackingId}
                       </td>
+                      <td className="px-4 py-3">Rs. {shipment.totalCost}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(
@@ -628,7 +903,6 @@ export default function ShipmentsPage() {
                             "N/A"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">Rs. {shipment.totalCost}</td>
                       <td className="px-4 py-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

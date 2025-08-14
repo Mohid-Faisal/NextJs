@@ -27,7 +27,14 @@ import {
 import { Country, State, City } from "country-state-city";
 import { Paperclip } from "lucide-react";
 
-const AddCustomerDialog = ({ triggerLabel = "Add Customer" }: { triggerLabel?: string }) => {
+const AddCustomerDialog = ({ 
+  triggerLabel = "Add Customer", 
+  onSuccess 
+}: { 
+  triggerLabel?: string;
+  onSuccess?: () => void;
+}) => {
+  const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     companyname: "",
     personname: "",
@@ -119,15 +126,19 @@ const AddCustomerDialog = ({ triggerLabel = "Add Customer" }: { triggerLabel?: s
       });
       setRegisterAccount(false);
       setFile(null);
+      setOpen(false); // Close dialog after successful submission
+      if (onSuccess) {
+        onSuccess(); // Call the callback to refresh the list
+      }
     } else {
       toast.error(data.message);
     }
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" onClick={(e) => e.preventDefault()}>
+        <Button type="button" variant="outline" >
           {triggerLabel}
         </Button>
       </DialogTrigger>
@@ -395,7 +406,7 @@ const AddCustomerDialog = ({ triggerLabel = "Add Customer" }: { triggerLabel?: s
               <Button type="reset" variant="ghost" className="text-sm px-4">
                 Cancel
               </Button>
-              <Button type="submit" className="text-sm px-4">
+              <Button type="button" onClick={handleCustomer} className="text-sm px-4">
                 Add Customer
               </Button>
             </div>

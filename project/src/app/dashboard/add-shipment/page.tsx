@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import AddCustomerDialog from "@/components/AddCustomerDialog";
 import AddRecipientDialog from "@/components/AddRecipientDialog";
+import UpdateCustomerAddressDialog from "@/components/UpdateCustomerAddressDialog";
+import UpdateRecipientAddressDialog from "@/components/UpdateRecipientAddressDialog";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +26,8 @@ import {
   FaFileInvoice,
   FaTrash,
 } from "react-icons/fa";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Country, State } from "country-state-city";
 
 // Add type for sender/recipient
 interface Party {
@@ -32,6 +35,9 @@ interface Party {
   Company: string;
   Address: string;
   Country: string;
+  State: string;
+  City: string;
+  Zip: string;
 }
 
 // Add type for package/box
@@ -214,6 +220,7 @@ const AddShipmentPage = () => {
           fuelSurcharge: parseFloat(form.fuelSurcharge) || 0, // Fuel surcharge from form
           discount: parseFloat(form.discount) || 0, // Discount from form
           profitPercentage: parseFloat(form.profitPercentage) || 0, // Profit percentage from form
+          packaging: form.packaging, // Packaging type (used as docType)
         };
         
         console.log('Rate calculation request payload:', requestPayload);
@@ -248,20 +255,25 @@ const AddShipmentPage = () => {
             const profitAmount = basePrice * (profitPercentage / 100);
             const finalPrice = basePrice + profitAmount;
             
-            // Update the form with the calculated values from backend
+            // Calculate ceiling values (rounded up)
+            const ceilingBasePrice = Math.ceil(basePrice);
+            const ceilingFinalPrice = Math.ceil(finalPrice);
+            const ceilingProfitAmount = ceilingFinalPrice - ceilingBasePrice;
+            
+            // Update the form with the ceiling final price
             setForm(prev => ({
               ...prev,
-              price: finalPrice.toString(),
+              price: ceilingFinalPrice.toString(),
             }));
             
-            // Store the backend-calculated values with profit applied
+            // Store the backend-calculated values with ceiling profit applied
             setCalculatedValues({
-              subtotal: finalPrice,
-              total: data.totalCost ? data.totalCost + profitAmount : finalPrice,
+              subtotal: ceilingFinalPrice,
+              total: data.totalCost ? Math.ceil(data.totalCost + profitAmount) : ceilingFinalPrice,
             });
             
-            const profitMessage = profitPercentage > 0 ? ` (includes ${profitPercentage}% profit: +$${profitAmount.toFixed(2)})` : '';
-            toast.success(`Rate calculated successfully! Price: $${finalPrice.toFixed(2)}${profitMessage}, Total: $${(data.totalCost ? data.totalCost + profitAmount : finalPrice).toFixed(2)}`);
+            const profitMessage = profitPercentage > 0 ? ` (includes ${profitPercentage}% profit: +$${ceilingProfitAmount.toFixed(2)})` : '';
+            toast.success(`Rate calculated successfully! Original: $${ceilingBasePrice.toFixed(2)}, Final: $${ceilingFinalPrice.toFixed(2)}${profitMessage}`);
           } else {
             toast.error(data.error || "Failed to calculate rate");
           }
@@ -282,13 +294,10 @@ const AddShipmentPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       const endpoints = [
-        { fn: setDeliveryTimes, url: "/api/settings/deliveryTime" },
-        { fn: setInvoiceStatuses, url: "/api/settings/invoiceStatus" },
         { fn: setDeliveryStatuses, url: "/api/settings/deliveryStatus" },
         { fn: setShippingModes, url: "/api/settings/shippingMode" },
         { fn: setPackagingTypes, url: "/api/settings/packagingType" },
         { fn: setVendors, url: "/api/vendors?limit=all" },
-        { fn: setServiceModes, url: "/api/settings/serviceMode" },
       ];
 
       for (const { fn, url } of endpoints) {
@@ -319,6 +328,31 @@ const AddShipmentPage = () => {
           console.error(`Error fetching data from ${url}:`, error);
           toast.error(`Failed to load ${url.split('/').pop()} data. Please try again.`);
         }
+      }
+
+      // Fetch vendor services separately
+      try {
+        const vendorServiceRes = await fetch("/api/settings/vendorService");
+        const vendorServiceData = await vendorServiceRes.json();
+
+        if (vendorServiceData && Array.isArray(vendorServiceData)) {
+          setAllVendorServices(vendorServiceData);
+          
+          // Extract unique services from vendor services for initial load
+          const uniqueServices = new Map();
+          vendorServiceData.forEach((item: any) => {
+            if (item.service && !uniqueServices.has(item.service)) {
+              uniqueServices.set(item.service, {
+                id: item.service,
+                name: item.service,
+              });
+            }
+          });
+          setServiceModes(Array.from(uniqueServices.values()));
+        }
+      } catch (error) {
+        console.error("Error fetching vendor services:", error);
+        toast.error("Failed to load vendor services data. Please try again.");
       }
     };
 
@@ -380,25 +414,23 @@ const AddShipmentPage = () => {
   // Types
   type Option = { id: string; name: string };
 
-  const [deliveryTimes, setDeliveryTimes] = useState<Option[]>([]);
-  const [invoiceStatuses, setInvoiceStatuses] = useState<Option[]>([]);
   const [deliveryStatuses, setDeliveryStatuses] = useState<Option[]>([]);
   const [shippingModes, setShippingModes] = useState<Option[]>([]);
   const [packagingTypes, setPackagingTypes] = useState<Option[]>([]);
   const [vendors, setVendors] = useState<Option[]>([]);
   const [serviceModes, setServiceModes] = useState<Option[]>([]);
+  const [allVendorServices, setAllVendorServices] = useState<any[]>([]);
 
   const [form, setForm] = useState({
-    shipmentDate: new Date().toISOString().slice(0, 10), // Default to today's date
+    shipmentDate: new Date().toLocaleDateString('en-CA'), // Default to today's date in local timezone
     trackingId: "",
+    invoiceNumber: "", // Add invoice number field
     agency: "",
     office: "",
     senderName: "",
     senderAddress: "",
     recipientName: "",
     recipientAddress: "",
-    deliveryTime: "",
-    invoiceStatus: "",
     deliveryStatus: "",
     shippingMode: "",
     packaging: "",
@@ -431,20 +463,42 @@ const AddShipmentPage = () => {
     total: 0,
   });
 
-  // Remove the real-time totalCost calculation
-  // const totalCost = useMemo(() => {
-  //   // Only calculate if we have a price from the backend calculation
-  //   if (form.price > 0) {
-  //     const originalPrice = form.price || 0;
-  //     const fuelSurchargeAmount = form.fuelSurcharge || 0;
-  //     const discountAmount = form.discount || 0;
-  //     return originalPrice + fuelSurchargeAmount - discountAmount;
-  //   }
-  //   return 0;
-  // }, [form.price, form.fuelSurcharge, form.discount]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // Filter services based on selected vendor
+  const filterServicesByVendor = (vendorName: string) => {
+    if (!vendorName) {
+      // If no vendor selected, show all services
+      const uniqueServices = new Map();
+      allVendorServices.forEach((item: any) => {
+        if (item.service && !uniqueServices.has(item.service)) {
+          uniqueServices.set(item.service, {
+            id: item.service,
+            name: item.service,
+          });
+        }
+      });
+      setServiceModes(Array.from(uniqueServices.values()));
+      return;
+    }
+
+    // Filter services for the selected vendor
+    const vendorServices = allVendorServices.filter(
+      (item: any) => item.vendor === vendorName
+    );
+    
+    const uniqueServices = new Map();
+    vendorServices.forEach((item: any) => {
+      if (item.service && !uniqueServices.has(item.service)) {
+        uniqueServices.set(item.service, {
+          id: item.service,
+          name: item.service,
+        });
+      }
+    });
+    setServiceModes(Array.from(uniqueServices.values()));
   };
 
   const handleSelect = (name: string, value: string) => {
@@ -454,6 +508,16 @@ const AddShipmentPage = () => {
       console.log('Updated form state:', newForm);
       return newForm;
     });
+
+    // If vendor is selected, filter services
+    if (name === "vendor") {
+      const selectedVendor = vendors.find(v => v.name === value);
+      if (selectedVendor) {
+        filterServicesByVendor(value);
+        // Clear service mode when vendor changes
+        setForm(prev => ({ ...prev, serviceMode: "" }));
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -518,42 +582,41 @@ const AddShipmentPage = () => {
       toast.success(isEditing ? "Shipment updated successfully!" : "Shipment added successfully!");
       console.log('Shipment saved successfully with data:', data.receivedData);
       if (!isEditing) {
-        setForm({
-        shipmentDate: new Date().toISOString().slice(0, 10),
-        trackingId: "",
-        agency: "Deprixa Miami",
-        office: "Deprixa Group",
-        senderName: "",
-        senderAddress: "",
-        recipientName: "",
-        recipientAddress: "",
-        deliveryTime: "",
-        invoiceStatus: "",
-        deliveryStatus: "",
-        shippingMode: "",
-        packaging: "",
-        vendor: "",
-        serviceMode: "",
-        amount: 1,
-        packageDescription: "",
-        weight: 0,
-        length: 0,
-        width: 0,
-        height: 0,
-        weightVol: 0,
-        fixedCharge: 0,
-        decValue: 0,
-        price: "0",
-        discount: "0",
-        fuelSurcharge: "0",
-        insurance: "0",
-        customs: "0",
-        tax: "0",
-        declaredValue: "0",
-        reissue: "0",
-        profitPercentage: "0",
-        manualRate: false,
-        });
+                 setForm({
+         shipmentDate: new Date().toLocaleDateString('en-CA'),
+         trackingId: "",
+         invoiceNumber: "",
+         agency: "Deprixa Miami",
+         office: "Deprixa Group",
+         senderName: "",
+         senderAddress: "",
+         recipientName: "",
+         recipientAddress: "",
+               deliveryStatus: "",
+         shippingMode: "",
+         packaging: "",
+         vendor: "",
+         serviceMode: "",
+         amount: 1,
+         packageDescription: "",
+         weight: 0,
+         length: 0,
+         width: 0,
+         height: 0,
+         weightVol: 0,
+         fixedCharge: 0,
+         decValue: 0,
+         price: "0",
+         discount: "0",
+         fuelSurcharge: "0",
+         insurance: "0",
+         customs: "0",
+         tax: "0",
+         declaredValue: "0",
+         reissue: "0",
+         profitPercentage: "0",
+         manualRate: false,
+         });
         // Reset calculated values
         setCalculatedValues({
           subtotal: 0,
@@ -574,18 +637,18 @@ const AddShipmentPage = () => {
         const data = await res.json();
         if (res.ok && data.shipment) {
           const s = data.shipment;
-          setForm((prev) => ({
-            ...prev,
-            shipmentDate: s.shipmentDate ? new Date(s.shipmentDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+          
+          // Create a complete form state object with all the data
+          const completeFormData = {
+            shipmentDate: s.shipmentDate ? new Date(s.shipmentDate).toISOString().slice(0, 10) : new Date().toLocaleDateString('en-CA'),
             trackingId: s.trackingId || "",
-            agency: s.agency || prev.agency,
-            office: s.office || prev.office,
+            invoiceNumber: s.invoiceNumber || "",
+            agency: s.agency || "",
+            office: s.office || "",
             senderName: s.senderName || "",
             senderAddress: s.senderAddress || "",
             recipientName: s.recipientName || "",
             recipientAddress: s.recipientAddress || "",
-            deliveryTime: s.deliveryTime || "",
-            invoiceStatus: s.invoiceStatus || "",
             deliveryStatus: s.deliveryStatus || "",
             shippingMode: s.shippingMode || "",
             packaging: s.packaging || "",
@@ -610,7 +673,10 @@ const AddShipmentPage = () => {
             reissue: s.reissue || 0,
             profitPercentage: s.profitPercentage || "0",
             manualRate: s.manualRate || false,
-          }));
+          };
+
+          // Set the complete form state at once
+          setForm(completeFormData);
 
           // Prefill selected sender/recipient if you have embedded data (keeping simple here)
           // Packages and calculated values stored as JSON strings in DB; parse if available
@@ -621,43 +687,206 @@ const AddShipmentPage = () => {
             }
             if (s.calculatedValues) {
               const parsedCalc = typeof s.calculatedValues === 'string' ? JSON.parse(s.calculatedValues) : s.calculatedValues;
-              if (parsedCalc && typeof parsedCalc === 'object') setCalculatedValues(parsedCalc);
+              if (parsedCalc && typeof parsedCalc === 'object') {
+                setCalculatedValues(parsedCalc);
+              }
+            } else {
+              // If no calculated values, set them based on the price from the database
+              const price = parseFloat(s.price) || 0;
+              setCalculatedValues({
+                subtotal: price,
+                total: price
+              });
             }
           } catch (e) {
             console.error('Failed to parse stored JSON fields', e);
+            // Fallback: set calculated values based on price
+            const price = parseFloat(s.price) || 0;
+            setCalculatedValues({
+              subtotal: price,
+              total: price
+            });
           }
 
-          // Set selected sender and recipient based on names
+          // Fetch complete sender and recipient data from database
           if (s.senderName) {
             setSenderQuery(s.senderName);
-            // Create a mock sender object for the selected state
-            const mockSender: Party = {
-              id: 0, // We don't have the actual ID, so use 0
-              Company: s.senderName,
-              Address: s.senderAddress || '',
-              Country: ''
-            };
-            setSelectedSender(mockSender);
+            try {
+              const senderRes = await fetch(`/api/search/customers?query=${encodeURIComponent(s.senderName)}`);
+              const senderData = await senderRes.json();
+              if (Array.isArray(senderData) && senderData.length > 0) {
+                // Find the exact match for the sender name
+                const exactSender = senderData.find((sender: Party) => sender.Company === s.senderName);
+                if (exactSender) {
+                  setSelectedSender(exactSender);
+                } else {
+                  // Fallback: create a mock sender object if exact match not found
+                  const mockSender: Party = {
+                    id: 0,
+                    Company: s.senderName,
+                    Address: s.senderAddress || '',
+                    Country: '',
+                    State: '',
+                    City: '',
+                    Zip: ''
+                  };
+                  setSelectedSender(mockSender);
+                }
+              } else {
+                // Fallback: create a mock sender object if no data found
+                const mockSender: Party = {
+                  id: 0,
+                  Company: s.senderName,
+                  Address: s.senderAddress || '',
+                  Country: '',
+                  State: '',
+                  City: '',
+                  Zip: ''
+                };
+                setSelectedSender(mockSender);
+              }
+            } catch (error) {
+              console.error('Error fetching sender data:', error);
+              // Fallback: create a mock sender object
+              const mockSender: Party = {
+                id: 0,
+                Company: s.senderName,
+                Address: s.senderAddress || '',
+                Country: '',
+                State: '',
+                City: '',
+                Zip: ''
+              };
+              setSelectedSender(mockSender);
+            }
           }
 
           if (s.recipientName) {
             setRecipientQuery(s.recipientName);
-            // Create a mock recipient object for the selected state
-            const mockRecipient: Party = {
-              id: 0, // We don't have the actual ID, so use 0
-              Company: s.recipientName,
-              Address: s.recipientAddress || '',
-              Country: ''
-            };
-            setSelectedRecipient(mockRecipient);
+            try {
+              const recipientRes = await fetch(`/api/search/recipients?query=${encodeURIComponent(s.recipientName)}`);
+              const recipientData = await recipientRes.json();
+              if (Array.isArray(recipientData) && recipientData.length > 0) {
+                // Find the exact match for the recipient name
+                const exactRecipient = recipientData.find((recipient: Party) => recipient.Company === s.recipientName);
+                if (exactRecipient) {
+                  setSelectedRecipient(exactRecipient);
+                } else {
+                  // Fallback: create a mock recipient object if exact match not found
+                  const mockRecipient: Party = {
+                    id: 0,
+                    Company: s.recipientName,
+                    Address: s.recipientAddress || '',
+                    Country: s.destination || '',
+                    State: '',
+                    City: '',
+                    Zip: ''
+                  };
+                  setSelectedRecipient(mockRecipient);
+                }
+              } else {
+                // Fallback: create a mock recipient object if no data found
+                const mockRecipient: Party = {
+                  id: 0,
+                  Company: s.recipientName,
+                  Address: s.recipientAddress || '',
+                  Country: s.destination || '',
+                  State: '',
+                  City: '',
+                  Zip: ''
+                };
+                setSelectedRecipient(mockRecipient);
+              }
+            } catch (error) {
+              console.error('Error fetching recipient data:', error);
+              // Fallback: create a mock recipient object
+              const mockRecipient: Party = {
+                id: 0,
+                Company: s.recipientName,
+                Address: s.recipientAddress || '',
+                Country: s.destination || '',
+                State: '',
+                City: '',
+                Zip: ''
+              };
+              setSelectedRecipient(mockRecipient);
+            }
           }
+
+          // Filter services based on vendor if vendor is set
+          if (s.vendor) {
+            filterServicesByVendor(s.vendor);
+          }
+
+          // Use a longer timeout to ensure all options are loaded
+          setTimeout(() => {
+            // Set all select values properly by calling handleSelect for each
+            if (s.agency) {
+              handleSelect("agency", s.agency);
+            }
+            if (s.office) {
+              handleSelect("office", s.office);
+            }
+            if (s.deliveryStatus) {
+              handleSelect("deliveryStatus", s.deliveryStatus);
+            }
+            if (s.shippingMode) {
+              handleSelect("shippingMode", s.shippingMode);
+            }
+            if (s.packaging) {
+              handleSelect("packaging", s.packaging);
+            }
+            if (s.vendor) {
+              handleSelect("vendor", s.vendor);
+            }
+            if (s.serviceMode) {
+              handleSelect("serviceMode", s.serviceMode);
+            }
+          }, 500); // Increased timeout to ensure options are loaded
         }
       } catch (e) {
         console.error('Failed to load shipment for edit', e);
       }
     };
     loadForEdit();
-  }, [editId]);
+  }, [editId, deliveryStatuses.length, shippingModes.length, packagingTypes.length, vendors.length, serviceModes.length]);
+
+  // Helper function to format full address
+  const formatFullAddress = (party: Party | null) => {
+    if (!party) return '';
+    
+    // Check if party has any address data
+    if (!party.Address && !party.City && !party.State && !party.Country) {
+      return '';
+    }
+    
+    // Get full country name
+    let countryName = party.Country;
+    if (party.Country && party.Country.length === 2) {
+      const country = Country.getCountryByCode(party.Country);
+      if (country) {
+        countryName = country.name;
+      }
+    }
+    
+    // Get full state/province name
+    let stateName = party.State;
+    if (party.State && party.Country) {
+      const state = State.getStateByCodeAndCountry(party.State, party.Country);
+      if (state) {
+        stateName = state.name;
+      }
+    }
+    
+    const parts = [
+      party.Address,
+      party.City,
+      stateName,
+      countryName
+    ].filter(part => part && part.trim() !== '');
+    
+    return parts.join(', ');
+  };
 
   const renderSelect = (
     label: string,
@@ -735,6 +964,23 @@ const AddShipmentPage = () => {
                     placeholder="Enter tracking"
                   />
                 </div>
+
+                {/* Invoice Number - Only show in edit mode */}
+                {editId && (
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-sm font-medium mb-1">
+                      Reciept #
+                    </Label>
+                    <Input
+                      id="invoiceNumber"
+                      name="invoiceNumber"
+                      value={form.invoiceNumber}
+                      readOnly
+                      className="bg-muted"
+                      placeholder="Invoice number"
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -749,7 +995,6 @@ const AddShipmentPage = () => {
                     List of Agencies
                   </Label>
                   <Select
-                    defaultValue={form.agency}
                     onValueChange={(value) => handleSelect("agency", value)}
                     value={form.agency}
                   >
@@ -768,7 +1013,6 @@ const AddShipmentPage = () => {
                     Office of origin
                   </Label>
                   <Select
-                    defaultValue={form.office}
                     onValueChange={(value) => handleSelect("office", value)}
                     value={form.office}
                   >
@@ -800,76 +1044,151 @@ const AddShipmentPage = () => {
                 {/* Sender Name with Add Button */}
                 <div className="flex flex-col text-foreground">
                   <Label className="mb-2">Sender/Customer</Label>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <Select
-                        value={selectedSender?.Company || ""}
-                        onValueChange={(value) => {
-                          const sender = senderResults.find(s => s.Company === value);
-                          if (sender) {
-                            setSelectedSender(sender);
-                            setSenderQuery(sender.Company);
-                            setForm(prev => ({
-                              ...prev,
-                              senderName: sender.Company,
-                              senderAddress: sender.Address
-                            }));
-                          }
-                        }}
-                        onOpenChange={setSenderDropdownOpen}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Search sender name..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <div className="p-2">
-                            <Input
-                              ref={senderSearchRef}
-                              placeholder="Search sender..."
-                              value={senderQuery}
-                              onChange={(e) => setSenderQuery(e.target.value)}
-                              className="mb-2"
-                            />
-                            {Array.isArray(senderResults) && senderResults.length > 0 && (
-                              <div className="max-h-60 overflow-y-auto">
-                                {senderResults.map((s) => (
-                                  <SelectItem key={s.id} value={s.Company}>
-                                    {s.Company}
-                                  </SelectItem>
-                                ))}
-                              </div>
-                            )}
-                            {senderQuery.length > 0 && senderQuery.length < 2 && (
-                              <div className="px-2 py-1 text-muted-foreground text-sm">
-                                Type at least 2 characters
-                              </div>
-                            )}
-                            {senderQuery.length >= 2 && Array.isArray(senderResults) && senderResults.length === 0 && (
-                              <div className="px-2 py-1 text-muted-foreground text-sm">
-                                No matches found
-                              </div>
-                            )}
-                          </div>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <AddCustomerDialog triggerLabel="+" />
+                                     <div className="flex items-center gap-2">
+                     <div className="flex-1">
+                       <Select
+                         value={selectedSender?.Company || ""}
+                                                   onValueChange={(value) => {
+                            const sender = senderResults.find(s => s.Company === value);
+                            if (sender) {
+                              setSelectedSender(sender);
+                              setSenderQuery(sender.Company);
+                              setForm(prev => ({
+                                ...prev,
+                                senderName: sender.Company,
+                                senderAddress: sender.Address
+                              }));
+                            } else {
+                              // Clear sender data when no sender is selected
+                              setSelectedSender(null);
+                              setSenderQuery("");
+                              setForm(prev => ({
+                                ...prev,
+                                senderName: "",
+                                senderAddress: ""
+                              }));
+                            }
+                          }}
+                         onOpenChange={setSenderDropdownOpen}
+                       >
+                         <SelectTrigger className="w-full">
+                           <SelectValue placeholder="Search sender name..." />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <div className="p-2">
+                             <Input
+                               ref={senderSearchRef}
+                               placeholder="Search sender..."
+                               value={senderQuery}
+                               onChange={(e) => setSenderQuery(e.target.value)}
+                               className="mb-2"
+                             />
+                             {Array.isArray(senderResults) && senderResults.length > 0 && (
+                               <div className="max-h-60 overflow-y-auto">
+                                 {senderResults.map((s) => (
+                                   <SelectItem key={s.id} value={s.Company}>
+                                     {s.Company}
+                                   </SelectItem>
+                                 ))}
+                               </div>
+                             )}
+                             {senderQuery.length > 0 && senderQuery.length < 2 && (
+                               <div className="px-2 py-1 text-muted-foreground text-sm">
+                                 Type at least 2 characters
+                               </div>
+                             )}
+                             {senderQuery.length >= 2 && Array.isArray(senderResults) && senderResults.length === 0 && (
+                               <div className="px-2 py-1 text-muted-foreground text-sm">
+                                 No matches found
+                               </div>
+                             )}
+                           </div>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <AddCustomerDialog 
+                       triggerLabel="+" 
+                       onSuccess={() => {
+                         // Refresh sender search results
+                         if (senderQuery.length >= 2) {
+                           fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
+                             .then((res) => res.json())
+                             .then((data) => {
+                               if (Array.isArray(data)) {
+                                 setSenderResults(data);
+                               }
+                             })
+                             .catch((error) => {
+                               console.error("Error refreshing senders:", error);
+                             });
+                         }
+                       }}
+                     />
                   </div>
                 </div>
 
                 {/* Sender Address */}
-                <div className="flex flex-col text-foreground">
-                  <Label className="mb-2">Sender/Customer Address</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={form.senderAddress}
-                      readOnly
-                      placeholder="Sender address"
-                      className="flex-1 bg-muted"
-                    />
-                    <AddCustomerDialog triggerLabel="+" />
-                  </div>
-                </div>
+                                 <div className="flex flex-col text-foreground">
+                   <Label className="mb-2">Sender/Customer Address</Label>
+                   <div className="flex gap-2">
+                     <Input
+                       value={formatFullAddress(selectedSender)}
+                       readOnly
+                       placeholder="Sender address"
+                       className="flex-1 bg-muted"
+                     />
+                     {selectedSender ? (
+                       <UpdateCustomerAddressDialog 
+                         triggerLabel="+" 
+                         customerId={selectedSender.id}
+                         currentAddress={selectedSender.Address}
+                         currentCity={selectedSender.City}
+                         currentState={selectedSender.State}
+                         currentCountry={selectedSender.Country}
+                         currentZip={selectedSender.Zip}
+                         onSuccess={() => {
+                           // Refresh sender search results and update selected sender
+                           if (senderQuery.length >= 2) {
+                             fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
+                               .then((res) => res.json())
+                               .then((data) => {
+                                 if (Array.isArray(data)) {
+                                   setSenderResults(data);
+                                   // Update the selected sender with new data
+                                   const updatedSender = data.find(s => s.id === selectedSender.id);
+                                   if (updatedSender) {
+                                     setSelectedSender(updatedSender);
+                                   }
+                                 }
+                               })
+                               .catch((error) => {
+                                 console.error("Error refreshing senders:", error);
+                               });
+                           }
+                         }}
+                       />
+                     ) : (
+                       <AddCustomerDialog 
+                         triggerLabel="+" 
+                         onSuccess={() => {
+                           // Refresh sender search results
+                           if (senderQuery.length >= 2) {
+                             fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
+                               .then((res) => res.json())
+                               .then((data) => {
+                                 if (Array.isArray(data)) {
+                                   setSenderResults(data);
+                                 }
+                               })
+                               .catch((error) => {
+                                 console.error("Error refreshing senders:", error);
+                               });
+                           }
+                         }}
+                       />
+                     )}
+                   </div>
+                 </div>
               </div>
             </CardContent>
           </Card>
@@ -887,76 +1206,151 @@ const AddShipmentPage = () => {
                 {/* Recipient Name with Add Button */}
                 <div className="flex flex-col text-foreground">
                   <Label className="mb-2">Recipient/Client</Label>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <Select
-                        value={selectedRecipient?.Company || ""}
-                        onValueChange={(value) => {
-                          const recipient = recipientResults.find(r => r.Company === value);
-                          if (recipient) {
-                            setSelectedRecipient(recipient);
-                            setRecipientQuery(recipient.Company);
-                            setForm(prev => ({
-                              ...prev,
-                              recipientName: recipient.Company,
-                              recipientAddress: recipient.Address
-                            }));
-                          }
-                        }}
-                        onOpenChange={setRecipientDropdownOpen}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Search recipient name..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <div className="p-2">
-                            <Input
-                              ref={recipientSearchRef}
-                              placeholder="Search recipient..."
-                              value={recipientQuery}
-                              onChange={(e) => setRecipientQuery(e.target.value)}
-                              className="mb-2"
-                            />
-                            {Array.isArray(recipientResults) && recipientResults.length > 0 && (
-                              <div className="max-h-60 overflow-y-auto">
-                                {recipientResults.map((r) => (
-                                  <SelectItem key={r.id} value={r.Company}>
-                                    {r.Company}
-                                  </SelectItem>
-                                ))}
-                              </div>
-                            )}
-                            {recipientQuery.length > 0 && recipientQuery.length < 2 && (
-                              <div className="px-2 py-1 text-muted-foreground text-sm">
-                                Type at least 2 characters
-                              </div>
-                            )}
-                            {recipientQuery.length >= 2 && Array.isArray(recipientResults) && recipientResults.length === 0 && (
-                              <div className="px-2 py-1 text-muted-foreground text-sm">
-                                No matches found
-                              </div>
-                            )}
-                          </div>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <AddRecipientDialog triggerLabel="+" />
+                                     <div className="flex items-center gap-2">
+                     <div className="flex-1">
+                       <Select
+                         value={selectedRecipient?.Company || ""}
+                                                   onValueChange={(value) => {
+                            const recipient = recipientResults.find(r => r.Company === value);
+                            if (recipient) {
+                              setSelectedRecipient(recipient);
+                              setRecipientQuery(recipient.Company);
+                              setForm(prev => ({
+                                ...prev,
+                                recipientName: recipient.Company,
+                                recipientAddress: recipient.Address
+                              }));
+                            } else {
+                              // Clear recipient data when no recipient is selected
+                              setSelectedRecipient(null);
+                              setRecipientQuery("");
+                              setForm(prev => ({
+                                ...prev,
+                                recipientName: "",
+                                recipientAddress: ""
+                              }));
+                            }
+                          }}
+                         onOpenChange={setRecipientDropdownOpen}
+                       >
+                         <SelectTrigger className="w-full">
+                           <SelectValue placeholder="Search recipient name..." />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <div className="p-2">
+                             <Input
+                               ref={recipientSearchRef}
+                               placeholder="Search recipient..."
+                               value={recipientQuery}
+                               onChange={(e) => setRecipientQuery(e.target.value)}
+                               className="mb-2"
+                             />
+                             {Array.isArray(recipientResults) && recipientResults.length > 0 && (
+                               <div className="max-h-60 overflow-y-auto">
+                                 {recipientResults.map((r) => (
+                                   <SelectItem key={r.id} value={r.Company}>
+                                     {r.Company}
+                                   </SelectItem>
+                                 ))}
+                               </div>
+                             )}
+                             {recipientQuery.length > 0 && recipientQuery.length < 2 && (
+                               <div className="px-2 py-1 text-muted-foreground text-sm">
+                                 Type at least 2 characters
+                               </div>
+                             )}
+                             {recipientQuery.length >= 2 && Array.isArray(recipientResults) && recipientResults.length === 0 && (
+                               <div className="px-2 py-1 text-muted-foreground text-sm">
+                                 No matches found
+                               </div>
+                             )}
+                           </div>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                     <AddRecipientDialog 
+                       triggerLabel="+" 
+                       onSuccess={() => {
+                         // Refresh recipient search results
+                         if (recipientQuery.length >= 2) {
+                           fetch(`/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`)
+                             .then((res) => res.json())
+                             .then((data) => {
+                               if (Array.isArray(data)) {
+                                 setRecipientResults(data);
+                               }
+                             })
+                             .catch((error) => {
+                               console.error("Error refreshing recipients:", error);
+                             });
+                         }
+                       }}
+                     />
                   </div>
                 </div>
 
                 {/* Recipient Address */}
-                <div className="flex flex-col text-foreground">
-                  <Label className="mb-2">Recipient/Client Address</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={form.recipientAddress}
-                      readOnly
-                      placeholder="Recipient address"
-                      className="flex-1 bg-muted"
-                    />
-                    <AddRecipientDialog triggerLabel="+" />
-                  </div>
-                </div>
+                                 <div className="flex flex-col text-foreground">
+                   <Label className="mb-2">Recipient/Client Address</Label>
+                   <div className="flex gap-2">
+                     <Input
+                       value={formatFullAddress(selectedRecipient)}
+                       readOnly
+                       placeholder="Recipient address"
+                       className="flex-1 bg-muted"
+                     />
+                     {selectedRecipient ? (
+                       <UpdateRecipientAddressDialog 
+                         triggerLabel="+" 
+                         recipientId={selectedRecipient.id}
+                         currentAddress={selectedRecipient.Address}
+                         currentCity={selectedRecipient.City}
+                         currentState={selectedRecipient.State}
+                         currentCountry={selectedRecipient.Country}
+                         currentZip={selectedRecipient.Zip}
+                         onSuccess={() => {
+                           // Refresh recipient search results and update selected recipient
+                           if (recipientQuery.length >= 2) {
+                             fetch(`/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`)
+                               .then((res) => res.json())
+                               .then((data) => {
+                                 if (Array.isArray(data)) {
+                                   setRecipientResults(data);
+                                   // Update the selected recipient with new data
+                                   const updatedRecipient = data.find(r => r.id === selectedRecipient.id);
+                                   if (updatedRecipient) {
+                                     setSelectedRecipient(updatedRecipient);
+                                   }
+                                 }
+                               })
+                               .catch((error) => {
+                                 console.error("Error refreshing recipients:", error);
+                               });
+                           }
+                         }}
+                       />
+                     ) : (
+                       <AddRecipientDialog 
+                         triggerLabel="+" 
+                         onSuccess={() => {
+                           // Refresh recipient search results
+                           if (recipientQuery.length >= 2) {
+                             fetch(`/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`)
+                               .then((res) => res.json())
+                               .then((data) => {
+                                 if (Array.isArray(data)) {
+                                   setRecipientResults(data);
+                                 }
+                               })
+                               .catch((error) => {
+                                 console.error("Error refreshing recipients:", error);
+                               });
+                           }
+                         }}
+                       />
+                     )}
+                   </div>
+                 </div>
               </div>
             </CardContent>
           </Card>
@@ -970,84 +1364,54 @@ const AddShipmentPage = () => {
               <span className="font-medium">Shipping information:</span>
             </div>
 
-            {/* First Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              {renderSelect(
-                "Delivery Time",
-                "Select delivery time",
-                deliveryTimes,
-                form.deliveryTime,
-                (value) => handleSelect("deliveryTime", value)
-              )}
-                              {renderSelect(
-                  "Invoice Status",
-                  "Select invoice status",
-                  invoiceStatuses,
-                  form.invoiceStatus,
-                  (value) => handleSelect("invoiceStatus", value)
+                         {/* All selects in one row */}
+             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+               {renderSelect(
+                 "Shipping Mode",
+                 "Select shipping mode",
+                 shippingModes,
+                 form.shippingMode,
+                 (value) => handleSelect("shippingMode", value)
+               )}
+               {renderSelect(
+                 "Type of Packaging",
+                 "Select packaging type",
+                 packagingTypes,
+                 form.packaging,
+                 (value) => handleSelect("packaging", value)
+               )}
+               {renderSelect(
+                 "Vendor",
+                 "Select vendor",
+                 vendors,
+                 form.vendor,
+                 (value) => handleSelect("vendor", value)
                 )}
-              {renderSelect(
-                "Delivery Status",
-                "Select delivery status",
-                deliveryStatuses,
-                form.deliveryStatus,
-                (value) => handleSelect("deliveryStatus", value)
-              )}
-              {renderSelect(
-                "Shipping Mode",
-                "Select shipping mode",
-                shippingModes,
-                form.shippingMode,
-                (value) => handleSelect("shippingMode", value)
-              )}
-            </div>
-
-            {/* Second Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {renderSelect(
-                "Type of Packaging",
-                "Select packaging type",
-                packagingTypes,
-                form.packaging,
-                (value) => handleSelect("packaging", value)
-              )}
-              {renderSelect(
-                "Vendor",
-                "Select vendor",
-                vendors,
-                form.vendor,
-                (value) => handleSelect("vendor", value)
-              )}
-              {renderSelect(
-                "Service Mode",
-                "Select service mode",
-                serviceModes,
-                form.serviceMode,
-                (value) => handleSelect("serviceMode", value)
-              )}
-            </div>
+               {renderSelect(
+                 "Service Mode",
+                 "Select service mode",
+                 serviceModes,
+                 form.serviceMode,
+                 (value) => handleSelect("serviceMode", value)
+                )}
+                {renderSelect(
+                  "Status",
+                  "Select status",
+                  deliveryStatuses,
+                  form.deliveryStatus,
+                  (value) => handleSelect("deliveryStatus", value)
+                )}
+             </div>
           </CardContent>
         </Card>
 
-        {/* Package Information Section */}
-        <Card className="bg-card border border-border shadow-sm mb-4">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <FaBoxOpen className="text-primary" />
-              <span className="font-medium">Package Information</span>
-              <span className="ml-auto flex items-center gap-2">
-                <Label className="mr-2">Manual rate</Label>
-                <Checkbox
-                  checked={form.manualRate}
-                  onCheckedChange={(checked) => {
-                    setForm(prev => ({ ...prev, manualRate: !!checked }));
-                    if (!checked) {
-                      calculateRate();
-                    }
-                  }}
-                />
-              </span>
-            </div>
+                 {/* Package Information Section */}
+         <Card className="bg-card border border-border shadow-sm mb-4">
+           <CardContent className="p-4">
+             <div className="flex items-center gap-2 mb-4">
+               <FaBoxOpen className="text-primary" />
+               <span className="font-medium">Package Information</span>
+             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border border-border">
                 <thead>
@@ -1164,13 +1528,26 @@ const AddShipmentPage = () => {
           </CardContent>
         </Card>
 
-        {/* Rate & Taxes Information Section */}
-        <Card className="bg-card border border-border shadow-sm mb-4">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <FaFileInvoice className="text-primary" />
-              <span className="font-medium">Rate & Taxes information</span>
-            </div>
+                 {/* Rate & Taxes Information Section */}
+         <Card className="bg-card border border-border shadow-sm mb-4">
+           <CardContent className="p-4">
+                           <div className="flex items-center gap-2 mb-4">
+                <FaFileInvoice className="text-primary" />
+                <span className="font-medium">Rate & Taxes information</span>
+                <span className="ml-auto flex items-center gap-2 mr-8">
+                  <Label className="mr-2 text-sm font-medium">Manual Rate</Label>
+                  <Switch
+                    checked={form.manualRate}
+                    onCheckedChange={(checked) => {
+                      setForm(prev => ({ ...prev, manualRate: !!checked }));
+                      if (!checked) {
+                        calculateRate();
+                      }
+                    }}
+                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  />
+                </span>
+              </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label className="mb-2 block">Price kg</Label>

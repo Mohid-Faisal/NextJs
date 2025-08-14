@@ -476,7 +476,7 @@ export default function InvoicesPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              {["All", "Pending", "Paid", "Overdue", "Cancelled"].map((s) => (
+              {["All", "Pending", "Paid", "Overdue","Partial"].map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
                 </SelectItem>

@@ -11,24 +11,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    // First, try to find country codes that match the search term
-    const matchingCountries = Country.getAllCountries().filter(country =>
-      country.name.toLowerCase().includes(query.toLowerCase()) ||
-      country.isoCode.toLowerCase().includes(query.toLowerCase())
-    );
-    
-    const countryCodes = matchingCountries.map(country => country.isoCode);
-    
     const customers = await prisma.customers.findMany({
       where: {
-        OR: [
-          { CompanyName: { contains: query, mode: "insensitive" } },
-          { PersonName: { contains: query, mode: "insensitive" } },
-          { Email: { contains: query, mode: "insensitive" } },
-          { Phone: { contains: query, mode: "insensitive" } },
-          { Country: { contains: query, mode: "insensitive" } },
-          ...(countryCodes.length > 0 ? [{ Country: { in: countryCodes } }] : []),
-        ],
+        CompanyName: {
+          contains: query,
+          mode: "insensitive",
+        },
       },
       take: 10,
       select: {
@@ -39,6 +27,9 @@ export async function GET(req: Request) {
         Phone: true,
         Address: true,
         Country: true,
+        State: true,
+        City: true,
+        Zip: true,
       }
     });
 
@@ -51,6 +42,9 @@ export async function GET(req: Request) {
       Phone: customer.Phone,
       Address: customer.Address,
       Country: customer.Country,
+      State: customer.State,
+      City: customer.City,
+      Zip: customer.Zip,
     }));
 
     return NextResponse.json(transformedCustomers);
