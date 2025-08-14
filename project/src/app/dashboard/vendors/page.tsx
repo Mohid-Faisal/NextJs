@@ -489,7 +489,7 @@ export default function VendorsPage() {
                               : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
                           }`}
                         >
-                          ${vendor.currentBalance?.toLocaleString() || '0.00'}
+                          ${vendor.currentBalance.toLocaleString()}
                         </span>
                       </td>
                       <td className="px-4 py-3">

@@ -20,7 +20,6 @@ export async function GET(req: Request) {
     | "senderName"
     | "recipientName"
     | "destination"
-    | "deliveryStatus"
     | "totalCost"
     | "invoiceStatus"
     | null;
@@ -76,6 +75,16 @@ export async function GET(req: Request) {
       take: limit,
       where,
       orderBy,
+      include: {
+        invoices: {
+          where: {
+            profile: "Customer"
+          },
+          select: {
+            status: true
+          }
+        }
+      }
     }),
     prisma.shipment.count({ where }),
   ]);

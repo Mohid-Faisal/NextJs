@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       tax,
       declaredValue,
       reissue,
+      profitPercentage,
       manualRate,
       packages,
       packageTotals,
@@ -164,13 +165,25 @@ export async function POST(req: NextRequest) {
     }
 
     // Calculate total cost: price + fuelSurcharge - percentage discount
-    const originalPrice = parseFloat(price) || 0;
+    // The price from frontend already includes profit, so we need to extract the original price
+    const priceWithProfit = parseFloat(price) || 0;
     const fuelSurchargeAmount = parseFloat(fuelSurcharge) || 0;
     const discountPercentage = parseFloat(discount) || 0;
+    const profitPercentageValue = parseFloat(profitPercentage) || 0;
+    
+    // Calculate the original price by removing profit from the price with profit
+    const originalPrice = profitPercentageValue > 0 ? priceWithProfit / (1 + profitPercentageValue / 100) : priceWithProfit;
     
     // Calculate discount amount as percentage of original price
     const discountAmount = (originalPrice * discountPercentage) / 100;
-    const totalCost = originalPrice + fuelSurchargeAmount - discountAmount;
+    
+    // Calculate profit amount as percentage of original price
+    const profitAmount = (originalPrice * profitPercentageValue) / 100;
+    
+    // Customer invoice uses the price with profit (from frontend)
+    const customerTotalCost = priceWithProfit + fuelSurchargeAmount - discountAmount;
+    // Vendor invoice uses original price without profit
+    const vendorTotalCost = originalPrice + fuelSurchargeAmount - discountAmount;
 
     // Get subtotal from calculated values or use original price
     const subtotal = calculatedValues?.subtotal || originalPrice;
@@ -206,7 +219,7 @@ export async function POST(req: NextRequest) {
         weightVol: parseFloat(weightVol) || 0,
         fixedCharge: parseFloat(fixedCharge) || 0,
         decValue: parseFloat(decValue) || 0,
-        price: originalPrice,
+        price: originalPrice, // Store original price without profit
         discount: discountPercentage,
         fuelSurcharge: fuelSurchargeAmount,
         insurance: parseFloat(insurance) || 0,
@@ -214,7 +227,7 @@ export async function POST(req: NextRequest) {
         tax: parseFloat(tax) || 0,
         declaredValue: parseFloat(declaredValue) || 0,
         reissue: parseFloat(reissue) || 0,
-        totalCost,
+        totalCost: customerTotalCost, // Use customer total cost for shipment record
         subtotal,
         manualRate: Boolean(manualRate),
         totalPackages: parseInt(totalPackages) || 0,
@@ -272,6 +285,11 @@ export async function POST(req: NextRequest) {
          { description: "Fuel Surcharge", value: fuelSurchargeAmount },
          { description: "Discount", value: -discountAmount }
        ];
+       
+       // Add profit line item if profit percentage is greater than 0
+       if (profitPercentageValue > 0) {
+         customerLineItems.push({ description: "Profit", value: profitAmount });
+       }
 
        const customerInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
          method: 'POST',
@@ -291,7 +309,7 @@ export async function POST(req: NextRequest) {
            vendorId: null,
            shipmentId: shipment.id,
            disclaimer: "Thank you for your business",
-           totalAmount: totalCost, // Use full shipment value for customer
+           totalAmount: customerTotalCost, // Use customer total cost (includes profit)
            currency: "USD"
          })
        });
@@ -301,11 +319,11 @@ export async function POST(req: NextRequest) {
        }
 
                // Create vendor invoice using the existing accounts API
-        // Vendor invoice starts at $0 - actual cost will be set later when we know vendor pricing
-        const vendorCost = 0; // Start at $0, will be updated when vendor cost is determined
+        // Vendor invoice uses original price without profit
         const vendorLineItems = [
-          { description: "Vendor Service", value: 0 },
-          { description: "Fuel Surcharge", value: 0 }
+          { description: "Vendor Service", value: originalPrice },
+          { description: "Fuel Surcharge", value: fuelSurchargeAmount },
+          { description: "Discount", value: -discountAmount }
         ];
 
         const vendorInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
@@ -325,8 +343,8 @@ export async function POST(req: NextRequest) {
             customerId: null,
             vendorId: vendorId,
             shipmentId: shipment.id,
-            disclaimer: "Vendor invoice - cost to be determined",
-            totalAmount: vendorCost, // Start at $0
+            disclaimer: "Vendor invoice - original cost without profit",
+            totalAmount: vendorTotalCost, // Use vendor total cost (no profit)
             currency: "USD"
           })
         });
@@ -350,12 +368,12 @@ export async function POST(req: NextRequest) {
             // 4. Vendor invoice starts at $0 - actual cost will be set later via invoice edit
            
            // Customer transaction (DEBIT - they owe us money)
-           if (customerId && totalCost > 0) {
+           if (customerId && customerTotalCost > 0) {
              await addCustomerTransaction(
                prisma,
                customerId,
                'DEBIT',
-               totalCost,
+               customerTotalCost,
                `Invoice for shipment ${trackingId}`,
                invoiceNumber
              );
@@ -365,7 +383,7 @@ export async function POST(req: NextRequest) {
             // This represents our liability to pay the vendor (decreases our balance)
             // Note: Since vendor cost is $0 initially, no company transaction is created yet
             // Company transaction will be created when vendor cost is determined and invoice is updated
-            if (totalCost > 0) {
+            if (vendorTotalCost > 0) {
               // For now, we only create customer transaction
               // Company liability will be created when vendor invoice is updated with actual cost
               console.log('Vendor cost is $0 initially - company transaction will be created when vendor cost is determined');
@@ -394,10 +412,14 @@ export async function POST(req: NextRequest) {
       },
       calculation: {
         originalPrice,
+        priceWithProfit,
         fuelSurcharge: fuelSurchargeAmount,
         discountPercentage: discountPercentage,
         discountAmount: discountAmount,
-        totalCost,
+        profitPercentage: profitPercentageValue,
+        profitAmount: profitAmount,
+        customerTotalCost,
+        vendorTotalCost,
         subtotal,
       },
       receivedData: {

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { addCompanyTransaction } from "@/lib/utils";
 
 // UI-to-enum mapping
-const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER" };
+const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Return: "RETURN" };
 const modeMap: Record<string, any> = { "Cash": "CASH", "Bank Transfer": "BANK_TRANSFER", "Card": "CARD", "Cheque": "CHEQUE" };
 
 export async function GET(request: Request) {
@@ -143,6 +144,68 @@ export async function POST(req: NextRequest) {
 
     try {
       const payment = await prisma.payment.create({ data });
+      
+      // Handle company account transactions based on payment type
+      if (data.transactionType === "EXPENSE") {
+        // For expenses, create a DEBIT transaction in company account
+        await addCompanyTransaction(
+          prisma,
+          'DEBIT',
+          Number(body.amount),
+          `Expense: ${body.category} - ${body.description || 'No description'}`,
+          body.reference || `Payment-${payment.id}`
+        );
+      } else if (data.transactionType === "INCOME") {
+        // For income, create a CREDIT transaction in company account
+        await addCompanyTransaction(
+          prisma,
+          'CREDIT',
+          Number(body.amount),
+          `Income: ${body.category} - ${body.description || 'No description'}`,
+          body.reference || `Payment-${payment.id}`
+        );
+      } else if (data.transactionType === "TRANSFER") {
+        // For transfers, create both DEBIT and CREDIT transactions
+        // DEBIT from source account
+        await addCompanyTransaction(
+          prisma,
+          'DEBIT',
+          Number(body.amount),
+          `Transfer out: ${body.category} - ${body.description || 'No description'}`,
+          body.reference || `Transfer-${payment.id}`
+        );
+        // CREDIT to destination account
+        await addCompanyTransaction(
+          prisma,
+          'CREDIT',
+          Number(body.amount),
+          `Transfer in: ${body.category} - ${body.description || 'No description'}`,
+          body.reference || `Transfer-${payment.id}`
+        );
+      } else if (data.transactionType === "RETURN") {
+        // For returns, create a DEBIT transaction in company account (money going out)
+        await addCompanyTransaction(
+          prisma,
+          'DEBIT',
+          Number(body.amount),
+          `Return: ${body.category} - ${body.description || 'No description'}`,
+          body.reference || `Return-${payment.id}`
+        );
+        
+        // If return is to a customer, update customer balance (CREDIT - they owe us less)
+        if (data.toPartyType === "CUSTOMER" && data.toCustomerId) {
+          const { addCustomerTransaction } = await import("@/lib/utils");
+          await addCustomerTransaction(
+            prisma,
+            Number(data.toCustomerId),
+            'CREDIT',
+            Number(body.amount),
+            `Return: ${body.category} - ${body.description || 'No description'}`,
+            body.reference || `Return-${payment.id}`
+          );
+        }
+      }
+      
       return NextResponse.json({ success: true, message: "Payment added successfully.", payment });
     } catch (e) {
       // Fallback: some databases may still have scalar columns instead of relations
@@ -175,6 +238,62 @@ export async function POST(req: NextRequest) {
       };
 
       const payment = await (prisma as any).payment.create({ data: fallbackData });
+      
+      // Handle company account transactions for fallback case too
+      if (fallbackData.transactionType === "EXPENSE") {
+        await addCompanyTransaction(
+          prisma,
+          'DEBIT',
+          Number(body.amount),
+          `Expense: ${body.category} - ${body.description || 'No description'}`,
+          body.reference || `Payment-${payment.id}`
+        );
+      } else if (fallbackData.transactionType === "INCOME") {
+        await addCompanyTransaction(
+          prisma,
+          'CREDIT',
+          Number(body.amount),
+          `Income: ${body.category} - ${body.description || 'No description'}`,
+          body.reference || `Payment-${payment.id}`
+        );
+             } else if (fallbackData.transactionType === "TRANSFER") {
+         await addCompanyTransaction(
+           prisma,
+           'DEBIT',
+           Number(body.amount),
+           `Transfer out: ${body.category} - ${body.description || 'No description'}`,
+           body.reference || `Transfer-${payment.id}`
+         );
+         await addCompanyTransaction(
+           prisma,
+           'CREDIT',
+           Number(body.amount),
+           `Transfer in: ${body.category} - ${body.description || 'No description'}`,
+           body.reference || `Transfer-${payment.id}`
+         );
+       } else if (fallbackData.transactionType === "RETURN") {
+         await addCompanyTransaction(
+           prisma,
+           'DEBIT',
+           Number(body.amount),
+           `Return: ${body.category} - ${body.description || 'No description'}`,
+           body.reference || `Return-${payment.id}`
+         );
+         
+         // If return is to a customer, update customer balance (CREDIT - they owe us less)
+         if (fallbackData.toPartyType === "CUSTOMER" && body.toCustomerId) {
+           const { addCustomerTransaction } = await import("@/lib/utils");
+           await addCustomerTransaction(
+             prisma,
+             Number(body.toCustomerId),
+             'CREDIT',
+             Number(body.amount),
+             `Return: ${body.category} - ${body.description || 'No description'}`,
+             body.reference || `Return-${payment.id}`
+           );
+         }
+       }
+      
       return NextResponse.json({ success: true, message: "Payment added successfully.", payment });
     }
   } catch (error) {

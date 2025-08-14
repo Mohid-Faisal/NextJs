@@ -32,10 +32,29 @@ type Transaction = {
   createdAt: string;
 };
 
+type PaymentStats = {
+  cash: {
+    inflow: number;
+    outflow: number;
+    net: number;
+  };
+  bank: {
+    inflow: number;
+    outflow: number;
+    net: number;
+  };
+  total: {
+    inflow: number;
+    outflow: number;
+    net: number;
+  };
+};
+
 export default function CompanyAccountPage() {
   const router = useRouter();
   const [account, setAccount] = useState<CompanyAccount | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -51,14 +70,25 @@ export default function CompanyAccountPage() {
 
   const fetchCompanyData = async () => {
     try {
-      const response = await fetch("/api/accounts/company");
-      const data = await response.json();
+      const [accountResponse, statsResponse] = await Promise.all([
+        fetch("/api/accounts/company"),
+        fetch("/api/accounts/company/stats")
+      ]);
       
-      if (response.ok) {
-        setAccount(data.account);
-        setTransactions(data.transactions);
+      const accountData = await accountResponse.json();
+      const statsData = await statsResponse.json();
+      
+      if (accountResponse.ok) {
+        setAccount(accountData.account);
+        setTransactions(accountData.transactions);
       } else {
-        console.error("Error fetching company data:", data.error);
+        console.error("Error fetching company data:", accountData.error);
+      }
+      
+      if (statsResponse.ok) {
+        setPaymentStats(statsData.stats);
+      } else {
+        console.error("Error fetching payment stats:", statsData.error);
       }
     } catch (error) {
       console.error("Error fetching company data:", error);
@@ -162,6 +192,136 @@ export default function CompanyAccountPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Payment Statistics Cards */}
+      {paymentStats && (
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+            Payment Statistics (Current Month)
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Cash Flow Card */}
+            <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-bold text-gray-800 dark:text-white flex items-center">
+                  <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                  Cash Flow
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Inflow:</span>
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                      ${paymentStats.cash.inflow.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Outflow:</span>
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                      ${paymentStats.cash.outflow.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-bold text-gray-800 dark:text-white">Net:</span>
+                      <span className={`text-sm font-bold ${
+                        paymentStats.cash.net > 0
+                          ? "text-green-600 dark:text-green-400"
+                          : paymentStats.cash.net < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-gray-600 dark:text-gray-400"
+                      }`}>
+                        ${paymentStats.cash.net.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bank Flow Card */}
+            <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-bold text-gray-800 dark:text-white flex items-center">
+                  <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                  Bank Flow
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Inflow:</span>
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                      ${paymentStats.bank.inflow.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Outflow:</span>
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                      ${paymentStats.bank.outflow.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-bold text-gray-800 dark:text-white">Net:</span>
+                      <span className={`text-sm font-bold ${
+                        paymentStats.bank.net > 0
+                          ? "text-green-600 dark:text-green-400"
+                          : paymentStats.bank.net < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-gray-600 dark:text-gray-400"
+                      }`}>
+                        ${paymentStats.bank.net.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+
+          </div>
+
+          {/* Total Summary Card */}
+          <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-center text-gray-800 dark:text-white">
+                Total Payment Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+                    ${paymentStats.total.inflow.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Inflow</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-1">
+                    ${paymentStats.total.outflow.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Outflow</div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-2xl font-bold mb-1 ${
+                    paymentStats.total.net > 0
+                      ? "text-green-600 dark:text-green-400"
+                      : paymentStats.total.net < 0
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-gray-600 dark:text-gray-400"
+                  }`}>
+                    ${paymentStats.total.net.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Net Flow</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Add Transaction Button */}
       <div className="mb-6">

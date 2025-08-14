@@ -119,9 +119,13 @@ export async function addVendorTransaction(
   }
 
   const previousBalance = vendor.currentBalance;
-  const newBalance = type === 'CREDIT' 
-    ? previousBalance + amount 
-    : previousBalance - amount;
+  
+  // For vendors: 
+  // - DEBIT means we owe them money (increases their positive balance)
+  // - CREDIT means we're paying them (decreases their positive balance)
+  const newBalance = type === 'DEBIT' 
+    ? previousBalance + amount  // We owe them more
+    : previousBalance - amount; // We're paying them
 
   // Update vendor balance
   await prisma.vendors.update({
@@ -350,7 +354,7 @@ export async function updateInvoiceBalance(
       });
       if (newVendor) {
         const previousBalance = newVendor.currentBalance;
-        const newBalance = previousBalance - newAmount; // DEBIT decreases vendor balance (we owe them)
+        const newBalance = previousBalance + newAmount; // DEBIT increases vendor balance (we owe them more)
 
         await prisma.vendors.update({
           where: { id: newVendorId },
@@ -374,9 +378,9 @@ export async function updateInvoiceBalance(
     vendorUpdated = true;
   } else if (amountDifference !== 0 && invoice.vendorId && invoice.vendor) {
     // Update existing vendor balance if amount changed
-    // For vendors: DEBIT means we owe them more money (negative balance)
+    // For vendors: DEBIT means we owe them more money (positive balance)
     const previousBalance = invoice.vendor.currentBalance;
-    const newBalance = previousBalance - amountDifference; // DEBIT decreases vendor balance (we owe them more)
+    const newBalance = previousBalance + amountDifference; // DEBIT increases vendor balance (we owe them more)
 
     await prisma.vendors.update({
       where: { id: invoice.vendorId },

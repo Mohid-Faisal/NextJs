@@ -302,6 +302,7 @@ enum TransactionType {
   INCOME
   EXPENSE
   TRANSFER
+  RETURN
 }
 
 enum PartyType {

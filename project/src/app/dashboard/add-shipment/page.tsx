@@ -205,14 +205,15 @@ const AddShipmentPage = () => {
           return;
         }
         
-        // Prepare the request payload with all required data including fuel surcharge and discount
+        // Prepare the request payload with all required data including fuel surcharge, discount, and profit percentage
         const requestPayload = {
           weight: totals.weight, // Total weight from packages
           vendor: form.vendor, // Selected vendor
           serviceMode: form.serviceMode, // Selected service mode
           destination: recipientCountryName, // Recipient country name as destination
-          fuelSurcharge: form.fuelSurcharge, // Fuel surcharge from form
-          discount: form.discount, // Discount from form
+          fuelSurcharge: parseFloat(form.fuelSurcharge) || 0, // Fuel surcharge from form
+          discount: parseFloat(form.discount) || 0, // Discount from form
+          profitPercentage: parseFloat(form.profitPercentage) || 0, // Profit percentage from form
         };
         
         console.log('Rate calculation request payload:', requestPayload);
@@ -241,19 +242,26 @@ const AddShipmentPage = () => {
           console.log('Rate calculation API response:', data);
           
           if (data.success && data.price) {
+            // Calculate profit-adjusted price
+            const basePrice = data.price;
+            const profitPercentage = parseFloat(form.profitPercentage) || 0;
+            const profitAmount = basePrice * (profitPercentage / 100);
+            const finalPrice = basePrice + profitAmount;
+            
             // Update the form with the calculated values from backend
             setForm(prev => ({
               ...prev,
-              price: data.price,
+              price: finalPrice.toString(),
             }));
             
-            // Store the backend-calculated values
+            // Store the backend-calculated values with profit applied
             setCalculatedValues({
-              subtotal: data.price,
-              total: data.totalCost || data.price,
+              subtotal: finalPrice,
+              total: data.totalCost ? data.totalCost + profitAmount : finalPrice,
             });
             
-            toast.success(`Rate calculated successfully! Price: $${data.price}, Total: $${(data.totalCost || data.price).toFixed(2)}`);
+            const profitMessage = profitPercentage > 0 ? ` (includes ${profitPercentage}% profit: +$${profitAmount.toFixed(2)})` : '';
+            toast.success(`Rate calculated successfully! Price: $${finalPrice.toFixed(2)}${profitMessage}, Total: $${(data.totalCost ? data.totalCost + profitAmount : finalPrice).toFixed(2)}`);
           } else {
             toast.error(data.error || "Failed to calculate rate");
           }
@@ -381,6 +389,7 @@ const AddShipmentPage = () => {
   const [serviceModes, setServiceModes] = useState<Option[]>([]);
 
   const [form, setForm] = useState({
+    shipmentDate: new Date().toISOString().slice(0, 10), // Default to today's date
     trackingId: "",
     agency: "",
     office: "",
@@ -404,14 +413,15 @@ const AddShipmentPage = () => {
     weightVol: 0,
     fixedCharge: 0,
     decValue: 0,
-    price: 0,
-    discount: 0,
-    fuelSurcharge: 0,
-    insurance: 0,
-    customs: 0,
-    tax: 0,
-    declaredValue: 0,
-    reissue: 0,
+    price: "0",
+    discount: "0",
+    fuelSurcharge: "0",
+    insurance: "0",
+    customs: "0",
+    tax: "0",
+    declaredValue: "0",
+    reissue: "0",
+    profitPercentage: "0",
     manualRate: false,
   });
 
@@ -482,6 +492,7 @@ const AddShipmentPage = () => {
       
       // Additional metadata
       submissionTimestamp: new Date().toISOString(),
+      shipmentDate: new Date(form.shipmentDate).toISOString(), // Use selected shipment date
       totalPackages: packages.length,
       totalWeight: totals.weight,
       totalWeightVol: totals.weightVol,
@@ -508,6 +519,7 @@ const AddShipmentPage = () => {
       console.log('Shipment saved successfully with data:', data.receivedData);
       if (!isEditing) {
         setForm({
+        shipmentDate: new Date().toISOString().slice(0, 10),
         trackingId: "",
         agency: "Deprixa Miami",
         office: "Deprixa Group",
@@ -531,14 +543,15 @@ const AddShipmentPage = () => {
         weightVol: 0,
         fixedCharge: 0,
         decValue: 0,
-        price: 0,
-        discount: 0,
-        fuelSurcharge: 0,
-        insurance: 0,
-        customs: 0,
-        tax: 0,
-        declaredValue: 0,
-        reissue: 0,
+        price: "0",
+        discount: "0",
+        fuelSurcharge: "0",
+        insurance: "0",
+        customs: "0",
+        tax: "0",
+        declaredValue: "0",
+        reissue: "0",
+        profitPercentage: "0",
         manualRate: false,
         });
         // Reset calculated values
@@ -563,6 +576,7 @@ const AddShipmentPage = () => {
           const s = data.shipment;
           setForm((prev) => ({
             ...prev,
+            shipmentDate: s.shipmentDate ? new Date(s.shipmentDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
             trackingId: s.trackingId || "",
             agency: s.agency || prev.agency,
             office: s.office || prev.office,
@@ -594,6 +608,7 @@ const AddShipmentPage = () => {
             tax: s.tax || 0,
             declaredValue: s.declaredValue || 0,
             reissue: s.reissue || 0,
+            profitPercentage: s.profitPercentage || "0",
             manualRate: s.manualRate || false,
           }));
 
@@ -660,14 +675,30 @@ const AddShipmentPage = () => {
 
         {/* Shipment Info Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Left Section: Tracking ID */}
+          {/* Left Section: Shipment Date + Tracking ID */}
           <Card className="bg-white dark:bg-background border border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-end gap-6">
+                {/* Shipment Date */}
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium mb-1">
+                    Shipment Date
+                  </Label>
+                  <Input
+                    id="shipmentDate"
+                    name="shipmentDate"
+                    type="date"
+                    value={form.shipmentDate}
+                    onChange={handleChange}
+                    required
+                    className="bg-muted"
+                  />
+                </div>
+
                 {/* Tracking ID */}
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium mb-1">
-                    Tracking ID
+                    Tracking
                   </Label>
                   <Input
                     id="trackingId"
@@ -676,7 +707,7 @@ const AddShipmentPage = () => {
                     onChange={handleChange}
                     required
                     className="bg-muted"
-                    placeholder="Enter tracking ID"
+                    placeholder="Enter tracking"
                   />
                 </div>
               </div>
@@ -1195,6 +1226,16 @@ const AddShipmentPage = () => {
                   value={form.fixedCharge}
                   className="w-full"
                   onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block">Profit %</Label>
+                <Input
+                  name="profitPercentage"
+                  value={form.profitPercentage}
+                  className="w-full"
+                  onChange={handleChange}
+                  placeholder="0"
                 />
               </div>
                              <div className="col-span-2 flex flex-col justify-end">
