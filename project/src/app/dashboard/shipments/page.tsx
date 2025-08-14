@@ -28,12 +28,17 @@ import { Country } from "country-state-city";
 import {
   format,
   parseISO,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
   isWithinInterval,
-  startOfDay,
-  endOfDay,
 } from "date-fns";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,16 +59,25 @@ export default function ShipmentsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("All");
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>(() => {
+  const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
     const twoMonthsAgo = new Date(
       now.getFullYear(),
       now.getMonth() - 2,
       now.getDate()
     );
-    return { from: twoMonthsAgo, to: now };
+    const tomorrow = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
+    return { from: twoMonthsAgo, to: tomorrow };
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [inputValue, setInputValue] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [shipmentToDelete, setShipmentToDelete] = useState<
     (Shipment & { invoices: { status: string }[] }) | null
@@ -73,14 +87,14 @@ export default function ShipmentsPage() {
   type SortField =
     | "trackingId"
     | "invoiceNumber"
-    | "createdAt"
+    | "shipmentDate"
     | "senderName"
     | "recipientName"
     | "destination"
     | "totalCost"
     | "invoiceStatus";
   type SortOrder = "asc" | "desc";
-  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortField, setSortField] = useState<SortField>("shipmentDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   useEffect(() => {
@@ -165,16 +179,102 @@ export default function ShipmentsPage() {
     }
   };
 
-  // Compact label for the date range button to avoid overflow
-  const formatRangeLabelText = (from?: Date, to?: Date) => {
-    if (!from) return "Select date range";
-    if (to) {
-      const sameYear = from.getFullYear() === to.getFullYear();
-      return sameYear
-        ? `${format(from, "MMM d")} - ${format(to, "MMM d, yyyy")}`
-        : `${format(from, "MMM d, yyyy")} - ${format(to, "MMM d, yyyy")}`;
+  // Custom calendar functions
+  const getDaysInMonth = (date: Date) => {
+    const start = startOfWeek(startOfMonth(date));
+    const end = endOfWeek(endOfMonth(date));
+    return eachDayOfInterval({ start, end });
+  };
+
+  const isInRange = (date: Date) => {
+    if (!dateRange?.from || !dateRange?.to) return false;
+    return isWithinInterval(date, { start: dateRange.from, end: dateRange.to });
+  };
+
+  const isRangeStart = (date: Date) => {
+    return dateRange?.from && isSameDay(date, dateRange.from);
+  };
+
+  const isRangeEnd = (date: Date) => {
+    return dateRange?.to && isSameDay(date, dateRange.to);
+  };
+
+  const handleDateClick = (date: Date) => {
+    if (!dateRange?.from || (dateRange.from && dateRange.to)) {
+      // Start new range
+      setDateRange({ from: date, to: undefined });
+    } else {
+      // Complete the range
+      if (date < dateRange.from) {
+        setDateRange({ from: date, to: dateRange.from });
+      } else {
+        setDateRange({ from: dateRange.from, to: date });
+      }
     }
-    return format(from, "MMM d, yyyy");
+  };
+
+  const formatRangeLabelText = (range?: { from: Date; to?: Date }) => {
+    if (!range?.from) return "Select date range";
+    if (range.to) {
+      return `${format(range.from, "dd-MM-yyyy")} to ${format(range.to, "dd-MM-yyyy")}`;
+    }
+    return format(range.from, "dd-MM-yyyy");
+  };
+
+  const parseDateInput = (input: string) => {
+    // Parse formats like "dd-MM-yyyy to dd-MM-yyyy" or "dd-MM-yyyy"
+    const parts = input.split(" to ");
+    if (parts.length === 2) {
+      const fromDate = parseDate(parts[0].trim());
+      const toDate = parseDate(parts[1].trim());
+      if (fromDate && toDate) {
+        return { from: fromDate, to: toDate };
+      }
+    } else if (parts.length === 1) {
+      const fromDate = parseDate(parts[0].trim());
+      if (fromDate) {
+        return { from: fromDate, to: undefined };
+      }
+    }
+    return undefined;
+  };
+
+  const parseDate = (dateStr: string) => {
+    // Parse dd-MM-yyyy format
+    const match = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    return null;
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+  };
+
+  const handleInputBlur = () => {
+    setIsEditing(false);
+    if (inputValue.trim()) {
+      const parsedRange = parseDateInput(inputValue);
+      if (parsedRange) {
+        setDateRange(parsedRange);
+        setPage(1);
+      }
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+      setInputValue(formatRangeLabelText(dateRange));
+    }
   };
 
   const handleEdit = (
@@ -247,142 +347,169 @@ export default function ShipmentsPage() {
             </Select>
           </div>
 
-          {/* Date Range Filter */}
-          <div>
-            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
-              Date Range
-            </span>
-            <div className="relative">
-              <Button
-                variant="outline"
-                onClick={() => setShowDatePicker(!showDatePicker)}
-                className="min-w-[220px] max-w-[300px] w-auto justify-start text-left font-normal overflow-hidden"
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                <span className="truncate">
-                  {formatRangeLabelText(dateRange?.from, dateRange?.to)}
-                </span>
-              </Button>
-              {showDatePicker && (
-                <div
-                  className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl overflow-hidden"
-                  style={{ width: "min(360px, 95vw)" }}
-                >
-                  <div className="p-4">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        Select Date Range
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Choose a date range to filter shipments
-                      </p>
+                                           {/* Date Range Filter */}
+            <div>
+              <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 block mb-1">
+                Select Date
+              </span>
+              <div className="relative">
+                                 <Input
+                   type="text"
+                   placeholder="dd-MM-yyyy to dd-MM-yyyy"
+                   value={isEditing ? inputValue : formatRangeLabelText(dateRange)}
+                   onChange={handleInputChange}
+                   onFocus={() => {
+                     setIsEditing(true);
+                     setInputValue(formatRangeLabelText(dateRange));
+                   }}
+                   onBlur={handleInputBlur}
+                   onKeyDown={handleInputKeyDown}
+                   onClick={() => !isEditing && setShowDatePicker(!showDatePicker)}
+                   className="w-64 bg-muted cursor-text"
+                 />
+                                 {!isEditing && (
+                   <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                 )}
+                {showDatePicker && (
+                  <div className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4" style={{ minWidth: "600px" }}>
+                    <div className="flex gap-4">
+                      {/* Left Calendar */}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <button
+                            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                          >
+                            ←
+                          </button>
+                          <h3 className="text-sm font-medium">
+                            {format(currentMonth, "MMM yyyy")}
+                          </h3>
+                          <div className="w-6"></div>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 text-xs">
+                          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
+                            <div key={day} className="p-2 text-center text-gray-500 font-medium">
+                              {day}
+                            </div>
+                          ))}
+                          {getDaysInMonth(currentMonth).map((day, index) => (
+                            <button
+                              key={index}
+                              onClick={() => handleDateClick(day)}
+                              className={`p-2 text-center text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900 ${
+                                !isSameMonth(day, currentMonth) 
+                                  ? "text-gray-300 dark:text-gray-600" 
+                                  : isRangeStart(day)
+                                  ? "bg-blue-500 text-white"
+                                  : isRangeEnd(day)
+                                  ? "bg-blue-500 text-white"
+                                  : isInRange(day)
+                                  ? "bg-blue-100 dark:bg-blue-800"
+                                  : "text-gray-700 dark:text-gray-200"
+                              }`}
+                            >
+                              {format(day, "d")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Right Calendar */}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="w-6"></div>
+                          <h3 className="text-sm font-medium">
+                            {format(addMonths(currentMonth, 1), "MMM yyyy")}
+                          </h3>
+                          <button
+                            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                          >
+                            →
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 text-xs">
+                          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
+                            <div key={day} className="p-2 text-center text-gray-500 font-medium">
+                              {day}
+                            </div>
+                          ))}
+                          {getDaysInMonth(addMonths(currentMonth, 1)).map((day, index) => (
+                            <button
+                              key={index}
+                              onClick={() => handleDateClick(day)}
+                              className={`p-2 text-center text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900 ${
+                                !isSameMonth(day, addMonths(currentMonth, 1)) 
+                                  ? "text-gray-300 dark:text-gray-600" 
+                                  : isRangeStart(day)
+                                  ? "bg-blue-500 text-white"
+                                  : isRangeEnd(day)
+                                  ? "bg-blue-500 text-white"
+                                  : isInRange(day)
+                                  ? "bg-blue-100 dark:bg-blue-800"
+                                  : "text-gray-700 dark:text-gray-200"
+                              }`}
+                            >
+                              {format(day, "d")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-
-                    <DayPicker
-                      mode="range"
-                      selected={dateRange}
-                      onSelect={(range) => {
-                        if (range?.from && range?.to) {
-                          setDateRange({ from: range.from, to: range.to });
-                        } else if (range?.from) {
-                          setDateRange({ from: range.from, to: range.from });
-                        }
-                      }}
-                      numberOfMonths={1}
-                      className="mb-4 w-full"
-                      styles={{
-                        months: { display: "block" },
-                        caption: {
-                          color: "inherit",
-                          fontSize: "1.1rem",
-                          fontWeight: "600",
-                        },
-                        head_cell: { color: "inherit", fontWeight: "500" },
-                        day: {
-                          color: "inherit",
-                          borderRadius: "6px",
-                          margin: "2px",
-                          transition: "all 0.2s",
-                        },
-                        day_selected: {
-                          backgroundColor: "#3b82f6",
-                          color: "white",
-                          fontWeight: "600",
-                        },
-                        day_today: {
-                          backgroundColor: "#e5e7eb",
-                          color: "inherit",
-                          fontWeight: "600",
-                        },
-                        day_range_start: {
-                          backgroundColor: "#3b82f6",
-                          color: "white",
-                          fontWeight: "600",
-                        },
-                        day_range_end: {
-                          backgroundColor: "#3b82f6",
-                          color: "white",
-                          fontWeight: "600",
-                        },
-                        day_range_middle: {
-                          backgroundColor: "#dbeafe",
-                          color: "inherit",
-                        },
-                        nav_button: {
-                          backgroundColor: "transparent",
-                          border: "none",
-                          borderRadius: "6px",
-                          padding: "4px",
-                          transition: "all 0.2s",
-                        },
-                        nav_button_previous: { marginRight: "8px" },
-                        nav_button_next: { marginLeft: "8px" },
-                      }}
-                    />
-
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center space-x-4">
+                    
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {dateRange?.from && dateRange?.to
+                          ? `${format(dateRange.from, "dd-MM-yyyy")} to ${format(dateRange.to, "dd-MM-yyyy")}`
+                          : "Select date range"}
+                      </div>
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            // Reset to default 2 months range
                             const now = new Date();
                             const twoMonthsAgo = new Date(
                               now.getFullYear(),
                               now.getMonth() - 2,
                               now.getDate()
                             );
-                            setDateRange({ from: twoMonthsAgo, to: now });
+                            const tomorrow = new Date(
+                              now.getFullYear(),
+                              now.getMonth(),
+                              now.getDate() + 1
+                            );
+                            setDateRange({ from: twoMonthsAgo, to: tomorrow });
+                            setCurrentMonth(twoMonthsAgo);
                           }}
                           className="text-gray-600 dark:text-gray-400"
                         >
-                          Reset to Default
+                          Restore Default
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => setShowDatePicker(false)}
+                          onClick={() => {
+                            setDateRange(undefined);
+                            setShowDatePicker(false);
+                          }}
                           className="text-gray-600 dark:text-gray-400"
                         >
                           Cancel
                         </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => setShowDatePicker(false)}
+                        >
+                          Apply
+                        </Button>
                       </div>
-                      <Button
-                        onClick={() => {
-                          setShowDatePicker(false);
-                          setPage(1);
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Apply Filter
-                      </Button>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -407,10 +534,10 @@ export default function ShipmentsPage() {
                   </th>
                   <th className="px-4 py-2 text-left">
                     <button
-                      onClick={() => handleSort("createdAt")}
+                      onClick={() => handleSort("shipmentDate")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Date {getSortIcon("createdAt")}
+                      Date {getSortIcon("shipmentDate")}
                     </button>
                   </th>
                   <th className="px-4 py-2 text-left">
@@ -479,7 +606,7 @@ export default function ShipmentsPage() {
                         {shipment.trackingId}
                       </td>
                       <td className="px-4 py-3">
-                        {formatDate(shipment.createdAt)}
+                        {formatDate(shipment.shipmentDate || shipment.createdAt)}
                       </td>
                       <td className="px-4 py-3">{shipment.senderName}</td>
                       <td className="px-4 py-3">{shipment.recipientName}</td>
@@ -556,10 +683,8 @@ export default function ShipmentsPage() {
                 limit: String(LIMIT),
                 ...(searchTerm && { search: searchTerm }),
                 ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
-                ...(dateRange?.from && {
-                  fromDate: dateRange.from.toISOString(),
-                }),
-                ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+                                                                  ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+                                 ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
                 sortField,
                 sortOrder,
               });

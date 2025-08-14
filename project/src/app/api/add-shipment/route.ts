@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
     // Extract basic required fields
     const {
       trackingId,
+      shipmentDate,
       agency,
       office,
       senderName,
@@ -196,6 +197,7 @@ export async function POST(req: NextRequest) {
       data: {
         trackingId,
         invoiceNumber,
+        shipmentDate: shipmentDate ? new Date(shipmentDate) : new Date(),
         agency,
         office,
         senderName,

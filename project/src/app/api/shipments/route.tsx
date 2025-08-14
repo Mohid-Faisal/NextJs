@@ -17,6 +17,7 @@ export async function GET(req: Request) {
     | "trackingId"
     | "invoiceNumber"
     | "createdAt"
+    | "shipmentDate"
     | "senderName"
     | "recipientName"
     | "destination"
@@ -30,14 +31,14 @@ export async function GET(req: Request) {
   if (status) where.deliveryStatus = status;
   if (invoiceStatus) where.invoiceStatus = invoiceStatus;
   
-  // Date range filtering
+  // Date range filtering - use shipmentDate instead of createdAt
   if (fromDate || toDate) {
-    where.createdAt = {};
+    where.shipmentDate = {};
     if (fromDate) {
-      where.createdAt.gte = new Date(fromDate);
+      where.shipmentDate.gte = new Date(fromDate);
     }
     if (toDate) {
-      where.createdAt.lte = new Date(toDate);
+      where.shipmentDate.lte = new Date(toDate);
     }
   }
 
@@ -67,7 +68,7 @@ export async function GET(req: Request) {
   // Sorting
   const orderBy: any = sortField
     ? { [sortField]: sortOrder }
-    : { createdAt: "desc" as const };
+    : { shipmentDate: "desc" as const };
 
   const [shipments, total] = await Promise.all([
     prisma.shipment.findMany({
