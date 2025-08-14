@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { Country } from "country-state-city";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -26,6 +27,13 @@ export async function GET(req: Request) {
     | null;
   const sortOrder = (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
 
+  // Debug logging for search
+  console.log('=== SHIPMENTS API SEARCH DEBUG ===');
+  console.log('Search term:', search);
+  console.log('Search term length:', search.length);
+  console.log('Search term trimmed:', search.trim());
+  console.log('All search params:', Object.fromEntries(searchParams.entries()));
+
   const where: any = {};
 
   if (status) where.deliveryStatus = status;
@@ -43,7 +51,19 @@ export async function GET(req: Request) {
   }
 
   // Fuzzy search across all relevant columns
-  if (search) {
+  if (search && search.length > 0) {
+    console.log('Building search query for term:', `"${search}"`);
+    
+    // First, try to find country codes that match the search term
+    const matchingCountries = Country.getAllCountries().filter(country =>
+      country.name.toLowerCase().includes(search.toLowerCase()) ||
+      country.isoCode.toLowerCase().includes(search.toLowerCase())
+    );
+    
+    const countryCodes = matchingCountries.map(country => country.isoCode);
+    console.log('Matching countries found:', matchingCountries.map(c => ({ name: c.name, code: c.isoCode })));
+    console.log('Country codes for search:', countryCodes);
+    
     where.OR = [
       { trackingId: { contains: search, mode: "insensitive" } },
       { invoiceNumber: { contains: search, mode: "insensitive" } },
@@ -63,6 +83,15 @@ export async function GET(req: Request) {
       { serviceMode: { contains: search, mode: "insensitive" } },
       { packageDescription: { contains: search, mode: "insensitive" } },
     ];
+    
+    // If we found matching country codes, also search for those in destination
+    if (countryCodes.length > 0) {
+      where.OR.push({ destination: { in: countryCodes } });
+    }
+    
+    console.log('Search WHERE clause:', JSON.stringify(where.OR, null, 2));
+  } else {
+    console.log('No search term provided or search term is empty');
   }
 
   // Sorting
@@ -70,25 +99,55 @@ export async function GET(req: Request) {
     ? { [sortField]: sortOrder }
     : { shipmentDate: "desc" as const };
 
-  const [shipments, total] = await Promise.all([
-    prisma.shipment.findMany({
-      skip,
-      take: limit,
-      where,
-      orderBy,
-      include: {
-        invoices: {
-          where: {
-            profile: "Customer"
-          },
-          select: {
-            status: true
+  console.log('Final WHERE clause:', JSON.stringify(where, null, 2));
+  console.log('Order by:', orderBy);
+  console.log('=== END SHIPMENTS API SEARCH DEBUG ===');
+
+  try {
+    const [shipments, total] = await Promise.all([
+      prisma.shipment.findMany({
+        skip,
+        take: limit,
+        where,
+        orderBy,
+        include: {
+          invoices: {
+            where: {
+              profile: "Customer"
+            },
+            select: {
+              status: true
+            }
           }
         }
-      }
-    }),
-    prisma.shipment.count({ where }),
-  ]);
+      }),
+      prisma.shipment.count({ where }),
+    ]);
 
-  return NextResponse.json({ shipments, total });
+    console.log(`Found ${shipments.length} shipments out of ${total} total`);
+    if (search && shipments.length > 0) {
+      console.log('Sample search results:');
+      shipments.slice(0, 3).forEach((shipment, index) => {
+        console.log(`Result ${index + 1}:`, {
+          id: shipment.id,
+          trackingId: shipment.trackingId,
+          invoiceNumber: shipment.invoiceNumber,
+          senderName: shipment.senderName,
+          recipientName: shipment.recipientName,
+          destination: shipment.destination,
+          packaging: shipment.packaging
+        });
+      });
+    }
+
+    return NextResponse.json({ shipments, total });
+  } catch (error) {
+    console.error('Error in shipments API:', error);
+    console.error('Search term was:', search);
+    console.error('WHERE clause was:', JSON.stringify(where, null, 2));
+    return NextResponse.json(
+      { error: "Failed to fetch shipments", details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
 }

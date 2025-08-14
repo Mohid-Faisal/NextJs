@@ -155,14 +155,27 @@ const InvoicePDF = ({ invoice, assets }: any) => (
       {/* Client + Invoice Info */}
       <View style={styles.infoRow}>
         <View style={styles.clientInfo}>
-          <Text>{invoice.customer?.CompanyName || "N/A"}</Text>
-          <Text>Attn: {invoice.customer?.PersonName || "N/A"}</Text>
-          <Text>{invoice.customer?.Address || "N/A"}</Text>
-          <Text>{invoice.destination}</Text>
+          {invoice.profile === "Vendor" ? (
+            // For vendor invoices, show vendor information
+            <>
+              <Text>{invoice.vendor?.CompanyName || "N/A"}</Text>
+              <Text>Attn: {invoice.vendor?.PersonName || "N/A"}</Text>
+              <Text>{invoice.vendor?.Address || "N/A"}</Text>
+              <Text>{invoice.destination}</Text>
+            </>
+          ) : (
+            // For customer invoices, show customer information
+            <>
+              <Text>{invoice.customer?.CompanyName || "N/A"}</Text>
+              <Text>Attn: {invoice.customer?.PersonName || "N/A"}</Text>
+              <Text>{invoice.customer?.Address || "N/A"}</Text>
+              <Text>{invoice.destination}</Text>
+            </>
+          )}
         </View>
         <View style={styles.invoiceInfo}>
           <Text>Invoice: {invoice.invoiceNumber}</Text>
-          <Text>Account Id: {invoice.customer?.id || "-"}</Text>
+          <Text>Account Id: {invoice.profile === "Vendor" ? (invoice.vendor?.id || "-") : (invoice.customer?.id || "-")}</Text>
           <Text>
             Date: {new Date(invoice.invoiceDate).toLocaleDateString("en-GB")}
           </Text>

@@ -818,31 +818,17 @@ const AddShipmentPage = () => {
             filterServicesByVendor(s.vendor);
           }
 
-          // Use a longer timeout to ensure all options are loaded
-          setTimeout(() => {
-            // Set all select values properly by calling handleSelect for each
-            if (s.agency) {
-              handleSelect("agency", s.agency);
-            }
-            if (s.office) {
-              handleSelect("office", s.office);
-            }
-            if (s.deliveryStatus) {
-              handleSelect("deliveryStatus", s.deliveryStatus);
-            }
-            if (s.shippingMode) {
-              handleSelect("shippingMode", s.shippingMode);
-            }
-            if (s.packaging) {
-              handleSelect("packaging", s.packaging);
-            }
-            if (s.vendor) {
-              handleSelect("vendor", s.vendor);
-            }
-            if (s.serviceMode) {
-              handleSelect("serviceMode", s.serviceMode);
-            }
-          }, 500); // Increased timeout to ensure options are loaded
+          // Set select values directly in the form state to ensure proper pre-filling
+          setForm(prev => ({
+            ...prev,
+            agency: s.agency || prev.agency,
+            office: s.office || prev.office,
+            deliveryStatus: s.deliveryStatus || prev.deliveryStatus,
+            shippingMode: s.shippingMode || prev.shippingMode,
+            packaging: s.packaging || prev.packaging,
+            vendor: s.vendor || prev.vendor,
+            serviceMode: s.serviceMode || prev.serviceMode,
+          }));
         }
       } catch (e) {
         console.error('Failed to load shipment for edit', e);

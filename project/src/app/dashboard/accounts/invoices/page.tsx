@@ -797,10 +797,10 @@ export default function InvoicesPage() {
                     </td>
                     <td className="px-4 py-3">
                       {(() => {
-                        const customerName = i.customer?.PersonName || i.customer?.CompanyName;
-                        const vendorName = i.vendor?.PersonName || i.vendor?.CompanyName;
+                        const customerName = i.customer?.CompanyName || i.customer?.PersonName;
+                        const vendorName = i.vendor?.CompanyName || i.vendor?.PersonName;
                         console.log(`Invoice ${i.id}: customer=${customerName}, vendor=${vendorName}`); // Debug log
-                        return customerName || vendorName || "-";
+                        return vendorName || customerName || "-";
                       })()}
                     </td>
                     <td className="px-4 py-3">
