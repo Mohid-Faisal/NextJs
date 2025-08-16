@@ -814,6 +814,14 @@ export default function InvoicesPage() {
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
                             onClick={() => {
+                              window.location.href = `/dashboard/accounts/payments/process?invoice=${i.invoiceNumber}`;
+                            }}
+                            className="text-blue-600 font-medium"
+                          >
+                            💰 Charge Payment
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
                               window.location.href = `/dashboard/accounts/invoices/add?id=${i.id}`;
                             }}
                           >

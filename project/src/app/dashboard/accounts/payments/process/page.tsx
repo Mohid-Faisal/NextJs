@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Search, Info } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 type Invoice = {
@@ -35,10 +35,12 @@ type Invoice = {
   invoiceDate: string;
   trackingNumber?: string;
   destination: string;
+  remainingAmount?: number;
 };
 
 export default function ProcessPaymentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,6 +56,25 @@ export default function ProcessPaymentPage() {
   useEffect(() => {
     fetchInvoices();
   }, []);
+
+  // Handle pre-selection of invoice from URL parameter
+  useEffect(() => {
+    const invoiceParam = searchParams.get('invoice');
+    if (invoiceParam && invoices.length > 0) {
+      const invoice = invoices.find(inv => inv.invoiceNumber === invoiceParam);
+      if (invoice) {
+        setSelectedInvoice(invoice);
+        // Set payment amount to remaining amount if available
+        const remainingAmount = invoice.remainingAmount;
+        if (remainingAmount !== undefined && remainingAmount > 0) {
+          setFormData(prev => ({
+            ...prev,
+            paymentAmount: remainingAmount.toString()
+          }));
+        }
+      }
+    }
+  }, [searchParams, invoices]);
 
   const fetchInvoices = async () => {
     try {
@@ -203,7 +224,7 @@ export default function ProcessPaymentPage() {
                         {invoice.profile}: {invoice.customer?.CompanyName || invoice.vendor?.CompanyName}
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-500">
-                        ${invoice.totalAmount.toLocaleString()} • {invoice.trackingNumber}
+                        ${invoice.totalAmount.toLocaleString()} • {invoice.trackingNumber} • {invoice.remainingAmount?.toLocaleString()}
                       </div>
                     </div>
                     <span
@@ -234,7 +255,12 @@ export default function ProcessPaymentPage() {
                   </h3>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <div>Invoice: {selectedInvoice.invoiceNumber}</div>
-                    <div>Amount: ${selectedInvoice.totalAmount.toLocaleString()}</div>
+                    <div>Original Amount: ${selectedInvoice.totalAmount.toLocaleString()}</div>
+                    {selectedInvoice.remainingAmount !== undefined && (
+                      <div className="font-semibold text-blue-600 dark:text-blue-400">
+                        Remaining Amount: ${selectedInvoice.remainingAmount.toLocaleString()}
+                      </div>
+                    )}
                     <div>Status: {selectedInvoice.status}</div>
                     <div>Profile: {selectedInvoice.profile}</div>
                     {selectedInvoice.trackingNumber && (
@@ -268,12 +294,24 @@ export default function ProcessPaymentPage() {
                       onChange={(e) => setFormData({ ...formData, paymentAmount: e.target.value })}
                       className="mt-1"
                       required
-                      min="0.01"
+                      min="0"
                     />
-                    {selectedInvoice.profile === "Customer" && (
+                    {selectedInvoice.remainingAmount !== undefined && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Invoice amount: ${selectedInvoice.totalAmount.toLocaleString()}
-                        {selectedInvoice.status === "Partial" && " (partial payment already made)"}
+                        {selectedInvoice.remainingAmount !== undefined ? (
+                          <>
+                            Original: ${selectedInvoice.totalAmount.toLocaleString()} • 
+                            Remaining: ${selectedInvoice.remainingAmount.toLocaleString()}
+                            {selectedInvoice.remainingAmount < selectedInvoice.totalAmount && (
+                              <span className="text-blue-600"> (balance already applied)</span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            Invoice amount: ${selectedInvoice.totalAmount.toLocaleString()}
+                            {selectedInvoice.status === "Partial" && " (partial payment already made)"}
+                          </>
+                        )}
                       </p>
                     )}
                   </div>

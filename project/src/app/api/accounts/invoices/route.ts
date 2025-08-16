@@ -73,8 +73,54 @@ export async function GET(req: NextRequest) {
       prisma.invoice.count({ where }),
     ]);
 
+    // Calculate remaining amount for each invoice
+    const invoicesWithRemainingAmount = await Promise.all(
+      invoices.map(async (invoice) => {
+        if (invoice.profile === "Customer") {
+          // Calculate total payments for this invoice
+          const totalPayments = await prisma.payment.aggregate({
+            where: {
+              reference: invoice.invoiceNumber,
+              transactionType: "INCOME"
+            },
+            _sum: {
+              amount: true
+            }
+          });
+
+          const totalPaid = totalPayments._sum.amount || 0;
+          const remainingAmount = Math.max(0, invoice.totalAmount - totalPaid);
+
+          return {
+            ...invoice,
+            remainingAmount
+          };
+        } else if (invoice.profile === "Vendor") {
+          // Calculate total payments for vendor invoice
+          const totalPayments = await prisma.payment.aggregate({
+            where: {
+              reference: invoice.invoiceNumber,
+              transactionType: "EXPENSE"
+            },
+            _sum: {
+              amount: true
+            }
+          });
+
+          const totalPaid = totalPayments._sum.amount || 0;
+          const remainingAmount = Math.max(0, invoice.totalAmount - totalPaid);
+
+          return {
+            ...invoice,
+            remainingAmount
+          };
+        }
+        return invoice;
+      })
+    );
+
     return NextResponse.json({
-      invoices,
+      invoices: invoicesWithRemainingAmount,
       total,
       page,
       totalPages: pageSize ? Math.ceil(total / pageSize) : 1,
