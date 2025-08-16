@@ -381,15 +381,17 @@ export async function POST(req: NextRequest) {
              );
            }
 
-                       // Company transaction (DEBIT - we owe vendor money)
-            // This represents our liability to pay the vendor (decreases our balance)
-            // Note: Since vendor cost is $0 initially, no company transaction is created yet
-            // Company transaction will be created when vendor cost is determined and invoice is updated
-            if (vendorTotalCost > 0) {
-              // For now, we only create customer transaction
-              // Company liability will be created when vendor invoice is updated with actual cost
-              console.log('Vendor cost is $0 initially - company transaction will be created when vendor cost is determined');
-            }
+           // Vendor transaction (DEBIT - we owe vendor money)
+           if (vendorId && vendorTotalCost > 0) {
+             await addVendorTransaction(
+               prisma,
+               vendorId,
+               'DEBIT',
+               vendorTotalCost,
+               `Vendor invoice for shipment ${trackingId}`,
+               vendorInvoiceNumber
+             );
+           }
 
           console.log('Financial transactions created successfully');
 
