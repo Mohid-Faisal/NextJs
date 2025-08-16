@@ -101,7 +101,7 @@ export default function ShipmentsPage() {
     | "amount"
     | "totalWeight";
   type SortOrder = "asc" | "desc";
-  const [sortField, setSortField] = useState<SortField>("shipmentDate");
+  const [sortField, setSortField] = useState<SortField>("invoiceNumber");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   useEffect(() => {

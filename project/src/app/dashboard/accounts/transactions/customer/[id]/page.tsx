@@ -272,10 +272,10 @@ export default function CustomerTransactionsPage() {
                 <thead>
                   <tr className="text-sm text-gray-500 dark:text-gray-300 border-b">
                     <th className="px-4 py-2 text-left">Date</th>
-                    <th className="px-4 py-2 text-left">Type</th>
-                    <th className="px-4 py-2 text-left">Amount</th>
-                    <th className="px-4 py-2 text-left">Description</th>
                     <th className="px-4 py-2 text-left">Reference</th>
+                    <th className="px-4 py-2 text-left">Description</th>
+                    <th className="px-4 py-2 text-left">Debit</th>
+                    <th className="px-4 py-2 text-left">Credit</th>
                     <th className="px-4 py-2 text-left">Balance</th>
                   </tr>
                 </thead>
@@ -285,22 +285,14 @@ export default function CustomerTransactionsPage() {
                       <td className="px-4 py-3">
                         {new Date(transaction.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            transaction.type === "CREDIT"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                          }`}
-                        >
-                          {transaction.type}
-                        </span>
+                      <td className="px-4 py-3">{transaction.reference || "-"}</td>
+                      <td className="px-4 py-3">{transaction.description}</td>
+                      <td className="px-4 py-3 font-medium">
+                        {transaction.type === "DEBIT" ? `$${transaction.amount.toLocaleString()}` : "-"}
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        ${transaction.amount.toLocaleString()}
+                        {transaction.type === "CREDIT" ? `$${transaction.amount.toLocaleString()}` : "-"}
                       </td>
-                      <td className="px-4 py-3">{transaction.description}</td>
-                      <td className="px-4 py-3">{transaction.reference || "-"}</td>
                       <td className="px-4 py-3">
                         <span
                           className={
