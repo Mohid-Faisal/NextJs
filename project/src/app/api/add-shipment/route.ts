@@ -167,27 +167,27 @@ export async function POST(req: NextRequest) {
 
     // Calculate total cost: price + fuelSurcharge - percentage discount
     // The price from frontend already includes profit, so we need to extract the original price
-    const priceWithProfit = parseFloat(price) || 0;
-    const fuelSurchargeAmount = parseFloat(fuelSurcharge) || 0;
+    const priceWithProfit = Math.round((parseFloat(price) || 0) * 100) / 100;
+    const fuelSurchargeAmount = Math.round((parseFloat(fuelSurcharge) || 0) * 100) / 100;
     const discountPercentage = parseFloat(discount) || 0;
     const profitPercentageValue = parseFloat(profitPercentage) || 0;
     
     // Calculate the original price by removing profit from the price with profit
-    const originalPrice = profitPercentageValue > 0 ? priceWithProfit / (1 + profitPercentageValue / 100) : priceWithProfit;
+    const originalPrice = profitPercentageValue > 0 ? Math.round((priceWithProfit / (1 + profitPercentageValue / 100)) * 100) / 100 : priceWithProfit;
     
     // Calculate discount amount as percentage of original price
-    const discountAmount = (originalPrice * discountPercentage) / 100;
+    const discountAmount = Math.round(((originalPrice * discountPercentage) / 100) * 100) / 100;
     
     // Calculate profit amount as percentage of original price
-    const profitAmount = (originalPrice * profitPercentageValue) / 100;
+    const profitAmount = Math.round(((originalPrice * profitPercentageValue) / 100) * 100) / 100;
     
     // Customer invoice uses the price with profit (from frontend)
-    const customerTotalCost = priceWithProfit + fuelSurchargeAmount - discountAmount;
+    const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount) * 100) / 100;
     // Vendor invoice uses original price without profit
-    const vendorTotalCost = originalPrice + fuelSurchargeAmount - discountAmount;
+    const vendorTotalCost = Math.round((originalPrice + fuelSurchargeAmount - discountAmount) * 100) / 100;
 
     // Get subtotal from calculated values or use original price
-    const subtotal = calculatedValues?.subtotal || originalPrice;
+    const subtotal = calculatedValues?.subtotal ? Math.round((calculatedValues.subtotal) * 100) / 100 : originalPrice;
 
     // Generate invoice number
     const invoiceNumber = await generateInvoiceNumber(prisma);
@@ -283,14 +283,14 @@ export async function POST(req: NextRequest) {
 
        // Create customer invoice using the existing accounts API
        const customerLineItems = [
-         { description: "Shipping Service", value: originalPrice },
-         { description: "Fuel Surcharge", value: fuelSurchargeAmount },
-         { description: "Discount", value: -discountAmount }
+         { description: "Shipping Service", value: Math.round(originalPrice * 100) / 100 },
+         { description: "Fuel Surcharge", value: Math.round(fuelSurchargeAmount * 100) / 100 },
+         { description: "Discount", value: Math.round(-discountAmount * 100) / 100 }
        ];
        
        // Add profit line item if profit percentage is greater than 0
        if (profitPercentageValue > 0) {
-         customerLineItems.push({ description: "Profit", value: profitAmount });
+         customerLineItems.push({ description: "Profit", value: Math.round(profitAmount * 100) / 100 });
        }
 
        const customerInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
@@ -305,7 +305,7 @@ export async function POST(req: NextRequest) {
            destination: destination,
            weight: parseFloat(totalWeight) || 0,
            profile: "Customer",
-           fscCharges: fuelSurchargeAmount,
+           fscCharges: Math.round(fuelSurchargeAmount * 100) / 100,
            lineItems: customerLineItems,
            customerId: customerId,
            vendorId: null,
@@ -323,9 +323,9 @@ export async function POST(req: NextRequest) {
                // Create vendor invoice using the existing accounts API
         // Vendor invoice uses original price without profit
         const vendorLineItems = [
-          { description: "Vendor Service", value: originalPrice },
-          { description: "Fuel Surcharge", value: fuelSurchargeAmount },
-          { description: "Discount", value: -discountAmount }
+          { description: "Vendor Service", value: Math.round(originalPrice * 100) / 100 },
+          { description: "Fuel Surcharge", value: Math.round(fuelSurchargeAmount * 100) / 100 },
+          { description: "Discount", value: Math.round(-discountAmount * 100) / 100 }
         ];
 
         const vendorInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {

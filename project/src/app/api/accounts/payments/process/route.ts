@@ -48,24 +48,63 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Create CREDIT transaction for customer (reduces their debt)
+      // Calculate how much is still owed on this invoice
+      const totalPaidSoFar = await prisma.payment.aggregate({
+        where: {
+          reference: invoiceNumber,
+          transactionType: "INCOME"
+        },
+        _sum: {
+          amount: true
+        }
+      });
+
+      const alreadyPaid = totalPaidSoFar._sum.amount || 0;
+      const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
+      
+      // Determine how much goes to the invoice and how much becomes credit
+      const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
+      const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
+
+      console.log(`Customer payment calculation for invoice ${invoiceNumber}:`, {
+        invoiceAmount: invoice.totalAmount,
+        alreadyPaid,
+        remainingAmount,
+        paymentAmount: paymentAmountNum,
+        amountForInvoice,
+        overpaymentAmount
+      });
+
+      // Create CREDIT transaction for customer for the invoice payment portion
       await addCustomerTransaction(
         prisma,
         invoice.customerId,
         'CREDIT',
-        paymentAmountNum,
+        amountForInvoice,
         description || `Payment for invoice ${invoiceNumber}`,
         reference || invoiceNumber
       );
 
-             // Create CREDIT transaction for company (we receive money)
-       await addCompanyTransaction(
-         prisma,
-         'CREDIT',
-         paymentAmountNum,
-         `Customer payment for invoice ${invoiceNumber}`,
-         reference || invoiceNumber
-       );
+      // Create CREDIT transaction for company (we receive money)
+      await addCompanyTransaction(
+        prisma,
+        'CREDIT',
+        paymentAmountNum,
+        `Customer payment for invoice ${invoiceNumber}`,
+        reference || invoiceNumber
+      );
+
+      // If there's an overpayment, create a separate credit transaction for the customer
+      if (overpaymentAmount > 0) {
+        await addCustomerTransaction(
+          prisma,
+          invoice.customerId,
+          'CREDIT',
+          overpaymentAmount,
+          `Overpayment credit for invoice ${invoiceNumber}`,
+          `CREDIT-${invoiceNumber}`
+        );
+      }
 
     } else if (paymentType === "VENDOR_PAYMENT") {
       // We are paying the vendor
@@ -86,63 +125,63 @@ export async function POST(req: NextRequest) {
         reference || invoiceNumber
       );
 
-             // Create DEBIT transaction for company (we pay money out to vendor)
-       await addCompanyTransaction(
-         prisma,
-         'DEBIT',
-         paymentAmountNum,
-         `Vendor payment for invoice ${invoiceNumber}`,
-         reference || invoiceNumber
-       );
-     }
+      // Create DEBIT transaction for company (we pay money out to vendor)
+      await addCompanyTransaction(
+        prisma,
+        'DEBIT',
+        paymentAmountNum,
+        `Vendor payment for invoice ${invoiceNumber}`,
+        reference || invoiceNumber
+      );
+    }
 
-         // Create payment record
-     const payment = await prisma.payment.create({
-       data: {
-         transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
-         category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
-         date: new Date(),
-         currency: "USD",
-         amount: paymentAmountNum,
-         fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
-         fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,
-         fromCustomer: paymentType === "CUSTOMER_PAYMENT" ? invoice.customer?.CompanyName || "" : "",
-         toPartyType: paymentType === "CUSTOMER_PAYMENT" ? "US" : "VENDOR",
-         toVendorId: paymentType === "VENDOR_PAYMENT" ? invoice.vendorId : null,
-         toVendor: paymentType === "VENDOR_PAYMENT" ? invoice.vendor?.CompanyName || "" : "",
-         mode: paymentMethod || "CASH",
-         reference: reference || invoiceNumber,
-         description: description || `Payment for invoice ${invoiceNumber}`
-       }
-     });
+    // Create payment record
+    const payment = await prisma.payment.create({
+      data: {
+        transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
+        category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
+        date: new Date(),
+        currency: "USD",
+        amount: paymentAmountNum,
+        fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
+        fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,
+        fromCustomer: paymentType === "CUSTOMER_PAYMENT" ? invoice.customer?.CompanyName || "" : "",
+        toPartyType: paymentType === "CUSTOMER_PAYMENT" ? "US" : "VENDOR",
+        toVendorId: paymentType === "VENDOR_PAYMENT" ? invoice.vendorId : null,
+        toVendor: paymentType === "VENDOR_PAYMENT" ? invoice.vendor?.CompanyName || "" : "",
+        mode: paymentMethod || "CASH",
+        reference: reference || invoiceNumber,
+        description: description || `Payment for invoice ${invoiceNumber}`
+      }
+    });
 
-     // Calculate invoice payment status and update
-     const paymentStatus = await calculateInvoicePaymentStatus(
-       prisma,
-       invoiceNumber,
-       invoice.totalAmount
-     );
+    // Calculate invoice payment status and update
+    const paymentStatus = await calculateInvoicePaymentStatus(
+      prisma,
+      invoiceNumber,
+      invoice.totalAmount
+    );
 
-     // Update invoice status based on total payments
-     await prisma.invoice.update({
-       where: { invoiceNumber },
-       data: { 
-         status: paymentStatus.status
-       }
-     });
+    // Update invoice status based on total payments
+    await prisma.invoice.update({
+      where: { invoiceNumber },
+      data: { 
+        status: paymentStatus.status
+      }
+    });
 
-     return NextResponse.json({
-       success: true,
-       message: "Payment processed successfully",
-       payment,
-       invoice: {
-         invoiceNumber: invoice.invoiceNumber,
-         status: paymentStatus.status,
-         totalPaid: paymentStatus.totalPaid,
-         remainingAmount: paymentStatus.remainingAmount,
-         totalAmount: paymentStatus.totalAmount
-       }
-     });
+    return NextResponse.json({
+      success: true,
+      message: "Payment processed successfully",
+      payment,
+      invoice: {
+        invoiceNumber: invoice.invoiceNumber,
+        status: paymentStatus.status,
+        totalPaid: paymentStatus.totalPaid,
+        remainingAmount: paymentStatus.remainingAmount,
+        totalAmount: paymentStatus.totalAmount
+      }
+    });
 
   } catch (error) {
     console.error("Error processing payment:", error);

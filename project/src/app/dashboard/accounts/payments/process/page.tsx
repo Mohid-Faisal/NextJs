@@ -12,8 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 type Invoice = {
   id: number;
@@ -102,7 +103,9 @@ export default function ProcessPaymentPage() {
       const data = await response.json();
       
       if (response.ok) {
-        alert("Payment processed successfully!");
+        toast.success("Payment processed successfully!", {
+          description: `Payment of $${parseFloat(formData.paymentAmount).toLocaleString()} has been processed for invoice ${selectedInvoice.invoiceNumber}`,
+        });
         setSelectedInvoice(null);
         setFormData({
           paymentAmount: "",
@@ -112,11 +115,15 @@ export default function ProcessPaymentPage() {
         });
         fetchInvoices(); // Refresh invoice list
       } else {
-        alert(`Error: ${data.error}`);
+        toast.error("Payment failed", {
+          description: data.error || "An error occurred while processing the payment",
+        });
       }
     } catch (error) {
       console.error("Error processing payment:", error);
-      alert("Failed to process payment");
+      toast.error("Payment failed", {
+        description: "Failed to process payment. Please try again.",
+      });
     } finally {
       setProcessing(false);
     }
@@ -236,6 +243,18 @@ export default function ProcessPaymentPage() {
                   </div>
                 </div>
 
+                {selectedInvoice.profile === "Customer" && (
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-start">
+                      <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="text-sm text-blue-800 dark:text-blue-200">
+                        <strong>Customer Payment Note:</strong> If the payment amount exceeds the invoice total, 
+                        the excess amount will be added to the customer's credit balance for future invoices.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={handlePayment} className="space-y-4">
                   <div>
                     <Label htmlFor="paymentAmount" className="font-bold">
@@ -249,11 +268,14 @@ export default function ProcessPaymentPage() {
                       onChange={(e) => setFormData({ ...formData, paymentAmount: e.target.value })}
                       className="mt-1"
                       required
-                      max={selectedInvoice.totalAmount}
+                      min="0.01"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Maximum: ${selectedInvoice.totalAmount.toLocaleString()}
-                    </p>
+                    {selectedInvoice.profile === "Customer" && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Invoice amount: ${selectedInvoice.totalAmount.toLocaleString()}
+                        {selectedInvoice.status === "Partial" && " (partial payment already made)"}
+                      </p>
+                    )}
                   </div>
 
                   <div>
