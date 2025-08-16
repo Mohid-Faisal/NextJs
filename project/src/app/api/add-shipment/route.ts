@@ -309,8 +309,8 @@ export async function POST(req: NextRequest) {
         // If vendor has negative balance, they owe us money, so we apply their debt to reduce our invoice
         if (vendorBalance > 0) {
           // We owe them money, apply their credit to reduce our debt
-          vendorRemainingAmount = Math.max(0, vendorTotalCost - vendorBalance);
-          vendorAppliedBalance = Math.min(vendorBalance, vendorTotalCost);
+          vendorRemainingAmount = vendorTotalCost;
+          vendorAppliedBalance = 0
         } else {
           // They owe us money, apply their debt to reduce our invoice
           vendorAppliedBalance = Math.min(Math.abs(vendorBalance), vendorTotalCost);
