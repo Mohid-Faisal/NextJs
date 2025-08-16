@@ -166,15 +166,16 @@ const AddShipmentPage = () => {
         if (pkg.id === id) {
           const updatedPackage = { ...pkg, [field]: value };
           
-          // Auto-calculate weight volume when length, width, or height changes
-          if (field === 'length' || field === 'width' || field === 'height') {
-            const { length, width, height } = updatedPackage;
-            if (length > 0 && width > 0 && height > 0) {
-              // Calculate weight volume: (length * width * height) / 5000, then ceil
-              const calculatedWeightVol = Math.ceil((length * width * height) / 5000);
-              updatedPackage.weightVol = calculatedWeightVol;
-            }
-          }
+                         // Auto-calculate weight volume when length, width, or height changes
+               if (field === 'length' || field === 'width' || field === 'height') {
+                 const { length, width, height } = updatedPackage;
+                 if (length > 0 && width > 0 && height > 0) {
+                   // Calculate weight volume: (length * width * height) / 5000, then round up to nearest 0.5
+                   const rawWeightVol = (length * width * height) / 5000;
+                   const calculatedWeightVol = Math.ceil(rawWeightVol * 2) / 2;
+                   updatedPackage.weightVol = calculatedWeightVol;
+                 }
+               }
           
           return updatedPackage;
         }
@@ -1436,6 +1437,9 @@ const AddShipmentPage = () => {
                       </td>
                       <td className="border border-border px-2 py-1">
                         <Input
+                          type="number"
+                          step="0.5"
+                          min="0"
                           value={pkg.weight}
                           onChange={(e) => updatePackage(pkg.id, "weight", parseFloat(e.target.value) || 0)}
                           className="w-16"
