@@ -65,7 +65,8 @@ export async function addCustomerTransaction(
   type: 'CREDIT' | 'DEBIT',
   amount: number,
   description: string,
-  reference?: string
+  reference?: string,
+  invoice?: string
 ) {
   const customer = await prisma.customers.findUnique({
     where: { id: customerId }
@@ -94,6 +95,7 @@ export async function addCustomerTransaction(
       amount,
       description,
       reference,
+      invoice,
       previousBalance,
       newBalance
     }
@@ -108,7 +110,8 @@ export async function addVendorTransaction(
   type: 'CREDIT' | 'DEBIT',
   amount: number,
   description: string,
-  reference?: string
+  reference?: string,
+  invoice?: string
 ) {
   const vendor = await prisma.vendors.findUnique({
     where: { id: vendorId }
@@ -141,6 +144,7 @@ export async function addVendorTransaction(
       amount,
       description,
       reference,
+      invoice,
       previousBalance,
       newBalance
     }
@@ -154,7 +158,8 @@ export async function addCompanyTransaction(
   type: 'CREDIT' | 'DEBIT',
   amount: number,
   description: string,
-  reference?: string
+  reference?: string,
+  invoice?: string
 ) {
   // Get or create company account
   let companyAccount = await prisma.companyAccount.findFirst();
@@ -187,6 +192,7 @@ export async function addCompanyTransaction(
       amount,
       description,
       reference,
+      invoice,
       previousBalance,
       newBalance
     }

@@ -432,6 +432,7 @@ export async function POST(req: NextRequest) {
                 'DEBIT',
                 remainingAmount,
                 `Invoice for shipment ${trackingId}`,
+                invoiceNumber,
                 invoiceNumber
               );
             }
@@ -444,7 +445,6 @@ export async function POST(req: NextRequest) {
                   transactionType: "INCOME",
                   category: "Balance Applied",
                   date: new Date(),
-                  currency: "USD",
                   amount: appliedBalance,
                   fromPartyType: "CUSTOMER",
                   fromCustomerId: customerId,
@@ -454,6 +454,7 @@ export async function POST(req: NextRequest) {
                   toVendor: "",
                   mode: "CASH",
                   reference: invoiceNumber,
+                  invoice: invoiceNumber,
                   description: `Credit applied for invoice ${invoiceNumber}`
                 }
               });
@@ -465,7 +466,8 @@ export async function POST(req: NextRequest) {
                 'DEBIT',
                 appliedBalance,
                 `Credit applied for invoice ${invoiceNumber}`,
-                `CREDIT-${invoiceNumber}`
+                `CREDIT-${invoiceNumber}`,
+                invoiceNumber
               );
 
               // Create CREDIT transaction for company (we receive money)
@@ -474,7 +476,8 @@ export async function POST(req: NextRequest) {
                 'DEBIT',
                 appliedBalance,
                 `Customer credit applied for invoice ${invoiceNumber}`,
-                `CREDIT-${invoiceNumber}`
+                `CREDIT-${invoiceNumber}`,
+                invoiceNumber
               );
             }
 
@@ -486,6 +489,7 @@ export async function POST(req: NextRequest) {
                 'DEBIT',
                 vendorRemainingAmount,
                 `Vendor invoice for shipment ${trackingId}`,
+                vendorInvoiceNumber,
                 vendorInvoiceNumber
               );
             }
@@ -498,7 +502,6 @@ export async function POST(req: NextRequest) {
                   transactionType: "EXPENSE",
                   category: "Balance Applied",
                   date: new Date(),
-                  currency: "USD",
                   amount: vendorAppliedBalance,
                   fromPartyType: "US",
                   fromCustomerId: null,
@@ -508,6 +511,7 @@ export async function POST(req: NextRequest) {
                   toVendor: vendor || "",
                   mode: "CASH",
                   reference: vendorInvoiceNumber,
+                  invoice: vendorInvoiceNumber,
                   description: `Credit applied for vendor invoice ${vendorInvoiceNumber}`
                 }
               });
@@ -519,7 +523,8 @@ export async function POST(req: NextRequest) {
                 'DEBIT',
                 vendorAppliedBalance,
                 `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
-                `CREDIT-${vendorInvoiceNumber}`
+                `CREDIT-${vendorInvoiceNumber}`,
+                vendorInvoiceNumber
               );
 
               // Create CREDIT transaction for company (reduces our liability)
@@ -528,7 +533,8 @@ export async function POST(req: NextRequest) {
                 'CREDIT',
                 vendorAppliedBalance,
                 `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
-                `CREDIT-${vendorInvoiceNumber}`
+                `CREDIT-${vendorInvoiceNumber}`,
+                vendorInvoiceNumber
               );
             }
 

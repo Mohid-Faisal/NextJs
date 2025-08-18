@@ -11,25 +11,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Table, Plus, Edit, Trash2 } from "lucide-react";
-import { ArrowDown, ArrowUp, ArrowUpDown, Printer } from "lucide-react";
+import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText } from "lucide-react";
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  format,
+  parseISO,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  isWithinInterval,
+} from "date-fns";
 
 type Payment = {
   id: number;
   transactionType: "Income" | "Expense" | "Transfer" | "Return";
   category: string;
   date: string; // ISO
-  currency: string;
   amount: number;
   fromAccount: string;
   toAccount: string;
   mode: "Cash" | "Bank Transfer" | "Card" | "Cheque";
   reference?: string;
-  dueDate?: string | null;
+  invoice?: string;
   description?: string;
 };
 
@@ -47,6 +65,27 @@ export default function PaymentsPage() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [modeFilter, setModeFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Date range states
+  const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
+    const now = new Date();
+    const twoMonthsAgo = new Date(
+      now.getFullYear(),
+      now.getMonth() - 2,
+      now.getDate()
+    );
+    const tomorrow = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
+    return { from: twoMonthsAgo, to: tomorrow };
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [inputValue, setInputValue] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -61,6 +100,8 @@ export default function PaymentsPage() {
         ...(typeFilter !== "All" && { type: typeFilter }),
         ...(modeFilter !== "All" && { mode: modeFilter }),
         ...(searchTerm && { search: searchTerm }),
+        ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+        ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
         sortField: sortField,
         sortOrder: sortOrder,
       });
@@ -72,7 +113,7 @@ export default function PaymentsPage() {
     };
 
     fetchPayments();
-  }, [page, pageSize, typeFilter, modeFilter, searchTerm, sortField, sortOrder]);
+  }, [page, pageSize, typeFilter, modeFilter, searchTerm, dateRange, sortField, sortOrder]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -93,97 +134,306 @@ export default function PaymentsPage() {
     );
   };
 
+  // Calendar functions
+  const getDaysInMonth = (date: Date) => {
+    const start = startOfWeek(startOfMonth(date));
+    const end = endOfWeek(endOfMonth(date));
+    return eachDayOfInterval({ start, end });
+  };
+
+  const isInRange = (date: Date) => {
+    if (!dateRange?.from || !dateRange?.to) return false;
+    return isWithinInterval(date, { start: dateRange.from, end: dateRange.to });
+  };
+
+  const isRangeStart = (date: Date) => {
+    return dateRange?.from && isSameDay(date, dateRange.from);
+  };
+
+  const isRangeEnd = (date: Date) => {
+    return dateRange?.to && isSameDay(date, dateRange.to);
+  };
+
+  const handleDateClick = (date: Date) => {
+    if (!dateRange?.from || (dateRange.from && dateRange.to)) {
+      setDateRange({ from: date, to: undefined });
+    } else {
+      if (date < dateRange.from) {
+        setDateRange({ from: date, to: dateRange.from });
+      } else {
+        setDateRange({ from: dateRange.from, to: date });
+      }
+    }
+  };
+
+  const formatRangeLabelText = (range?: { from: Date; to?: Date }) => {
+    if (!range?.from) return "Select date range";
+    if (range.to) {
+      return `${format(range.from, "dd-MM-yyyy")} to ${format(range.to, "dd-MM-yyyy")}`;
+    }
+    return format(range.from, "dd-MM-yyyy");
+  };
+
+  const parseDateInput = (input: string) => {
+    const parts = input.split(" to ");
+    if (parts.length === 2) {
+      const fromDate = parseDate(parts[0].trim());
+      const toDate = parseDate(parts[1].trim());
+      if (fromDate && toDate) {
+        return { from: fromDate, to: toDate };
+      }
+    } else if (parts.length === 1) {
+      const fromDate = parseDate(parts[0].trim());
+      if (fromDate) {
+        return { from: fromDate, to: undefined };
+      }
+    }
+    return undefined;
+  };
+
+  const parseDate = (dateStr: string) => {
+    const match = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    return null;
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+  };
+
+  const handleInputBlur = () => {
+    setIsEditing(false);
+    if (inputValue.trim()) {
+      const parsedRange = parseDateInput(inputValue);
+      if (parsedRange) {
+        setDateRange(parsedRange);
+        setPage(1);
+      }
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+      setInputValue(formatRangeLabelText(dateRange));
+    }
+  };
+
   const totalAmount = useMemo(
     () => payments.reduce((acc, p) => acc + p.amount, 0),
     [payments]
   );
 
-  const exportToCSV = () => {
-    const headers = ["ID","Type","Category","Date","Currency","Amount","From","To","Mode","Reference","Due Date"];
-    const rows = payments.map((p) => [
-      p.id,
-      p.transactionType,
-      p.category,
-      new Date(p.date).toLocaleDateString(),
-      p.currency,
-      p.amount,
-      p.fromAccount,
-      p.toAccount,
-      p.mode,
-      p.reference ?? "",
-      p.dueDate ? new Date(p.dueDate).toLocaleDateString() : "",
-    ]);
-    const csv = [headers, ...rows]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `payments_${new Date().toISOString().split("T")[0]}.csv`;
+  // Export functions
+  const exportToExcel = (data: any[], headers: string[], filename: string) => {
+    const csvContent = [headers, ...data]
+      .map(row => row.map((cell: any) => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
-  const exportToPrint = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    const rows = payments
-      .map(
-        (p) => `
-        <tr>
-          <td>${p.id}</td>
-          <td>${p.transactionType}</td>
-          <td>${p.category}</td>
-          <td>${new Date(p.date).toLocaleDateString()}</td>
-          <td>${p.currency}</td>
-          <td>${p.amount}</td>
-          <td>${p.fromAccount}</td>
-          <td>${p.toAccount}</td>
-          <td>${p.mode}</td>
-          <td>${p.reference ?? ''}</td>
-          <td>${p.dueDate ? new Date(p.dueDate).toLocaleDateString() : ''}</td>
-        </tr>`
-      )
-      .join("");
+  const exportToPrint = (data: any[], headers: string[], title: string, total: number) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const tableHTML = `
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              h1 { color: #333; }
+            </style>
+          </head>
+          <body>
+            <h1>${title}</h1>
+            <p>Total: ${total}</p>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  ${headers.map(header => `<th>${header}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${data.map(row => `<tr>${row.map((cell: any) => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      
+      printWindow.document.write(tableHTML);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Payments</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-          </style>
-        </head>
-        <body>
-          <h1>Payments</h1>
-          <p>Total Amount: ${totalAmount}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Date</th>
-                <th>Currency</th>
-                <th>Amount</th>
-                <th>From</th>
-                <th>To</th>
-                <th>Mode</th>
-                <th>Reference</th>
-                <th>Due Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+  const exportToPDF = async (data: any[], headers: string[], title: string, total: number) => {
+    setIsGeneratingPDF(true);
+    try {
+      const { Document, Page, Text, View, StyleSheet, pdf } = await import('@react-pdf/renderer');
+      
+      const styles = StyleSheet.create({
+        page: {
+          flexDirection: 'column',
+          backgroundColor: '#ffffff',
+          padding: 30,
+        },
+        title: {
+          fontSize: 24,
+          marginBottom: 10,
+          textAlign: 'center',
+          color: '#333',
+        },
+        subtitle: {
+          fontSize: 12,
+          marginBottom: 5,
+          color: '#666',
+        },
+        table: {
+          width: 'auto',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderRightWidth: 0,
+          borderBottomWidth: 0,
+          borderColor: '#bfbfbf',
+        },
+        tableRow: {
+          margin: 'auto',
+          flexDirection: 'row',
+        },
+        tableColHeader: {
+          width: '9.09%',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderLeftWidth: 0,
+          borderTopWidth: 0,
+          borderColor: '#bfbfbf',
+          backgroundColor: '#4285f4',
+        },
+        tableCol: {
+          width: '9.09%',
+          borderStyle: 'solid',
+          borderWidth: 1,
+          borderLeftWidth: 0,
+          borderTopWidth: 0,
+          borderColor: '#bfbfbf',
+        },
+        tableCellHeader: {
+          margin: 'auto',
+          marginTop: 5,
+          fontSize: 6,
+          fontWeight: 'bold',
+          color: '#ffffff',
+        },
+        tableCell: {
+          margin: 'auto',
+          marginTop: 5,
+          fontSize: 6,
+          color: '#333',
+        },
+      });
+
+      const MyDocument = () => {
+        return (
+          <Document>
+            <Page size="A4" style={styles.page}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>Total: {total}</Text>
+              <Text style={styles.subtitle}>Generated on: {new Date().toLocaleDateString()}</Text>
+              
+              <View style={styles.table}>
+                <View style={styles.tableRow}>
+                  {headers.map((header, index) => (
+                    <View key={index} style={styles.tableColHeader}>
+                      <Text style={styles.tableCellHeader}>{header}</Text>
+                    </View>
+                  ))}
+                </View>
+                
+                {data.map((row, rowIndex) => (
+                  <View key={rowIndex} style={styles.tableRow}>
+                    {row.map((cell: any, cellIndex: number) => (
+                      <View key={cellIndex} style={styles.tableCol}>
+                        <Text style={styles.tableCell}>{String(cell || '')}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            </Page>
+          </Document>
+        );
+      };
+
+      const blob = await pdf(<MyDocument />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('PDF generation error:', error);
+      alert(`Error generating PDF: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const getPaymentExportData = (payments: Payment[]) => {
+    const headers = ["ID", "Type", "Category", "Date", "Amount", "From", "To", "Mode", "Reference", "Invoice"];
+    const data = payments.map(payment => [
+      payment.id,
+      payment.transactionType,
+      payment.category,
+      format(parseISO(payment.date), "dd-MM-yyyy"),
+      `$${payment.amount.toLocaleString()}`,
+      payment.fromAccount,
+      payment.toAccount,
+      payment.mode,
+      payment.reference || "N/A",
+      payment.invoice || "N/A"
+    ]);
+    return { headers, data };
+  };
+
+  const handleExportExcel = () => {
+    const { headers, data } = getPaymentExportData(payments);
+    exportToExcel(data, headers, 'payments');
+  };
+
+  const handleExportPrint = () => {
+    const { headers, data } = getPaymentExportData(payments);
+    exportToPrint(data, headers, 'Payments Report', total);
+  };
+
+  const handleExportPDF = () => {
+    const { headers, data } = getPaymentExportData(payments);
+    exportToPDF(data, headers, 'Payments Report', total);
   };
 
      const handleEdit = (payment: Payment) => {
@@ -194,13 +444,12 @@ export default function PaymentsPage() {
        transactionType: payment.transactionType,
        category: payment.category,
        date: payment.date,
-       currency: payment.currency,
        amount: payment.amount.toString(),
        fromAccount: payment.fromAccount,
        toAccount: payment.toAccount,
        paymentMode: payment.mode, // Changed from 'mode' to 'paymentMode' to avoid conflict
        reference: payment.reference || '',
-       dueDate: payment.dueDate || '',
+       invoice: payment.invoice || '',
        description: payment.description || ''
      });
      
@@ -227,6 +476,8 @@ export default function PaymentsPage() {
       ...(typeFilter !== "All" && { type: typeFilter }),
       ...(modeFilter !== "All" && { mode: modeFilter }),
       ...(searchTerm && { search: searchTerm }),
+      ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+      ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
       sortField: sortField,
       sortOrder: sortOrder,
     });
@@ -247,10 +498,13 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4 w-full max-w-xl">
+      {/* Filters */}
+      <div className="mb-6 flex items-center justify-between gap-4">
+        {/* Left side - Show Entries first, then Search field */}
+        <div className="flex items-center gap-4">
+          {/* Show Entries Dropdown - First position from left */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Show:</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Show:</span>
             <Select
               value={pageSize.toString()}
               onValueChange={(value) => {
@@ -258,10 +512,11 @@ export default function PaymentsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-24 h-9">
+              <SelectTrigger className="w-[80px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="5">5</SelectItem>
                 <SelectItem value="10">10</SelectItem>
                 <SelectItem value="25">25</SelectItem>
                 <SelectItem value="50">50</SelectItem>
@@ -271,25 +526,189 @@ export default function PaymentsPage() {
             </Select>
           </div>
 
-          <div className="flex w-full">
-            <Input
-              placeholder="Search by customer or reference..."
-              value={searchTerm}
-              onChange={(e) => {
-                setPage(1);
-                setSearchTerm(e.target.value);
-              }}
-              className="rounded-r-none"
-            />
-            <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md text-white text-sm">
-              Search
+          {/* Search field */}
+          <div className="flex-1 max-w-md">
+            <div className="flex">
+              <Input
+                placeholder="Search by type, category, amount, from, to, mode, reference, invoice..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setPage(1);
+                  setSearchTerm(e.target.value);
+                }}
+                className="rounded-r-none"
+              />
+              <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
+                <Search className="text-white w-5 h-5" />
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Center - Date Range Filter */}
+        <div className="relative">
+          <Input
+            type="text"
+            placeholder="dd-MM-yyyy to dd-MM-yyyy"
+            value={isEditing ? inputValue : formatRangeLabelText(dateRange)}
+            onChange={handleInputChange}
+            onFocus={() => {
+              setIsEditing(true);
+              setInputValue(formatRangeLabelText(dateRange));
+            }}
+            onBlur={handleInputBlur}
+            onKeyDown={handleInputKeyDown}
+            onClick={() => !isEditing && setShowDatePicker(!showDatePicker)}
+            className="w-64 bg-muted cursor-text"
+          />
+          {!isEditing && (
+            <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          )}
+          {showDatePicker && (
+            <div className="absolute left-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4" style={{ minWidth: "600px" }}>
+              <div className="flex gap-4">
+                {/* Left Calendar */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      ←
+                    </button>
+                    <h3 className="text-sm font-medium">
+                      {format(currentMonth, "MMM yyyy")}
+                    </h3>
+                    <div className="w-6"></div>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-xs">
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
+                      <div key={day} className="p-2 text-center text-gray-500 font-medium">
+                        {day}
+                      </div>
+                    ))}
+                    {getDaysInMonth(currentMonth).map((day, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleDateClick(day)}
+                        className={`p-2 text-center text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900 ${
+                          !isSameMonth(day, currentMonth) 
+                            ? "text-gray-300 dark:text-gray-600" 
+                            : isRangeStart(day)
+                            ? "bg-blue-500 text-white"
+                            : isRangeEnd(day)
+                            ? "bg-blue-500 text-white"
+                            : isInRange(day)
+                            ? "bg-blue-100 dark:bg-blue-800"
+                            : "text-gray-700 dark:text-gray-200"
+                        }`}
+                      >
+                        {format(day, "d")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Right Calendar */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-6"></div>
+                    <h3 className="text-sm font-medium">
+                      {format(addMonths(currentMonth, 1), "MMM yyyy")}
+                    </h3>
+                    <button
+                      onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      →
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-xs">
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
+                      <div key={day} className="p-2 text-center text-gray-500 font-medium">
+                        {day}
+                      </div>
+                    ))}
+                    {getDaysInMonth(addMonths(currentMonth, 1)).map((day, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleDateClick(day)}
+                        className={`p-2 text-center text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900 ${
+                          !isSameMonth(day, addMonths(currentMonth, 1)) 
+                            ? "text-gray-300 dark:text-gray-600" 
+                            : isRangeStart(day)
+                            ? "bg-blue-500 text-white"
+                            : isRangeEnd(day)
+                            ? "bg-blue-500 text-white"
+                            : isInRange(day)
+                            ? "bg-blue-100 dark:bg-blue-800"
+                            : "text-gray-700 dark:text-gray-200"
+                        }`}
+                      >
+                        {format(day, "d")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {dateRange?.from && dateRange?.to
+                    ? `${format(dateRange.from, "dd-MM-yyyy")} to ${format(dateRange.to, "dd-MM-yyyy")}`
+                    : "Select date range"}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const now = new Date();
+                      const twoMonthsAgo = new Date(
+                        now.getFullYear(),
+                        now.getMonth() - 2,
+                        now.getDate()
+                      );
+                      const tomorrow = new Date(
+                        now.getFullYear(),
+                        now.getMonth(),
+                        now.getDate() + 1
+                      );
+                      setDateRange({ from: twoMonthsAgo, to: tomorrow });
+                      setCurrentMonth(twoMonthsAgo);
+                    }}
+                    className="text-gray-600 dark:text-gray-400"
+                  >
+                    Restore Default
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDateRange(undefined);
+                      setShowDatePicker(false);
+                    }}
+                    className="text-gray-600 dark:text-gray-400"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowDatePicker(false)}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right side - All other controls */}
         <div className="flex items-center gap-3">
+          {/* Type Filter */}
           <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[120px] h-9">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -298,8 +717,10 @@ export default function PaymentsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* Mode Filter */}
           <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[140px] h-9">
               <SelectValue placeholder="Mode" />
             </SelectTrigger>
             <SelectContent>
@@ -308,19 +729,40 @@ export default function PaymentsPage() {
               ))}
             </SelectContent>
           </Select>
-        </div>
 
-        <div className="flex gap-2">
-          <Button asChild>
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-[100px] h-9 justify-between">
+                Export
+                <ArrowUp className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[120px]">
+              <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
+                <Table className="w-4 h-4" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
+                <Printer className="w-4 h-4" />
+                Print
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleExportPDF} 
+                disabled={isGeneratingPDF}
+                className="flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                {isGeneratingPDF ? 'Generating...' : 'PDF'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Add Payment Button */}
+          <Button asChild className="h-9">
             <Link href="/dashboard/accounts/payments/add" className="flex items-center gap-2">
               <Plus className="w-4 h-4" /> Add Payment
             </Link>
-          </Button>
-          <Button variant="outline" onClick={exportToCSV} className="flex items-center gap-2">
-            <Table className="w-4 h-4" /> CSV
-          </Button>
-          <Button variant="outline" onClick={exportToPrint} className="flex items-center gap-2">
-            <Printer className="w-4 h-4" /> Print
           </Button>
         </div>
       </div>
@@ -345,9 +787,7 @@ export default function PaymentsPage() {
                   <th className="px-4 py-2 text-left">
                     <button onClick={() => handleSort("date")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">Date {getSortIcon("date")}</button>
                   </th>
-                  <th className="px-4 py-2 text-left">
-                    <button onClick={() => handleSort("currency")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">Currency {getSortIcon("currency")}</button>
-                  </th>
+
                   <th className="px-4 py-2 text-left">
                     <button onClick={() => handleSort("amount")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">Amount {getSortIcon("amount")}</button>
                   </th>
@@ -364,7 +804,7 @@ export default function PaymentsPage() {
                     <button onClick={() => handleSort("reference")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">Reference {getSortIcon("reference")}</button>
                   </th>
                   <th className="px-4 py-2 text-left">
-                    <button onClick={() => handleSort("dueDate")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">Due Date {getSortIcon("dueDate")}</button>
+                    <button onClick={() => handleSort("invoice")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">Invoice {getSortIcon("invoice")}</button>
                   </th>
                   <th className="px-4 py-2 text-left">Actions</th>
                 </tr>
@@ -376,13 +816,12 @@ export default function PaymentsPage() {
                     <td className="px-4 py-3">{p.transactionType}</td>
                     <td className="px-4 py-3">{p.category}</td>
                     <td className="px-4 py-3">{new Date(p.date).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">{p.currency}</td>
-                    <td className="px-4 py-3">{p.currency} {p.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3">${p.amount.toLocaleString()}</td>
                     <td className="px-4 py-3">{p.fromAccount}</td>
                     <td className="px-4 py-3">{p.toAccount}</td>
                     <td className="px-4 py-3">{p.mode}</td>
                     <td className="px-4 py-3">{p.reference}</td>
-                    <td className="px-4 py-3">{p.dueDate ? new Date(p.dueDate).toLocaleDateString() : ""}</td>
+                    <td className="px-4 py-3">{p.invoice || ""}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button

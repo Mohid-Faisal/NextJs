@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
       description 
     } = body;
 
-    if (!invoiceNumber || !paymentAmount || !paymentType) {
+    if (!invoiceNumber || !paymentAmount || !paymentType || !reference) {
       return NextResponse.json(
-        { error: "Invoice number, payment amount, and payment type are required" },
+        { error: "Invoice number, payment amount, payment type, and reference are required" },
         { status: 400 }
       );
     }
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       // Calculate how much is still owed on this invoice
       const totalPaidSoFar = await prisma.payment.aggregate({
         where: {
-          reference: invoiceNumber,
+          invoice: invoiceNumber,
           transactionType: "INCOME"
         },
         _sum: {
@@ -82,7 +82,8 @@ export async function POST(req: NextRequest) {
         'CREDIT',
         amountForInvoice,
         description || `Payment for invoice ${invoiceNumber}`,
-        reference || invoiceNumber
+        reference,
+        invoiceNumber
       );
 
       // Create CREDIT transaction for company (we receive money)
@@ -91,7 +92,8 @@ export async function POST(req: NextRequest) {
         'CREDIT',
         paymentAmountNum,
         `Customer payment for invoice ${invoiceNumber}`,
-        reference || invoiceNumber
+        reference,
+        invoiceNumber
       );
 
       // If there's an overpayment, create a separate credit transaction for the customer
@@ -102,7 +104,8 @@ export async function POST(req: NextRequest) {
           'CREDIT',
           overpaymentAmount,
           `Overpayment credit for invoice ${invoiceNumber}`,
-          `CREDIT-${invoiceNumber}`
+          `CREDIT-${invoiceNumber}`,
+          invoiceNumber
         );
       }
 
@@ -122,7 +125,8 @@ export async function POST(req: NextRequest) {
         'CREDIT',
         paymentAmountNum,
         description || `Payment for invoice ${invoiceNumber}`,
-        reference || invoiceNumber
+        reference,
+        invoiceNumber
       );
 
       // Create DEBIT transaction for company (we pay money out to vendor)
@@ -131,7 +135,8 @@ export async function POST(req: NextRequest) {
         'DEBIT',
         paymentAmountNum,
         `Vendor payment for invoice ${invoiceNumber}`,
-        reference || invoiceNumber
+        reference,
+        invoiceNumber
       );
     }
 
@@ -141,7 +146,6 @@ export async function POST(req: NextRequest) {
         transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
         category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
         date: new Date(),
-        currency: "USD",
         amount: paymentAmountNum,
         fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
         fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,
@@ -150,7 +154,8 @@ export async function POST(req: NextRequest) {
         toVendorId: paymentType === "VENDOR_PAYMENT" ? invoice.vendorId : null,
         toVendor: paymentType === "VENDOR_PAYMENT" ? invoice.vendor?.CompanyName || "" : "",
         mode: paymentMethod || "CASH",
-        reference: reference || invoiceNumber,
+        reference: reference,
+        invoice: invoiceNumber,
         description: description || `Payment for invoice ${invoiceNumber}`
       }
     });

@@ -24,6 +24,8 @@ import {
   FileText,
   CreditCard,
   Book,
+  ClipboardList,
+  Zap,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -88,6 +90,16 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     },
   ];
   const subLinksSettings = [
+    {
+      href: "/dashboard/settings/logistics",
+      label: "Logistics Settings",
+      icon: Truck,
+    },
+    {
+      href: "/dashboard/settings/payment",
+      label: "Payment Settings",
+      icon: CreditCard,
+    },
     {
       href: "/dashboard/settings/shipment-info-settings",
       label: "Shipment Info Settings",
@@ -296,6 +308,26 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Reports */}
+          <Link
+            href="/dashboard/reports"
+            className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+              pathname.startsWith("/dashboard/reports")
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            }`}
+          >
+            <ClipboardList className="w-5 h-5 flex-shrink-0" />
+            <span
+              className={`whitespace-nowrap transition-all duration-200 ${
+                isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+              }`}
+            >
+              Reports
+            </span>
+          </Link>
+
           {/* Settings Collapsible */}
           <div>
             <button

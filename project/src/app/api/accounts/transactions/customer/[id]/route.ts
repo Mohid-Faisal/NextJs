@@ -16,14 +16,58 @@ export async function GET(
       );
     }
 
-    // Get customer with transactions
+    // Get query parameters
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const fromDate = searchParams.get('fromDate');
+    const toDate = searchParams.get('toDate');
+    const sortField = searchParams.get('sortField') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+    // Calculate skip for pagination
+    const skip = (page - 1) * limit;
+
+    // Build where clause for filtering
+    const whereClause: any = {
+      customerId: customerId
+    };
+
+    // Add search filter
+    if (search) {
+      whereClause.OR = [
+        { description: { contains: search, mode: 'insensitive' } },
+        { reference: { contains: search, mode: 'insensitive' } },
+        { amount: { equals: parseFloat(search) || undefined } }
+      ];
+    }
+
+    // Add date range filter
+    if (fromDate || toDate) {
+      whereClause.createdAt = {};
+      if (fromDate) {
+        whereClause.createdAt.gte = new Date(fromDate);
+      }
+      if (toDate) {
+        whereClause.createdAt.lte = new Date(toDate);
+      }
+    }
+
+    // Validate sort field
+    const allowedSortFields = ['createdAt', 'amount', 'type', 'description', 'reference'];
+    const validSortField = allowedSortFields.includes(sortField) ? sortField : 'createdAt';
+    const validSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    // Get customer info
     const customer = await prisma.customers.findUnique({
       where: { id: customerId },
-      include: {
-        transactions: {
-          orderBy: { createdAt: 'desc' },
-          take: 50 // Limit to last 50 transactions
-        }
+      select: {
+        id: true,
+        CompanyName: true,
+        PersonName: true,
+        currentBalance: true,
+        creditLimit: true
       }
     });
 
@@ -34,6 +78,19 @@ export async function GET(
       );
     }
 
+    // Get total count for pagination
+    const total = await prisma.customerTransaction.count({
+      where: whereClause
+    });
+
+    // Get transactions with pagination and filtering
+    const transactions = await prisma.customerTransaction.findMany({
+      where: whereClause,
+      orderBy: { [validSortField]: validSortOrder },
+      skip,
+      take: limit
+    });
+
     return NextResponse.json({
       customer: {
         id: customer.id,
@@ -42,7 +99,11 @@ export async function GET(
         currentBalance: customer.currentBalance,
         creditLimit: customer.creditLimit
       },
-      transactions: customer.transactions
+      transactions,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     });
 
   } catch (error) {

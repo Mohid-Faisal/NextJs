@@ -240,7 +240,8 @@ model CustomerTransaction {
   type            String   // "CREDIT", "DEBIT"
   amount          Float
   description     String
-  reference       String?  // Invoice number, payment reference, etc.
+  reference       String?  // Payment reference, etc.
+  invoice         String?  // Invoice number
   
   // Balance tracking
   previousBalance Float
@@ -261,7 +262,8 @@ model VendorTransaction {
   type            String   // "CREDIT", "DEBIT"
   amount          Float
   description     String
-  reference       String?  // Invoice number, payment reference, etc.
+  reference       String?  // Payment reference, etc.
+  invoice         String?  // Invoice number
   
   // Balance tracking
   previousBalance Float
@@ -282,7 +284,8 @@ model CompanyTransaction {
   type            String        // "CREDIT", "DEBIT"
   amount          Float
   description     String
-  reference       String?       // Invoice number, payment reference, etc.
+  reference       String?       // Payment reference, etc.
+  invoice         String?       // Invoice number
   
   // Balance tracking
   previousBalance Float
@@ -326,7 +329,6 @@ model Payment {
   transactionType TransactionType
   category        String
   date            DateTime
-  currency        String
   amount          Float
 
   // From: Customer or Us
@@ -341,7 +343,7 @@ model Payment {
 
   mode            PaymentMode?
   reference       String?
-  dueDate         DateTime?
+  invoice         String?
   description     String?
 
   createdAt       DateTime         @default(now())

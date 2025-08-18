@@ -49,6 +49,7 @@ export default function ProcessPaymentPage() {
   const [formData, setFormData] = useState({
     paymentAmount: "",
     paymentMethod: "CASH",
+    invoice: "",
     reference: "",
     description: ""
   });
@@ -131,6 +132,7 @@ export default function ProcessPaymentPage() {
         setFormData({
           paymentAmount: "",
           paymentMethod: "CASH",
+          invoice: "",
           reference: "",
           description: ""
         });
@@ -337,8 +339,20 @@ export default function ProcessPaymentPage() {
                   </div>
 
                   <div>
+                    <Label htmlFor="invoice" className="font-bold">
+                      Invoice Number
+                    </Label>
+                    <Input
+                      id="invoice"
+                      value={selectedInvoice.invoiceNumber}
+                      className="mt-1 bg-gray-50"
+                      readOnly
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="reference" className="font-bold">
-                      Reference (Optional)
+                      Reference *
                     </Label>
                     <Input
                       id="reference"
@@ -346,6 +360,7 @@ export default function ProcessPaymentPage() {
                       onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
                       className="mt-1"
                       placeholder="Payment reference number"
+                      required
                     />
                   </div>
 

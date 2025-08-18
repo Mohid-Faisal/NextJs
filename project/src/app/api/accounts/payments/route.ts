@@ -15,9 +15,11 @@ export async function GET(request: Request) {
   const type = url.searchParams.get("type") || "All";
   const mode = url.searchParams.get("mode") || "All";
   const search = (url.searchParams.get("search") || "").toLowerCase();
+  const fromDate = url.searchParams.get("fromDate");
+  const toDate = url.searchParams.get("toDate");
   const sortField = (url.searchParams.get("sortField") || "date").toString();
   const sortOrder = (url.searchParams.get("sortOrder") || "desc").toLowerCase() as "asc" | "desc";
-  const validSortFields = ["id", "date", "amount", "category", "currency", "mode", "reference", "dueDate"];
+  const validSortFields = ["id", "date", "amount", "category", "mode", "reference", "invoice"];
   const finalSortField = validSortFields.includes(sortField) ? sortField : "date";
 
   const where: any = {};
@@ -25,10 +27,33 @@ export async function GET(request: Request) {
   if (mode !== "All") where.mode = modeMap[mode] ?? mode;
   if (search) {
     where.OR = [
+      { transactionType: { contains: search, mode: "insensitive" } },
       { category: { contains: search, mode: "insensitive" } },
+      { amount: { equals: parseFloat(search) || undefined } },
+      { fromCustomer: { contains: search, mode: "insensitive" } },
+      { toVendor: { contains: search, mode: "insensitive" } },
+      { mode: { contains: search, mode: "insensitive" } },
       { reference: { contains: search, mode: "insensitive" } },
+      { invoice: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
-    ];
+    ].filter(condition => {
+      // Remove amount condition if search is not a valid number
+      if (condition.amount && isNaN(parseFloat(search))) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // Add date range filtering
+  if (fromDate || toDate) {
+    where.date = {};
+    if (fromDate) {
+      where.date.gte = new Date(fromDate);
+    }
+    if (toDate) {
+      where.date.lte = new Date(toDate);
+    }
   }
 
   const db: any = prisma;
@@ -57,13 +82,12 @@ export async function GET(request: Request) {
           transactionType: true,
           category: true,
           date: true,
-          currency: true,
           amount: true,
           fromCustomer: true,
           toVendor: true,
           mode: true,
           reference: true,
-          dueDate: true,
+          invoice: true,
           description: true,
         },
       });
@@ -77,13 +101,12 @@ export async function GET(request: Request) {
     transactionType: p.transactionType,
     category: p.category,
     date: (p.date instanceof Date ? p.date : new Date(p.date)).toISOString(),
-    currency: p.currency,
     amount: p.amount,
     fromAccount: p.fromCustomer?.CompanyName ?? p.fromCustomer ?? (p.fromPartyType === "US" ? "Us" : ""),
     toAccount: p.toVendor?.CompanyName ?? p.toVendor ?? (p.toPartyType === "US" ? "Us" : ""),
     mode: p.mode,
     reference: p.reference ?? undefined,
-    dueDate: p.dueDate ? (p.dueDate instanceof Date ? p.dueDate : new Date(p.dueDate)).toISOString() : null,
+    invoice: p.invoice ?? undefined,
     description: p.description ?? undefined,
   }));
 
@@ -95,7 +118,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // Basic validation similar to other routes
-    const required = ["transactionType", "category", "date", "currency", "amount"];
+    const required = ["transactionType", "category", "date", "amount"];
     for (const key of required) {
       if (body[key] === undefined || body[key] === null || String(body[key]).trim() === "") {
         return NextResponse.json(
@@ -125,13 +148,12 @@ export async function POST(req: NextRequest) {
       transactionType: typeMap[body.transactionType] ?? body.transactionType,
       category: body.category,
       date: new Date(body.date),
-      currency: body.currency,
-      amount: Number(body.amount),
-      fromPartyType: resolvedFromParty,
-      toPartyType: resolvedToParty,
-      mode: body.mode ? (modeMap[body.mode] ?? body.mode) : null,
-      reference: body.reference || null,
-      dueDate: body.dueDate ? new Date(body.dueDate) : null,
+              amount: Number(body.amount),
+        fromPartyType: resolvedFromParty,
+        toPartyType: resolvedToParty,
+        mode: body.mode ? (modeMap[body.mode] ?? body.mode) : null,
+        reference: body.reference || null,
+        invoice: body.invoice || null,
       description: body.description || null,
     };
 
@@ -225,13 +247,12 @@ export async function POST(req: NextRequest) {
         transactionType: typeMap[body.transactionType] ?? body.transactionType,
         category: body.category,
         date: new Date(body.date),
-        currency: body.currency,
         amount: Number(body.amount),
         fromPartyType: resolvedFromParty,
         toPartyType: resolvedToParty,
         mode: body.mode ? (modeMap[body.mode] ?? body.mode) : null,
         reference: body.reference || null,
-        dueDate: body.dueDate ? new Date(body.dueDate) : null,
+        invoice: body.invoice || null,
         description: body.description || null,
         fromCustomer: fromName,
         toVendor: toName,
