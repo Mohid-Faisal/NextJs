@@ -623,6 +623,8 @@ const AddShipmentPage = () => {
           subtotal: 0,
           total: 0,
         });
+        // Redirect to shipments page after successful addition
+        router.push('/dashboard/shipments');
       }
     } else {
       toast.error(data.message || "Failed to add shipment.");
