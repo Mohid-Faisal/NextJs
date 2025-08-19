@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
           // Calculate total payments for this invoice
           const totalPayments = await prisma.payment.aggregate({
             where: {
-              reference: invoice.invoiceNumber,
+              invoice: invoice.invoiceNumber,
               transactionType: "INCOME"
             },
             _sum: {
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
           // Calculate total payments for vendor invoice
           const totalPayments = await prisma.payment.aggregate({
             where: {
-              reference: invoice.invoiceNumber,
+              invoice: invoice.invoiceNumber,
               transactionType: "EXPENSE"
             },
             _sum: {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Paperclip, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Paperclip, Search, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import {
   Select,
   SelectTrigger,
@@ -16,8 +16,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const ManageRateListPage = () => {
+  const router = useRouter();
   const [selectedVendor, setSelectedVendor] = useState<string>("");
   const [selectedVendorName, setSelectedVendorName] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("");
@@ -329,6 +331,18 @@ const ManageRateListPage = () => {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-6xl mx-auto px-4 mt-10"
     >
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={() => router.back()}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+      </div>
+
       <Card className="bg-white dark:bg-gray-900 border shadow-sm rounded-2xl">
         <CardContent className="p-8 space-y-8">
           <h1 className="text-2xl font-semibold text-primary text-center">
