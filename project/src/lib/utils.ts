@@ -421,7 +421,7 @@ export async function calculateInvoicePaymentStatus(
   // Calculate total payments for this invoice
   const totalPayments = await prisma.payment.aggregate({
     where: {
-      reference: invoiceNumber
+      invoice: invoiceNumber
     },
     _sum: {
       amount: true
