@@ -526,50 +526,52 @@ export default function CompanyAccountPage() {
 
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="mb-6">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        
-        <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
-          Company Account
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {account.name}
-        </p>
-      </div>
-
-      {/* Company Balance Card */}
-      <Card className="mb-6 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center text-gray-800 dark:text-white">
-            Company Balance
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center">
-          <div className="text-4xl font-bold mb-2">
-            <span
-              className={
-                account.currentBalance > 0
-                  ? "text-green-600 dark:text-green-400"
-                  : account.currentBalance < 0
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-gray-600 dark:text-gray-400"
-              }
-            >
-              ${account.currentBalance.toLocaleString()}
-            </span>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {account.currentBalance > 0 ? "Positive Balance" : account.currentBalance < 0 ? "Negative Balance" : "Zero Balance"}
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          
+          <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
+            Company Account
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {account.name}
           </p>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Company Balance Card - Compact */}
+        <Card className="shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 min-w-[800px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl font-semibold text-center text-gray-600 dark:text-gray-400">
+              Company Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center pt-0">
+            <div className="text-4xl font-bold">
+              <span
+                className={
+                  account.currentBalance > 0
+                    ? "text-green-600 dark:text-green-400"
+                    : account.currentBalance < 0
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-gray-600 dark:text-gray-400"
+                }
+              >
+                ${account.currentBalance.toLocaleString()}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {account.currentBalance > 0 ? "Positive" : account.currentBalance < 0 ? "Negative" : "Zero"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Payment Statistics Cards */}
       {paymentStats && (
