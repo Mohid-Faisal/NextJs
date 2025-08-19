@@ -24,6 +24,7 @@ import {
   FileText,
   CreditCard,
   Book,
+  BookOpen,
   ClipboardList,
   Zap,
 } from "lucide-react";
@@ -126,8 +127,11 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     { href: "/dashboard/accounts/invoices", label: "Invoices", icon: FileText },
     { href: "/dashboard/accounts/payments", label: "Payments", icon: CreditCard },
     { href: "/dashboard/accounts/ledger", label: "Ledger", icon: Book },
+    { href: "/dashboard/accounts/account-books", label: "Account Books", icon: BookOpen },
     { href: "/dashboard/accounts/payments/process", label: "Process Payment", icon: CreditCard },
     { href: "/dashboard/accounts/company", label: "Company Account", icon: Building2 },
+    { href: "/dashboard/chart-of-accounts", label: "Chart of Accounts", icon: ClipboardList },
+    { href: "/dashboard/journal-entries", label: "Journal Entries", icon: Book },
   ];
 
   return (

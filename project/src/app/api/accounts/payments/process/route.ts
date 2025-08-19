@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addCustomerTransaction, addVendorTransaction, addCompanyTransaction, calculateInvoicePaymentStatus } from "@/lib/utils";
+import { addCustomerTransaction, addVendorTransaction, calculateInvoicePaymentStatus } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,12 +11,22 @@ export async function POST(req: NextRequest) {
       paymentType, // "CUSTOMER_PAYMENT" or "VENDOR_PAYMENT"
       paymentMethod,
       reference,
-      description 
+      description,
+      debitAccountId,
+      creditAccountId
     } = body;
 
     if (!invoiceNumber || !paymentAmount || !paymentType || !reference) {
       return NextResponse.json(
         { error: "Invoice number, payment amount, payment type, and reference are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate chart of accounts
+    if (!debitAccountId || !creditAccountId) {
+      return NextResponse.json(
+        { error: "Both debit and credit accounts are required" },
         { status: 400 }
       );
     }
@@ -86,16 +96,6 @@ export async function POST(req: NextRequest) {
         invoiceNumber
       );
 
-      // Create CREDIT transaction for company (we receive money)
-      await addCompanyTransaction(
-        prisma,
-        'CREDIT',
-        paymentAmountNum,
-        `Customer payment for invoice ${invoiceNumber}`,
-        reference,
-        invoiceNumber
-      );
-
       // If there's an overpayment, create a separate credit transaction for the customer
       if (overpaymentAmount > 0) {
         await addCustomerTransaction(
@@ -128,16 +128,6 @@ export async function POST(req: NextRequest) {
         reference,
         invoiceNumber
       );
-
-      // Create DEBIT transaction for company (we pay money out to vendor)
-      await addCompanyTransaction(
-        prisma,
-        'DEBIT',
-        paymentAmountNum,
-        `Vendor payment for invoice ${invoiceNumber}`,
-        reference,
-        invoiceNumber
-      );
     }
 
     // Create payment record
@@ -159,6 +149,9 @@ export async function POST(req: NextRequest) {
         description: description || `Payment for invoice ${invoiceNumber}`
       }
     });
+
+    // Create journal entry for the payment
+    await createJournalEntryForPaymentProcess(payment, body, invoice);
 
     // Calculate invoice payment status and update
     const paymentStatus = await calculateInvoicePaymentStatus(
@@ -194,5 +187,70 @@ export async function POST(req: NextRequest) {
       { error: "Failed to process payment" },
       { status: 500 }
     );
+  }
+}
+
+async function createJournalEntryForPaymentProcess(payment: any, body: any, invoice: any) {
+  try {
+    // Generate journal entry number
+    const lastEntry = await prisma.journalEntry.findFirst({
+      orderBy: { entryNumber: "desc" }
+    });
+
+    let entryNumber = "JE-0001";
+    if (lastEntry) {
+      const lastNumber = parseInt(lastEntry.entryNumber.split("-")[1]);
+      entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
+    }
+
+    // Create journal entry with lines
+    const journalEntry = await prisma.$transaction(async (tx) => {
+      // Create the journal entry
+      const entry = await tx.journalEntry.create({
+        data: {
+          entryNumber,
+          date: new Date(),
+          description: `Invoice Payment: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment for ${invoice.invoiceNumber} - ${body.description || 'No description'}`,
+          reference: body.reference || `Payment-${payment.id}`,
+          totalDebit: Number(body.paymentAmount),
+          totalCredit: Number(body.paymentAmount),
+          isPosted: true, // Auto-post payment journal entries
+          postedAt: new Date()
+        }
+      });
+
+      // Create the journal entry lines
+      await Promise.all([
+        // Debit line
+        tx.journalEntryLine.create({
+          data: {
+            journalEntryId: entry.id,
+            accountId: body.debitAccountId,
+            debitAmount: Number(body.paymentAmount),
+            creditAmount: 0,
+            description: `Debit: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment`,
+            reference: body.reference || `Payment-${payment.id}`
+          }
+        }),
+        // Credit line
+        tx.journalEntryLine.create({
+          data: {
+            journalEntryId: entry.id,
+            accountId: body.creditAccountId,
+            debitAmount: 0,
+            creditAmount: Number(body.paymentAmount),
+            description: `Credit: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment`,
+            reference: body.reference || `Payment-${payment.id}`
+          }
+        })
+      ]);
+
+      return entry;
+    });
+
+    console.log(`Created journal entry ${journalEntry.entryNumber} for payment process ${payment.id}`);
+  } catch (error) {
+    console.error("Error creating journal entry for payment process:", error);
+    throw error;
   }
 }

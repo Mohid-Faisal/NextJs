@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addCompanyTransaction } from "@/lib/utils";
 
 // UI-to-enum mapping
 const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Return: "RETURN" };
@@ -66,8 +65,32 @@ export async function GET(request: Request) {
       orderBy: { [finalSortField]: sortOrder },
       skip: limit ? (page - 1) * limit : 0,
       take: limit ?? undefined,
-      include: { fromCustomer: true, toVendor: true },
+      include: { 
+        fromCustomer: true, 
+        toVendor: true
+      },
     });
+
+    // Find related journal entries for each payment
+    const paymentsWithJournalEntries = await Promise.all(
+      payments.map(async (payment) => {
+        const journalEntry = await prisma.journalEntry.findFirst({
+          where: {
+            reference: payment.reference || `Payment-${payment.id}`
+          },
+          select: {
+            entryNumber: true
+          }
+        });
+        
+        return {
+          ...payment,
+          journalEntry
+        };
+      })
+    );
+
+    payments = paymentsWithJournalEntries;
   } catch (err) {
     // Fallback if relations not present; select scalar fields
     try {
@@ -91,6 +114,27 @@ export async function GET(request: Request) {
           description: true,
         },
       });
+
+      // Find related journal entries for fallback case too
+      const paymentsWithJournalEntries = await Promise.all(
+        payments.map(async (payment) => {
+          const journalEntry = await prisma.journalEntry.findFirst({
+            where: {
+              reference: payment.reference || `Payment-${payment.id}`
+            },
+            select: {
+              entryNumber: true
+            }
+          });
+          
+          return {
+            ...payment,
+            journalEntry
+          };
+        })
+      );
+
+      payments = paymentsWithJournalEntries;
     } catch (e) {
       return NextResponse.json({ payments: [], total: 0 });
     }
@@ -108,6 +152,7 @@ export async function GET(request: Request) {
     reference: p.reference ?? undefined,
     invoice: p.invoice ?? undefined,
     description: p.description ?? undefined,
+    journalEntryNumber: p.journalEntry?.entryNumber ?? undefined,
   }));
 
   return NextResponse.json({ payments: ui, total });
@@ -126,6 +171,14 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+    }
+
+    // Validate chart of accounts
+    if (!body.debitAccountId || !body.creditAccountId) {
+      return NextResponse.json(
+        { success: false, message: "Both debit and credit accounts are required." },
+        { status: 400 }
+      );
     }
 
     // Party validation
@@ -148,12 +201,12 @@ export async function POST(req: NextRequest) {
       transactionType: typeMap[body.transactionType] ?? body.transactionType,
       category: body.category,
       date: new Date(body.date),
-              amount: Number(body.amount),
-        fromPartyType: resolvedFromParty,
-        toPartyType: resolvedToParty,
-        mode: body.mode ? (modeMap[body.mode] ?? body.mode) : null,
-        reference: body.reference || null,
-        invoice: body.invoice || null,
+      amount: Number(body.amount),
+      fromPartyType: resolvedFromParty,
+      toPartyType: resolvedToParty,
+      mode: body.mode ? (modeMap[body.mode] ?? body.mode) : null,
+      reference: body.reference || null,
+      invoice: body.invoice || null,
       description: body.description || null,
     };
 
@@ -167,66 +220,8 @@ export async function POST(req: NextRequest) {
     try {
       const payment = await prisma.payment.create({ data });
       
-      // Handle company account transactions based on payment type
-      if (data.transactionType === "EXPENSE") {
-        // For expenses, create a DEBIT transaction in company account
-        await addCompanyTransaction(
-          prisma,
-          'DEBIT',
-          Number(body.amount),
-          `Expense: ${body.category} - ${body.description || 'No description'}`,
-          body.reference || `Payment-${payment.id}`
-        );
-      } else if (data.transactionType === "INCOME") {
-        // For income, create a CREDIT transaction in company account
-        await addCompanyTransaction(
-          prisma,
-          'CREDIT',
-          Number(body.amount),
-          `Income: ${body.category} - ${body.description || 'No description'}`,
-          body.reference || `Payment-${payment.id}`
-        );
-      } else if (data.transactionType === "TRANSFER") {
-        // For transfers, create both DEBIT and CREDIT transactions
-        // DEBIT from source account
-        await addCompanyTransaction(
-          prisma,
-          'DEBIT',
-          Number(body.amount),
-          `Transfer out: ${body.category} - ${body.description || 'No description'}`,
-          body.reference || `Transfer-${payment.id}`
-        );
-        // CREDIT to destination account
-        await addCompanyTransaction(
-          prisma,
-          'CREDIT',
-          Number(body.amount),
-          `Transfer in: ${body.category} - ${body.description || 'No description'}`,
-          body.reference || `Transfer-${payment.id}`
-        );
-      } else if (data.transactionType === "RETURN") {
-        // For returns, create a DEBIT transaction in company account (money going out)
-        await addCompanyTransaction(
-          prisma,
-          'DEBIT',
-          Number(body.amount),
-          `Return: ${body.category} - ${body.description || 'No description'}`,
-          body.reference || `Return-${payment.id}`
-        );
-        
-        // If return is to a customer, update customer balance (CREDIT - they owe us less)
-        if (data.toPartyType === "CUSTOMER" && data.toCustomerId) {
-          const { addCustomerTransaction } = await import("@/lib/utils");
-          await addCustomerTransaction(
-            prisma,
-            Number(data.toCustomerId),
-            'CREDIT',
-            Number(body.amount),
-            `Return: ${body.category} - ${body.description || 'No description'}`,
-            body.reference || `Return-${payment.id}`
-          );
-        }
-      }
+      // Create journal entry for the payment
+      await createJournalEntryForPayment(payment, body);
       
       return NextResponse.json({ success: true, message: "Payment added successfully.", payment });
     } catch (e) {
@@ -260,60 +255,8 @@ export async function POST(req: NextRequest) {
 
       const payment = await (prisma as any).payment.create({ data: fallbackData });
       
-      // Handle company account transactions for fallback case too
-      if (fallbackData.transactionType === "EXPENSE") {
-        await addCompanyTransaction(
-          prisma,
-          'DEBIT',
-          Number(body.amount),
-          `Expense: ${body.category} - ${body.description || 'No description'}`,
-          body.reference || `Payment-${payment.id}`
-        );
-      } else if (fallbackData.transactionType === "INCOME") {
-        await addCompanyTransaction(
-          prisma,
-          'CREDIT',
-          Number(body.amount),
-          `Income: ${body.category} - ${body.description || 'No description'}`,
-          body.reference || `Payment-${payment.id}`
-        );
-             } else if (fallbackData.transactionType === "TRANSFER") {
-         await addCompanyTransaction(
-           prisma,
-           'DEBIT',
-           Number(body.amount),
-           `Transfer out: ${body.category} - ${body.description || 'No description'}`,
-           body.reference || `Transfer-${payment.id}`
-         );
-         await addCompanyTransaction(
-           prisma,
-           'CREDIT',
-           Number(body.amount),
-           `Transfer in: ${body.category} - ${body.description || 'No description'}`,
-           body.reference || `Transfer-${payment.id}`
-         );
-       } else if (fallbackData.transactionType === "RETURN") {
-         await addCompanyTransaction(
-           prisma,
-           'DEBIT',
-           Number(body.amount),
-           `Return: ${body.category} - ${body.description || 'No description'}`,
-           body.reference || `Return-${payment.id}`
-         );
-         
-         // If return is to a customer, update customer balance (CREDIT - they owe us less)
-         if (fallbackData.toPartyType === "CUSTOMER" && body.toCustomerId) {
-           const { addCustomerTransaction } = await import("@/lib/utils");
-           await addCustomerTransaction(
-             prisma,
-             Number(body.toCustomerId),
-             'CREDIT',
-             Number(body.amount),
-             `Return: ${body.category} - ${body.description || 'No description'}`,
-             body.reference || `Return-${payment.id}`
-           );
-         }
-       }
+      // Create journal entry for the fallback payment
+      await createJournalEntryForPayment(payment, body);
       
       return NextResponse.json({ success: true, message: "Payment added successfully.", payment });
     }
@@ -323,6 +266,71 @@ export async function POST(req: NextRequest) {
       { success: false, message: "Failed to add payment." },
       { status: 500 }
     );
+  }
+}
+
+async function createJournalEntryForPayment(payment: any, body: any) {
+  try {
+    // Generate journal entry number
+    const lastEntry = await prisma.journalEntry.findFirst({
+      orderBy: { entryNumber: "desc" }
+    });
+
+    let entryNumber = "JE-0001";
+    if (lastEntry) {
+      const lastNumber = parseInt(lastEntry.entryNumber.split("-")[1]);
+      entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
+    }
+
+    // Create journal entry with lines
+    const journalEntry = await prisma.$transaction(async (tx) => {
+      // Create the journal entry
+      const entry = await tx.journalEntry.create({
+        data: {
+          entryNumber,
+          date: new Date(body.date),
+          description: `Payment: ${body.category} - ${body.description || 'No description'}`,
+          reference: body.reference || `Payment-${payment.id}`,
+          totalDebit: Number(body.amount),
+          totalCredit: Number(body.amount),
+          isPosted: true, // Auto-post payment journal entries
+          postedAt: new Date()
+        }
+      });
+
+      // Create the journal entry lines
+      await Promise.all([
+        // Debit line
+        tx.journalEntryLine.create({
+          data: {
+            journalEntryId: entry.id,
+            accountId: body.debitAccountId,
+            debitAmount: Number(body.amount),
+            creditAmount: 0,
+            description: `Debit: ${body.category}`,
+            reference: body.reference || `Payment-${payment.id}`
+          }
+        }),
+        // Credit line
+        tx.journalEntryLine.create({
+          data: {
+            journalEntryId: entry.id,
+            accountId: body.creditAccountId,
+            debitAmount: 0,
+            creditAmount: Number(body.amount),
+            description: `Credit: ${body.category}`,
+            reference: body.reference || `Payment-${payment.id}`
+          }
+        })
+      ]);
+
+      return entry;
+    });
+
+    console.log(`Created journal entry ${journalEntry.entryNumber} for payment ${payment.id}`);
+  } catch (error) {
+    console.error("Error creating journal entry for payment:", error);
+    throw error;
   }
 }
 

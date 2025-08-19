@@ -38,6 +38,14 @@ type Invoice = {
   remainingAmount?: number;
 };
 
+type ChartOfAccount = {
+  id: number;
+  code: string;
+  accountName: string;
+  category: string;
+  type: string;
+};
+
 export default function ProcessPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,6 +54,10 @@ export default function ProcessPaymentPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const [debitAccountId, setDebitAccountId] = useState<number>(0);
+  const [creditAccountId, setCreditAccountId] = useState<number>(0);
+  const [accountsInitialized, setAccountsInitialized] = useState(false);
   const [formData, setFormData] = useState({
     paymentAmount: "",
     paymentMethod: "CASH",
@@ -56,6 +68,7 @@ export default function ProcessPaymentPage() {
 
   useEffect(() => {
     fetchInvoices();
+    fetchAccounts();
   }, []);
 
   // Handle pre-selection of invoice from URL parameter
@@ -90,6 +103,69 @@ export default function ProcessPaymentPage() {
     }
   };
 
+  const fetchAccounts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/chart-of-accounts?limit=1000");
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setAccounts(data.data);
+        setDefaultAccounts(data.data);
+        setAccountsInitialized(true);
+        console.log("Loaded accounts:", data.data.length);
+      } else {
+        console.error("Failed to load accounts:", data);
+        toast.error("Failed to load chart of accounts");
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+      toast.error("Error loading chart of accounts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initializeChartOfAccounts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/chart-of-accounts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "initialize" })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message);
+        await fetchAccounts(); // Reload accounts after initialization
+      } else {
+        toast.error(data.error);
+      }
+    } catch (error) {
+      console.error("Error initializing accounts:", error);
+      toast.error("Failed to initialize chart of accounts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setDefaultAccounts = (accounts: ChartOfAccount[]) => {
+    // For invoice payments: Debit Accounts Receivable, Credit Cash
+    const receivableAccount = accounts.find(a => a.accountName === "Accounts Receivable");
+    const cashAccount = accounts.find(a => a.accountName === "Cash");
+    
+    if (receivableAccount) {
+      setDebitAccountId(receivableAccount.id);
+      console.log("Set default debit account:", receivableAccount.accountName);
+    }
+    if (cashAccount) {
+      setCreditAccountId(cashAccount.id);
+      console.log("Set default credit account:", cashAccount.accountName);
+    }
+  };
+
   const filteredInvoices = invoices.filter(invoice => 
     invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     invoice.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -101,6 +177,12 @@ export default function ProcessPaymentPage() {
     e.preventDefault();
     
     if (!selectedInvoice) return;
+
+    // Validate chart of accounts selection
+    if (!debitAccountId || !creditAccountId) {
+      toast.error("Please select both debit and credit accounts.");
+      return;
+    }
 
     setProcessing(true);
     
@@ -118,7 +200,10 @@ export default function ProcessPaymentPage() {
           paymentType,
           paymentMethod: formData.paymentMethod,
           reference: formData.reference,
-          description: formData.description
+          description: formData.description,
+          // Chart of accounts
+          debitAccountId,
+          creditAccountId,
         }),
       });
 
@@ -314,6 +399,76 @@ export default function ProcessPaymentPage() {
                             {selectedInvoice.status === "Partial" && " (partial payment already made)"}
                           </>
                         )}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Chart of Accounts Section */}
+                  <div>
+                    <Label htmlFor="debitAccount" className="font-bold">
+                      Debit Account
+                    </Label>
+                    <Select value={String(debitAccountId)} onValueChange={(value) => setDebitAccountId(parseInt(value))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={loading ? "Loading accounts..." : "Select debit account"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loading ? (
+                          <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
+                        ) : accounts.length === 0 ? (
+                          <SelectItem value="no-accounts" disabled>No accounts available</SelectItem>
+                        ) : (
+                          accounts.map((account) => (
+                            <SelectItem key={account.id} value={String(account.id)}>
+                              {account.code} - {account.accountName}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {accounts.length === 0 && !loading && (
+                      <p className="text-xs text-red-500 mt-1">
+                        No chart of accounts found. Please initialize the chart of accounts first.
+                      </p>
+                    )}
+                    {accounts.length === 0 && !loading && (
+                      <Button
+                        type="button"
+                        onClick={initializeChartOfAccounts}
+                        disabled={loading}
+                        className="mt-2 text-sm"
+                        variant="outline"
+                      >
+                        {loading ? "Initializing..." : "Initialize Chart of Accounts"}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="creditAccount" className="font-bold">
+                      Credit Account
+                    </Label>
+                    <Select value={String(creditAccountId)} onValueChange={(value) => setCreditAccountId(parseInt(value))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={loading ? "Loading accounts..." : "Select credit account"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loading ? (
+                          <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
+                        ) : accounts.length === 0 ? (
+                          <SelectItem value="no-accounts" disabled>No accounts available</SelectItem>
+                        ) : (
+                          accounts.map((account) => (
+                            <SelectItem key={account.id} value={String(account.id)}>
+                              {account.code} - {account.accountName}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {accounts.length === 0 && !loading && (
+                      <p className="text-xs text-red-500 mt-1">
+                        No chart of accounts found. Please initialize the chart of accounts first.
                       </p>
                     )}
                   </div>

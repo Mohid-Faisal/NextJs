@@ -49,6 +49,7 @@ type Payment = {
   reference?: string;
   invoice?: string;
   description?: string;
+  journalEntryNumber?: string; // Add journal entry number
 };
 
 type SortField = keyof Payment;
@@ -463,6 +464,11 @@ export default function PaymentsPage() {
      window.location.href = `/dashboard/accounts/payments/add?${queryParams.toString()}`;
    };
 
+  const handleViewJournalEntry = (journalEntryNumber: string) => {
+    // Navigate to journal entries page with filter for this entry
+    window.location.href = `/dashboard/journal-entries?search=${journalEntryNumber}`;
+  };
+
   const handleDelete = (payment: Payment) => {
     setPaymentToDelete(payment);
     setOpenDeleteDialog(true);
@@ -806,6 +812,7 @@ export default function PaymentsPage() {
                   <th className="px-4 py-2 text-left">
                     <button onClick={() => handleSort("invoice")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">Invoice {getSortIcon("invoice")}</button>
                   </th>
+                  <th className="px-4 py-2 text-left">Journal Entry</th>
                   <th className="px-4 py-2 text-left">Actions</th>
                 </tr>
               </thead>
@@ -822,6 +829,19 @@ export default function PaymentsPage() {
                     <td className="px-4 py-3">{p.mode}</td>
                     <td className="px-4 py-3">{p.reference}</td>
                     <td className="px-4 py-3">{p.invoice || ""}</td>
+                    <td className="px-4 py-3">
+                      {p.journalEntryNumber ? (
+                        <button
+                          onClick={() => handleViewJournalEntry(p.journalEntryNumber!)}
+                          className="text-blue-600 hover:text-blue-800 hover:underline text-xs"
+                          title="View journal entry"
+                        >
+                          {p.journalEntryNumber}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-xs">N/A</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
