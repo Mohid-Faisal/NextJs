@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addCustomerTransaction } from "@/lib/utils";
+import { addCustomerTransaction, createJournalEntryForTransaction } from "@/lib/utils";
 
 export async function GET(
   req: NextRequest,
@@ -150,6 +150,16 @@ export async function POST(
       prisma,
       customerId,
       type,
+      parseFloat(amount),
+      description,
+      reference
+    );
+
+    // Create journal entry for customer transaction
+    const transactionType = type === 'CREDIT' ? 'CUSTOMER_CREDIT' : 'CUSTOMER_DEBIT';
+    await createJournalEntryForTransaction(
+      prisma,
+      transactionType,
       parseFloat(amount),
       description,
       reference

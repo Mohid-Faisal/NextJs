@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, CreditCard, Book } from "lucide-react";
+import { FileText, CreditCard, Book, BookOpen } from "lucide-react";
 
 export default function AccountsHomePage() {
   const items = [
@@ -25,13 +25,19 @@ export default function AccountsHomePage() {
       description: "See account balances and transaction history.",
       Icon: Book,
     },
+    {
+      href: "/dashboard/accounts/account-books",
+      title: "Account Books",
+      description: "View journal entries filtered by account or category.",
+      Icon: BookOpen,
+    },
   ];
 
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
       <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">Accounts</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {items.map(({ href, title, description, Icon }) => (
           <Card key={href} className="border-gray-200 dark:border-gray-700">
             <CardContent className="p-6 flex flex-col gap-4">

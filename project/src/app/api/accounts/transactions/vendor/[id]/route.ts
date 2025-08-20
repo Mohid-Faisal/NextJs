@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addVendorTransaction } from "@/lib/utils";
+import { addVendorTransaction, createJournalEntryForTransaction } from "@/lib/utils";
 
 export async function GET(
   req: NextRequest,
@@ -150,6 +150,16 @@ export async function POST(
       prisma,
       vendorId,
       type,
+      parseFloat(amount),
+      description,
+      reference
+    );
+
+    // Create journal entry for vendor transaction
+    const transactionType = type === 'CREDIT' ? 'VENDOR_CREDIT' : 'VENDOR_DEBIT';
+    await createJournalEntryForTransaction(
+      prisma,
+      transactionType,
       parseFloat(amount),
       description,
       reference

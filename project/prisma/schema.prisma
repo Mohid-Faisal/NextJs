@@ -308,7 +308,8 @@ enum TransactionType {
   INCOME
   EXPENSE
   TRANSFER
-  RETURN
+  ADJUSTMENT
+  EQUITY
 }
 
 enum PartyType {
@@ -383,4 +384,54 @@ model Invoice {
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// Chart of Accounts Models
+model ChartOfAccount {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  accountName String
+  category    String   // Asset, Liability, Equity, Expense, Revenue
+  type        String   // Current Asset, Fixed Asset, Current Liability, etc.
+  debitRule   String   // "Increases" or "Decreases"
+  creditRule  String   // "Increases" or "Decreases"
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  journalLines   JournalEntryLine[]
+}
+
+model JournalEntry {
+  id              Int      @id @default(autoincrement())
+  entryNumber     String   @unique
+  date            DateTime
+  description     String
+  reference       String?
+  totalDebit      Float
+  totalCredit     Float
+  isPosted        Boolean  @default(false)
+  postedAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  lines     JournalEntryLine[]
+}
+
+model JournalEntryLine {
+  id              Int      @id @default(autoincrement())
+  journalEntryId  Int
+  accountId       Int
+  debitAmount     Float    @default(0)
+  creditAmount    Float    @default(0)
+  description     String?
+  reference       String?
+  createdAt       DateTime @default(now())
+
+  // Relations
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 }

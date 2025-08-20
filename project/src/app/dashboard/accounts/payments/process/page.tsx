@@ -38,6 +38,14 @@ type Invoice = {
   remainingAmount?: number;
 };
 
+type ChartOfAccount = {
+  id: number;
+  code: string;
+  accountName: string;
+  category: string;
+  type: string;
+};
+
 export default function ProcessPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,6 +54,10 @@ export default function ProcessPaymentPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const [debitAccountId, setDebitAccountId] = useState<number>(0);
+  const [creditAccountId, setCreditAccountId] = useState<number>(0);
+  const [accountsInitialized, setAccountsInitialized] = useState(false);
   const [formData, setFormData] = useState({
     paymentAmount: "",
     paymentMethod: "CASH",
@@ -56,6 +68,7 @@ export default function ProcessPaymentPage() {
 
   useEffect(() => {
     fetchInvoices();
+    fetchAccounts();
   }, []);
 
   // Handle pre-selection of invoice from URL parameter
@@ -73,9 +86,13 @@ export default function ProcessPaymentPage() {
             paymentAmount: remainingAmount.toString()
           }));
         }
+        // Set default accounts for the selected invoice
+        if (accountsInitialized && accounts.length > 0) {
+          setDefaultAccountsForInvoice(accounts, invoice);
+        }
       }
     }
-  }, [searchParams, invoices]);
+  }, [searchParams, invoices, accountsInitialized, accounts]);
 
   const fetchInvoices = async () => {
     try {
@@ -90,6 +107,98 @@ export default function ProcessPaymentPage() {
     }
   };
 
+  const fetchAccounts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/chart-of-accounts?limit=1000");
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setAccounts(data.data);
+        setDefaultAccounts(data.data);
+        setAccountsInitialized(true);
+        console.log("Loaded accounts:", data.data.length);
+      } else {
+        console.error("Failed to load accounts:", data);
+        toast.error("Failed to load chart of accounts");
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+      toast.error("Error loading chart of accounts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initializeChartOfAccounts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/chart-of-accounts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "initialize" })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message);
+        await fetchAccounts(); // Reload accounts after initialization
+      } else {
+        toast.error(data.error);
+      }
+    } catch (error) {
+      console.error("Error initializing accounts:", error);
+      toast.error("Failed to initialize chart of accounts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setDefaultAccounts = (accounts: ChartOfAccount[]) => {
+    // Default accounts will be set when an invoice is selected
+    // This function is kept for backward compatibility
+    console.log("Accounts loaded, default accounts will be set when invoice is selected");
+  };
+
+  const setDefaultAccountsForInvoice = (accounts: ChartOfAccount[], invoice: Invoice) => {
+    if (invoice.profile === "Customer") {
+      // For customer payments: Customer has already paid, so we record the income
+      // Debit Cash (we received money), Credit Revenue (income earned)
+      const cashAccount = accounts.find(a => a.accountName === "Cash");
+      const revenueAccount = accounts.find(a => 
+        a.category === "Revenue" && 
+        (a.accountName.includes("Freight") || a.accountName.includes("Services") || a.accountName.includes("Revenue"))
+      );
+      
+      if (cashAccount) {
+        setDebitAccountId(cashAccount.id);
+        console.log("Set default debit account for customer payment:", cashAccount.accountName);
+      }
+      if (revenueAccount) {
+        setCreditAccountId(revenueAccount.id);
+        console.log("Set default credit account for customer payment:", revenueAccount.accountName);
+      }
+    } else if (invoice.profile === "Vendor") {
+      // For vendor payments: We are paying the vendor for expenses
+      // Debit Expense (cost incurred), Credit Cash (we paid money)
+      const expenseAccount = accounts.find(a => 
+        a.category === "Expense" && 
+        (a.accountName.includes("Operations") || a.accountName.includes("Fuel") || a.accountName.includes("Maintenance") || a.accountName.includes("Expense"))
+      );
+      const cashAccount = accounts.find(a => a.accountName === "Cash");
+      
+      if (expenseAccount) {
+        setDebitAccountId(expenseAccount.id);
+        console.log("Set default debit account for vendor payment:", expenseAccount.accountName);
+      }
+      if (cashAccount) {
+        setCreditAccountId(cashAccount.id);
+        console.log("Set default credit account for vendor payment:", cashAccount.accountName);
+      }
+    }
+  };
+
   const filteredInvoices = invoices.filter(invoice => 
     invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     invoice.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -101,6 +210,12 @@ export default function ProcessPaymentPage() {
     e.preventDefault();
     
     if (!selectedInvoice) return;
+
+    // Validate chart of accounts selection
+    if (!debitAccountId || !creditAccountId) {
+      toast.error("Please select both debit and credit accounts.");
+      return;
+    }
 
     setProcessing(true);
     
@@ -118,7 +233,10 @@ export default function ProcessPaymentPage() {
           paymentType,
           paymentMethod: formData.paymentMethod,
           reference: formData.reference,
-          description: formData.description
+          description: formData.description,
+          // Chart of accounts
+          debitAccountId,
+          creditAccountId,
         }),
       });
 
@@ -215,7 +333,12 @@ export default function ProcessPaymentPage() {
                       ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                       : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
-                  onClick={() => setSelectedInvoice(invoice)}
+                  onClick={() => {
+                    setSelectedInvoice(invoice);
+                    if (accountsInitialized && accounts.length > 0) {
+                      setDefaultAccountsForInvoice(accounts, invoice);
+                    }
+                  }}
                 >
                   <div className="flex justify-between items-start">
                     <div>
@@ -278,6 +401,21 @@ export default function ProcessPaymentPage() {
                       <div className="text-sm text-blue-800 dark:text-blue-200">
                         <strong>Customer Payment Note:</strong> If the payment amount exceeds the invoice total, 
                         the excess amount will be added to the customer's credit balance for future invoices.
+                        <br />
+                        <strong>Default Accounts:</strong> Debit Cash, Credit Revenue (Freight/Services)
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedInvoice.profile === "Vendor" && (
+                  <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                    <div className="flex items-start">
+                      <Info className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="text-sm text-orange-800 dark:text-orange-200">
+                        <strong>Vendor Payment Note:</strong> This payment reduces the amount owed to the vendor.
+                        <br />
+                        <strong>Default Accounts:</strong> Debit Expense (Operations/Fuel/Maintenance), Credit Cash
                       </div>
                     </div>
                   </div>
@@ -314,6 +452,76 @@ export default function ProcessPaymentPage() {
                             {selectedInvoice.status === "Partial" && " (partial payment already made)"}
                           </>
                         )}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Chart of Accounts Section */}
+                  <div>
+                    <Label htmlFor="debitAccount" className="font-bold">
+                      Debit Account
+                    </Label>
+                    <Select value={String(debitAccountId)} onValueChange={(value) => setDebitAccountId(parseInt(value))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={loading ? "Loading accounts..." : "Select debit account"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loading ? (
+                          <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
+                        ) : accounts.length === 0 ? (
+                          <SelectItem value="no-accounts" disabled>No accounts available</SelectItem>
+                        ) : (
+                          accounts.map((account) => (
+                            <SelectItem key={account.id} value={String(account.id)}>
+                              {account.code} - {account.accountName}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {accounts.length === 0 && !loading && (
+                      <p className="text-xs text-red-500 mt-1">
+                        No chart of accounts found. Please initialize the chart of accounts first.
+                      </p>
+                    )}
+                    {accounts.length === 0 && !loading && (
+                      <Button
+                        type="button"
+                        onClick={initializeChartOfAccounts}
+                        disabled={loading}
+                        className="mt-2 text-sm"
+                        variant="outline"
+                      >
+                        {loading ? "Initializing..." : "Initialize Chart of Accounts"}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="creditAccount" className="font-bold">
+                      Credit Account
+                    </Label>
+                    <Select value={String(creditAccountId)} onValueChange={(value) => setCreditAccountId(parseInt(value))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={loading ? "Loading accounts..." : "Select credit account"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loading ? (
+                          <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
+                        ) : accounts.length === 0 ? (
+                          <SelectItem value="no-accounts" disabled>No accounts available</SelectItem>
+                        ) : (
+                          accounts.map((account) => (
+                            <SelectItem key={account.id} value={String(account.id)}>
+                              {account.code} - {account.accountName}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {accounts.length === 0 && !loading && (
+                      <p className="text-xs text-red-500 mt-1">
+                        No chart of accounts found. Please initialize the chart of accounts first.
                       </p>
                     )}
                   </div>
