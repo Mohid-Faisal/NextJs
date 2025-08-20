@@ -96,6 +96,8 @@ export async function POST(req: NextRequest) {
         invoiceNumber
       );
 
+      // Journal entry will be created by createJournalEntryForPaymentProcess
+
       // If there's an overpayment, create a separate credit transaction for the customer
       if (overpaymentAmount > 0) {
         await addCustomerTransaction(
@@ -107,6 +109,8 @@ export async function POST(req: NextRequest) {
           `CREDIT-${invoiceNumber}`,
           invoiceNumber
         );
+
+        // Journal entry will be created by createJournalEntryForPaymentProcess
       }
 
     } else if (paymentType === "VENDOR_PAYMENT") {
@@ -128,6 +132,8 @@ export async function POST(req: NextRequest) {
         reference,
         invoiceNumber
       );
+
+      // Journal entry will be created by createJournalEntryForPaymentProcess
     }
 
     // Create payment record

@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
           },
           {
             mode: "CASH",
-            transactionType: "RETURN"
+            transactionType: "ADJUSTMENT"
           },
           {
             transactionType: "TRANSFER",
@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
           },
           {
             mode: "BANK_TRANSFER",
-            transactionType: "RETURN"
+            transactionType: "ADJUSTMENT"
           },
           {
             transactionType: "TRANSFER",

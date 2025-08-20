@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransaction, addVendorTransaction, addCompanyTransaction } from "@/lib/utils";
+import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransaction, addVendorTransaction, addCompanyTransaction, createJournalEntryForTransaction } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -292,10 +292,15 @@ export async function POST(req: NextRequest) {
           vendorId = vendorRecord?.id || null;
           vendorBalance = vendorRecord?.currentBalance || 0;
         }
-
-                       // Calculate remaining amount based on customer balance
+        if (customerBalance > 0) {
+        // Calculate remaining amount based on customer balance
         remainingAmount = Math.max(0, customerTotalCost - customerBalance);
         appliedBalance = Math.min(customerBalance, customerTotalCost);
+        }
+        else {
+          remainingAmount = customerTotalCost;
+          appliedBalance = 0;
+        }
         
         // Determine invoice status based on remaining amount
         if (remainingAmount === 0) {
@@ -435,6 +440,16 @@ export async function POST(req: NextRequest) {
                 invoiceNumber,
                 invoiceNumber
               );
+
+              // Create journal entry for customer debit transaction
+              await createJournalEntryForTransaction(
+                prisma,
+                'CUSTOMER_DEBIT',
+                remainingAmount,
+                `Customer invoice for shipment ${trackingId}`,
+                invoiceNumber,
+                invoiceNumber
+              );
             }
 
             // If customer has balance and it was applied, create a payment transaction
@@ -470,10 +485,30 @@ export async function POST(req: NextRequest) {
                 invoiceNumber
               );
 
+              // Create journal entry for customer credit transaction
+              await createJournalEntryForTransaction(
+                prisma,
+                'CUSTOMER_CREDIT',
+                appliedBalance,
+                `Customer credit applied for invoice ${invoiceNumber}`,
+                `CREDIT-${invoiceNumber}`,
+                invoiceNumber
+              );
+
               // Create CREDIT transaction for company (we receive money)
               await addCompanyTransaction(
                 prisma,
                 'DEBIT',
+                appliedBalance,
+                `Customer credit applied for invoice ${invoiceNumber}`,
+                `CREDIT-${invoiceNumber}`,
+                invoiceNumber
+              );
+
+              // Create journal entry for company debit transaction
+              await createJournalEntryForTransaction(
+                prisma,
+                'COMPANY_DEBIT',
                 appliedBalance,
                 `Customer credit applied for invoice ${invoiceNumber}`,
                 `CREDIT-${invoiceNumber}`,
@@ -487,6 +522,16 @@ export async function POST(req: NextRequest) {
                 prisma,
                 vendorId,
                 'DEBIT',
+                vendorRemainingAmount,
+                `Vendor invoice for shipment ${trackingId}`,
+                vendorInvoiceNumber,
+                vendorInvoiceNumber
+              );
+
+              // Create journal entry for vendor debit transaction
+              await createJournalEntryForTransaction(
+                prisma,
+                'VENDOR_DEBIT',
                 vendorRemainingAmount,
                 `Vendor invoice for shipment ${trackingId}`,
                 vendorInvoiceNumber,
@@ -527,10 +572,30 @@ export async function POST(req: NextRequest) {
                 vendorInvoiceNumber
               );
 
+              // Create journal entry for vendor credit transaction
+              await createJournalEntryForTransaction(
+                prisma,
+                'VENDOR_CREDIT',
+                vendorAppliedBalance,
+                `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
+                `CREDIT-${vendorInvoiceNumber}`,
+                vendorInvoiceNumber
+              );
+
               // Create CREDIT transaction for company (reduces our liability)
               await addCompanyTransaction(
                 prisma,
                 'CREDIT',
+                vendorAppliedBalance,
+                `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
+                `CREDIT-${vendorInvoiceNumber}`,
+                vendorInvoiceNumber
+              );
+
+              // Create journal entry for company credit transaction
+              await createJournalEntryForTransaction(
+                prisma,
+                'COMPANY_CREDIT',
                 vendorAppliedBalance,
                 `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
                 `CREDIT-${vendorInvoiceNumber}`,

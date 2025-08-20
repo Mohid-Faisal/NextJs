@@ -86,9 +86,13 @@ export default function ProcessPaymentPage() {
             paymentAmount: remainingAmount.toString()
           }));
         }
+        // Set default accounts for the selected invoice
+        if (accountsInitialized && accounts.length > 0) {
+          setDefaultAccountsForInvoice(accounts, invoice);
+        }
       }
     }
-  }, [searchParams, invoices]);
+  }, [searchParams, invoices, accountsInitialized, accounts]);
 
   const fetchInvoices = async () => {
     try {
@@ -152,17 +156,46 @@ export default function ProcessPaymentPage() {
   };
 
   const setDefaultAccounts = (accounts: ChartOfAccount[]) => {
-    // For invoice payments: Debit Accounts Receivable, Credit Cash
-    const receivableAccount = accounts.find(a => a.accountName === "Accounts Receivable");
-    const cashAccount = accounts.find(a => a.accountName === "Cash");
-    
-    if (receivableAccount) {
-      setDebitAccountId(receivableAccount.id);
-      console.log("Set default debit account:", receivableAccount.accountName);
-    }
-    if (cashAccount) {
-      setCreditAccountId(cashAccount.id);
-      console.log("Set default credit account:", cashAccount.accountName);
+    // Default accounts will be set when an invoice is selected
+    // This function is kept for backward compatibility
+    console.log("Accounts loaded, default accounts will be set when invoice is selected");
+  };
+
+  const setDefaultAccountsForInvoice = (accounts: ChartOfAccount[], invoice: Invoice) => {
+    if (invoice.profile === "Customer") {
+      // For customer payments: Customer has already paid, so we record the income
+      // Debit Cash (we received money), Credit Revenue (income earned)
+      const cashAccount = accounts.find(a => a.accountName === "Cash");
+      const revenueAccount = accounts.find(a => 
+        a.category === "Revenue" && 
+        (a.accountName.includes("Freight") || a.accountName.includes("Services") || a.accountName.includes("Revenue"))
+      );
+      
+      if (cashAccount) {
+        setDebitAccountId(cashAccount.id);
+        console.log("Set default debit account for customer payment:", cashAccount.accountName);
+      }
+      if (revenueAccount) {
+        setCreditAccountId(revenueAccount.id);
+        console.log("Set default credit account for customer payment:", revenueAccount.accountName);
+      }
+    } else if (invoice.profile === "Vendor") {
+      // For vendor payments: We are paying the vendor for expenses
+      // Debit Expense (cost incurred), Credit Cash (we paid money)
+      const expenseAccount = accounts.find(a => 
+        a.category === "Expense" && 
+        (a.accountName.includes("Operations") || a.accountName.includes("Fuel") || a.accountName.includes("Maintenance") || a.accountName.includes("Expense"))
+      );
+      const cashAccount = accounts.find(a => a.accountName === "Cash");
+      
+      if (expenseAccount) {
+        setDebitAccountId(expenseAccount.id);
+        console.log("Set default debit account for vendor payment:", expenseAccount.accountName);
+      }
+      if (cashAccount) {
+        setCreditAccountId(cashAccount.id);
+        console.log("Set default credit account for vendor payment:", cashAccount.accountName);
+      }
     }
   };
 
@@ -300,7 +333,12 @@ export default function ProcessPaymentPage() {
                       ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                       : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
-                  onClick={() => setSelectedInvoice(invoice)}
+                  onClick={() => {
+                    setSelectedInvoice(invoice);
+                    if (accountsInitialized && accounts.length > 0) {
+                      setDefaultAccountsForInvoice(accounts, invoice);
+                    }
+                  }}
                 >
                   <div className="flex justify-between items-start">
                     <div>
@@ -363,6 +401,21 @@ export default function ProcessPaymentPage() {
                       <div className="text-sm text-blue-800 dark:text-blue-200">
                         <strong>Customer Payment Note:</strong> If the payment amount exceeds the invoice total, 
                         the excess amount will be added to the customer's credit balance for future invoices.
+                        <br />
+                        <strong>Default Accounts:</strong> Debit Cash, Credit Revenue (Freight/Services)
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedInvoice.profile === "Vendor" && (
+                  <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                    <div className="flex items-start">
+                      <Info className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="text-sm text-orange-800 dark:text-orange-200">
+                        <strong>Vendor Payment Note:</strong> This payment reduces the amount owed to the vendor.
+                        <br />
+                        <strong>Default Accounts:</strong> Debit Expense (Operations/Fuel/Maintenance), Credit Cash
                       </div>
                     </div>
                   </div>

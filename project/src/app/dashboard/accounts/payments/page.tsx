@@ -39,7 +39,7 @@ import {
 
 type Payment = {
   id: number;
-  transactionType: "Income" | "Expense" | "Transfer" | "Return";
+  transactionType: "Income" | "Expense" | "Transfer" | "Adjustment" | "Equity";
   category: string;
   date: string; // ISO
   amount: number;
@@ -455,7 +455,7 @@ export default function PaymentsPage() {
      });
      
      // Add customer ID for Return transactions
-     if (payment.transactionType === "Return" && payment.toAccount !== "Us") {
+     if (payment.transactionType === "Adjustment" && payment.toAccount !== "Us") {
        // Extract customer ID from toAccount if it's a customer name
        // This assumes the toAccount contains the customer ID when it's a customer
        queryParams.append('toCustomerId', payment.toAccount);

@@ -22,9 +22,9 @@ const defaultAccounts = [
   { code: "2202", accountName: "Warehouse Mortgage Payable", category: "Liability", type: "Non-Current Liability", debitRule: "Decreases", creditRule: "Increases", description: "Mortgage loans for warehousing facilities" },
   
   // Equity
-  { code: "3101", accountName: "Owner's Equity", category: "Equity", type: "Equity", debitRule: "", creditRule: "", description: "Owner's initial and additional investments in the business" },
-  { code: "3102", accountName: "Retained Earnings", category: "Equity", type: "Equity", debitRule: "", creditRule: "", description: "Cumulative profits retained in the business for reinvestment" },
-  { code: "3103", accountName: "Current Year Earnings", category: "Equity", type: "Equity", debitRule: "", creditRule: "", description: "Current year's net income or loss" },
+  { code: "3101", accountName: "Owner's Equity", category: "Equity", type: "Equity", debitRule: "Decreases", creditRule: "Increases", description: "Owner's initial and additional investments in the business" },
+  { code: "3102", accountName: "Retained Earnings", category: "Equity", type: "Equity", debitRule: "Decreases", creditRule: "Increases", description: "Cumulative profits retained in the business for reinvestment" },
+  { code: "3103", accountName: "Current Year Earnings", category: "Equity", type: "Equity", debitRule: "Decreases", creditRule: "Increases", description: "Current year's net income or loss" },
   
   // Expenses
   { code: "4101", accountName: "Depreciation Expense - Fleet Vehicles", category: "Expense", type: "Depreciation", debitRule: "Increases", creditRule: "Decreases", description: "Depreciation of trucks, vans, and other vehicles" },

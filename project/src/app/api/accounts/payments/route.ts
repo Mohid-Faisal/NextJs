@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // UI-to-enum mapping
-const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Return: "RETURN" };
+const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Adjustment: "ADJUSTMENT", Equity: "EQUITY" };
 const modeMap: Record<string, any> = { "Cash": "CASH", "Bank Transfer": "BANK_TRANSFER", "Card": "CARD", "Cheque": "CHEQUE" };
 
 export async function GET(request: Request) {
@@ -65,10 +65,6 @@ export async function GET(request: Request) {
       orderBy: { [finalSortField]: sortOrder },
       skip: limit ? (page - 1) * limit : 0,
       take: limit ?? undefined,
-      include: { 
-        fromCustomer: true, 
-        toVendor: true
-      },
     });
 
     // Find related journal entries for each payment
@@ -162,7 +158,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Basic validation similar to other routes
+    // Basic validation
     const required = ["transactionType", "category", "date", "amount"];
     for (const key of required) {
       if (body[key] === undefined || body[key] === null || String(body[key]).trim() === "") {
@@ -181,41 +177,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Party validation
-    const resolvedFromParty = body.fromPartyType ?? (body.fromAccount === "Us" ? "US" : "CUSTOMER");
-    const resolvedToParty = body.toPartyType ?? (body.toAccount === "Us" ? "US" : "VENDOR");
-    if (resolvedFromParty === "CUSTOMER" && !body.fromCustomerId) {
+    // Validate accounts are different
+    if (body.debitAccountId === body.creditAccountId) {
       return NextResponse.json(
-        { success: false, message: "fromCustomerId is required when fromPartyType is CUSTOMER." },
+        { success: false, message: "Debit and credit accounts must be different." },
         { status: 400 }
       );
     }
-    if (resolvedToParty === "VENDOR" && !body.toVendorId) {
-      return NextResponse.json(
-        { success: false, message: "toVendorId is required when toPartyType is VENDOR." },
-        { status: 400 }
-      );
-    }
+
+    // Party validation - all internal transactions
+    const fromPartyType = "US";
+    const toPartyType = "US";
 
     const data: any = {
       transactionType: typeMap[body.transactionType] ?? body.transactionType,
       category: body.category,
       date: new Date(body.date),
       amount: Number(body.amount),
-      fromPartyType: resolvedFromParty,
-      toPartyType: resolvedToParty,
-      mode: body.mode ? (modeMap[body.mode] ?? body.mode) : null,
+      fromPartyType: fromPartyType,
+      toPartyType: toPartyType,
+      mode: body.paymentMethod ? (modeMap[body.paymentMethod] ?? body.paymentMethod) : null,
       reference: body.reference || null,
       invoice: body.invoice || null,
       description: body.description || null,
+      fromCustomer: "Us",
+      toVendor: "Us",
     };
 
-    if (resolvedFromParty === "CUSTOMER") {
-      data.fromCustomer = { connect: { id: Number(body.fromCustomerId) } };
-    }
-    if (resolvedToParty === "VENDOR") {
-      data.toVendor = { connect: { id: Number(body.toVendorId) } };
-    }
+    // All internal transactions - no external party relationships
 
     try {
       const payment = await prisma.payment.create({ data });
@@ -226,34 +215,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Payment added successfully.", payment });
     } catch (e) {
       // Fallback: some databases may still have scalar columns instead of relations
-      // Compose scalar-friendly payload by storing party names
-      let fromName = "Us";
-      let toName = "Us";
-      if (resolvedFromParty === "CUSTOMER") {
-        const c = await prisma.customers.findUnique({ where: { id: Number(body.fromCustomerId) } });
-        fromName = c?.CompanyName || fromName;
-      }
-      if (resolvedToParty === "VENDOR") {
-        const v = await prisma.vendors.findUnique({ where: { id: Number(body.toVendorId) } });
-        toName = v?.CompanyName || toName;
-      }
-
+      // All internal transactions
       const fallbackData: any = {
         transactionType: typeMap[body.transactionType] ?? body.transactionType,
         category: body.category,
         date: new Date(body.date),
         amount: Number(body.amount),
-        fromPartyType: resolvedFromParty,
-        toPartyType: resolvedToParty,
-        mode: body.mode ? (modeMap[body.mode] ?? body.mode) : null,
+        fromPartyType: fromPartyType,
+        toPartyType: toPartyType,
+        mode: body.paymentMethod ? (modeMap[body.paymentMethod] ?? body.paymentMethod) : null,
         reference: body.reference || null,
         invoice: body.invoice || null,
         description: body.description || null,
-        fromCustomer: fromName,
-        toVendor: toName,
+        fromCustomer: "Us",
+        toVendor: "Us",
       };
 
-      const payment = await (prisma as any).payment.create({ data: fallbackData });
+      const payment = await prisma.payment.create({ data: fallbackData });
       
       // Create journal entry for the fallback payment
       await createJournalEntryForPayment(payment, body);

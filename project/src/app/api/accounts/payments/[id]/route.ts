@@ -40,7 +40,6 @@ export async function PUT(
         transactionType: body.transactionType,
         category: body.category,
         date: body.date,
-        currency: body.currency,
         amount: body.amount,
         fromPartyType: body.fromPartyType,
         fromCustomerId: body.fromCustomerId,
@@ -48,7 +47,6 @@ export async function PUT(
         toVendorId: body.toVendorId,
         mode: body.mode,
         reference: body.reference,
-        dueDate: body.dueDate,
         description: body.description,
       },
     });

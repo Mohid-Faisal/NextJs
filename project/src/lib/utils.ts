@@ -446,3 +446,249 @@ export async function calculateInvoicePaymentStatus(
     totalAmount: invoiceAmount
   };
 }
+
+// Create journal entry for customer/vendor transactions
+export async function createJournalEntryForTransaction(
+  prisma: any,
+  type: 'CUSTOMER_DEBIT' | 'CUSTOMER_CREDIT' | 'VENDOR_DEBIT' | 'VENDOR_CREDIT' | 'COMPANY_DEBIT' | 'COMPANY_CREDIT',
+  amount: number,
+  description: string,
+  reference?: string,
+  invoice?: string
+) {
+  try {
+    // Generate journal entry number
+    const lastEntry = await prisma.journalEntry.findFirst({
+      orderBy: { entryNumber: "desc" }
+    });
+
+    let entryNumber = "JE-0001";
+    if (lastEntry) {
+      const lastNumber = parseInt(lastEntry.entryNumber.split("-")[1]);
+      entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
+    }
+
+    // Get chart of accounts
+    const cashAccount = await prisma.chartOfAccount.findFirst({
+      where: { accountName: "Cash" }
+    });
+
+    const accountsReceivable = await prisma.chartOfAccount.findFirst({
+      where: { accountName: "Accounts Receivable" }
+    });
+
+    const accountsPayable = await prisma.chartOfAccount.findFirst({
+      where: { accountName: "Accounts Payable" }
+    });
+
+    const revenueAccount = await prisma.chartOfAccount.findFirst({
+      where: { 
+        category: "Revenue",
+        accountName: { contains: "Freight" }
+      }
+    });
+
+    const expenseAccount = await prisma.chartOfAccount.findFirst({
+      where: { 
+        category: "Expense",
+        accountName: { contains: "Operations" }
+      }
+    });
+
+    // Create journal entry with lines
+    const journalEntry = await prisma.$transaction(async (tx) => {
+      // Create the journal entry
+      const entry = await tx.journalEntry.create({
+        data: {
+          entryNumber,
+          date: new Date(),
+          description: description,
+          reference: reference || `Transaction-${Date.now()}`,
+          totalDebit: amount,
+          totalCredit: amount,
+          isPosted: true,
+          postedAt: new Date()
+        }
+      });
+
+      // Create journal entry lines based on transaction type
+      switch (type) {
+        case 'CUSTOMER_DEBIT':
+          // Customer owes us money: Debit Accounts Receivable, Credit Revenue
+          if (accountsReceivable && revenueAccount) {
+            await Promise.all([
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: accountsReceivable.id,
+                  debitAmount: amount,
+                  creditAmount: 0,
+                  description: `Debit: Customer owes money`,
+                  reference: reference
+                }
+              }),
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: revenueAccount.id,
+                  debitAmount: 0,
+                  creditAmount: amount,
+                  description: `Credit: Revenue earned`,
+                  reference: reference
+                }
+              })
+            ]);
+          }
+          break;
+
+        case 'CUSTOMER_CREDIT':
+          // Customer pays us: Debit Cash, Credit Accounts Receivable
+          if (cashAccount && accountsReceivable) {
+            await Promise.all([
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: cashAccount.id,
+                  debitAmount: amount,
+                  creditAmount: 0,
+                  description: `Debit: Cash received`,
+                  reference: reference
+                }
+              }),
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: accountsReceivable.id,
+                  debitAmount: 0,
+                  creditAmount: amount,
+                  description: `Credit: Accounts receivable reduced`,
+                  reference: reference
+                }
+              })
+            ]);
+          }
+          break;
+
+        case 'VENDOR_DEBIT':
+          // We owe vendor money: Debit Expense, Credit Accounts Payable
+          if (expenseAccount && accountsPayable) {
+            await Promise.all([
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: expenseAccount.id,
+                  debitAmount: amount,
+                  creditAmount: 0,
+                  description: `Debit: Expense incurred`,
+                  reference: reference
+                }
+              }),
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: accountsPayable.id,
+                  debitAmount: 0,
+                  creditAmount: amount,
+                  description: `Credit: Accounts payable increased`,
+                  reference: reference
+                }
+              })
+            ]);
+          }
+          break;
+
+        case 'VENDOR_CREDIT':
+          // We pay vendor: Debit Accounts Payable, Credit Cash
+          if (accountsPayable && cashAccount) {
+            await Promise.all([
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: accountsPayable.id,
+                  debitAmount: amount,
+                  creditAmount: 0,
+                  description: `Debit: Accounts payable reduced`,
+                  reference: reference
+                }
+              }),
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: cashAccount.id,
+                  debitAmount: 0,
+                  creditAmount: amount,
+                  description: `Credit: Cash paid`,
+                  reference: reference
+                }
+              })
+            ]);
+          }
+          break;
+
+        case 'COMPANY_DEBIT':
+          // Company receives money: Debit Cash, Credit Revenue
+          if (cashAccount && revenueAccount) {
+            await Promise.all([
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: cashAccount.id,
+                  debitAmount: amount,
+                  creditAmount: 0,
+                  description: `Debit: Cash received`,
+                  reference: reference
+                }
+              }),
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: revenueAccount.id,
+                  debitAmount: 0,
+                  creditAmount: amount,
+                  description: `Credit: Revenue earned`,
+                  reference: reference
+                }
+              })
+            ]);
+          }
+          break;
+
+        case 'COMPANY_CREDIT':
+          // Company pays money: Debit Expense, Credit Cash
+          if (expenseAccount && cashAccount) {
+            await Promise.all([
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: expenseAccount.id,
+                  debitAmount: amount,
+                  creditAmount: 0,
+                  description: `Debit: Expense incurred`,
+                  reference: reference
+                }
+              }),
+              tx.journalEntryLine.create({
+                data: {
+                  journalEntryId: entry.id,
+                  accountId: cashAccount.id,
+                  debitAmount: 0,
+                  creditAmount: amount,
+                  description: `Credit: Cash paid`,
+                  reference: reference
+                }
+              })
+            ]);
+          }
+          break;
+      }
+
+      return entry;
+    });
+
+    console.log(`Created journal entry ${journalEntry.entryNumber} for ${type} transaction`);
+    return journalEntry;
+  } catch (error) {
+    console.error("Error creating journal entry for transaction:", error);
+    throw error;
+  }
+}

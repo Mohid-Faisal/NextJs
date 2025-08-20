@@ -27,6 +27,7 @@ import {
   BookOpen,
   ClipboardList,
   Zap,
+  TrendingUp,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -132,6 +133,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     { href: "/dashboard/accounts/company", label: "Company Account", icon: Building2 },
     { href: "/dashboard/chart-of-accounts", label: "Chart of Accounts", icon: ClipboardList },
     { href: "/dashboard/journal-entries", label: "Journal Entries", icon: Book },
+    { href: "/dashboard/accounts/balance-sheet", label: "Balance Sheet", icon: BarChart2 },
+    { href: "/dashboard/accounts/income-statement", label: "Income Statement", icon: TrendingUp },
   ];
 
   return (
