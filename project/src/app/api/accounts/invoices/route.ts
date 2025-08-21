@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     const limit = searchParams.get("limit");
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
+    const profile = searchParams.get("profile") || "";
     const fromDate = searchParams.get("fromDate");
     const toDate = searchParams.get("toDate");
     const sortField = searchParams.get("sortField") || "createdAt";
@@ -18,12 +19,18 @@ export async function GET(req: NextRequest) {
 
     // Build where clause
     const where: any = {};
+    
+    // Add profile filter - this must come first and not be overridden
+    if (profile) {
+      where.profile = profile;
+    }
+    
     if (search) {
-      where.OR = [
+      // Create search conditions that don't override the profile filter
+      const searchConditions = [
         { invoiceNumber: { contains: search, mode: "insensitive" } },
         { trackingNumber: { contains: search, mode: "insensitive" } },
         { destination: { contains: search, mode: "insensitive" } },
-        { profile: { contains: search, mode: "insensitive" } },
         { customer: { 
           OR: [
             { CompanyName: { contains: search, mode: "insensitive" } },
@@ -37,7 +44,20 @@ export async function GET(req: NextRequest) {
           ]
         } },
       ];
+      
+      // Only add search conditions if they don't conflict with profile filter
+      if (profile) {
+        // If we have a profile filter, only search within that profile
+        where.AND = [
+          { profile: profile },
+          { OR: searchConditions }
+        ];
+      } else {
+        // If no profile filter, use regular OR search
+        where.OR = searchConditions;
+      }
     }
+    
     if (status && status !== "All") {
       where.status = status;
     }
@@ -57,6 +77,10 @@ export async function GET(req: NextRequest) {
     const orderBy: any = {};
     orderBy[sortField] = sortOrder;
 
+    // Debug logging
+    console.log('Invoice API - Profile filter:', profile);
+    console.log('Invoice API - Where clause:', JSON.stringify(where, null, 2));
+
     // Fetch invoices with relations
     const [invoices, total] = await Promise.all([
       prisma.invoice.findMany({
@@ -72,6 +96,9 @@ export async function GET(req: NextRequest) {
       }),
       prisma.invoice.count({ where }),
     ]);
+
+    console.log('Invoice API - Found invoices:', invoices.length);
+    console.log('Invoice API - Invoice profiles:', invoices.map(i => i.profile));
 
     // Calculate remaining amount for each invoice
     const invoicesWithRemainingAmount = await Promise.all(

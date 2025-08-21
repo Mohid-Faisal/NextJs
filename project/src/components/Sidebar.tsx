@@ -56,6 +56,12 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [accountsOpen, setAccountsOpen] = useState(
     pathname.startsWith("/dashboard/accounts")
   );
+  const [incomeOpen, setIncomeOpen] = useState(
+    pathname.startsWith("/dashboard/income")
+  );
+  const [expenseOpen, setExpenseOpen] = useState(
+    pathname.startsWith("/dashboard/expense")
+  );
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/dashboard/shipment-settings")
   );
@@ -125,16 +131,23 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   ];
 
   const subLinksAccounts = [
-    { href: "/dashboard/accounts/invoices", label: "Invoices", icon: FileText },
     { href: "/dashboard/accounts/payments", label: "Payments", icon: CreditCard },
-    { href: "/dashboard/accounts/ledger", label: "Ledger", icon: Book },
     { href: "/dashboard/accounts/account-books", label: "Account Books", icon: BookOpen },
-    { href: "/dashboard/accounts/payments/process", label: "Process Payment", icon: CreditCard },
     { href: "/dashboard/accounts/company", label: "Company Account", icon: Building2 },
     { href: "/dashboard/chart-of-accounts", label: "Chart of Accounts", icon: ClipboardList },
     { href: "/dashboard/journal-entries", label: "Journal Entries", icon: Book },
     { href: "/dashboard/accounts/balance-sheet", label: "Balance Sheet", icon: BarChart2 },
     { href: "/dashboard/accounts/income-statement", label: "Income Statement", icon: TrendingUp },
+  ];
+
+  const subLinksIncome = [
+    { href: "/dashboard/income/invoices", label: "Invoices", icon: FileText },
+    { href: "/dashboard/income/revenue", label: "Revenue", icon: TrendingUp },
+  ];
+
+  const subLinksExpense = [
+    { href: "/dashboard/expense/bills", label: "Bills", icon: FileText },
+    { href: "/dashboard/expense/payments", label: "Payments", icon: CreditCard },
   ];
 
   return (
@@ -261,6 +274,116 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               </Link>
             );
           })}
+
+          {/* Income Collapsible */}
+          <div>
+            <button
+              onClick={() => setIncomeOpen(!incomeOpen)}
+              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                pathname.startsWith("/dashboard/income") ||
+                pathname.startsWith("/dashboard/accounts/revenue")
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <TrendingUp className="w-5 h-5 flex-shrink-0" />
+                <span
+                  className={`whitespace-nowrap transition-all duration-200 ${
+                    isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                  }`}
+                >
+                  Income
+                </span>
+              </div>
+              {isOpen && (incomeOpen ? (
+                <ChevronUp className="w-4 h-4 ml-auto" />
+              ) : (
+                <ChevronDown className="w-4 h-4 ml-auto" />
+              ))}
+            </button>
+
+            <AnimatePresence>
+              {incomeOpen && isOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="pl-10 mt-2 space-y-1"
+                >
+                  {subLinksIncome.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                        pathname === href
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      {label}
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Expense Collapsible */}
+          <div>
+            <button
+              onClick={() => setExpenseOpen(!expenseOpen)}
+              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                pathname.startsWith("/dashboard/expense") ||
+                pathname.startsWith("/dashboard/accounts/payments")
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+            >
+                             <div className="flex items-center gap-4">
+                 <ShoppingCart className="w-5 h-5 flex-shrink-0" />
+                 <span
+                   className={`whitespace-nowrap transition-all duration-200 ${
+                     isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                   }`}
+                 >
+                   Expense
+                 </span>
+               </div>
+              {isOpen && (expenseOpen ? (
+                <ChevronUp className="w-4 h-4 ml-auto" />
+              ) : (
+                <ChevronDown className="w-4 h-4 ml-auto" />
+              ))}
+            </button>
+
+            <AnimatePresence>
+              {expenseOpen && isOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="pl-10 mt-2 space-y-1"
+                >
+                  {subLinksExpense.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                        pathname === href
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      {label}
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Accounts Collapsible */}
           <div>
