@@ -491,12 +491,12 @@ export async function createJournalEntryForTransaction(
     const expenseAccount = await prisma.chartOfAccount.findFirst({
       where: { 
         category: "Expense",
-        accountName: { contains: "Operations" }
+        accountName: "Vendor Expense"
       }
     });
 
     // Create journal entry with lines
-    const journalEntry = await prisma.$transaction(async (tx) => {
+    const journalEntry = await prisma.$transaction(async (tx: any) => {
       // Create the journal entry
       const entry = await tx.journalEntry.create({
         data: {

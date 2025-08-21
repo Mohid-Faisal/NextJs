@@ -36,6 +36,7 @@ const defaultAccounts = [
   { code: "4302", accountName: "Utilities Expense", category: "Expense", type: "Overhead", debitRule: "Increases", creditRule: "Decreases", description: "Electricity, water, and internet expenses for facilities" },
   { code: "4303", accountName: "Administrative Salaries", category: "Expense", type: "Overhead", debitRule: "Increases", creditRule: "Decreases", description: "Salaries for administrative and office staff" },
   { code: "4304", accountName: "Insurance Expense", category: "Expense", type: "Overhead", debitRule: "Increases", creditRule: "Decreases", description: "Insurance costs for vehicles and cargo" },
+  { code: "4305", accountName: "Vendor Expense", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Expenses paid to vendors for transportation and logistics services" },
   
   // Revenue
   { code: "5101", accountName: "Freight Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from freight and cargo transportation" },
