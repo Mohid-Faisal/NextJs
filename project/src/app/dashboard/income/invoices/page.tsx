@@ -465,7 +465,7 @@ export default function IncomeInvoicesPage() {
       </div>
 
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4 w-full max-w-xl">
+        <div className="flex items-center gap-4 w-full max-w-lg">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Show:</span>
             <Select
@@ -475,15 +475,15 @@ export default function IncomeInvoicesPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-24 h-9">
+              <SelectTrigger className="w-16 h-9">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="all">All</SelectItem>
+              <SelectContent className="w-16 p-1">
+                <SelectItem value="10" className="py-1.5">10</SelectItem>
+                <SelectItem value="25" className="py-1.5">25</SelectItem>
+                <SelectItem value="50" className="py-1.5">50</SelectItem>
+                <SelectItem value="100" className="py-1.5">100</SelectItem>
+                <SelectItem value="all" className="py-1.5">All</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -512,7 +512,7 @@ export default function IncomeInvoicesPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -706,39 +706,27 @@ export default function IncomeInvoicesPage() {
               )}
             </div>
           </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link
-              href="/dashboard/accounts/invoices/add"
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" /> Add Invoice
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link
-              href="/dashboard/accounts/payments/process"
-              className="flex items-center gap-2"
-            >
-              💰 Process Payment
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
-            onClick={exportToCSV}
-            className="flex items-center gap-2"
-          >
-            <Table className="w-4 h-4" /> CSV
-          </Button>
-          <Button
-            variant="outline"
-            onClick={exportToPrint}
-            className="flex items-center gap-2"
-          >
-            <Printer className="w-4 h-4" /> Print
-          </Button>
+          {/* Export Dropdown */}
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+                  Export
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[120px]">
+                <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2">
+                  <Table className="w-4 h-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
+                  <Printer className="w-4 h-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -750,13 +738,6 @@ export default function IncomeInvoicesPage() {
             </p>
           ) : (
             <>
-              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  <strong>Filter Applied:</strong> Showing only Customer
-                  invoices (Profile: Customer)
-                </p>
-              </div>
-
               <table className="min-w-full table-auto border-separate border-spacing-y-4">
                 <thead>
                   <tr className="text-sm text-gray-500 dark:text-gray-300">

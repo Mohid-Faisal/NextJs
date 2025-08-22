@@ -484,7 +484,7 @@ export async function createJournalEntryForTransaction(
     const revenueAccount = await prisma.chartOfAccount.findFirst({
       where: { 
         category: "Revenue",
-        accountName: { contains: "Freight" }
+        accountName: "Logistics Services Revenue"
       }
     });
 

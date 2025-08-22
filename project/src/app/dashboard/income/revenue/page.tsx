@@ -464,43 +464,45 @@ export default function IncomeRevenuePage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="paymentMethod" className="text-sm font-medium">
-                  Payment Method
-                </Label>
-                <Select
-                  value={formData.paymentMethod}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, paymentMethod: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                    <SelectItem value="CHECK">Check</SelectItem>
-                    <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="flex gap-4">
+                <div className="space-y-1.5 flex-1">
+                  <Label htmlFor="paymentMethod" className="text-sm font-medium">
+                    Payment Method
+                  </Label>
+                  <Select
+                    value={formData.paymentMethod}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, paymentMethod: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CASH">Cash</SelectItem>
+                      <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                      <SelectItem value="CHECK">Check</SelectItem>
+                      <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="reference" className="text-sm font-medium">
-                  Reference
-                </Label>
-                <Input
-                  id="reference"
-                  value={formData.reference}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      reference: e.target.value,
-                    }))
-                  }
-                  placeholder="Payment reference"
-                />
+                <div className="space-y-1.5 flex-1">
+                  <Label htmlFor="reference" className="text-sm font-medium">
+                    Reference
+                  </Label>
+                  <Input
+                    id="reference"
+                    value={formData.reference}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        reference: e.target.value,
+                      }))
+                    }
+                    placeholder="Payment reference"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -536,7 +538,7 @@ export default function IncomeRevenuePage() {
                       setDebitAccountId(parseInt(value))
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select debit account" />
                     </SelectTrigger>
                     <SelectContent>
@@ -571,7 +573,7 @@ export default function IncomeRevenuePage() {
                       setCreditAccountId(parseInt(value))
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select credit account" />
                     </SelectTrigger>
                     <SelectContent>

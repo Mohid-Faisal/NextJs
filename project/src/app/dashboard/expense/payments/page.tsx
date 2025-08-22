@@ -63,7 +63,7 @@ export default function ExpensePaymentsPage() {
     paymentMethod: "CASH",
     invoice: "",
     reference: "",
-    description: ""
+    description: "",
   });
 
   useEffect(() => {
@@ -73,17 +73,19 @@ export default function ExpensePaymentsPage() {
 
   // Handle pre-selection of invoice from URL parameter
   useEffect(() => {
-    const invoiceParam = searchParams.get('invoice');
+    const invoiceParam = searchParams.get("invoice");
     if (invoiceParam && invoices.length > 0) {
-      const invoice = invoices.find(inv => inv.invoiceNumber === invoiceParam);
+      const invoice = invoices.find(
+        (inv) => inv.invoiceNumber === invoiceParam
+      );
       if (invoice) {
         setSelectedInvoice(invoice);
         // Set payment amount to remaining amount if available
         const remainingAmount = invoice.remainingAmount;
         if (remainingAmount !== undefined && remainingAmount > 0) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            paymentAmount: remainingAmount.toString()
+            paymentAmount: remainingAmount.toString(),
           }));
         }
         // Set default accounts for the selected invoice
@@ -99,10 +101,12 @@ export default function ExpensePaymentsPage() {
       // Only fetch vendor invoices
       const response = await fetch("/api/accounts/invoices?profile=Vendor");
       const data = await response.json();
-      
+
       if (response.ok) {
         // Double-check that only vendor invoices are included
-        const vendorInvoices = (data.invoices || []).filter((invoice: Invoice) => invoice.profile === "Vendor");
+        const vendorInvoices = (data.invoices || []).filter(
+          (invoice: Invoice) => invoice.profile === "Vendor"
+        );
         setInvoices(vendorInvoices);
       }
     } catch (error) {
@@ -115,7 +119,7 @@ export default function ExpensePaymentsPage() {
       setLoading(true);
       const response = await fetch("/api/chart-of-accounts?limit=1000");
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         setAccounts(data.data);
         setDefaultAccounts(data.data);
@@ -139,7 +143,7 @@ export default function ExpensePaymentsPage() {
       const response = await fetch("/api/chart-of-accounts", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "initialize" })
+        body: JSON.stringify({ action: "initialize" }),
       });
 
       const data = await response.json();
@@ -160,35 +164,55 @@ export default function ExpensePaymentsPage() {
 
   const setDefaultAccounts = (accounts: ChartOfAccount[]) => {
     // Default accounts will be set when an invoice is selected
-    console.log("Accounts loaded, default accounts will be set when invoice is selected");
+    console.log(
+      "Accounts loaded, default accounts will be set when invoice is selected"
+    );
   };
 
-  const setDefaultAccountsForInvoice = (accounts: ChartOfAccount[], invoice: Invoice) => {
+  const setDefaultAccountsForInvoice = (
+    accounts: ChartOfAccount[],
+    invoice: Invoice
+  ) => {
     // For vendor payments: We are paying the vendor for expenses
     // Debit Accounts Payable (vendor's liability), Credit Cash (we paid money)
-    const accountsPayableAccount = accounts.find(a => a.accountName === "Accounts Payable");
-    const cashAccount = accounts.find(a => a.accountName === "Cash");
-    
+    const accountsPayableAccount = accounts.find(
+      (a) => a.accountName === "Accounts Payable"
+    );
+    const cashAccount = accounts.find((a) => a.accountName === "Cash");
+
     if (accountsPayableAccount) {
       setDebitAccountId(accountsPayableAccount.id);
-      console.log("Set default debit account for vendor payment:", accountsPayableAccount.accountName);
+      console.log(
+        "Set default debit account for vendor payment:",
+        accountsPayableAccount.accountName
+      );
     }
     if (cashAccount) {
       setCreditAccountId(cashAccount.id);
-      console.log("Set default credit account for vendor payment:", cashAccount.accountName);
+      console.log(
+        "Set default credit account for vendor payment:",
+        cashAccount.accountName
+      );
     }
   };
 
-  const filteredInvoices = invoices.filter(invoice => 
-    invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.vendor?.CompanyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.vendor?.PersonName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredInvoices = invoices.filter(
+    (invoice) =>
+      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.trackingNumber
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      invoice.vendor?.CompanyName.toLowerCase().includes(
+        searchTerm.toLowerCase()
+      ) ||
+      invoice.vendor?.PersonName.toLowerCase().includes(
+        searchTerm.toLowerCase()
+      )
   );
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedInvoice) return;
 
     // Validate chart of accounts selection
@@ -198,7 +222,7 @@ export default function ExpensePaymentsPage() {
     }
 
     setProcessing(true);
-    
+
     try {
       const response = await fetch("/api/accounts/payments/process", {
         method: "POST",
@@ -219,10 +243,14 @@ export default function ExpensePaymentsPage() {
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         toast.success("Vendor payment processed successfully!", {
-          description: `Payment of $${parseFloat(formData.paymentAmount).toLocaleString()} has been processed for invoice ${selectedInvoice.invoiceNumber}`,
+          description: `Payment of $${parseFloat(
+            formData.paymentAmount
+          ).toLocaleString()} has been processed for invoice ${
+            selectedInvoice.invoiceNumber
+          }`,
         });
         setSelectedInvoice(null);
         setFormData({
@@ -230,12 +258,13 @@ export default function ExpensePaymentsPage() {
           paymentMethod: "CASH",
           invoice: "",
           reference: "",
-          description: ""
+          description: "",
         });
         fetchInvoices(); // Refresh invoice list
       } else {
         toast.error("Payment failed", {
-          description: data.error || "An error occurred while processing the payment",
+          description:
+            data.error || "An error occurred while processing the payment",
         });
       }
     } catch (error) {
@@ -272,15 +301,19 @@ export default function ExpensePaymentsPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        
+
         <div className="flex items-center gap-3 mb-2">
           <ShoppingCart className="w-10 h-10 text-orange-600" />
           <h1 className="text-4xl font-bold text-gray-800 dark:text-white">
             Vendor Payments
           </h1>
         </div>
-        <p className="text-gray-600 dark:text-gray-400">Process vendor payments and record expenses</p>
-        <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Showing only Vendor invoices for payment processing</p>
+        <p className="text-gray-600 dark:text-gray-400">
+          Process vendor payments and record expenses
+        </p>
+        <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+          Showing only Vendor invoices for payment processing
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -304,7 +337,9 @@ export default function ExpensePaymentsPage() {
 
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {filteredInvoices.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No vendor invoices found</p>
+                <p className="text-gray-500 text-center py-8">
+                  No vendor invoices found
+                </p>
               ) : (
                 filteredInvoices.map((invoice) => (
                   <div
@@ -317,10 +352,13 @@ export default function ExpensePaymentsPage() {
                     onClick={() => {
                       setSelectedInvoice(invoice);
                       const remainingAmount = invoice.remainingAmount;
-                      if (remainingAmount !== undefined && remainingAmount > 0) {
-                        setFormData(prev => ({
+                      if (
+                        remainingAmount !== undefined &&
+                        remainingAmount > 0
+                      ) {
+                        setFormData((prev) => ({
                           ...prev,
-                          paymentAmount: remainingAmount.toString()
+                          paymentAmount: remainingAmount.toString(),
                         }));
                       }
                       if (accountsInitialized && accounts.length > 0) {
@@ -334,22 +372,32 @@ export default function ExpensePaymentsPage() {
                           {invoice.invoiceNumber}
                         </h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {invoice.vendor?.CompanyName || invoice.vendor?.PersonName}
+                          {invoice.vendor?.CompanyName ||
+                            invoice.vendor?.PersonName}
                         </p>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                          invoice.status
+                        )}`}
+                      >
                         {invoice.status}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-gray-500">Total:</span>
-                        <span className="ml-2 font-medium">${invoice.totalAmount.toLocaleString()}</span>
+                        <span className="ml-2 font-medium">
+                          ${invoice.totalAmount.toLocaleString()}
+                        </span>
                       </div>
                       <div>
                         <span className="text-gray-500">Remaining:</span>
                         <span className="ml-2 font-medium text-orange-600">
-                          ${(invoice.remainingAmount || invoice.totalAmount).toLocaleString()}
+                          $
+                          {(
+                            invoice.remainingAmount || invoice.totalAmount
+                          ).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -375,116 +423,178 @@ export default function ExpensePaymentsPage() {
                   Selected Invoice: {selectedInvoice.invoiceNumber}
                 </h3>
                 <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Vendor: {selectedInvoice.vendor?.CompanyName || selectedInvoice.vendor?.PersonName}
+                  Vendor:{" "}
+                  {selectedInvoice.vendor?.CompanyName ||
+                    selectedInvoice.vendor?.PersonName}
                 </p>
                 <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Remaining Amount: ${(selectedInvoice.remainingAmount || selectedInvoice.totalAmount).toLocaleString()}
+                  Remaining Amount: $
+                  {(
+                    selectedInvoice.remainingAmount ||
+                    selectedInvoice.totalAmount
+                  ).toLocaleString()}
                 </p>
               </div>
             ) : (
               <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <p className="text-gray-500 text-center">Please select a vendor invoice to process payment</p>
+                <p className="text-gray-500 text-center">
+                  Please select a vendor invoice to process payment
+                </p>
               </div>
             )}
 
-                                      <form onSubmit={handlePayment} className="space-y-4">
-               <div className="space-y-1.5">
-                 <Label htmlFor="paymentAmount" className="text-sm font-medium">Payment Amount</Label>
-                 <Input
-                   id="paymentAmount"
-                   type="number"
-                   step="0.01"
-                   value={formData.paymentAmount}
-                   onChange={(e) => setFormData(prev => ({ ...prev, paymentAmount: e.target.value }))}
-                   placeholder="Enter payment amount"
-                   required
-                 />
-               </div>
+            <form onSubmit={handlePayment} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="paymentAmount" className="text-sm font-medium">
+                  Payment Amount
+                </Label>
+                <Input
+                  id="paymentAmount"
+                  type="number"
+                  step="0.01"
+                  value={formData.paymentAmount}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      paymentAmount: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter payment amount"
+                  required
+                />
+              </div>
 
-               <div className="space-y-1.5">
-                 <Label htmlFor="paymentMethod" className="text-sm font-medium">Payment Method</Label>
-                 <Select
-                   value={formData.paymentMethod}
-                   onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
-                 >
-                   <SelectTrigger>
-                     <SelectValue />
-                   </SelectTrigger>
-                   <SelectContent>
-                     <SelectItem value="CASH">Cash</SelectItem>
-                     <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                     <SelectItem value="CHECK">Check</SelectItem>
-                     <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                   </SelectContent>
-                 </Select>
-               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="paymentMethod" className="text-sm font-medium">
+                    Payment Method
+                  </Label>
+                  <Select
+                    value={formData.paymentMethod}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, paymentMethod: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CASH">Cash</SelectItem>
+                      <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                      <SelectItem value="CHECK">Check</SelectItem>
+                      <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-               <div className="space-y-1.5">
-                 <Label htmlFor="reference" className="text-sm font-medium">Reference</Label>
-                 <Input
-                   id="reference"
-                   value={formData.reference}
-                   onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
-                   placeholder="Payment reference"
-                 />
-               </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="reference" className="text-sm font-medium">
+                    Reference
+                  </Label>
+                  <Input
+                    id="reference"
+                    value={formData.reference}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        reference: e.target.value,
+                      }))
+                    }
+                    placeholder="Payment reference"
+                  />
+                </div>
+              </div>
 
-               <div className="space-y-1.5">
-                 <Label htmlFor="description" className="text-sm font-medium">Description</Label>
-                 <Input
-                   id="description"
-                   value={formData.description}
-                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                   placeholder="Payment description"
-                 />
-               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-sm font-medium">
+                  Description
+                </Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  placeholder="Payment description"
+                />
+              </div>
 
-               {/* Chart of Accounts Selection */}
-               <div className="space-y-4">
-                 <h3 className="font-semibold text-gray-900 dark:text-white text-base">Chart of Accounts</h3>
-                 
-                 <div className="space-y-1.5">
-                   <Label htmlFor="debitAccount" className="text-sm font-medium">Debit Account (Accounts Payable)</Label>
-                   <Select
-                     value={debitAccountId.toString()}
-                     onValueChange={(value) => setDebitAccountId(parseInt(value))}
-                   >
-                     <SelectTrigger>
-                       <SelectValue placeholder="Select debit account" />
-                     </SelectTrigger>
-                     <SelectContent>
-                       {accounts
-                         .filter(account => account.accountName === "Accounts Payable" || account.category === "Liability")
-                         .map(account => (
-                           <SelectItem key={account.id} value={account.id.toString()}>
-                             {account.code} - {account.accountName}
-                           </SelectItem>
-                         ))}
-                     </SelectContent>
-                   </Select>
-                 </div>
+              {/* Chart of Accounts Selection */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white text-base">
+                  Chart of Accounts
+                </h3>
 
-                 <div className="space-y-1.5">
-                   <Label htmlFor="creditAccount" className="text-sm font-medium">Credit Account (Cash Paid)</Label>
-                   <Select
-                     value={creditAccountId.toString()}
-                     onValueChange={(value) => setCreditAccountId(parseInt(value))}
-                   >
-                     <SelectTrigger>
-                       <SelectValue placeholder="Select credit account" />
-                     </SelectTrigger>
-                     <SelectContent>
-                       {accounts
-                         .filter(account => account.accountName === "Cash" || account.category === "Asset")
-                         .map(account => (
-                           <SelectItem key={account.id} value={account.id.toString()}>
-                             {account.code} - {account.accountName}
-                           </SelectItem>
-                         ))}
-                     </SelectContent>
-                   </Select>
-                 </div>
-               </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="debitAccount" className="text-sm font-medium">
+                    Debit Account (Accounts Payable)
+                  </Label>
+                  <Select
+                    value={debitAccountId.toString()}
+                    onValueChange={(value) =>
+                      setDebitAccountId(parseInt(value))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select debit account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts
+                        .filter(
+                          (account) =>
+                            account.accountName === "Accounts Payable" ||
+                            account.category === "Liability"
+                        )
+                        .map((account) => (
+                          <SelectItem
+                            key={account.id}
+                            value={account.id.toString()}
+                          >
+                            {account.code} - {account.accountName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="creditAccount"
+                    className="text-sm font-medium"
+                  >
+                    Credit Account (Cash Paid)
+                  </Label>
+                  <Select
+                    value={creditAccountId.toString()}
+                    onValueChange={(value) =>
+                      setCreditAccountId(parseInt(value))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select credit account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts
+                        .filter(
+                          (account) =>
+                            account.accountName === "Cash" ||
+                            account.category === "Asset"
+                        )
+                        .map((account) => (
+                          <SelectItem
+                            key={account.id}
+                            value={account.id.toString()}
+                          >
+                            {account.code} - {account.accountName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
               <Button
                 type="submit"
@@ -498,7 +608,8 @@ export default function ExpensePaymentsPage() {
             {!accountsInitialized && (
               <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                 <p className="text-yellow-800 dark:text-yellow-200 text-sm mb-2">
-                  Chart of accounts not initialized. Please initialize to proceed.
+                  Chart of accounts not initialized. Please initialize to
+                  proceed.
                 </p>
                 <Button
                   onClick={initializeChartOfAccounts}

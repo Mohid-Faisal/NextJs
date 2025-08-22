@@ -364,24 +364,35 @@ export default function VendorsPage() {
 
         {/* Export and Add buttons */}
         <div className="flex gap-2">
-                    {/* Export buttons */}
-          <Button variant="outline" onClick={handleExportExcel} className="flex items-center gap-2">
-            <Table className="w-4 h-4" />
-            Excel
-          </Button>
-          <Button variant="outline" onClick={handleExportPrint} className="flex items-center gap-2">
-            <Printer className="w-4 h-4" />
-            Print
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleExportPDF} 
-            disabled={isGeneratingPDF}
-            className="flex items-center gap-2"
-          >
-            <FileText className="w-4 h-4" />
-            {isGeneratingPDF ? 'Generating...' : 'PDF'}
-          </Button>
+          {/* Export Dropdown */}
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+                  Export
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[120px]">
+                <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
+                  <Table className="w-4 h-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
+                  <Printer className="w-4 h-4" />
+                  Print
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleExportPDF} 
+                  disabled={isGeneratingPDF}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  {isGeneratingPDF ? 'Generating...' : 'PDF'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* Add Vendor button */}
           <Button asChild>

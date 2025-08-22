@@ -138,7 +138,7 @@ const AddCustomerDialog = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" >
+        <Button type="button" className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
           {triggerLabel}
         </Button>
       </DialogTrigger>

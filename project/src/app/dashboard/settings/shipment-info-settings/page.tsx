@@ -34,6 +34,8 @@ const settingTypes = [
   "packagingType",
   "serviceMode",
   "vendorService",
+  "agencies",
+  "offices",
 ];
 
 function formatLabel(label: string) {
@@ -62,6 +64,12 @@ export default function ShipmentSettingsPage() {
     for (const type of settingTypes) {
       if (type === "vendorService") {
         const res = await fetch(`/api/settings/${type}`);
+        all[type] = await res.json();
+      } else if (type === "agencies") {
+        const res = await fetch(`/api/agencies`);
+        all[type] = await res.json();
+      } else if (type === "offices") {
+        const res = await fetch(`/api/offices`);
         all[type] = await res.json();
       } else {
         const res = await fetch(`/api/settings/${type}`);
@@ -114,6 +122,33 @@ export default function ShipmentSettingsPage() {
         const error = await res.json();
         toast.error(error.error || "Something went wrong.");
       }
+    } else if (currentTab === "agencies" || currentTab === "offices") {
+      const code = newValues[`${currentTab}Code`]?.trim();
+      const name = newValues[`${currentTab}Name`]?.trim();
+      
+      if (!code || !name) {
+        toast.error("Please enter both code and name");
+        return;
+      }
+
+      const res = await fetch(`/api/${currentTab}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, name }),
+      });
+
+      if (res.ok) {
+        toast.success(`${currentTab === "agencies" ? "Agency" : "Office"} added successfully!`);
+        setNewValues((prev) => ({ 
+          ...prev, 
+          [`${currentTab}Code`]: "",
+          [`${currentTab}Name`]: "" 
+        }));
+        fetchOptions();
+      } else {
+        const error = await res.json();
+        toast.error(error.error || "Something went wrong.");
+      }
     } else {
       const value = newValues[currentTab]?.trim();
       if (!value) return;
@@ -134,7 +169,15 @@ export default function ShipmentSettingsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/settings/${currentTab}?id=${id}`, {
+    let endpoint = `/api/settings/${currentTab}?id=${id}`;
+    
+    if (currentTab === "agencies") {
+      endpoint = `/api/agencies/${id}`;
+    } else if (currentTab === "offices") {
+      endpoint = `/api/offices/${id}`;
+    }
+
+    const res = await fetch(endpoint, {
       method: "DELETE",
     });
 
@@ -165,15 +208,32 @@ export default function ShipmentSettingsPage() {
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`/api/settings/${editingItem.type}`, {
+      let endpoint = `/api/settings/${editingItem.type}`;
+      let body: any = {
+        id: editingItem.id,
+        name: editValue.trim(),
+      };
+
+      if (editingItem.type === "agencies") {
+        endpoint = `/api/agencies/${editingItem.id}`;
+        body = {
+          code: editValue.trim(),
+          name: editValue.trim(),
+        };
+      } else if (editingItem.type === "offices") {
+        endpoint = `/api/offices/${editingItem.id}`;
+        body = {
+          code: editValue.trim(),
+          name: editValue.trim(),
+        };
+      }
+
+      const response = await fetch(endpoint, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          id: editingItem.id,
-          name: editValue.trim(),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
@@ -208,7 +268,12 @@ export default function ShipmentSettingsPage() {
     type: string; 
   }) => {
     const isEditing = editingItem?.id === item.id && editingItem?.type === type;
-    const displayValue = item.name || "Not specified";
+    let displayValue = item.name || "Not specified";
+    
+    // For agencies and offices, show both code and name
+    if (type === "agencies" || type === "offices") {
+      displayValue = `${item.code} - ${item.name}`;
+    }
 
     if (isEditing) {
       return (
@@ -250,7 +315,7 @@ export default function ShipmentSettingsPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => startEditing(item.id, type, item.name || "")}
+            onClick={() => startEditing(item.id, type, type === "agencies" || type === "offices" ? item.code || "" : item.name || "")}
             className="h-8 w-8"
           >
             <Edit3 className="w-3 h-3" />
@@ -275,12 +340,12 @@ export default function ShipmentSettingsPage() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue={currentTab} onValueChange={setCurrentTab}>
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-6">
-            {settingTypes.map((type) => (
-              <TabsTrigger key={type} value={type}>
-                {formatLabel(type)}
-              </TabsTrigger>
-            ))}
+                     <TabsList className="flex flex-wrap justify-center gap-2 mb-6 p-1">
+                          {settingTypes.map((type) => (
+                <TabsTrigger key={type} value={type} className="min-w-[110px] text-center">
+                  {formatLabel(type)}
+                </TabsTrigger>
+              ))}
           </TabsList>
 
           {settingTypes.map((type) => (
@@ -323,51 +388,94 @@ export default function ShipmentSettingsPage() {
                       <Button onClick={handleAdd}>Add Vendor Service</Button>
                     </div>
 
-                                         {options[type]?.length > 0 ? (
-                       <ul className="space-y-3">
-                         {(() => {
-                           // Group vendor services by vendor
-                           const groupedVendors: Record<string, any[]> = {};
-                           options[type].forEach((item: any) => {
-                             if (!groupedVendors[item.vendor]) {
-                               groupedVendors[item.vendor] = [];
-                             }
-                             groupedVendors[item.vendor].push(item);
-                           });
+                    {options[type]?.length > 0 ? (
+                      <ul className="space-y-3">
+                        {(() => {
+                          // Group vendor services by vendor
+                          const groupedVendors: Record<string, any[]> = {};
+                          options[type].forEach((item: any) => {
+                            if (!groupedVendors[item.vendor]) {
+                              groupedVendors[item.vendor] = [];
+                            }
+                            groupedVendors[item.vendor].push(item);
+                          });
 
-                           return Object.entries(groupedVendors).map(([vendor, services]) => (
-                             <li
-                               key={vendor}
-                               className="flex justify-between items-center border px-4 py-3 rounded shadow-sm"
-                             >
-                               <div className="flex flex-col">
-                                 <span className="font-medium text-lg">{vendor}</span>
-                                 <div className="flex flex-wrap gap-2 mt-2">
-                                   {services.map((service) => (
-                                     <span
-                                       key={service.id}
-                                       className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                                     >
-                                       {service.service}
-                                       <Button
-                                         variant="ghost"
-                                         size="sm"
-                                         onClick={() => handleDelete(service.id)}
-                                         className="h-4 w-4 p-0 ml-1 hover:bg-blue-200"
-                                       >
-                                         <Trash2 className="w-3 h-3 text-red-500" />
-                                       </Button>
-                                     </span>
-                                   ))}
-                                 </div>
-                               </div>
-                             </li>
-                           ));
-                         })()}
-                       </ul>
-                     ) : (
-                       <p className="text-muted-foreground">No vendor services yet.</p>
-                     )}
+                          return Object.entries(groupedVendors).map(([vendor, services]) => (
+                            <li
+                              key={vendor}
+                              className="flex justify-between items-center border px-4 py-3 rounded shadow-sm"
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium text-lg">{vendor}</span>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {services.map((service) => (
+                                    <span
+                                      key={service.id}
+                                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                                    >
+                                      {service.service}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDelete(service.id)}
+                                        className="h-4 w-4 p-0 ml-1 hover:bg-blue-200"
+                                      >
+                                        <Trash2 className="w-3 h-3 text-red-500" />
+                                      </Button>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </li>
+                          ));
+                        })()}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground">No vendor services yet.</p>
+                    )}
+                  </>
+                ) : type === "agencies" || type === "offices" ? (
+                  // Agencies and Offices Tab
+                  <>
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                      <Input
+                        placeholder={`${type === "agencies" ? "Agency" : "Office"} Code`}
+                        value={newValues[`${type}Code`] || ""}
+                        onChange={(e) =>
+                          setNewValues((prev) => ({
+                            ...prev,
+                            [`${type}Code`]: e.target.value,
+                          }))
+                        }
+                        className="w-full md:w-auto"
+                      />
+                      <Input
+                        placeholder={`${type === "agencies" ? "Agency" : "Office"} Name`}
+                        value={newValues[`${type}Name`] || ""}
+                        onChange={(e) =>
+                          setNewValues((prev) => ({
+                            ...prev,
+                            [`${type}Name`]: e.target.value,
+                          }))
+                        }
+                        className="w-full md:w-auto"
+                      />
+                      <Button onClick={handleAdd}>Add {type === "agencies" ? "Agency" : "Office"}</Button>
+                    </div>
+
+                    {options[type]?.length > 0 ? (
+                      <ul className="space-y-3">
+                        {options[type].map((item: any) => (
+                          <EditableItem
+                            key={item.id}
+                            item={item}
+                            type={type}
+                          />
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground">No {type === "agencies" ? "agencies" : "offices"} yet.</p>
+                    )}
                   </>
                 ) : (
                   // Regular Settings Tab
@@ -387,19 +495,19 @@ export default function ShipmentSettingsPage() {
                       <Button onClick={handleAdd}>Add</Button>
                     </div>
 
-                                         {options[type]?.length > 0 ? (
-                       <ul className="space-y-3">
-                         {options[type].map((item: any) => (
-                           <EditableItem
-                             key={item.id}
-                             item={item}
-                             type={type}
-                           />
-                         ))}
-                       </ul>
-                     ) : (
-                       <p className="text-muted-foreground">No entries yet.</p>
-                     )}
+                    {options[type]?.length > 0 ? (
+                      <ul className="space-y-3">
+                        {options[type].map((item: any) => (
+                          <EditableItem
+                            key={item.id}
+                            item={item}
+                            type={type}
+                          />
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground">No entries yet.</p>
+                    )}
                   </>
                 )}
               </motion.div>

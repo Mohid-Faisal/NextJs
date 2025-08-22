@@ -437,7 +437,7 @@ export default function ExpenseBillsPage() {
       </div>
 
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4 w-full max-w-xl">
+        <div className="flex items-center gap-4 w-full max-w-lg">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Show:</span>
             <Select
@@ -447,7 +447,7 @@ export default function ExpenseBillsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-24 h-9">
+              <SelectTrigger className="w-20 h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -484,7 +484,7 @@ export default function ExpenseBillsPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -656,39 +656,27 @@ export default function ExpenseBillsPage() {
               )}
             </div>
           </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link
-              href="/dashboard/accounts/invoices/add"
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" /> Add Invoice
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link
-              href="/dashboard/accounts/payments/process"
-              className="flex items-center gap-2"
-            >
-              💰 Process Payment
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
-            onClick={exportToCSV}
-            className="flex items-center gap-2"
-          >
-            <Table className="w-4 h-4" /> CSV
-          </Button>
-          <Button
-            variant="outline"
-            onClick={exportToPrint}
-            className="flex items-center gap-2"
-          >
-            <Printer className="w-4 h-4" /> Print
-          </Button>
+          {/* Export Dropdown */}
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+                  Export
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[120px]">
+                <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2">
+                  <Table className="w-4 h-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
+                  <Printer className="w-4 h-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -700,12 +688,6 @@ export default function ExpenseBillsPage() {
             </p>
           ) : (
             <>
-              <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                <p className="text-sm text-orange-700 dark:text-orange-300">
-                  <strong>Filter Applied:</strong> Showing only Vendor invoices (Profile: Vendor)
-                </p>
-              </div>
-              
             <table className="min-w-full table-auto border-separate border-spacing-y-4">
               <thead>
                 <tr className="text-sm text-gray-500 dark:text-gray-300">

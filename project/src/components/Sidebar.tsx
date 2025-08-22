@@ -56,6 +56,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [accountsOpen, setAccountsOpen] = useState(
     pathname.startsWith("/dashboard/accounts")
   );
+
   const [incomeOpen, setIncomeOpen] = useState(
     pathname.startsWith("/dashboard/income")
   );
@@ -131,23 +132,26 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   ];
 
   const subLinksAccounts = [
-    { href: "/dashboard/accounts/payments", label: "Payments", icon: CreditCard },
+    { href: "/dashboard/chart-of-accounts", label: "Chart of Accounts", icon: ClipboardList },
     { href: "/dashboard/accounts/account-books", label: "Account Books", icon: BookOpen },
     { href: "/dashboard/accounts/company", label: "Company Account", icon: Building2 },
-    { href: "/dashboard/chart-of-accounts", label: "Chart of Accounts", icon: ClipboardList },
     { href: "/dashboard/journal-entries", label: "Journal Entries", icon: Book },
     { href: "/dashboard/accounts/balance-sheet", label: "Balance Sheet", icon: BarChart2 },
     { href: "/dashboard/accounts/income-statement", label: "Income Statement", icon: TrendingUp },
   ];
 
+
+
   const subLinksIncome = [
     { href: "/dashboard/income/invoices", label: "Invoices", icon: FileText },
     { href: "/dashboard/income/revenue", label: "Revenue", icon: TrendingUp },
+    { href: "/dashboard/income/credit-notes", label: "Credit Notes", icon: FileText },
   ];
 
   const subLinksExpense = [
     { href: "/dashboard/expense/bills", label: "Bills", icon: FileText },
     { href: "/dashboard/expense/payments", label: "Payments", icon: CreditCard },
+    { href: "/dashboard/expense/debit-notes", label: "Debit Notes", icon: FileText },
   ];
 
   return (
@@ -335,8 +339,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             <button
               onClick={() => setExpenseOpen(!expenseOpen)}
               className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                pathname.startsWith("/dashboard/expense") ||
-                pathname.startsWith("/dashboard/accounts/payments")
+                pathname.startsWith("/dashboard/expense") &&
+                !pathname.startsWith("/dashboard/accounts/payments")
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
@@ -384,13 +388,33 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               )}
             </AnimatePresence>
           </div>
+                     {/* Transactions */}
+           <Link
+             href="/dashboard/accounts/payments"
+             className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+               pathname.startsWith("/dashboard/transactions") ||
+               pathname.startsWith("/dashboard/accounts/payments")
+                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+             }`}
+           >
+             <CreditCard className="w-5 h-5 flex-shrink-0" />
+             <span
+               className={`whitespace-nowrap transition-all duration-200 ${
+                 isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+               }`}
+             >
+               Transactions
+             </span>
+           </Link>
 
           {/* Accounts Collapsible */}
           <div>
             <button
               onClick={() => setAccountsOpen(!accountsOpen)}
               className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                pathname.startsWith("/dashboard/accounts")
+                pathname.startsWith("/dashboard/accounts") &&
+                !pathname.startsWith("/dashboard/accounts/payments")
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
@@ -438,6 +462,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               )}
             </AnimatePresence>
           </div>
+
 
           {/* Reports */}
           <Link

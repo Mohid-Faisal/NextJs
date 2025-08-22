@@ -526,7 +526,7 @@ export default function ShipmentsPage() {
       {/* Filters */}
       <div className="mb-6 flex justify-between items-end gap-4">
         {/* Left side - Search field */}
-        <div>
+        <div className="w-full max-w-2xl">
           <div className="flex w-full max-w-sm">
             <Input
               placeholder="Search by invoice #, sender, receiver, destination, type, tracking..."
@@ -549,7 +549,7 @@ export default function ShipmentsPage() {
           <div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-[120px] justify-between">
+                <Button className="w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
                   Export
                   <ArrowUp className="ml-2 h-4 w-4" />
                 </Button>
@@ -876,7 +876,7 @@ export default function ShipmentsPage() {
                       <td className="px-4 py-3">
                         {formatDate(shipment.shipmentDate || shipment.createdAt)}
                       </td>
-                      <td className="px-4 py-3 font-medium text-blue-600">
+                      <td className="px-4 py-3 font-bold text-blue-600">
                         {shipment.invoiceNumber}
                       </td>
                       <td className="px-4 py-3">{shipment.senderName}</td>
@@ -887,7 +887,7 @@ export default function ShipmentsPage() {
                       <td className="px-4 py-3">{shipment.packaging || "N/A"}</td>
                       <td className="px-4 py-3">{shipment.amount || 1}</td>
                       <td className="px-4 py-3">{shipment.totalWeight || shipment.weight || 0}</td>
-                      <td className="px-4 py-3 font-medium">
+                      <td className="px-4 py-3 font-bold text-purple-600">
                         {shipment.trackingId}
                       </td>
                       <td className="px-4 py-3">Rs. {shipment.totalCost}</td>
@@ -911,7 +911,7 @@ export default function ShipmentsPage() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem
                               onClick={() => handleEdit(shipment)}
                             >
@@ -932,6 +932,10 @@ export default function ShipmentsPage() {
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Printer className="mr-2 h-4 w-4" />
+                              Print Receipt
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

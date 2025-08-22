@@ -101,6 +101,44 @@ const AddShipmentPage = () => {
     }
   }, [senderDropdownOpen]);
 
+  // Fetch agencies and offices
+  useEffect(() => {
+    const fetchAgenciesAndOffices = async () => {
+      try {
+        const [agenciesRes, officesRes] = await Promise.all([
+          fetch("/api/agencies"),
+          fetch("/api/offices"),
+        ]);
+
+        if (agenciesRes.ok) {
+          const agenciesData = await agenciesRes.json();
+          setAgencies(
+            agenciesData.map((agency: any) => ({
+              id: agency.id,
+              name: agency.name,
+              code: agency.code,
+            }))
+          );
+        }
+
+        if (officesRes.ok) {
+          const officesData = await officesRes.json();
+          setOffices(
+            officesData.map((office: any) => ({
+              id: office.id,
+              name: office.name,
+              code: office.code,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch agencies and offices:", error);
+      }
+    };
+
+    fetchAgenciesAndOffices();
+  }, []);
+
   // Focus search input when recipient dropdown opens
   useEffect(() => {
     if (recipientDropdownOpen && recipientSearchRef.current) {
@@ -116,7 +154,7 @@ const AddShipmentPage = () => {
       (acc, pkg) => {
         // For total weight, pick the higher value between weight and weightVol for each package
         const packageWeight = Math.max(pkg.weight, pkg.weightVol);
-        
+
         return {
           amount: acc.amount + pkg.amount,
           weight: acc.weight + packageWeight, // Use the higher value for total weight
@@ -165,18 +203,18 @@ const AddShipmentPage = () => {
       packages.map((pkg) => {
         if (pkg.id === id) {
           const updatedPackage = { ...pkg, [field]: value };
-          
-                         // Auto-calculate weight volume when length, width, or height changes
-               if (field === 'length' || field === 'width' || field === 'height') {
-                 const { length, width, height } = updatedPackage;
-                 if (length > 0 && width > 0 && height > 0) {
-                   // Calculate weight volume: (length * width * height) / 5000, then round up to nearest 0.5
-                   const rawWeightVol = (length * width * height) / 5000;
-                   const calculatedWeightVol = Math.ceil(rawWeightVol * 2) / 2;
-                   updatedPackage.weightVol = calculatedWeightVol;
-                 }
-               }
-          
+
+          // Auto-calculate weight volume when length, width, or height changes
+          if (field === "length" || field === "width" || field === "height") {
+            const { length, width, height } = updatedPackage;
+            if (length > 0 && width > 0 && height > 0) {
+              // Calculate weight volume: (length * width * height) / 5000, then round up to nearest 0.5
+              const rawWeightVol = (length * width * height) / 5000;
+              const calculatedWeightVol = Math.ceil(rawWeightVol * 2) / 2;
+              updatedPackage.weightVol = calculatedWeightVol;
+            }
+          }
+
           return updatedPackage;
         }
         return pkg;
@@ -193,25 +231,25 @@ const AddShipmentPage = () => {
           toast.error("Please select a recipient with a valid country");
           return;
         }
-        
+
         const recipientCountry = selectedRecipient.Country;
         let recipientCountryName: string;
-        
+
         // Use the country code directly as the country name
         recipientCountryName = recipientCountry;
         console.log(`Using country code '${recipientCountry}' as country name`);
-        
+
         // Validate required form fields
         if (!form.vendor || !form.serviceMode) {
           toast.error("Please select both vendor and service mode");
           return;
         }
-        
+
         if (totals.weight <= 0) {
           toast.error("Please add package weight information");
           return;
         }
-        
+
         // Prepare the request payload with all required data including fuel surcharge, discount, and profit percentage
         const requestPayload = {
           weight: totals.weight, // Total weight from packages
@@ -223,9 +261,9 @@ const AddShipmentPage = () => {
           profitPercentage: parseFloat(form.profitPercentage) || 0, // Profit percentage from form
           packaging: form.packaging, // Packaging type (used as docType)
         };
-        
-        console.log('Rate calculation request payload:', requestPayload);
-        console.log('Additional context:', {
+
+        console.log("Rate calculation request payload:", requestPayload);
+        console.log("Additional context:", {
           totalWeight: totals.weight,
           selectedVendor: form.vendor,
           selectedServiceMode: form.serviceMode,
@@ -236,7 +274,7 @@ const AddShipmentPage = () => {
           fuelSurcharge: form.fuelSurcharge,
           discount: form.discount,
         });
-        
+
         const response = await fetch("/api/rates/calc", {
           method: "POST",
           headers: {
@@ -244,43 +282,54 @@ const AddShipmentPage = () => {
           },
           body: JSON.stringify(requestPayload),
         });
-        
+
         if (response.ok) {
           const data = await response.json();
-          console.log('Rate calculation API response:', data);
-          
+          console.log("Rate calculation API response:", data);
+
           if (data.success && data.price) {
             // Calculate profit-adjusted price
             const basePrice = data.price;
             const profitPercentage = parseFloat(form.profitPercentage) || 0;
             const profitAmount = basePrice * (profitPercentage / 100);
             const finalPrice = basePrice + profitAmount;
-            
+
             // Calculate ceiling values (rounded up)
             const ceilingBasePrice = Math.ceil(basePrice);
             const ceilingFinalPrice = Math.ceil(finalPrice);
             const ceilingProfitAmount = ceilingFinalPrice - ceilingBasePrice;
-            
+
             // Update the form with the ceiling final price
-            setForm(prev => ({
+            setForm((prev) => ({
               ...prev,
               price: ceilingFinalPrice.toString(),
             }));
-            
+
             // Store the backend-calculated values with ceiling profit applied
             setCalculatedValues({
               subtotal: ceilingFinalPrice,
-              total: data.totalCost ? Math.ceil(data.totalCost + profitAmount) : ceilingFinalPrice,
+              total: data.totalCost
+                ? Math.ceil(data.totalCost + profitAmount)
+                : ceilingFinalPrice,
             });
-            
-            const profitMessage = profitPercentage > 0 ? ` (includes ${profitPercentage}% profit: +$${ceilingProfitAmount.toFixed(2)})` : '';
-            toast.success(`Rate calculated successfully! Original: $${ceilingBasePrice.toFixed(2)}, Final: $${ceilingFinalPrice.toFixed(2)}${profitMessage}`);
+
+            const profitMessage =
+              profitPercentage > 0
+                ? ` (includes ${profitPercentage}% profit: +$${ceilingProfitAmount.toFixed(
+                    2
+                  )})`
+                : "";
+            toast.success(
+              `Rate calculated successfully! Original: $${ceilingBasePrice.toFixed(
+                2
+              )}, Final: $${ceilingFinalPrice.toFixed(2)}${profitMessage}`
+            );
           } else {
             toast.error(data.error || "Failed to calculate rate");
           }
         } else {
           const errorData = await response.json();
-          console.error('Rate calculation API error:', errorData);
+          console.error("Rate calculation API error:", errorData);
           toast.error(errorData.error || "Failed to calculate rate");
         }
       } catch (error) {
@@ -305,7 +354,7 @@ const AddShipmentPage = () => {
         try {
           const res = await fetch(url);
           const data = await res.json();
-          
+
           // Handle vendors API response differently
           if (url.includes("/api/vendors")) {
             if (!data.vendors || !Array.isArray(data.vendors)) {
@@ -314,20 +363,24 @@ const AddShipmentPage = () => {
             }
             const vendorOptions = data.vendors.map((vendor: any) => ({
               id: vendor.id.toString(),
-              name: vendor.CompanyName
+              name: vendor.CompanyName,
             }));
             fn(vendorOptions);
           } else {
             // Validate data is an array
             if (!Array.isArray(data)) {
-              toast.error(`Invalid data format received from ${url.split('/').pop()}`);
+              toast.error(
+                `Invalid data format received from ${url.split("/").pop()}`
+              );
               return;
             }
             fn(data);
           }
         } catch (error) {
           console.error(`Error fetching data from ${url}:`, error);
-          toast.error(`Failed to load ${url.split('/').pop()} data. Please try again.`);
+          toast.error(
+            `Failed to load ${url.split("/").pop()} data. Please try again.`
+          );
         }
       }
 
@@ -338,7 +391,7 @@ const AddShipmentPage = () => {
 
         if (vendorServiceData && Array.isArray(vendorServiceData)) {
           setAllVendorServices(vendorServiceData);
-          
+
           // Extract unique services from vendor services for initial load
           const uniqueServices = new Map();
           vendorServiceData.forEach((item: any) => {
@@ -390,7 +443,9 @@ const AddShipmentPage = () => {
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (recipientQuery.length >= 2) {
-        fetch(`/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`)
+        fetch(
+          `/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`
+        )
           .then((res) => res.json())
           .then((data) => {
             console.log("Recipient search results:", data);
@@ -413,7 +468,7 @@ const AddShipmentPage = () => {
   }, [recipientQuery]);
 
   // Types
-  type Option = { id: string; name: string };
+  type Option = { id: string; name: string; code?: string };
 
   const [deliveryStatuses, setDeliveryStatuses] = useState<Option[]>([]);
   const [shippingModes, setShippingModes] = useState<Option[]>([]);
@@ -421,13 +476,15 @@ const AddShipmentPage = () => {
   const [vendors, setVendors] = useState<Option[]>([]);
   const [serviceModes, setServiceModes] = useState<Option[]>([]);
   const [allVendorServices, setAllVendorServices] = useState<any[]>([]);
+  const [agencies, setAgencies] = useState<Option[]>([]);
+  const [offices, setOffices] = useState<Option[]>([]);
 
   const [form, setForm] = useState({
-    shipmentDate: new Date().toLocaleDateString('en-CA'), // Default to today's date in local timezone
+    shipmentDate: new Date().toLocaleDateString("en-CA"), // Default to today's date in local timezone
     trackingId: "",
     invoiceNumber: "", // Add invoice number field
-    agency: "",
-    office: "",
+    agency: "PSS", // Default to PSS
+    office: "LHE", // Default to LHE
     senderName: "",
     senderAddress: "",
     recipientName: "",
@@ -489,7 +546,7 @@ const AddShipmentPage = () => {
     const vendorServices = allVendorServices.filter(
       (item: any) => item.vendor === vendorName
     );
-    
+
     const uniqueServices = new Map();
     vendorServices.forEach((item: any) => {
       if (item.service && !uniqueServices.has(item.service)) {
@@ -503,58 +560,58 @@ const AddShipmentPage = () => {
   };
 
   const handleSelect = (name: string, value: string) => {
-    console.log('handleSelect called:', { name, value });
-    setForm(prev => {
+    console.log("handleSelect called:", { name, value });
+    setForm((prev) => {
       const newForm = { ...prev, [name]: value };
-      console.log('Updated form state:', newForm);
+      console.log("Updated form state:", newForm);
       return newForm;
     });
 
     // If vendor is selected, filter services
     if (name === "vendor") {
-      const selectedVendor = vendors.find(v => v.name === value);
+      const selectedVendor = vendors.find((v) => v.name === value);
       if (selectedVendor) {
         filterServicesByVendor(value);
         // Clear service mode when vendor changes
-        setForm(prev => ({ ...prev, serviceMode: "" }));
+        setForm((prev) => ({ ...prev, serviceMode: "" }));
       }
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields
-    if (!form.trackingId || form.trackingId.trim() === '') {
+    if (!form.trackingId || form.trackingId.trim() === "") {
       toast.error("Please enter a tracking ID");
       return;
     }
-    
+
     if (!selectedRecipient || !selectedRecipient.Country) {
       toast.error("Please select a recipient with a valid country");
       return;
     }
-    
+
     // Get destination from recipient's country
     const destination = selectedRecipient.Country;
-    
+
     // Prepare all collected data
     const shipmentData = {
       // Basic form data with tracking ID and destination
       ...form,
       destination: destination,
-      
+
       // Package information
       packages: packages,
       packageTotals: totals,
-      
+
       // Selected sender and recipient data
       selectedSender: selectedSender,
       selectedRecipient: selectedRecipient,
-      
+
       // Calculated values from backend
       calculatedValues: calculatedValues,
-      
+
       // Additional metadata
       submissionTimestamp: new Date().toISOString(),
       shipmentDate: new Date(form.shipmentDate).toISOString(), // Use selected shipment date
@@ -562,69 +619,76 @@ const AddShipmentPage = () => {
       totalWeight: totals.weight,
       totalWeightVol: totals.weightVol,
     };
-    
-    console.log('Sending complete shipment data to backend:', shipmentData);
-    console.log('Tracking ID:', form.trackingId);
-    console.log('Destination (Recipient Country):', destination);
+
+    console.log("Sending complete shipment data to backend:", shipmentData);
+    console.log("Tracking ID:", form.trackingId);
+    console.log("Destination (Recipient Country):", destination);
 
     const isEditing = Boolean(editId);
-    const res = await fetch(isEditing ? 
-      "/api/update-shipment" : 
-      "/api/add-shipment", {
-      method: isEditing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(isEditing ? { id: Number(editId), ...shipmentData } : shipmentData),
-    });
+    const res = await fetch(
+      isEditing ? "/api/update-shipment" : "/api/add-shipment",
+      {
+        method: isEditing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          isEditing ? { id: Number(editId), ...shipmentData } : shipmentData
+        ),
+      }
+    );
 
     const data = await res.json();
-    console.log('Backend response:', data);
-    
+    console.log("Backend response:", data);
+
     if (data.success) {
-      toast.success(isEditing ? "Shipment updated successfully!" : "Shipment added successfully!");
-      console.log('Shipment saved successfully with data:', data.receivedData);
+      toast.success(
+        isEditing
+          ? "Shipment updated successfully!"
+          : "Shipment added successfully!"
+      );
+      console.log("Shipment saved successfully with data:", data.receivedData);
       if (!isEditing) {
-                 setForm({
-         shipmentDate: new Date().toLocaleDateString('en-CA'),
-         trackingId: "",
-         invoiceNumber: "",
-         agency: "Deprixa Miami",
-         office: "Deprixa Group",
-         senderName: "",
-         senderAddress: "",
-         recipientName: "",
-         recipientAddress: "",
-               deliveryStatus: "",
-         shippingMode: "",
-         packaging: "",
-         vendor: "",
-         serviceMode: "",
-         amount: 1,
-         packageDescription: "",
-         weight: 0,
-         length: 0,
-         width: 0,
-         height: 0,
-         weightVol: 0,
-         fixedCharge: 0,
-         decValue: 0,
-         price: "0",
-         discount: "0",
-         fuelSurcharge: "0",
-         insurance: "0",
-         customs: "0",
-         tax: "0",
-         declaredValue: "0",
-         reissue: "0",
-         profitPercentage: "0",
-         manualRate: false,
-         });
+        setForm({
+          shipmentDate: new Date().toLocaleDateString("en-CA"),
+          trackingId: "",
+          invoiceNumber: "",
+          agency: "PSS",
+          office: "LHE",
+          senderName: "",
+          senderAddress: "",
+          recipientName: "",
+          recipientAddress: "",
+          deliveryStatus: "",
+          shippingMode: "",
+          packaging: "",
+          vendor: "",
+          serviceMode: "",
+          amount: 1,
+          packageDescription: "",
+          weight: 0,
+          length: 0,
+          width: 0,
+          height: 0,
+          weightVol: 0,
+          fixedCharge: 0,
+          decValue: 0,
+          price: "0",
+          discount: "0",
+          fuelSurcharge: "0",
+          insurance: "0",
+          customs: "0",
+          tax: "0",
+          declaredValue: "0",
+          reissue: "0",
+          profitPercentage: "0",
+          manualRate: false,
+        });
         // Reset calculated values
         setCalculatedValues({
           subtotal: 0,
           total: 0,
         });
         // Redirect to shipments page after successful addition
-        router.push('/dashboard/shipments');
+        router.push("/dashboard/shipments");
       }
     } else {
       toast.error(data.message || "Failed to add shipment.");
@@ -640,10 +704,12 @@ const AddShipmentPage = () => {
         const data = await res.json();
         if (res.ok && data.shipment) {
           const s = data.shipment;
-          
+
           // Create a complete form state object with all the data
           const completeFormData = {
-            shipmentDate: s.shipmentDate ? new Date(s.shipmentDate).toISOString().slice(0, 10) : new Date().toLocaleDateString('en-CA'),
+            shipmentDate: s.shipmentDate
+              ? new Date(s.shipmentDate).toISOString().slice(0, 10)
+              : new Date().toLocaleDateString("en-CA"),
             trackingId: s.trackingId || "",
             invoiceNumber: s.invoiceNumber || "",
             agency: s.agency || "",
@@ -685,12 +751,18 @@ const AddShipmentPage = () => {
           // Packages and calculated values stored as JSON strings in DB; parse if available
           try {
             if (s.packages) {
-              const parsed = typeof s.packages === 'string' ? JSON.parse(s.packages) : s.packages;
+              const parsed =
+                typeof s.packages === "string"
+                  ? JSON.parse(s.packages)
+                  : s.packages;
               if (Array.isArray(parsed)) setPackages(parsed);
             }
             if (s.calculatedValues) {
-              const parsedCalc = typeof s.calculatedValues === 'string' ? JSON.parse(s.calculatedValues) : s.calculatedValues;
-              if (parsedCalc && typeof parsedCalc === 'object') {
+              const parsedCalc =
+                typeof s.calculatedValues === "string"
+                  ? JSON.parse(s.calculatedValues)
+                  : s.calculatedValues;
+              if (parsedCalc && typeof parsedCalc === "object") {
                 setCalculatedValues(parsedCalc);
               }
             } else {
@@ -698,16 +770,16 @@ const AddShipmentPage = () => {
               const price = parseFloat(s.price) || 0;
               setCalculatedValues({
                 subtotal: price,
-                total: price
+                total: price,
               });
             }
           } catch (e) {
-            console.error('Failed to parse stored JSON fields', e);
+            console.error("Failed to parse stored JSON fields", e);
             // Fallback: set calculated values based on price
             const price = parseFloat(s.price) || 0;
             setCalculatedValues({
               subtotal: price,
-              total: price
+              total: price,
             });
           }
 
@@ -715,11 +787,17 @@ const AddShipmentPage = () => {
           if (s.senderName) {
             setSenderQuery(s.senderName);
             try {
-              const senderRes = await fetch(`/api/search/customers?query=${encodeURIComponent(s.senderName)}`);
+              const senderRes = await fetch(
+                `/api/search/customers?query=${encodeURIComponent(
+                  s.senderName
+                )}`
+              );
               const senderData = await senderRes.json();
               if (Array.isArray(senderData) && senderData.length > 0) {
                 // Find the exact match for the sender name
-                const exactSender = senderData.find((sender: Party) => sender.Company === s.senderName);
+                const exactSender = senderData.find(
+                  (sender: Party) => sender.Company === s.senderName
+                );
                 if (exactSender) {
                   setSelectedSender(exactSender);
                 } else {
@@ -727,11 +805,11 @@ const AddShipmentPage = () => {
                   const mockSender: Party = {
                     id: 0,
                     Company: s.senderName,
-                    Address: s.senderAddress || '',
-                    Country: '',
-                    State: '',
-                    City: '',
-                    Zip: ''
+                    Address: s.senderAddress || "",
+                    Country: "",
+                    State: "",
+                    City: "",
+                    Zip: "",
                   };
                   setSelectedSender(mockSender);
                 }
@@ -740,25 +818,25 @@ const AddShipmentPage = () => {
                 const mockSender: Party = {
                   id: 0,
                   Company: s.senderName,
-                  Address: s.senderAddress || '',
-                  Country: '',
-                  State: '',
-                  City: '',
-                  Zip: ''
+                  Address: s.senderAddress || "",
+                  Country: "",
+                  State: "",
+                  City: "",
+                  Zip: "",
                 };
                 setSelectedSender(mockSender);
               }
             } catch (error) {
-              console.error('Error fetching sender data:', error);
+              console.error("Error fetching sender data:", error);
               // Fallback: create a mock sender object
               const mockSender: Party = {
                 id: 0,
                 Company: s.senderName,
-                Address: s.senderAddress || '',
-                Country: '',
-                State: '',
-                City: '',
-                Zip: ''
+                Address: s.senderAddress || "",
+                Country: "",
+                State: "",
+                City: "",
+                Zip: "",
               };
               setSelectedSender(mockSender);
             }
@@ -767,11 +845,17 @@ const AddShipmentPage = () => {
           if (s.recipientName) {
             setRecipientQuery(s.recipientName);
             try {
-              const recipientRes = await fetch(`/api/search/recipients?query=${encodeURIComponent(s.recipientName)}`);
+              const recipientRes = await fetch(
+                `/api/search/recipients?query=${encodeURIComponent(
+                  s.recipientName
+                )}`
+              );
               const recipientData = await recipientRes.json();
               if (Array.isArray(recipientData) && recipientData.length > 0) {
                 // Find the exact match for the recipient name
-                const exactRecipient = recipientData.find((recipient: Party) => recipient.Company === s.recipientName);
+                const exactRecipient = recipientData.find(
+                  (recipient: Party) => recipient.Company === s.recipientName
+                );
                 if (exactRecipient) {
                   setSelectedRecipient(exactRecipient);
                 } else {
@@ -779,11 +863,11 @@ const AddShipmentPage = () => {
                   const mockRecipient: Party = {
                     id: 0,
                     Company: s.recipientName,
-                    Address: s.recipientAddress || '',
-                    Country: s.destination || '',
-                    State: '',
-                    City: '',
-                    Zip: ''
+                    Address: s.recipientAddress || "",
+                    Country: s.destination || "",
+                    State: "",
+                    City: "",
+                    Zip: "",
                   };
                   setSelectedRecipient(mockRecipient);
                 }
@@ -792,25 +876,25 @@ const AddShipmentPage = () => {
                 const mockRecipient: Party = {
                   id: 0,
                   Company: s.recipientName,
-                  Address: s.recipientAddress || '',
-                  Country: s.destination || '',
-                  State: '',
-                  City: '',
-                  Zip: ''
+                  Address: s.recipientAddress || "",
+                  Country: s.destination || "",
+                  State: "",
+                  City: "",
+                  Zip: "",
                 };
                 setSelectedRecipient(mockRecipient);
               }
             } catch (error) {
-              console.error('Error fetching recipient data:', error);
+              console.error("Error fetching recipient data:", error);
               // Fallback: create a mock recipient object
               const mockRecipient: Party = {
                 id: 0,
                 Company: s.recipientName,
-                Address: s.recipientAddress || '',
-                Country: s.destination || '',
-                State: '',
-                City: '',
-                Zip: ''
+                Address: s.recipientAddress || "",
+                Country: s.destination || "",
+                State: "",
+                City: "",
+                Zip: "",
               };
               setSelectedRecipient(mockRecipient);
             }
@@ -822,7 +906,7 @@ const AddShipmentPage = () => {
           }
 
           // Set select values directly in the form state to ensure proper pre-filling
-          setForm(prev => ({
+          setForm((prev) => ({
             ...prev,
             agency: s.agency || prev.agency,
             office: s.office || prev.office,
@@ -834,21 +918,28 @@ const AddShipmentPage = () => {
           }));
         }
       } catch (e) {
-        console.error('Failed to load shipment for edit', e);
+        console.error("Failed to load shipment for edit", e);
       }
     };
     loadForEdit();
-  }, [editId, deliveryStatuses.length, shippingModes.length, packagingTypes.length, vendors.length, serviceModes.length]);
+  }, [
+    editId,
+    deliveryStatuses.length,
+    shippingModes.length,
+    packagingTypes.length,
+    vendors.length,
+    serviceModes.length,
+  ]);
 
   // Helper function to format full address
   const formatFullAddress = (party: Party | null) => {
-    if (!party) return '';
-    
+    if (!party) return "";
+
     // Check if party has any address data
     if (!party.Address && !party.City && !party.State && !party.Country) {
-      return '';
+      return "";
     }
-    
+
     // Get full country name
     let countryName = party.Country;
     if (party.Country && party.Country.length === 2) {
@@ -857,7 +948,7 @@ const AddShipmentPage = () => {
         countryName = country.name;
       }
     }
-    
+
     // Get full state/province name
     let stateName = party.State;
     if (party.State && party.Country) {
@@ -866,15 +957,12 @@ const AddShipmentPage = () => {
         stateName = state.name;
       }
     }
-    
-    const parts = [
-      party.Address,
-      party.City,
-      stateName,
-      countryName
-    ].filter(part => part && part.trim() !== '');
-    
-    return parts.join(', ');
+
+    const parts = [party.Address, party.City, stateName, countryName].filter(
+      (part) => part && part.trim() !== ""
+    );
+
+    return parts.join(", ");
   };
 
   const renderSelect = (
@@ -891,17 +979,15 @@ const AddShipmentPage = () => {
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-                  {options.map((option) => (
-          <SelectItem key={option.id} value={option.name}>
-            {option.name}
-          </SelectItem>
-        ))}
+          {options.map((option) => (
+            <SelectItem key={option.id} value={option.name}>
+              {option.name}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
   );
-
-
 
   return (
     <motion.div
@@ -937,12 +1023,22 @@ const AddShipmentPage = () => {
                     className="bg-muted"
                   />
                 </div>
+                {/* Invoice/Receipt Number */}
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium mb-1">Receipt #</Label>
+                  <Input
+                    id="invoiceNumber"
+                    name="invoiceNumber"
+                    value={form.invoiceNumber}
+                    readOnly
+                    className="bg-muted"
+                    placeholder="Auto-generated"
+                  />
+                </div>
 
                 {/* Tracking ID */}
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium mb-1">
-                    Tracking
-                  </Label>
+                  <Label className="text-sm font-medium mb-1">Tracking</Label>
                   <Input
                     id="trackingId"
                     name="trackingId"
@@ -953,23 +1049,6 @@ const AddShipmentPage = () => {
                     placeholder="Enter tracking"
                   />
                 </div>
-
-                {/* Invoice Number - Only show in edit mode */}
-                {editId && (
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-sm font-medium mb-1">
-                      Reciept #
-                    </Label>
-                    <Input
-                      id="invoiceNumber"
-                      name="invoiceNumber"
-                      value={form.invoiceNumber}
-                      readOnly
-                      className="bg-muted"
-                      placeholder="Invoice number"
-                    />
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -981,7 +1060,7 @@ const AddShipmentPage = () => {
                 {/* List of Agencies */}
                 <div className="flex flex-col gap-2 w-full">
                   <Label className="text-sm font-medium mb-1">
-                    List of Agencies
+                    Branch / Agencies
                   </Label>
                   <Select
                     onValueChange={(value) => handleSelect("agency", value)}
@@ -991,7 +1070,14 @@ const AddShipmentPage = () => {
                       <SelectValue placeholder="Select agency" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PSS">PSS</SelectItem>
+                      {agencies.map((agency) => (
+                        <SelectItem
+                          key={agency.id}
+                          value={agency.code || agency.id}
+                        >
+                          {agency.code || agency.id}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -999,7 +1085,7 @@ const AddShipmentPage = () => {
                 {/* Office of Origin */}
                 <div className="flex flex-col gap-2 w-full">
                   <Label className="text-sm font-medium mb-1">
-                    Office of origin
+                    Office of Origin
                   </Label>
                   <Select
                     onValueChange={(value) => handleSelect("office", value)}
@@ -1009,7 +1095,14 @@ const AddShipmentPage = () => {
                       <SelectValue placeholder="Select office" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Lahore PK">Lahore PK</SelectItem>
+                      {offices.map((office) => (
+                        <SelectItem
+                          key={office.id}
+                          value={office.code || office.id}
+                        >
+                          {office.code || office.id}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1033,151 +1126,177 @@ const AddShipmentPage = () => {
                 {/* Sender Name with Add Button */}
                 <div className="flex flex-col text-foreground">
                   <Label className="mb-2">Sender/Customer</Label>
-                                     <div className="flex items-center gap-2">
-                     <div className="flex-1">
-                       <Select
-                         value={selectedSender?.Company || ""}
-                                                   onValueChange={(value) => {
-                            const sender = senderResults.find(s => s.Company === value);
-                            if (sender) {
-                              setSelectedSender(sender);
-                              setSenderQuery(sender.Company);
-                              setForm(prev => ({
-                                ...prev,
-                                senderName: sender.Company,
-                                senderAddress: sender.Address
-                              }));
-                            } else {
-                              // Clear sender data when no sender is selected
-                              setSelectedSender(null);
-                              setSenderQuery("");
-                              setForm(prev => ({
-                                ...prev,
-                                senderName: "",
-                                senderAddress: ""
-                              }));
-                            }
-                          }}
-                         onOpenChange={setSenderDropdownOpen}
-                       >
-                         <SelectTrigger className="w-full">
-                           <SelectValue placeholder="Search sender name..." />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <div className="p-2">
-                             <Input
-                               ref={senderSearchRef}
-                               placeholder="Search sender..."
-                               value={senderQuery}
-                               onChange={(e) => setSenderQuery(e.target.value)}
-                               className="mb-2"
-                             />
-                             {Array.isArray(senderResults) && senderResults.length > 0 && (
-                               <div className="max-h-60 overflow-y-auto">
-                                 {senderResults.map((s) => (
-                                   <SelectItem key={s.id} value={s.Company}>
-                                     {s.Company}
-                                   </SelectItem>
-                                 ))}
-                               </div>
-                             )}
-                             {senderQuery.length > 0 && senderQuery.length < 2 && (
-                               <div className="px-2 py-1 text-muted-foreground text-sm">
-                                 Type at least 2 characters
-                               </div>
-                             )}
-                             {senderQuery.length >= 2 && Array.isArray(senderResults) && senderResults.length === 0 && (
-                               <div className="px-2 py-1 text-muted-foreground text-sm">
-                                 No matches found
-                               </div>
-                             )}
-                           </div>
-                         </SelectContent>
-                       </Select>
-                     </div>
-                     <AddCustomerDialog 
-                       triggerLabel="+" 
-                       onSuccess={() => {
-                         // Refresh sender search results
-                         if (senderQuery.length >= 2) {
-                           fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
-                             .then((res) => res.json())
-                             .then((data) => {
-                               if (Array.isArray(data)) {
-                                 setSenderResults(data);
-                               }
-                             })
-                             .catch((error) => {
-                               console.error("Error refreshing senders:", error);
-                             });
-                         }
-                       }}
-                     />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Select
+                        value={selectedSender?.Company || ""}
+                        onValueChange={(value) => {
+                          const sender = senderResults.find(
+                            (s) => s.Company === value
+                          );
+                          if (sender) {
+                            setSelectedSender(sender);
+                            setSenderQuery(sender.Company);
+                            setForm((prev) => ({
+                              ...prev,
+                              senderName: sender.Company,
+                              senderAddress: sender.Address,
+                            }));
+                          } else {
+                            // Clear sender data when no sender is selected
+                            setSelectedSender(null);
+                            setSenderQuery("");
+                            setForm((prev) => ({
+                              ...prev,
+                              senderName: "",
+                              senderAddress: "",
+                            }));
+                          }
+                        }}
+                        onOpenChange={setSenderDropdownOpen}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Search sender name..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="p-2">
+                            <Input
+                              ref={senderSearchRef}
+                              placeholder="Search sender..."
+                              value={senderQuery}
+                              onChange={(e) => setSenderQuery(e.target.value)}
+                              className="mb-2"
+                            />
+                            {Array.isArray(senderResults) &&
+                              senderResults.length > 0 && (
+                                <div className="max-h-60 overflow-y-auto">
+                                  {senderResults.map((s) => (
+                                    <SelectItem key={s.id} value={s.Company}>
+                                      {s.Company}
+                                    </SelectItem>
+                                  ))}
+                                </div>
+                              )}
+                            {senderQuery.length > 0 &&
+                              senderQuery.length < 2 && (
+                                <div className="px-2 py-1 text-muted-foreground text-sm">
+                                  Type at least 2 characters
+                                </div>
+                              )}
+                            {senderQuery.length >= 2 &&
+                              Array.isArray(senderResults) &&
+                              senderResults.length === 0 && (
+                                <div className="px-2 py-1 text-muted-foreground text-sm">
+                                  No matches found
+                                </div>
+                              )}
+                          </div>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <AddCustomerDialog
+                      triggerLabel="+"
+                      onSuccess={() => {
+                        // Refresh sender search results
+                        if (senderQuery.length >= 2) {
+                          fetch(
+                            `/api/search/customers?query=${encodeURIComponent(
+                              senderQuery
+                            )}`
+                          )
+                            .then((res) => res.json())
+                            .then((data) => {
+                              if (Array.isArray(data)) {
+                                setSenderResults(data);
+                              }
+                            })
+                            .catch((error) => {
+                              console.error("Error refreshing senders:", error);
+                            });
+                        }
+                      }}
+                    />
                   </div>
                 </div>
 
                 {/* Sender Address */}
-                                 <div className="flex flex-col text-foreground">
-                   <Label className="mb-2">Sender/Customer Address</Label>
-                   <div className="flex gap-2">
-                     <Input
-                       value={formatFullAddress(selectedSender)}
-                       readOnly
-                       placeholder="Sender address"
-                       className="flex-1 bg-muted"
-                     />
-                     {selectedSender ? (
-                       <UpdateCustomerAddressDialog 
-                         triggerLabel="+" 
-                         customerId={selectedSender.id}
-                         currentAddress={selectedSender.Address}
-                         currentCity={selectedSender.City}
-                         currentState={selectedSender.State}
-                         currentCountry={selectedSender.Country}
-                         currentZip={selectedSender.Zip}
-                         onSuccess={() => {
-                           // Refresh sender search results and update selected sender
-                           if (senderQuery.length >= 2) {
-                             fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
-                               .then((res) => res.json())
-                               .then((data) => {
-                                 if (Array.isArray(data)) {
-                                   setSenderResults(data);
-                                   // Update the selected sender with new data
-                                   const updatedSender = data.find(s => s.id === selectedSender.id);
-                                   if (updatedSender) {
-                                     setSelectedSender(updatedSender);
-                                   }
-                                 }
-                               })
-                               .catch((error) => {
-                                 console.error("Error refreshing senders:", error);
-                               });
-                           }
-                         }}
-                       />
-                     ) : (
-                       <AddCustomerDialog 
-                         triggerLabel="+" 
-                         onSuccess={() => {
-                           // Refresh sender search results
-                           if (senderQuery.length >= 2) {
-                             fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
-                               .then((res) => res.json())
-                               .then((data) => {
-                                 if (Array.isArray(data)) {
-                                   setSenderResults(data);
-                                 }
-                               })
-                               .catch((error) => {
-                                 console.error("Error refreshing senders:", error);
-                               });
-                           }
-                         }}
-                       />
-                     )}
-                   </div>
-                 </div>
+                <div className="flex flex-col text-foreground">
+                  <Label className="mb-2">Sender/Customer Address</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={formatFullAddress(selectedSender)}
+                      readOnly
+                      placeholder="Sender address"
+                      className="flex-1 bg-muted"
+                    />
+                    {selectedSender ? (
+                      <UpdateCustomerAddressDialog
+                        triggerLabel="+"
+                        customerId={selectedSender.id}
+                        currentAddress={selectedSender.Address}
+                        currentCity={selectedSender.City}
+                        currentState={selectedSender.State}
+                        currentCountry={selectedSender.Country}
+                        currentZip={selectedSender.Zip}
+                        onSuccess={() => {
+                          // Refresh sender search results and update selected sender
+                          if (senderQuery.length >= 2) {
+                            fetch(
+                              `/api/search/customers?query=${encodeURIComponent(
+                                senderQuery
+                              )}`
+                            )
+                              .then((res) => res.json())
+                              .then((data) => {
+                                if (Array.isArray(data)) {
+                                  setSenderResults(data);
+                                  // Update the selected sender with new data
+                                  const updatedSender = data.find(
+                                    (s) => s.id === selectedSender.id
+                                  );
+                                  if (updatedSender) {
+                                    setSelectedSender(updatedSender);
+                                  }
+                                }
+                              })
+                              .catch((error) => {
+                                console.error(
+                                  "Error refreshing senders:",
+                                  error
+                                );
+                              });
+                          }
+                        }}
+                      />
+                    ) : (
+                      <AddCustomerDialog
+                        triggerLabel="+"
+                        onSuccess={() => {
+                          // Refresh sender search results
+                          if (senderQuery.length >= 2) {
+                            fetch(
+                              `/api/search/customers?query=${encodeURIComponent(
+                                senderQuery
+                              )}`
+                            )
+                              .then((res) => res.json())
+                              .then((data) => {
+                                if (Array.isArray(data)) {
+                                  setSenderResults(data);
+                                }
+                              })
+                              .catch((error) => {
+                                console.error(
+                                  "Error refreshing senders:",
+                                  error
+                                );
+                              });
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1195,151 +1314,182 @@ const AddShipmentPage = () => {
                 {/* Recipient Name with Add Button */}
                 <div className="flex flex-col text-foreground">
                   <Label className="mb-2">Recipient/Client</Label>
-                                     <div className="flex items-center gap-2">
-                     <div className="flex-1">
-                       <Select
-                         value={selectedRecipient?.Company || ""}
-                                                   onValueChange={(value) => {
-                            const recipient = recipientResults.find(r => r.Company === value);
-                            if (recipient) {
-                              setSelectedRecipient(recipient);
-                              setRecipientQuery(recipient.Company);
-                              setForm(prev => ({
-                                ...prev,
-                                recipientName: recipient.Company,
-                                recipientAddress: recipient.Address
-                              }));
-                            } else {
-                              // Clear recipient data when no recipient is selected
-                              setSelectedRecipient(null);
-                              setRecipientQuery("");
-                              setForm(prev => ({
-                                ...prev,
-                                recipientName: "",
-                                recipientAddress: ""
-                              }));
-                            }
-                          }}
-                         onOpenChange={setRecipientDropdownOpen}
-                       >
-                         <SelectTrigger className="w-full">
-                           <SelectValue placeholder="Search recipient name..." />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <div className="p-2">
-                             <Input
-                               ref={recipientSearchRef}
-                               placeholder="Search recipient..."
-                               value={recipientQuery}
-                               onChange={(e) => setRecipientQuery(e.target.value)}
-                               className="mb-2"
-                             />
-                             {Array.isArray(recipientResults) && recipientResults.length > 0 && (
-                               <div className="max-h-60 overflow-y-auto">
-                                 {recipientResults.map((r) => (
-                                   <SelectItem key={r.id} value={r.Company}>
-                                     {r.Company}
-                                   </SelectItem>
-                                 ))}
-                               </div>
-                             )}
-                             {recipientQuery.length > 0 && recipientQuery.length < 2 && (
-                               <div className="px-2 py-1 text-muted-foreground text-sm">
-                                 Type at least 2 characters
-                               </div>
-                             )}
-                             {recipientQuery.length >= 2 && Array.isArray(recipientResults) && recipientResults.length === 0 && (
-                               <div className="px-2 py-1 text-muted-foreground text-sm">
-                                 No matches found
-                               </div>
-                             )}
-                           </div>
-                         </SelectContent>
-                       </Select>
-                     </div>
-                     <AddRecipientDialog 
-                       triggerLabel="+" 
-                       onSuccess={() => {
-                         // Refresh recipient search results
-                         if (recipientQuery.length >= 2) {
-                           fetch(`/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`)
-                             .then((res) => res.json())
-                             .then((data) => {
-                               if (Array.isArray(data)) {
-                                 setRecipientResults(data);
-                               }
-                             })
-                             .catch((error) => {
-                               console.error("Error refreshing recipients:", error);
-                             });
-                         }
-                       }}
-                     />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Select
+                        value={selectedRecipient?.Company || ""}
+                        onValueChange={(value) => {
+                          const recipient = recipientResults.find(
+                            (r) => r.Company === value
+                          );
+                          if (recipient) {
+                            setSelectedRecipient(recipient);
+                            setRecipientQuery(recipient.Company);
+                            setForm((prev) => ({
+                              ...prev,
+                              recipientName: recipient.Company,
+                              recipientAddress: recipient.Address,
+                            }));
+                          } else {
+                            // Clear recipient data when no recipient is selected
+                            setSelectedRecipient(null);
+                            setRecipientQuery("");
+                            setForm((prev) => ({
+                              ...prev,
+                              recipientName: "",
+                              recipientAddress: "",
+                            }));
+                          }
+                        }}
+                        onOpenChange={setRecipientDropdownOpen}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Search recipient name..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="p-2">
+                            <Input
+                              ref={recipientSearchRef}
+                              placeholder="Search recipient..."
+                              value={recipientQuery}
+                              onChange={(e) =>
+                                setRecipientQuery(e.target.value)
+                              }
+                              className="mb-2"
+                            />
+                            {Array.isArray(recipientResults) &&
+                              recipientResults.length > 0 && (
+                                <div className="max-h-60 overflow-y-auto">
+                                  {recipientResults.map((r) => (
+                                    <SelectItem key={r.id} value={r.Company}>
+                                      {r.Company}
+                                    </SelectItem>
+                                  ))}
+                                </div>
+                              )}
+                            {recipientQuery.length > 0 &&
+                              recipientQuery.length < 2 && (
+                                <div className="px-2 py-1 text-muted-foreground text-sm">
+                                  Type at least 2 characters
+                                </div>
+                              )}
+                            {recipientQuery.length >= 2 &&
+                              Array.isArray(recipientResults) &&
+                              recipientResults.length === 0 && (
+                                <div className="px-2 py-1 text-muted-foreground text-sm">
+                                  No matches found
+                                </div>
+                              )}
+                          </div>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <AddRecipientDialog
+                      triggerLabel="+"
+                      onSuccess={() => {
+                        // Refresh recipient search results
+                        if (recipientQuery.length >= 2) {
+                          fetch(
+                            `/api/search/recipients?query=${encodeURIComponent(
+                              recipientQuery
+                            )}`
+                          )
+                            .then((res) => res.json())
+                            .then((data) => {
+                              if (Array.isArray(data)) {
+                                setRecipientResults(data);
+                              }
+                            })
+                            .catch((error) => {
+                              console.error(
+                                "Error refreshing recipients:",
+                                error
+                              );
+                            });
+                        }
+                      }}
+                    />
                   </div>
                 </div>
 
                 {/* Recipient Address */}
-                                 <div className="flex flex-col text-foreground">
-                   <Label className="mb-2">Recipient/Client Address</Label>
-                   <div className="flex gap-2">
-                     <Input
-                       value={formatFullAddress(selectedRecipient)}
-                       readOnly
-                       placeholder="Recipient address"
-                       className="flex-1 bg-muted"
-                     />
-                     {selectedRecipient ? (
-                       <UpdateRecipientAddressDialog 
-                         triggerLabel="+" 
-                         recipientId={selectedRecipient.id}
-                         currentAddress={selectedRecipient.Address}
-                         currentCity={selectedRecipient.City}
-                         currentState={selectedRecipient.State}
-                         currentCountry={selectedRecipient.Country}
-                         currentZip={selectedRecipient.Zip}
-                         onSuccess={() => {
-                           // Refresh recipient search results and update selected recipient
-                           if (recipientQuery.length >= 2) {
-                             fetch(`/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`)
-                               .then((res) => res.json())
-                               .then((data) => {
-                                 if (Array.isArray(data)) {
-                                   setRecipientResults(data);
-                                   // Update the selected recipient with new data
-                                   const updatedRecipient = data.find(r => r.id === selectedRecipient.id);
-                                   if (updatedRecipient) {
-                                     setSelectedRecipient(updatedRecipient);
-                                   }
-                                 }
-                               })
-                               .catch((error) => {
-                                 console.error("Error refreshing recipients:", error);
-                               });
-                           }
-                         }}
-                       />
-                     ) : (
-                       <AddRecipientDialog 
-                         triggerLabel="+" 
-                         onSuccess={() => {
-                           // Refresh recipient search results
-                           if (recipientQuery.length >= 2) {
-                             fetch(`/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`)
-                               .then((res) => res.json())
-                               .then((data) => {
-                                 if (Array.isArray(data)) {
-                                   setRecipientResults(data);
-                                 }
-                               })
-                               .catch((error) => {
-                                 console.error("Error refreshing recipients:", error);
-                               });
-                           }
-                         }}
-                       />
-                     )}
-                   </div>
-                 </div>
+                <div className="flex flex-col text-foreground">
+                  <Label className="mb-2">Recipient/Client Address</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={formatFullAddress(selectedRecipient)}
+                      readOnly
+                      placeholder="Recipient address"
+                      className="flex-1 bg-muted"
+                    />
+                    {selectedRecipient ? (
+                      <UpdateRecipientAddressDialog
+                        triggerLabel="+"
+                        recipientId={selectedRecipient.id}
+                        currentAddress={selectedRecipient.Address}
+                        currentCity={selectedRecipient.City}
+                        currentState={selectedRecipient.State}
+                        currentCountry={selectedRecipient.Country}
+                        currentZip={selectedRecipient.Zip}
+                        onSuccess={() => {
+                          // Refresh recipient search results and update selected recipient
+                          if (recipientQuery.length >= 2) {
+                            fetch(
+                              `/api/search/recipients?query=${encodeURIComponent(
+                                recipientQuery
+                              )}`
+                            )
+                              .then((res) => res.json())
+                              .then((data) => {
+                                if (Array.isArray(data)) {
+                                  setRecipientResults(data);
+                                  // Update the selected recipient with new data
+                                  const updatedRecipient = data.find(
+                                    (r) => r.id === selectedRecipient.id
+                                  );
+                                  if (updatedRecipient) {
+                                    setSelectedRecipient(updatedRecipient);
+                                  }
+                                }
+                              })
+                              .catch((error) => {
+                                console.error(
+                                  "Error refreshing recipients:",
+                                  error
+                                );
+                              });
+                          }
+                        }}
+                      />
+                    ) : (
+                      <AddRecipientDialog
+                        triggerLabel="+"
+                        onSuccess={() => {
+                          // Refresh recipient search results
+                          if (recipientQuery.length >= 2) {
+                            fetch(
+                              `/api/search/recipients?query=${encodeURIComponent(
+                                recipientQuery
+                              )}`
+                            )
+                              .then((res) => res.json())
+                              .then((data) => {
+                                if (Array.isArray(data)) {
+                                  setRecipientResults(data);
+                                }
+                              })
+                              .catch((error) => {
+                                console.error(
+                                  "Error refreshing recipients:",
+                                  error
+                                );
+                              });
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1353,68 +1503,68 @@ const AddShipmentPage = () => {
               <span className="font-medium">Shipping information:</span>
             </div>
 
-                         {/* All selects in one row */}
-             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-               {renderSelect(
-                 "Shipping Mode",
-                 "Select shipping mode",
-                 shippingModes,
-                 form.shippingMode,
-                 (value) => handleSelect("shippingMode", value)
-               )}
-               {renderSelect(
-                 "Type of Packaging",
-                 "Select packaging type",
-                 packagingTypes,
-                 form.packaging,
-                 (value) => handleSelect("packaging", value)
-               )}
-               {renderSelect(
-                 "Vendor",
-                 "Select vendor",
-                 vendors,
-                 form.vendor,
-                 (value) => handleSelect("vendor", value)
-                )}
-               {renderSelect(
-                 "Service Mode",
-                 "Select service mode",
-                 serviceModes,
-                 form.serviceMode,
-                 (value) => handleSelect("serviceMode", value)
-                )}
-                {renderSelect(
-                  "Status",
-                  "Select status",
-                  deliveryStatuses,
-                  form.deliveryStatus,
-                  (value) => handleSelect("deliveryStatus", value)
-                )}
-             </div>
+            {/* All selects in one row */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {renderSelect(
+                "Shipping Mode",
+                "Select shipping mode",
+                shippingModes,
+                form.shippingMode,
+                (value) => handleSelect("shippingMode", value)
+              )}
+              {renderSelect(
+                "Type of Packaging",
+                "Select packaging type",
+                packagingTypes,
+                form.packaging,
+                (value) => handleSelect("packaging", value)
+              )}
+              {renderSelect(
+                "Vendor",
+                "Select vendor",
+                vendors,
+                form.vendor,
+                (value) => handleSelect("vendor", value)
+              )}
+              {renderSelect(
+                "Service Mode",
+                "Select service mode",
+                serviceModes,
+                form.serviceMode,
+                (value) => handleSelect("serviceMode", value)
+              )}
+              {renderSelect(
+                "Status",
+                "Select status",
+                deliveryStatuses,
+                form.deliveryStatus,
+                (value) => handleSelect("deliveryStatus", value)
+              )}
+            </div>
           </CardContent>
         </Card>
 
-                 {/* Package Information Section */}
-         <Card className="bg-card border border-border shadow-sm mb-4">
-           <CardContent className="p-4">
-             <div className="flex items-center gap-2 mb-4">
-               <FaBoxOpen className="text-primary" />
-               <span className="font-medium">Package Information</span>
-             </div>
+        {/* Package Information Section */}
+        <Card className="bg-card border border-border shadow-sm mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <FaBoxOpen className="text-primary" />
+              <span className="font-medium">Package Information</span>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border border-border">
                 <thead>
                   <tr className="bg-muted">
-                    <th className="px-2 py-1 border border-border">Amount</th>
-                    <th className="px-2 py-1 border border-border">Package Description</th>
-                    <th className="px-2 py-1 border border-border">Weight</th>
-                    <th className="px-2 py-1 border border-border">Length</th>
-                    <th className="px-2 py-1 border border-border">Width</th>
-                    <th className="px-2 py-1 border border-border">Height</th>
-                    <th className="px-2 py-1 border border-border">
-                      Weight Vol.
+                    <th className="py-1 border border-border">Pieces</th>
+                    <th className="border border-border">
+                      Package Description
                     </th>
-                    <th className="px-2 py-1 border border-border">Fixed charge</th>
+                    <th className="py-1 border border-border">Weight</th>
+                    <th className="py-1 border border-border">Length</th>
+                    <th className="py-1 border border-border">Width</th>
+                    <th className="py-1 border border-border">Height</th>
+                    <th className="py-1 border border-border">Weight Vol.</th>
+
                     <th className="px-2 py-1 border border-border">DecValue</th>
                     <th className="px-2 py-1 border border-border">Action</th>
                   </tr>
@@ -1422,75 +1572,127 @@ const AddShipmentPage = () => {
                 <tbody>
                   {packages.map((pkg) => (
                     <tr key={pkg.id}>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          value={pkg.amount}
-                          onChange={(e) => updatePackage(pkg.id, "amount", parseInt(e.target.value) || 0)}
-                          className="w-12"
-                        />
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            value={pkg.amount}
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "amount",
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="w-12 text-center"
+                          />
+                        </div>
                       </td>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          value={pkg.packageDescription}
-                          placeholder="Package Description"
-                          onChange={(e) => updatePackage(pkg.id, "packageDescription", e.target.value)}
-                          className="w-40"
-                        />
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            value={pkg.packageDescription}
+                            placeholder="Package Description"
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "packageDescription",
+                                e.target.value
+                              )
+                            }
+                            className="w-50 text-center"
+                          />
+                        </div>
                       </td>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          value={pkg.weight}
-                          onChange={(e) => updatePackage(pkg.id, "weight", parseFloat(e.target.value) || 0)}
-                          className="w-16"
-                        />
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            value={pkg.weight}
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "weight",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-16 text-center"
+                          />
+                        </div>
                       </td>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          value={pkg.length}
-                          onChange={(e) => updatePackage(pkg.id, "length", parseFloat(e.target.value) || 0)}
-                          className="w-16"
-                        />
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            value={pkg.length}
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "length",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-16 text-center"
+                          />
+                        </div>
                       </td>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          value={pkg.width}
-                          onChange={(e) => updatePackage(pkg.id, "width", parseFloat(e.target.value) || 0)}
-                          className="w-16"
-                        />
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            value={pkg.width}
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "width",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-16 text-center"
+                          />
+                        </div>
                       </td>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          value={pkg.height}
-                          onChange={(e) => updatePackage(pkg.id, "height", parseFloat(e.target.value) || 0)}
-                          className="w-16"
-                        />
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            value={pkg.height}
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "height",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-16 text-center"
+                          />
+                        </div>
                       </td>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          value={pkg.weightVol}
-                          readOnly
-                          className="w-16 bg-muted"
-                          title="Auto-calculated: (L × W × H) ÷ 5000, rounded up"
-                        />
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            value={pkg.weightVol}
+                            readOnly
+                            className="w-16 bg-muted text-center"
+                            title="Auto-calculated: (L × W × H) ÷ 5000, rounded up"
+                          />
+                        </div>
                       </td>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          value={pkg.fixedCharge}
-                          onChange={(e) => updatePackage(pkg.id, "fixedCharge", parseFloat(e.target.value) || 0)}
-                          className="w-16"
-                        />
+
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            value={pkg.decValue}
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "decValue",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-16 text-center"
+                          />
+                        </div>
                       </td>
-                      <td className="border border-border px-2 py-1">
-                        <Input
-                          value={pkg.decValue}
-                          onChange={(e) => updatePackage(pkg.id, "decValue", parseFloat(e.target.value) || 0)}
-                          className="w-16"
-                        />
-                      </td>
-                      <td className="border border-border px-2 py-1">
+                      <td className="border border-border px-2 py-1 text-center">
                         {packages.length > 1 && (
                           <Button
                             type="button"
@@ -1510,36 +1712,42 @@ const AddShipmentPage = () => {
               <div className="flex items-center gap-2 mt-2">
                 <span className="font-medium">TOTALS</span>
                 <span className="ml-auto">
-                  Amount: {totals.amount} | Weight: {totals.weight} | Weight Vol: {totals.weightVol} | Fixed Charge: {totals.fixedCharge} | DecValue: {totals.decValue}
+                  Amount: {totals.amount} | Weight: {totals.weight} | Weight
+                  Vol: {totals.weightVol} | DecValue: {totals.decValue}
                 </span>
               </div>
-              <Button type="button" variant="outline" className="mt-2" onClick={addPackage}>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2"
+                onClick={addPackage}
+              >
                 + Add Box or Packages
               </Button>
             </div>
           </CardContent>
         </Card>
 
-                 {/* Rate & Taxes Information Section */}
-         <Card className="bg-card border border-border shadow-sm mb-4">
-           <CardContent className="p-4">
-                           <div className="flex items-center gap-2 mb-4">
-                <FaFileInvoice className="text-primary" />
-                <span className="font-medium">Rate & Taxes information</span>
-                <span className="ml-auto flex items-center gap-2 mr-8">
-                  <Label className="mr-2 text-sm font-medium">Manual Rate</Label>
-                  <Switch
-                    checked={form.manualRate}
-                    onCheckedChange={(checked) => {
-                      setForm(prev => ({ ...prev, manualRate: !!checked }));
-                      if (!checked) {
-                        calculateRate();
-                      }
-                    }}
-                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                  />
-                </span>
-              </div>
+        {/* Rate & Taxes Information Section */}
+        <Card className="bg-card border border-border shadow-sm mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <FaFileInvoice className="text-primary" />
+              <span className="font-medium">Rate & Taxes information</span>
+              <span className="ml-auto flex items-center gap-2 mr-8">
+                <Label className="mr-2 text-sm font-medium">Manual Rate</Label>
+                <Switch
+                  checked={form.manualRate}
+                  onCheckedChange={(checked) => {
+                    setForm((prev) => ({ ...prev, manualRate: !!checked }));
+                    if (!checked) {
+                      calculateRate();
+                    }
+                  }}
+                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
+              </span>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label className="mb-2 block">Price kg</Label>
@@ -1632,17 +1840,31 @@ const AddShipmentPage = () => {
                   placeholder="0"
                 />
               </div>
-                             <div className="col-span-2 flex flex-col justify-end">
-                 <div className="flex items-center gap-4 mt-4">
-                   <span className="font-medium">Subtotal</span>
-                   <span className="text-green-600">$ {calculatedValues.subtotal > 0 ? calculatedValues.subtotal.toFixed(2) : '0.00'}</span>
-                   <span className="font-medium ml-8">TOTAL</span>
-                   <span className="text-green-600">$ {calculatedValues.total > 0 ? calculatedValues.total.toFixed(2) : '0.00'}</span>
-                 </div>
-               </div>
+              <div className="col-span-2 flex flex-col justify-end">
+                <div className="flex items-center gap-4 mt-4">
+                  <span className="font-medium">Subtotal</span>
+                  <span className="text-green-600">
+                    ${" "}
+                    {calculatedValues.subtotal > 0
+                      ? calculatedValues.subtotal.toFixed(2)
+                      : "0.00"}
+                  </span>
+                  <span className="font-medium ml-8">TOTAL</span>
+                  <span className="text-green-600">
+                    ${" "}
+                    {calculatedValues.total > 0
+                      ? calculatedValues.total.toFixed(2)
+                      : "0.00"}
+                  </span>
+                </div>
+              </div>
             </div>
             <div className="flex justify-end gap-4 mt-6">
-              <Button type="button" className="bg-blue-500" onClick={calculateRate}>
+              <Button
+                type="button"
+                className="bg-blue-500"
+                onClick={calculateRate}
+              >
                 Price list calculation
               </Button>
               <Button type="submit" className="bg-green-500">

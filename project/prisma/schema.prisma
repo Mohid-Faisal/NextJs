@@ -107,6 +107,7 @@ model Customers {
   // Relations
   invoices          Invoice[]
   transactions      CustomerTransaction[]
+  creditNotes       CreditNote[]
 }
 
 
@@ -130,6 +131,7 @@ model Vendors {
   // Relations
   invoices          Invoice[]
   transactions      VendorTransaction[]
+  debitNotes        DebitNote[]
 }
 
 model Recipients {
@@ -149,6 +151,20 @@ model Recipients {
 model DeliveryTime {
   id        Int   @id @default(autoincrement())
   name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Agency {
+  id        Int   @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Office {
+  id        Int   @id @default(autoincrement())
+  code      String   @unique
+  name      String
   createdAt DateTime @default(now())
 }
 
@@ -384,6 +400,42 @@ model Invoice {
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  
+  // Relations
+  debitNotes      DebitNote[]
+  creditNotes     CreditNote[]
+}
+
+model DebitNote {
+  id              Int      @id @default(autoincrement())
+  debitNoteNumber String   @unique
+  billId          Int?     // Reference to the original bill/invoice
+  bill            Invoice? @relation(fields: [billId], references: [id])
+  vendorId        Int?
+  vendor          Vendors? @relation(fields: [vendorId], references: [id])
+  amount          Float
+  date            DateTime
+  description     String?
+  currency        String   @default("USD")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CreditNote {
+  id               Int      @id @default(autoincrement())
+  creditNoteNumber String   @unique
+  invoiceId        Int?     // Reference to the original customer invoice
+  invoice          Invoice? @relation(fields: [invoiceId], references: [id])
+  customerId       Int?
+  customer         Customers? @relation(fields: [customerId], references: [id])
+  amount           Float
+  date             DateTime
+  description      String?
+  currency         String   @default("USD")
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 // Chart of Accounts Models

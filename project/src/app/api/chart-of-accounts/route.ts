@@ -4,15 +4,11 @@ import { prisma } from "@/lib/prisma";
 // Default Chart of Accounts data based on the image
 const defaultAccounts = [
   // Assets
-  { code: "1101", accountName: "Cash", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Physical cash and bank accounts" },
-  { code: "1102", accountName: "Accounts Receivable", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Money owed by customers for transportation or logistics services" },
-  { code: "1103", accountName: "Fuel Inventory", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Fuel stock for transportation vehicles" },
-  { code: "1104", accountName: "Spare Parts Inventory", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Spare parts and accessories for vehicle maintenance" },
-  { code: "1105", accountName: "Fleet Vehicles", category: "Asset", type: "Fixed Asset", debitRule: "Increases", creditRule: "Decreases", description: "Trucks, vans, and other vehicles used for transportation" },
-  { code: "1106", accountName: "Warehousing Facilities", category: "Asset", type: "Fixed Asset", debitRule: "Increases", creditRule: "Decreases", description: "Storage warehouses used in logistics operations" },
-  { code: "1107", accountName: "Office Equipment", category: "Asset", type: "Fixed Asset", debitRule: "Increases", creditRule: "Decreases", description: "Office furniture, computers, and administrative equipment" },
-  { code: "1108", accountName: "Prepaid Insurance", category: "Asset", type: "Prepayment", debitRule: "Increases", creditRule: "Decreases", description: "Insurance premiums paid in advance for vehicles and cargo" },
-  { code: "1109", accountName: "Prepaid Rent", category: "Asset", type: "Prepayment", debitRule: "Increases", creditRule: "Decreases", description: "Advance rent payments for warehouses or office spaces" },
+  { code: "1101", accountName: "Cash", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Physical cash" },
+  { code: "1102", accountName: "Bank", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Bank Account" },
+  { code: "1103", accountName: "Accounts Receivable", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Money owed by customers for transportation or logistics services" },
+  { code: "1104", accountName: "Warehousing Facilities", category: "Asset", type: "Fixed Asset", debitRule: "Increases", creditRule: "Decreases", description: "Storage warehouses used in logistics operations" },
+  { code: "1105", accountName: "Office Equipment", category: "Asset", type: "Fixed Asset", debitRule: "Increases", creditRule: "Decreases", description: "Office furniture, computers, and administrative equipment" },
   
   // Liabilities
   { code: "2101", accountName: "Accounts Payable", category: "Liability", type: "Current Liability", debitRule: "Decreases", creditRule: "Increases", description: "Money owed to suppliers, contractors, or vendors" },
@@ -27,21 +23,30 @@ const defaultAccounts = [
   { code: "3103", accountName: "Current Year Earnings", category: "Equity", type: "Equity", debitRule: "Decreases", creditRule: "Increases", description: "Current year's net income or loss" },
   
   // Expenses
-  { code: "4101", accountName: "Depreciation Expense - Fleet Vehicles", category: "Expense", type: "Depreciation", debitRule: "Increases", creditRule: "Decreases", description: "Depreciation of trucks, vans, and other vehicles" },
-  { code: "4102", accountName: "Depreciation Expense - Warehousing Facilities", category: "Expense", type: "Depreciation", debitRule: "Increases", creditRule: "Decreases", description: "Depreciation of warehouses and storage facilities" },
-  { code: "4201", accountName: "Fuel Costs", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Expenses related to fuel consumption for fleet vehicles" },
-  { code: "4202", accountName: "Vehicle Maintenance", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Costs for repairing and maintaining fleet vehicles" },
-  { code: "4203", accountName: "Driver Salaries", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Wages paid to vehicle drivers" },
-  { code: "4301", accountName: "Warehouse Rent", category: "Expense", type: "Overhead", debitRule: "Increases", creditRule: "Decreases", description: "Rental costs for warehouses" },
-  { code: "4302", accountName: "Utilities Expense", category: "Expense", type: "Overhead", debitRule: "Increases", creditRule: "Decreases", description: "Electricity, water, and internet expenses for facilities" },
-  { code: "4303", accountName: "Administrative Salaries", category: "Expense", type: "Overhead", debitRule: "Increases", creditRule: "Decreases", description: "Salaries for administrative and office staff" },
-  { code: "4304", accountName: "Insurance Expense", category: "Expense", type: "Overhead", debitRule: "Increases", creditRule: "Decreases", description: "Insurance costs for vehicles and cargo" },
-  { code: "4305", accountName: "Vendor Expense", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Expenses paid to vendors for transportation and logistics services" },
+  { code: "4101", accountName: "Vendor Expense", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Expenses paid to vendors for transportation and logistics services" },
+  { code: "4102", accountName: "Bank Charges", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Bank charges for the bank account" },
+  { code: "4103", accountName: "Equipments", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Equipment Costs" },
+  { code: "4104", accountName: "Fuel", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Fuel" },
+  { code: "4105", accountName: "Insurance", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Insurances" },
+  { code: "4106", accountName: "Legal and Accounting", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "For Legal Cases" },
+  { code: "4107", accountName: "Licsense and Permit", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Licsense and Permit" },
+  { code: "4108", accountName: "Maintenance and Repair", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Maintenance and Repair" },
+  { code: "4109", accountName: "Marketing and Advertising", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Marketing and Advertising" },
+  { code: "4110", accountName: "Office Supplies", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Supplies for the office" },
+  { code: "4111", accountName: "Packaging Material", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Packaging Material" },
+  { code: "4112", accountName: "Petty", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Small Expenses" },
+  { code: "4113", accountName: "Renewals", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Renewal of Certificates" },
+  { code: "4114", accountName: "Rent", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Rent" },
+  { code: "4115", accountName: "Salary and Wages", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Salary and Wages" },
+  { code: "4116", accountName: "Taxes", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Taxes" },
+  { code: "4117", accountName: "Tools", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Tools" },
+  { code: "4118", accountName: "Transportation", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Transportation" },
+  { code: "4119", accountName: "Utilities", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Utlities" },
   
   // Revenue
-  { code: "5101", accountName: "Freight Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from freight and cargo transportation" },
-  { code: "5102", accountName: "Logistics Services Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from logistics and warehousing services" },
-  { code: "5103", accountName: "Vehicle Leasing Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from leasing vehicles to third parties" }
+  { code: "5101", accountName: "Logistics Services Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from logistics services" },
+  { code: "5102", accountName: "Packaging Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from Packaging" },
+  { code: "5103", accountName: "Other Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from third parties" }
 ];
 
 export async function GET(req: NextRequest) {

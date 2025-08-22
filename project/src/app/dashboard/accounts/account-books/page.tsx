@@ -373,42 +373,7 @@ export default function AccountBooksPage() {
     setEntries([]);
   };
 
-  const testPayments = async () => {
-    try {
-      const response = await fetch("/api/test-payments");
-      const data = await response.json();
-      console.log("Test payments response:", data);
-      toast.info(`Found ${data.totalCount} payments in database`);
-      
-      if (data.samplePayments && data.samplePayments.length > 0) {
-        console.log("Sample payment structure:", data.samplePayments[0]);
-      }
-    } catch (error) {
-      console.error("Error testing payments:", error);
-      toast.error("Error testing payments");
-    }
-  };
 
-  const loadAllPayments = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/account-books?limit=all");
-      const data = await response.json();
-      
-      if (data.success) {
-        setEntries(data.payments || []);
-        setSelectedCategory("all-categories");
-        toast.success(`Loaded ${data.payments?.length || 0} payments`);
-      } else {
-        toast.error(data.error || "Failed to load payments");
-      }
-    } catch (error) {
-      console.error("Error loading all payments:", error);
-      toast.error("Error loading payments");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
@@ -440,31 +405,13 @@ export default function AccountBooksPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="account" className="font-bold">
-                Account
-              </Label>
-              <Select value={String(selectedAccount)} onValueChange={(value) => setSelectedAccount(parseInt(value))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">All Accounts</SelectItem>
-                  {accounts.map((account) => (
-                    <SelectItem key={account.id} value={String(account.id)}>
-                      {account.code} - {account.accountName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div>
               <Label htmlFor="category" className="font-bold">
                 Category
               </Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 w-full">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -472,6 +419,24 @@ export default function AccountBooksPage() {
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="account" className="font-bold">
+                Account
+              </Label>
+              <Select value={String(selectedAccount)} onValueChange={(value) => setSelectedAccount(parseInt(value))}>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">All Accounts</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={String(account.id)}>
+                      {account.code} - {account.accountName}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -508,22 +473,6 @@ export default function AccountBooksPage() {
               className="w-full"
             >
               Clear Filters
-            </Button>
-            
-            <Button
-              onClick={testPayments}
-              variant="outline"
-              className="w-full"
-            >
-              Test Payments
-            </Button>
-            
-            <Button
-              onClick={loadAllPayments}
-              variant="outline"
-              className="w-full"
-            >
-              Load All Payments
             </Button>
           </CardContent>
         </Card>
