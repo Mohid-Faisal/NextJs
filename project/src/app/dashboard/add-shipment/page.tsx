@@ -289,28 +289,32 @@ const AddShipmentPage = () => {
 
           if (data.success && data.price) {
             // Calculate profit-adjusted price
-            const basePrice = data.price;
-            const profitPercentage = parseFloat(form.profitPercentage) || 0;
-            const profitAmount = basePrice * (profitPercentage / 100);
-            const finalPrice = basePrice + profitAmount;
+            const basePrice = data.originalCost;
+            const finalPrice = data.totalCost;
+            const profitPercentage = data.profitPercentage;
+            const fixedCharge = data.fixedCharge || 0;
+            const vendorPrice = data.vendorPrice || 0;
 
             // Calculate ceiling values (rounded up)
             const ceilingBasePrice = Math.ceil(basePrice);
             const ceilingFinalPrice = Math.ceil(finalPrice);
             const ceilingProfitAmount = ceilingFinalPrice - ceilingBasePrice;
 
-            // Update the form with the ceiling final price
+            // Update the form with the ceiling final price, fixed charge, and vendor price
             setForm((prev) => ({
               ...prev,
               price: ceilingFinalPrice.toString(),
+              fixedCharge: fixedCharge.toString(),
+              vendorPrice: vendorPrice.toString(),
             }));
 
             // Store the backend-calculated values with ceiling profit applied
             setCalculatedValues({
               subtotal: ceilingFinalPrice,
               total: data.totalCost
-                ? Math.ceil(data.totalCost + profitAmount)
+                ? Math.ceil(data.totalCost)
                 : ceilingFinalPrice,
+              vendorPrice: vendorPrice,
             });
 
             const profitMessage =
@@ -319,10 +323,12 @@ const AddShipmentPage = () => {
                     2
                   )})`
                 : "";
+            const fixedChargeMessage = fixedCharge > 0 ? `, Fixed Charge: $${fixedCharge.toFixed(2)}` : "";
+            const vendorPriceMessage = vendorPrice > 0 ? `, Vendor Price: $${vendorPrice.toFixed(2)}` : "";
             toast.success(
               `Rate calculated successfully! Original: $${ceilingBasePrice.toFixed(
                 2
-              )}, Final: $${ceilingFinalPrice.toFixed(2)}${profitMessage}`
+              )}, Final: $${ceilingFinalPrice.toFixed(2)}${profitMessage}${fixedChargeMessage}${vendorPriceMessage}`
             );
           } else {
             toast.error(data.error || "Failed to calculate rate");
@@ -519,6 +525,7 @@ const AddShipmentPage = () => {
   const [calculatedValues, setCalculatedValues] = useState({
     subtotal: 0,
     total: 0,
+    vendorPrice: 0,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -686,6 +693,7 @@ const AddShipmentPage = () => {
         setCalculatedValues({
           subtotal: 0,
           total: 0,
+          vendorPrice: 0,
         });
         // Redirect to shipments page after successful addition
         router.push("/dashboard/shipments");
@@ -766,12 +774,13 @@ const AddShipmentPage = () => {
                 setCalculatedValues(parsedCalc);
               }
             } else {
-              // If no calculated values, set them based on the price from the database
-              const price = parseFloat(s.price) || 0;
-              setCalculatedValues({
-                subtotal: price,
-                total: price,
-              });
+                          // If no calculated values, set them based on the price from the database
+            const price = parseFloat(s.price) || 0;
+            setCalculatedValues({
+              subtotal: price,
+              total: price,
+              vendorPrice: 0,
+            });
             }
           } catch (e) {
             console.error("Failed to parse stored JSON fields", e);
@@ -780,6 +789,7 @@ const AddShipmentPage = () => {
             setCalculatedValues({
               subtotal: price,
               total: price,
+              vendorPrice: 0,
             });
           }
 
@@ -1822,12 +1832,15 @@ const AddShipmentPage = () => {
                 />
               </div>
               <div>
-                <Label className="mb-2 block">Fixed charge</Label>
+                <Label className="mb-2 block">
+                  Fixed charge <span className="text-xs text-gray-500">(Auto-calculated)</span>
+                </Label>
                 <Input
                   name="fixedCharge"
                   value={form.fixedCharge}
-                  className="w-full"
-                  onChange={handleChange}
+                  className="w-full bg-gray-50 cursor-not-allowed"
+                  readOnly
+                  disabled
                 />
               </div>
               <div>
@@ -1844,14 +1857,14 @@ const AddShipmentPage = () => {
                 <div className="flex items-center gap-4 mt-4">
                   <span className="font-medium">Subtotal</span>
                   <span className="text-green-600">
-                    ${" "}
+                    PKR{" "}
                     {calculatedValues.subtotal > 0
                       ? calculatedValues.subtotal.toFixed(2)
                       : "0.00"}
                   </span>
                   <span className="font-medium ml-8">TOTAL</span>
                   <span className="text-green-600">
-                    ${" "}
+                    PKR{" "}
                     {calculatedValues.total > 0
                       ? calculatedValues.total.toFixed(2)
                       : "0.00"}

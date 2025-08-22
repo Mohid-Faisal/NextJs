@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { weight, vendor, serviceMode, destination, fuelSurcharge = 0, discount = 0, packaging } = body;
+    const { weight, vendor, serviceMode, destination, fuelSurcharge = 0, discount = 0, packaging, profitPercentage} = body;
 
     console.log('Rate calculation API received request:', {
       weight,
@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
       fuelSurcharge,
       discount,
       packaging,
+      profitPercentage,
       fullBody: body
     });
 
@@ -231,6 +232,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Find the fixed charge based on weight
+    const fixedCharge = await prisma.fixedCharge.findFirst({
+      where: {
+        weight: weightNumber
+      }
+    });
+
+    if (!fixedCharge) {
+      return NextResponse.json(
+        {
+          error: `No fixed charge found for weight: ${weightNumber}kg`,
+        },
+        { status: 404 }
+      );
+    }
+
+    const fixedChargeAmount = fixedCharge.fixedCharge;
+
     // Find the best overall rate from all rates (lowest price)
     const bestOverallRate = allRates.reduce((best, current) => {
       return current.price < best.price ? current : best;
@@ -238,12 +257,16 @@ export async function POST(req: NextRequest) {
 
     // Calculate the total with fuel surcharge and percentage discount
     const originalPrice = bestOverallRate.price;
+    const vendorPrice = bestOverallRate.price;
     const fuelSurchargeAmount = parseFloat(fuelSurcharge) || 0;
     const discountPercentage = parseFloat(discount) || 0;
     
     // Calculate discount amount as percentage of original price
     const discountAmount = (originalPrice * discountPercentage) / 100;
-    const totalCost = originalPrice + fuelSurchargeAmount - discountAmount;
+    const originalCost = originalPrice + fuelSurchargeAmount - discountAmount + fixedChargeAmount;
+
+    const profitPercentageAmount = (originalCost * profitPercentage) / 100;
+    const totalCost = originalCost + profitPercentageAmount;
 
     const result = {
       success: true,
@@ -255,13 +278,20 @@ export async function POST(req: NextRequest) {
       fuelSurcharge: fuelSurchargeAmount,
       discountPercentage: discountPercentage,
       discountAmount: discountAmount,
+      originalCost: originalCost,
+      profitPercentage: profitPercentage,
+      profitPercentageAmount: profitPercentageAmount,
       totalCost: totalCost,
+      fixedCharge: fixedChargeAmount,
+      vendorPrice: vendorPrice,
       calculation: {
         originalPrice,
         fuelSurcharge: fuelSurchargeAmount,
         discountPercentage: discountPercentage,
         discountAmount: discountAmount,
         totalCost,
+        fixedCharge: fixedChargeAmount,
+        vendorPrice: vendorPrice,
       },
     };
 

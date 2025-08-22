@@ -487,3 +487,10 @@ model JournalEntryLine {
   journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   account      ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 }
+
+model FixedCharge {
+  id          Int      @id @default(autoincrement())
+  weight      Float    // Weight in kg (0.5, 1.0, 1.5, etc.)
+  fixedCharge Float    // Fixed charge amount (1500, 1550, 1600, etc.)
+  createdAt   DateTime @default(now())
+}
