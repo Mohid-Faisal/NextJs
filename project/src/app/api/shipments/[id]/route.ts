@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 function decodeToken(token: string) {
   try {
     const secret = process.env.JWT_SECRET || "your-secret-key";
-    return jwt.verify(token, secret) as any;
+    return jwt.verify(token, secret) as { id: string; [key: string]: unknown };
   } catch (error) {
     return null;
   }
@@ -15,10 +15,11 @@ function decodeToken(token: string) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const shipmentId = parseInt(params.id);
+    const { id } = await params;
+    const shipmentId = parseInt(id);
 
     if (isNaN(shipmentId)) {
       return NextResponse.json(
@@ -106,10 +107,11 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const shipmentId = parseInt(params.id);
+    const { id } = await params;
+    const shipmentId = parseInt(id);
     
     if (isNaN(shipmentId)) {
       return NextResponse.json(
@@ -138,7 +140,7 @@ export async function DELETE(
     }
 
     // Get the request body for password verification
-    const body = await request.json();
+    const body: { password: string } = await request.json();
     const { password } = body;
 
     if (!password) {

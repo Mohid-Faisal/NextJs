@@ -3,12 +3,34 @@ import { prisma } from "@/lib/prisma";
 import { decodeToken } from "@/lib/utils";
 import bcrypt from "bcrypt";
 
+// Define proper types for the request body
+interface RecipientUpdateData {
+  companyname?: string;
+  personname?: string;
+  email?: string;
+  phone?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  zip?: string;
+  address?: string;
+}
+
+interface AddressUpdateData {
+  Address?: string;
+  City?: string;
+  State?: string;
+  Country?: string;
+  Zip?: string;
+}
+
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const recipientId = parseInt(params.id);
+    const { id } = await params;
+    const recipientId = parseInt(id);
     
     if (isNaN(recipientId)) {
       return NextResponse.json(
@@ -40,10 +62,11 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const recipientId = parseInt(params.id);
+    const { id } = await params;
+    const recipientId = parseInt(id);
     
     if (isNaN(recipientId)) {
       return NextResponse.json(
@@ -52,7 +75,7 @@ export async function PUT(
       );
     }
 
-    const body = await req.json();
+    const body: RecipientUpdateData = await req.json();
     
     const updatedRecipient = await prisma.recipients.update({
       where: { id: recipientId },
@@ -85,10 +108,11 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const recipientId = parseInt(params.id);
+    const { id } = await params;
+    const recipientId = parseInt(id);
     
     if (isNaN(recipientId)) {
       return NextResponse.json(
@@ -117,7 +141,7 @@ export async function DELETE(
     }
 
     // Get the request body for password verification
-    const body = await req.json();
+    const body: { password: string } = await req.json();
     const { password } = body;
 
     if (!password) {
@@ -181,14 +205,15 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
-    const body = await req.json();
+    const { id } = await params;
+    const idNum = parseInt(id);
+    const body: AddressUpdateData = await req.json();
 
     const updatedRecipient = await prisma.recipients.update({
-      where: { id },
+      where: { id: idNum },
       data: {
         Address: body.Address,
         City: body.City,

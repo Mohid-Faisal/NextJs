@@ -3,12 +3,13 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const idNum = parseInt(id);
     
-    if (isNaN(id)) {
+    if (isNaN(idNum)) {
       return NextResponse.json(
         { success: false, error: "Invalid account ID" },
         { status: 400 }
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const account = await prisma.chartOfAccount.findUnique({
-      where: { id }
+      where: { id: idNum }
     });
 
     if (!account) {
@@ -41,12 +42,13 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const idNum = parseInt(id);
     
-    if (isNaN(id)) {
+    if (isNaN(idNum)) {
       return NextResponse.json(
         { success: false, error: "Invalid account ID" },
         { status: 400 }
@@ -58,7 +60,7 @@ export async function PUT(
 
     // Check if account exists
     const existingAccount = await prisma.chartOfAccount.findUnique({
-      where: { id }
+      where: { id: idNum }
     });
 
     if (!existingAccount) {
@@ -70,7 +72,7 @@ export async function PUT(
 
     // Update account
     const updatedAccount = await prisma.chartOfAccount.update({
-      where: { id },
+      where: { id: idNum },
       data: {
         accountName: accountName || existingAccount.accountName,
         category: category || existingAccount.category,
@@ -98,12 +100,13 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const idNum = parseInt(id);
     
-    if (isNaN(id)) {
+    if (isNaN(idNum)) {
       return NextResponse.json(
         { success: false, error: "Invalid account ID" },
         { status: 400 }
@@ -112,7 +115,7 @@ export async function DELETE(
 
     // Check if account exists
     const existingAccount = await prisma.chartOfAccount.findUnique({
-      where: { id }
+      where: { id: idNum }
     });
 
     if (!existingAccount) {
@@ -124,7 +127,7 @@ export async function DELETE(
 
     // Check if account has any journal entries
     const journalEntries = await prisma.journalEntryLine.count({
-      where: { accountId: id }
+      where: { accountId: idNum }
     });
 
     if (journalEntries > 0) {
@@ -136,7 +139,7 @@ export async function DELETE(
 
     // Delete account
     await prisma.chartOfAccount.delete({
-      where: { id }
+      where: { id: idNum }
     });
 
     return NextResponse.json({

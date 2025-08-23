@@ -3,12 +3,26 @@ import { NextResponse } from "next/server";
 import { decodeToken } from "@/lib/utils";
 import bcrypt from "bcrypt";
 
+// Define proper types for the request body
+interface VendorUpdateData {
+  companyname?: string;
+  personname?: string;
+  email?: string;
+  phone?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  zip?: string;
+  address?: string;
+}
+
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const vendorId = parseInt(params.id);
+    const { id } = await params;
+    const vendorId = parseInt(id);
     
     if (isNaN(vendorId)) {
       return NextResponse.json(
@@ -40,10 +54,11 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const vendorId = parseInt(params.id);
+    const { id } = await params;
+    const vendorId = parseInt(id);
     
     if (isNaN(vendorId)) {
       return NextResponse.json(
@@ -52,7 +67,7 @@ export async function PUT(
       );
     }
 
-    const body = await req.json();
+    const body: VendorUpdateData = await req.json();
     
     const updatedVendor = await prisma.vendors.update({
       where: { id: vendorId },
@@ -85,10 +100,11 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const vendorId = parseInt(params.id);
+    const { id } = await params;
+    const vendorId = parseInt(id);
     
     if (isNaN(vendorId)) {
       return NextResponse.json(
@@ -117,7 +133,7 @@ export async function DELETE(
     }
 
     // Get the request body for password verification
-    const body = await req.json();
+    const body: { password: string } = await req.json();
     const { password } = body;
 
     if (!password) {

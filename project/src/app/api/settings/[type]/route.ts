@@ -10,7 +10,7 @@ const modelMap: Record<string, any> = {
   serviceMode: prisma.serviceMode,
 };
 
-export async function GET(req: NextRequest, { params }: { params: { type: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json([], { status: 400 });
@@ -19,23 +19,23 @@ export async function GET(req: NextRequest, { params }: { params: { type: string
   return NextResponse.json(data);
 }
 
-export async function POST(req: NextRequest, { params }: { params: { type: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
-  const { name } = await req.json();
+  const { name }: { name: string } = await req.json();
   const created = await model.create({ data: { name } });
   return NextResponse.json(created);
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { type: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
   try {
-    const body = await req.json();
+    const body: { id: string | number; name: string } = await req.json();
     const { id, name } = body;
     
     if (!id || !name) {
@@ -43,7 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: { type: string
     }
 
     const updated = await model.update({
-      where: { id: parseInt(id) },
+      where: { id: typeof id === 'string' ? parseInt(id) : id },
       data: { name }
     });
     
@@ -54,7 +54,7 @@ export async function PUT(req: NextRequest, { params }: { params: { type: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { type: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });

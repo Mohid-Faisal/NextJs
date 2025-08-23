@@ -6,16 +6,17 @@ const prisma = new PrismaClient();
 // PUT /api/debit-notes/[id] - Update a debit note
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const idNum = parseInt(id);
     const body = await request.json();
     const { amount, date, description } = body;
 
     // Update the debit note
     const updatedDebitNote = await prisma.debitNote.update({
-      where: { id },
+      where: { id: idNum },
       data: {
         ...(amount && { amount: parseFloat(amount) }),
         ...(date && { date: new Date(date) }),
@@ -52,13 +53,14 @@ export async function PUT(
 // DELETE /api/debit-notes/[id] - Delete a debit note
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const idNum = parseInt(id);
 
     await prisma.debitNote.delete({
-      where: { id },
+      where: { id: idNum },
     });
 
     return NextResponse.json({ message: "Debit note deleted successfully" });

@@ -14,7 +14,7 @@ export async function GET() {
     totalShipments,
     totalUsers,
     totalRevenue,
-    newOrders,
+    recentShipmentsCount,
     monthlyRaw,
     recentShipments
   ] = await Promise.all([
@@ -26,7 +26,11 @@ export async function GET() {
       },
     }),
     prisma.shipment.count({
-      where: { status: "Pending" },
+      where: { 
+        createdAt: {
+          gte: new Date(new Date().setDate(new Date().getDate() - 7)), // Last 7 days
+        }
+      },
     }),
     prisma.shipment.groupBy({
       by: ["createdAt"],
@@ -51,7 +55,6 @@ export async function GET() {
         recipientName: true,
         destination: true,
         totalCost: true,
-        status: true,
         createdAt: true,
       },
     }),
@@ -74,7 +77,7 @@ export async function GET() {
     totalShipments,
     totalUsers,
     totalRevenue: totalRevenue._sum.totalCost || 0,
-    newOrders,
+    recentShipmentsCount,
     monthlyEarnings,
     recentShipments,
   });

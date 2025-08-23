@@ -6,10 +6,11 @@ const prisma = new PrismaClient();
 // PUT /api/offices/[id] - Update office
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const idNum = parseInt(id);
     const body = await request.json();
     const { code, name } = body;
 
@@ -18,7 +19,7 @@ export async function PUT(
     }
 
     const office = await prisma.office.update({
-      where: { id },
+      where: { id: idNum },
       data: { code, name }
     });
 
@@ -34,12 +35,13 @@ export async function PUT(
 // DELETE /api/offices/[id] - Delete office
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const idNum = parseInt(id);
     await prisma.office.delete({
-      where: { id }
+      where: { id: idNum }
     });
 
     return NextResponse.json({ message: "Office deleted successfully" });

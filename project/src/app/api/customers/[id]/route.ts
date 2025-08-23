@@ -3,12 +3,37 @@ import { prisma } from "@/lib/prisma";
 import { decodeToken } from "@/lib/utils";
 import bcrypt from "bcrypt";
 
+// Define proper types for the request body
+interface CustomerUpdateData {
+  companyname?: string;
+  personname?: string;
+  email?: string;
+  phone?: string;
+  documenttype?: string;
+  documentnumber?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  zip?: string;
+  address?: string;
+  activestatus?: string;
+}
+
+interface AddressUpdateData {
+  Address?: string;
+  City?: string;
+  State?: string;
+  Country?: string;
+  Zip?: string;
+}
+
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const customerId = parseInt(params.id);
+    const { id } = await params;
+    const customerId = parseInt(id);
     
     if (isNaN(customerId)) {
       return NextResponse.json(
@@ -40,10 +65,11 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const customerId = parseInt(params.id);
+    const { id } = await params;
+    const customerId = parseInt(id);
     
     if (isNaN(customerId)) {
       return NextResponse.json(
@@ -52,7 +78,7 @@ export async function PUT(
       );
     }
 
-    const body = await req.json();
+    const body: CustomerUpdateData = await req.json();
     
     const updatedCustomer = await prisma.customers.update({
       where: { id: customerId },
@@ -88,10 +114,11 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const customerId = parseInt(params.id);
+    const { id } = await params;
+    const customerId = parseInt(id);
     
     if (isNaN(customerId)) {
       return NextResponse.json(
@@ -184,14 +211,15 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
-    const body = await req.json();
+    const { id } = await params;
+    const idNum = parseInt(id);
+    const body: AddressUpdateData = await req.json();
 
     const updatedCustomer = await prisma.customers.update({
-      where: { id },
+      where: { id: idNum },
       data: {
         Address: body.Address,
         City: body.City,
