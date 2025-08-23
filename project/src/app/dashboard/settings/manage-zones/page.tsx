@@ -259,43 +259,44 @@ const ManageZonesPage = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-6xl mx-auto px-4 mt-10"
-    >
-      {/* Back Button */}
-      <div className="mb-6">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-      </div>
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-6xl mx-auto"
+      >
+        {/* Back Button */}
+        <div className="mb-4 sm:mb-6">
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+        </div>
 
-      <Card className="bg-white dark:bg-gray-900 border shadow-sm rounded-2xl">
-        <CardContent className="p-8 space-y-8">
-          <h1 className="text-2xl font-semibold text-primary text-center">
-            Manage Company Zones
-          </h1>
+        <Card className="bg-white dark:bg-gray-900 border shadow-sm rounded-2xl">
+          <CardContent className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-8">
+            <h1 className="text-xl sm:text-2xl font-semibold text-primary text-center">
+              Manage Company Zones
+            </h1>
 
           {/* Service Info */}
           {selectedServiceName && zones && (
-            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <div className="flex items-center justify-between">
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                 <div>
-                  <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                  <h2 className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-100">
                     {selectedServiceName}
                   </h2>
-                                     <p className="text-sm text-blue-700 dark:text-blue-300">
-                     {zones.length} countries • {filteredZones?.length || zones.length} displayed
-                   </p>
+                  <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
+                    {zones.length} countries • {filteredZones?.length || zones.length} displayed
+                  </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                  <div className="text-lg sm:text-2xl font-bold text-blue-900 dark:text-blue-100">
                     {zones.length}
                   </div>
                   <div className="text-xs text-blue-600 dark:text-blue-400">
@@ -307,9 +308,9 @@ const ManageZonesPage = () => {
               {/* Zone Statistics */}
               {zones.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                      <div className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-100">
                         {new Set(zones.map(z => z.zone)).size}
                       </div>
                       <div className="text-xs text-blue-600 dark:text-blue-400">
@@ -317,7 +318,7 @@ const ManageZonesPage = () => {
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                      <div className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-100">
                         {zones.filter(z => z.phoneCode && z.phoneCode !== "").length}
                       </div>
                       <div className="text-xs text-blue-600 dark:text-blue-400">
@@ -325,7 +326,7 @@ const ManageZonesPage = () => {
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                      <div className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-100">
                         {zones.filter(z => z.code && z.code !== "").length}
                       </div>
                       <div className="text-xs text-blue-600 dark:text-blue-400">
@@ -333,7 +334,7 @@ const ManageZonesPage = () => {
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                      <div className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-100">
                         {Math.max(...zones.map(z => parseInt(z.zone.replace(/\D/g, '') || '0')))}
                       </div>
                       <div className="text-xs text-blue-600 dark:text-blue-400">
@@ -615,9 +616,10 @@ const ManageZonesPage = () => {
               </p>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
   );
 };
 

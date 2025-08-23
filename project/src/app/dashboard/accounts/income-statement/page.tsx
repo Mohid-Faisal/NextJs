@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Download, Calendar, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Download, Calendar, TrendingUp, TrendingDown, DollarSign, ArrowUp, Table, Printer, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -33,6 +39,7 @@ type IncomeStatementData = {
   expenses: AccountBalance[];
   totalRevenue: number;
   totalExpenses: number;
+  grossProfit: number;
   netIncome: number;
   period: {
     startDate: string;
@@ -49,6 +56,7 @@ export default function IncomeStatementPage() {
     expenses: [],
     totalRevenue: 0,
     totalExpenses: 0,
+    grossProfit: 0,
     netIncome: 0,
     period: {
       startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10), // Start of current year
@@ -56,7 +64,7 @@ export default function IncomeStatementPage() {
     }
   });
   const [loading, setLoading] = useState(false);
-  const [periodType, setPeriodType] = useState<'year' | 'quarter' | 'month' | 'custom'>('year');
+  const [periodType, setPeriodType] = useState<'year' | 'quarter' | 'month' | 'custom'>('month');
 
   useEffect(() => {
     fetchAccounts();
@@ -209,9 +217,14 @@ export default function IncomeStatementPage() {
   const calculateIncomeStatement = () => {
     const revenues = accountBalances.filter(acc => acc.category === 'Revenue');
     const expenses = accountBalances.filter(acc => acc.category === 'Expense');
+    
+    // Find vendor expense specifically for gross profit calculation
+    const vendorExpense = expenses.find(acc => acc.accountName === 'Vendor Expense');
+    const vendorExpenseAmount = vendorExpense ? vendorExpense.balance : 0;
 
     const totalRevenue = revenues.reduce((sum, acc) => sum + acc.balance, 0);
     const totalExpenses = expenses.reduce((sum, acc) => sum + acc.balance, 0);
+    const grossProfit = totalRevenue - vendorExpenseAmount;
     const netIncome = totalRevenue - totalExpenses;
 
     setIncomeStatementData(prev => ({
@@ -220,11 +233,13 @@ export default function IncomeStatementPage() {
       expenses,
       totalRevenue,
       totalExpenses,
+      grossProfit,
       netIncome
     }));
   };
 
-  const exportToCSV = () => {
+  // Export functions
+  const exportToExcel = () => {
     const headers = ["Category", "Account Code", "Account Name", "Amount"];
     const csvContent = [
       headers.join(","),
@@ -250,23 +265,30 @@ export default function IncomeStatementPage() {
       ["", "", "Net Income", incomeStatementData.netIncome.toLocaleString()].join(",")
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `income-statement-${incomeStatementData.period.startDate}-to-${incomeStatementData.period.endDate}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `income-statement-${incomeStatementData.period.startDate}-to-${incomeStatementData.period.endDate}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
     
-    toast.success("Income statement exported successfully");
+    toast.success("Income statement exported to Excel successfully");
+  };
+
+  const exportToPrint = () => {
+    window.print();
+    toast.success("Print dialog opened");
+  };
+
+  const exportToPDF = () => {
+    // For now, just show a message that PDF export is not implemented
+    toast.info("PDF export will be implemented soon");
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PKR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
@@ -322,8 +344,8 @@ export default function IncomeStatementPage() {
   );
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <div className="mb-4 sm:mb-6">
         <Button
           variant="outline"
           onClick={() => router.back()}
@@ -333,9 +355,9 @@ export default function IncomeStatementPage() {
           Back
         </Button>
         
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
               Income Statement
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
@@ -343,7 +365,7 @@ export default function IncomeStatementPage() {
             </p>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <Label htmlFor="periodType" className="text-sm font-medium">Period:</Label>
               <select
@@ -352,15 +374,15 @@ export default function IncomeStatementPage() {
                 onChange={(e) => setPeriodType(e.target.value as any)}
                 className="px-3 py-1 border border-gray-300 rounded-md text-sm"
               >
-                <option value="year">Current Year</option>
-                <option value="quarter">Current Quarter</option>
                 <option value="month">Current Month</option>
+                <option value="quarter">Current Quarter</option>
+                <option value="year">Current Year</option>
                 <option value="custom">Custom Period</option>
               </select>
             </div>
             
             {periodType === 'custom' && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <Input
                   type="date"
@@ -369,7 +391,7 @@ export default function IncomeStatementPage() {
                     ...prev,
                     period: { ...prev.period, startDate: e.target.value }
                   }))}
-                  className="w-32"
+                  className="w-full sm:w-32"
                 />
                 <span className="text-gray-500">to</span>
                 <Input
@@ -379,19 +401,39 @@ export default function IncomeStatementPage() {
                     ...prev,
                     period: { ...prev.period, endDate: e.target.value }
                   }))}
-                  className="w-32"
+                  className="w-full sm:w-32"
                 />
               </div>
             )}
             
-            <Button
-              onClick={exportToCSV}
-              variant="outline"
-              disabled={loading}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
+                         {/* Export Dropdown */}
+             <div>
+               <DropdownMenu>
+                 <DropdownMenuTrigger asChild>
+                   <Button className="w-full sm:w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+                     Export
+                     <ArrowUp className="ml-2 h-4 w-4" />
+                   </Button>
+                 </DropdownMenuTrigger>
+                 <DropdownMenuContent align="end" className="w-[120px]">
+                   <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
+                     <Table className="w-4 h-4" />
+                     Excel
+                   </DropdownMenuItem>
+                   <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
+                     <Printer className="w-4 h-4" />
+                     Print
+                   </DropdownMenuItem>
+                   <DropdownMenuItem 
+                     onClick={exportToPDF} 
+                     className="flex items-center gap-2"
+                   >
+                     <FileText className="w-4 h-4" />
+                     PDF
+                   </DropdownMenuItem>
+                 </DropdownMenuContent>
+               </DropdownMenu>
+             </div>
           </div>
         </div>
       </div>
@@ -402,16 +444,16 @@ export default function IncomeStatementPage() {
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading income statement...</p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-4 sm:space-y-8">
           {/* Revenues */}
           <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-green-50 dark:bg-green-900/20">
-              <CardTitle className="text-2xl font-bold text-green-800 dark:text-green-200 flex items-center">
-                <TrendingUp className="w-6 h-6 mr-2" />
+              <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-green-800 dark:text-green-200 flex items-center">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
                 Revenues
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
               {renderSection("Revenues", incomeStatementData.revenues, incomeStatementData.totalRevenue, 
                 "text-green-600", <TrendingUp className="w-5 h-5 text-green-600" />)}
             </CardContent>
@@ -420,12 +462,12 @@ export default function IncomeStatementPage() {
           {/* Expenses */}
           <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-red-50 dark:bg-red-900/20">
-              <CardTitle className="text-2xl font-bold text-red-800 dark:text-red-200 flex items-center">
-                <TrendingDown className="w-6 h-6 mr-2" />
+              <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-red-800 dark:text-red-200 flex items-center">
+                <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
                 Expenses
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
               {renderSection("Expenses", incomeStatementData.expenses, incomeStatementData.totalExpenses, 
                 "text-red-600", <TrendingDown className="w-5 h-5 text-red-600" />)}
             </CardContent>
@@ -434,25 +476,25 @@ export default function IncomeStatementPage() {
           {/* Net Income */}
           <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
             <CardHeader className={`${incomeStatementData.netIncome >= 0 ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-orange-50 dark:bg-orange-900/20'}`}>
-              <CardTitle className={`text-2xl font-bold flex items-center ${incomeStatementData.netIncome >= 0 ? 'text-blue-800 dark:text-blue-200' : 'text-orange-800 dark:text-orange-200'}`}>
-                <DollarSign className="w-6 h-6 mr-2" />
+              <CardTitle className={`text-lg sm:text-xl lg:text-2xl font-bold flex items-center ${incomeStatementData.netIncome >= 0 ? 'text-blue-800 dark:text-blue-200' : 'text-orange-800 dark:text-orange-200'}`}>
+                <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
                 Net Income (Current Year Earnings)
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex justify-between items-center py-4">
-                <span className="text-xl font-bold">Net Income</span>
-                <span className={`text-2xl font-bold ${incomeStatementData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 py-4">
+                <span className="text-lg sm:text-xl font-bold">Net Income</span>
+                <span className={`text-lg sm:text-xl lg:text-2xl font-bold ${incomeStatementData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(incomeStatementData.netIncome)}
                 </span>
               </div>
               
               {incomeStatementData.netIncome >= 0 ? (
-                <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                <div className="text-xs sm:text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-2 sm:p-3 rounded-lg">
                   ✅ Profitable period with positive net income
                 </div>
               ) : (
-                <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                <div className="text-xs sm:text-sm text-red-600 bg-red-50 dark:bg-green-900/20 p-2 sm:p-3 rounded-lg">
                   ⚠️ Net loss for this period
                 </div>
               )}
@@ -463,48 +505,63 @@ export default function IncomeStatementPage() {
 
       {/* Summary */}
       {!loading && (
-        <Card className="mt-8 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
+        <Card className="mt-4 sm:mt-8 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
           <CardHeader className="bg-gray-50 dark:bg-gray-800">
-            <CardTitle className="text-xl font-bold text-gray-800 dark:text-white">
+            <CardTitle className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
               Performance Summary
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-6">
               <div className="text-center">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Revenue</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">
                   {formatCurrency(incomeStatementData.totalRevenue)}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total Expenses</div>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Gross Profit</div>
+                <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${incomeStatementData.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(incomeStatementData.grossProfit)}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Expenses</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
                   {formatCurrency(incomeStatementData.totalExpenses)}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Net Income</div>
-                <div className={`text-2xl font-bold ${incomeStatementData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Net Income</div>
+                <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${incomeStatementData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(incomeStatementData.netIncome)}
                 </div>
               </div>
             </div>
             
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Profit Margin</div>
-                  <div className="text-lg font-bold">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8 justify-items-center">
+                <div className="text-center">
+                  <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gross Profit Margin</div>
+                  <div className="text-base sm:text-lg font-bold">
+                    {incomeStatementData.totalRevenue > 0 
+                      ? `${((incomeStatementData.grossProfit / incomeStatementData.totalRevenue) * 100).toFixed(1)}%`
+                      : 'N/A'
+                    }
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Net Profit Margin</div>
+                  <div className="text-base sm:text-lg font-bold">
                     {incomeStatementData.totalRevenue > 0 
                       ? `${((incomeStatementData.netIncome / incomeStatementData.totalRevenue) * 100).toFixed(1)}%`
                       : 'N/A'
                     }
                   </div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expense Ratio</div>
-                  <div className="text-lg font-bold">
+                <div className="text-center">
+                  <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expense Ratio</div>
+                  <div className="text-base sm:text-lg font-bold">
                     {incomeStatementData.totalRevenue > 0 
                       ? `${((incomeStatementData.totalExpenses / incomeStatementData.totalRevenue) * 100).toFixed(1)}%`
                       : 'N/A'

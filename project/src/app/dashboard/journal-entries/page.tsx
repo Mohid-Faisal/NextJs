@@ -274,10 +274,10 @@ const JournalEntriesPage = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-7xl mx-auto px-4 py-8"
+      className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0"
     >
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4 sm:mb-8">
         <Button
           variant="outline"
           onClick={() => window.history.back()}
@@ -287,9 +287,9 @@ const JournalEntriesPage = () => {
           Back
         </Button>
         
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               Journal Entries
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -305,12 +305,12 @@ const JournalEntriesPage = () => {
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex flex-wrap gap-4 items-center">
+      <Card className="mb-4 sm:mb-6">
+        <CardContent className="p-3 sm:p-4 lg:p-6">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start lg:items-center">
             {/* Search */}
-            <div className="flex-1 min-w-[300px]">
-              <div className="relative">
+            <div className="flex w-full max-w-sm">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search entries..."
@@ -322,7 +322,7 @@ const JournalEntriesPage = () => {
             </div>
 
             {/* Date Range */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Input
                 type="date"
                 value={fromDate}
@@ -339,7 +339,7 @@ const JournalEntriesPage = () => {
 
             {/* Posted Filter */}
             <Select value={isPostedFilter} onValueChange={setIsPostedFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -352,7 +352,7 @@ const JournalEntriesPage = () => {
             {/* Export */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="w-full sm:w-auto">
                   Export
                 </Button>
               </DropdownMenuTrigger>
@@ -378,44 +378,75 @@ const JournalEntriesPage = () => {
       {/* Journal Entries Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Journal Entries ({total} entries)</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Journal Entries ({total} entries)</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-4 lg:p-6">
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full border-separate border-spacing-y-2 sm:border-spacing-y-4">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">Entry #</th>
-                    <th className="text-left p-3 font-medium">Date</th>
-                    <th className="text-left p-3 font-medium">Description</th>
-                    <th className="text-left p-3 font-medium">Reference</th>
-                    <th className="text-right p-3 font-medium">Total Debit</th>
-                    <th className="text-right p-3 font-medium">Total Credit</th>
-                    <th className="text-left p-3 font-medium">Status</th>
-                    <th className="text-right p-3 font-medium">Actions</th>
+                  <tr className="border-b text-xs sm:text-sm">
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Entry #</span>
+                      <span className="sm:hidden">Entry</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Date</span>
+                      <span className="sm:hidden">Date</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Description</span>
+                      <span className="sm:hidden">Desc</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Reference</span>
+                      <span className="sm:hidden">Ref</span>
+                    </th>
+                    <th className="text-right p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Total Debit</span>
+                      <span className="sm:hidden">Debit</span>
+                    </th>
+                    <th className="text-right p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Total Credit</span>
+                      <span className="sm:hidden">Credit</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Status</span>
+                      <span className="sm:hidden">Status</span>
+                    </th>
+                    <th className="text-right p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Actions</span>
+                      <span className="sm:hidden">Actions</span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-xs sm:text-sm">
                   {entries && entries.length > 0 ? (
                     entries.map((entry) => (
                       <tr key={entry.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="p-3 font-mono">{entry.entryNumber}</td>
-                        <td className="p-3">{new Date(entry.date).toLocaleDateString()}</td>
-                        <td className="p-3">{entry.description}</td>
-                        <td className="p-3">{entry.reference || "-"}</td>
-                        <td className="p-3 text-right">${entry.totalDebit.toFixed(2)}</td>
-                        <td className="p-3 text-right">${entry.totalCredit.toFixed(2)}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
+                        <td className="p-2 sm:p-3 font-mono">{entry.entryNumber}</td>
+                        <td className="p-2 sm:p-3">{new Date(entry.date).toLocaleDateString()}</td>
+                        <td className="p-2 sm:p-3">
+                          <span className="hidden sm:inline">{entry.description}</span>
+                          <span className="sm:hidden">{entry.description?.substring(0, 20)}...</span>
+                        </td>
+                        <td className="p-2 sm:p-3">
+                          <span className="hidden sm:inline">{entry.reference || "-"}</span>
+                          <span className="sm:hidden">{entry.reference?.substring(0, 8) || "-"}...</span>
+                        </td>
+                        <td className="p-2 sm:p-3 text-right">${entry.totalDebit.toFixed(2)}</td>
+                        <td className="p-2 sm:p-3 text-right">${entry.totalCredit.toFixed(2)}</td>
+                        <td className="p-2 sm:p-3">
+                          <span className={`px-1 sm:px-2 py-1 rounded-full text-xs ${
                             entry.isPosted ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
                           }`}>
-                            {entry.isPosted ? "Posted" : "Draft"}
+                            <span className="hidden sm:inline">{entry.isPosted ? "Posted" : "Draft"}</span>
+                            <span className="sm:hidden">{entry.isPosted ? "Posted" : "Draft"}</span>
                           </span>
                         </td>
-                        <td className="p-3 text-right">
+                        <td className="p-2 sm:p-3 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm">
@@ -452,8 +483,8 @@ const JournalEntriesPage = () => {
 
           {/* Pagination */}
           {total > limit && (
-            <div className="flex justify-between items-center mt-6">
-              <div className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 mt-4 sm:mt-6">
+              <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                 Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} entries
               </div>
               <div className="flex gap-2">
@@ -461,6 +492,7 @@ const JournalEntriesPage = () => {
                   variant="outline"
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
+                  className="w-full sm:w-auto"
                 >
                   Previous
                 </Button>
@@ -468,6 +500,7 @@ const JournalEntriesPage = () => {
                   variant="outline"
                   onClick={() => setPage(page + 1)}
                   disabled={page >= Math.ceil(total / limit)}
+                  className="w-full sm:w-auto"
                 >
                   Next
                 </Button>
@@ -479,13 +512,13 @@ const JournalEntriesPage = () => {
 
       {/* Add Journal Entry Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
           <DialogHeader>
             <DialogTitle>Create New Journal Entry</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Header Information */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="date">Date</Label>
                 <Input
@@ -517,7 +550,7 @@ const JournalEntriesPage = () => {
 
             {/* Journal Entry Lines */}
             <div>
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-4">
                 <Label>Journal Entry Lines</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addLine}>
                   <Plus className="w-4 h-4 mr-2" />
@@ -525,10 +558,10 @@ const JournalEntriesPage = () => {
                 </Button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {formData.lines.map((line, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-4 items-end border p-4 rounded-lg">
-                    <div className="col-span-4">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-end border p-3 sm:p-4 rounded-lg">
+                    <div className="sm:col-span-4">
                       <Label>Account</Label>
                       <Select 
                         value={String(line.accountId)} 
@@ -552,7 +585,7 @@ const JournalEntriesPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <Label>Debit</Label>
                       <Input
                         type="number"
@@ -562,7 +595,7 @@ const JournalEntriesPage = () => {
                         placeholder="0.00"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <Label>Credit</Label>
                       <Input
                         type="number"
@@ -572,7 +605,7 @@ const JournalEntriesPage = () => {
                         placeholder="0.00"
                       />
                     </div>
-                    <div className="col-span-3">
+                    <div className="sm:col-span-3">
                       <Label>Description</Label>
                       <Input
                         value={line.description || ""}
@@ -580,7 +613,7 @@ const JournalEntriesPage = () => {
                         placeholder="Line description"
                       />
                     </div>
-                    <div className="col-span-1">
+                    <div className="sm:col-span-1">
                       {formData.lines.length > 2 && (
                         <Button
                           type="button"
@@ -600,14 +633,14 @@ const JournalEntriesPage = () => {
 
             {/* Totals */}
             <div className="border-t pt-4">
-              <div className="flex justify-between items-center">
-                <div className="flex gap-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
                   <div>
-                    <span className="text-sm text-gray-600">Total Debit:</span>
+                    <span className="text-xs sm:text-sm text-gray-600">Total Debit:</span>
                     <span className="ml-2 font-semibold">${totalDebit.toFixed(2)}</span>
                   </div>
                   <div>
-                    <span className="text-sm text-gray-600">Total Credit:</span>
+                    <span className="text-xs sm:text-sm text-gray-600">Total Credit:</span>
                     <span className="ml-2 font-semibold">${totalCredit.toFixed(2)}</span>
                   </div>
                 </div>
@@ -615,7 +648,7 @@ const JournalEntriesPage = () => {
                   {!isBalanced && (
                     <AlertCircle className="w-4 h-4 text-red-500" />
                   )}
-                  <span className={`text-sm ${isBalanced ? "text-green-600" : "text-red-600"}`}>
+                  <span className={`text-xs sm:text-sm ${isBalanced ? "text-green-600" : "text-red-600"}`}>
                     {isBalanced ? "Balanced" : "Not Balanced"}
                   </span>
                 </div>
@@ -623,7 +656,7 @@ const JournalEntriesPage = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
@@ -637,14 +670,14 @@ const JournalEntriesPage = () => {
 
       {/* View Journal Entry Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl w-full">
           <DialogHeader>
             <DialogTitle>Journal Entry Details</DialogTitle>
           </DialogHeader>
           {viewingEntry && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Header Information */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <Label>Entry Number</Label>
                   <p className="font-mono">{viewingEntry.entryNumber}</p>
@@ -655,7 +688,7 @@ const JournalEntriesPage = () => {
                 </div>
                 <div>
                   <Label>Status</Label>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
+                  <span className={`px-1 sm:px-2 py-1 rounded-full text-xs ${
                     viewingEntry.isPosted ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
                   }`}>
                     {viewingEntry.isPosted ? "Posted" : "Draft"}
@@ -678,18 +711,18 @@ const JournalEntriesPage = () => {
                 <Label>Journal Entry Lines</Label>
                 <div className="mt-4 space-y-2">
                   {viewingEntry.lines.map((line, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-4 items-center border p-3 rounded">
-                      <div className="col-span-4">
-                        <span className="text-sm text-gray-600">{line.account.code} - {line.account.accountName}</span>
+                    <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 items-center border p-3 rounded">
+                      <div className="sm:col-span-4">
+                        <span className="text-xs sm:text-sm text-gray-600">{line.account.code} - {line.account.accountName}</span>
                       </div>
-                      <div className="col-span-2 text-right">
+                      <div className="sm:col-span-2 text-right">
                         <span className="font-mono">${line.debitAmount.toFixed(2)}</span>
                       </div>
-                      <div className="col-span-2 text-right">
+                      <div className="sm:col-span-2 text-right">
                         <span className="font-mono">${line.creditAmount.toFixed(2)}</span>
                       </div>
-                      <div className="col-span-4">
-                        <span className="text-sm">{line.description || "-"}</span>
+                      <div className="sm:col-span-4">
+                        <span className="text-xs sm:text-sm">{line.description || "-"}</span>
                       </div>
                     </div>
                   ))}
@@ -698,19 +731,19 @@ const JournalEntriesPage = () => {
 
               {/* Totals */}
               <div className="border-t pt-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
                     <div>
-                      <span className="text-sm text-gray-600">Total Debit:</span>
+                      <span className="text-xs sm:text-sm text-gray-600">Total Debit:</span>
                       <span className="ml-2 font-semibold">${viewingEntry.totalDebit.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-sm text-gray-600">Total Credit:</span>
+                      <span className="text-xs sm:text-sm text-gray-600">Total Credit:</span>
                       <span className="ml-2 font-semibold">${viewingEntry.totalCredit.toFixed(2)}</span>
                     </div>
                   </div>
                   <div className="text-green-600">
-                    <span className="text-sm">Balanced</span>
+                    <span className="text-xs sm:text-sm">Balanced</span>
                   </div>
                 </div>
               </div>

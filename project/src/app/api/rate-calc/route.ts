@@ -37,6 +37,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Fetch fixed charge based on weight
+    const fixedCharge = await prisma.fixedCharge.findFirst({
+      where: {
+        weight: weightNumber,
+      },
+      orderBy: {
+        weight: "asc",
+      },
+    });
+
     // Step 1: Find all zones for the destination country
     const zoneInfos = await prisma.zone.findMany({
       where: {
@@ -248,6 +258,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       profitPercentage: profitPercent,
+      fixedCharge: fixedCharge ? {
+        weight: fixedCharge.weight,
+        amount: fixedCharge.fixedCharge,
+      } : null,
       zones: zones.map((zone) => ({
         zone: zone.zone,
         country: zone.country,

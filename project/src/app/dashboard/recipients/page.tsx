@@ -303,21 +303,21 @@ export default function RecipientsPage() {
   };
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-4xl font-bold text-gray-800 dark:text-white">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">
           All Recipients
         </h2>
         <div className="text-right">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{total}</div>
+          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{total}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">Total Recipients</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        {/* Page size and Search bar */}
-        <div className="flex items-center gap-4 w-full max-w-md">
+      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+        {/* Left side - Page size and Search bar */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
           {/* Page size select */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Show:</span>
@@ -342,7 +342,7 @@ export default function RecipientsPage() {
           </div>
 
           {/* Search bar with icon */}
-          <div className="flex flex-1">
+          <div className="flex flex-1 max-w-sm">
             {/* Search input */}
             <Input
               placeholder="Search by company name, person name, phone, city, or country"
@@ -355,12 +355,12 @@ export default function RecipientsPage() {
             />
             {/* Icon box */}
             <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-              <Search className="text-white s w-5 h-5" />
+              <Search className="text-white w-5 h-5" />
             </div>
           </div>
         </div>
 
-        {/* Export and Add buttons */}
+        {/* Right side - Export and Add buttons */}
         <div className="flex gap-2">
           {/* Export Dropdown */}
           <div>
@@ -402,70 +402,85 @@ export default function RecipientsPage() {
         </div>
       </div>
       
-      {/* Shipments Table */}
+      {/* Recipients Table */}
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <CardContent className="p-6 overflow-x-auto">
+        <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
           {recipients.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
               No recipients found.
             </p>
           ) : (
-            <table className="min-w-full table-auto border-separate border-spacing-y-4">
+            <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
-                <tr className="text-sm text-gray-500 dark:text-gray-300">
-                  <th className="px-4 py-2 text-left">
+                <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("id")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                     >
-                      ID {getSortIcon("id")}
+                      <span className="hidden sm:inline">ID</span>
+                      <span className="sm:hidden">ID</span>
+                      {getSortIcon("id")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("CompanyName")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                     >
-                      Company Name {getSortIcon("CompanyName")}
+                      <span className="hidden sm:inline">Company Name</span>
+                      <span className="sm:hidden">Company</span>
+                      {getSortIcon("CompanyName")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("PersonName")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                     >
-                      Contact Person {getSortIcon("PersonName")}
+                      <span className="hidden sm:inline">Contact Person</span>
+                      <span className="sm:hidden">Contact</span>
+                      {getSortIcon("PersonName")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("Phone")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                     >
-                      Phone {getSortIcon("Phone")}
+                      <span className="hidden sm:inline">Phone</span>
+                      <span className="sm:hidden">Phone</span>
+                      {getSortIcon("Phone")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("City")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                     >
-                      City {getSortIcon("City")}
+                      <span className="hidden sm:inline">City</span>
+                      <span className="sm:hidden">City</span>
+                      {getSortIcon("City")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("Country")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                     >
-                      Country {getSortIcon("Country")}
+                      <span className="hidden sm:inline">Country</span>
+                      <span className="sm:hidden">Country</span>
+                      {getSortIcon("Country")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">Action</th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span className="hidden sm:inline">Action</span>
+                    <span className="sm:hidden">Action</span>
+                  </th>
                 </tr>
               </thead>
               <AnimatePresence>
-                <tbody className="text-sm text-gray-700 dark:text-gray-200 font-light">
+                <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
                   {recipients.map((recipient) => (
                     <motion.tr
                       key={recipient.id}
@@ -475,15 +490,22 @@ export default function RecipientsPage() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <td className="px-4 py-3 font-medium">{recipient.id}</td>
-                      <td className="px-4 py-3">{recipient.CompanyName}</td>
-                      <td className="px-4 py-3">{recipient.PersonName}</td>
-                      <td className="px-4 py-3">{recipient.Phone}</td>
-                      <td className="px-4 py-3">{recipient.City}</td>
-                      <td className="px-4 py-3">
-                        {country.getCountryByCode(recipient.Country)?.name}
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{recipient.id}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{recipient.CompanyName}</span>
+                        <span className="sm:hidden">{recipient.CompanyName?.substring(0, 15)}...</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{recipient.PersonName}</span>
+                        <span className="sm:hidden">{recipient.PersonName?.substring(0, 12)}...</span>
+                      </td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{recipient.Phone}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{recipient.City}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{country.getCountryByCode(recipient.Country)?.name}</span>
+                        <span className="sm:hidden">{country.getCountryByCode(recipient.Country)?.name?.substring(0, 10)}...</span>
+                      </td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button className="p-2 hover:bg-gray-100 rounded">
@@ -554,8 +576,8 @@ export default function RecipientsPage() {
       />
 
       {/* Pagination and Total Count */}
-      <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
-        <div>
+      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
+        <div className="text-center sm:text-left">
           {pageSize === 'all' 
             ? `Showing all ${total} recipients`
             : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} recipients`
@@ -567,7 +589,7 @@ export default function RecipientsPage() {
             <Button
               disabled={page <= 1}
               onClick={() => setPage((prev) => prev - 1)}
-              className="hover:scale-105 transition-transform"
+              className="hover:scale-105 transition-transform w-full sm:w-auto"
             >
               ← Prev
             </Button>
@@ -577,7 +599,7 @@ export default function RecipientsPage() {
             <Button
               disabled={page >= totalPages}
               onClick={() => setPage((prev) => prev + 1)}
-              className="hover:scale-105 transition-transform"
+              className="hover:scale-105 transition-transform w-full sm:w-auto"
             >
               Next →
             </Button>

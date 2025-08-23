@@ -1003,21 +1003,21 @@ const AddShipmentPage = () => {
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-7xl mx-auto px-2 py-6 text-foreground h-[calc(100vh-64px)] overflow-y-auto"
+      className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 text-foreground h-[calc(100vh-64px)] overflow-y-auto transition-all duration-300 ease-in-out"
     >
       <form onSubmit={handleSubmit}>
         {/* Record shipment header */}
-        <div className="flex items-center gap-2 mb-2">
-          <FaBoxOpen className="text-xl text-primary" />
-          <h1 className="text-2xl font-semibold">Add shipment</h1>
+        <div className="flex items-center gap-2 mb-4 sm:mb-6">
+          <FaBoxOpen className="text-lg sm:text-xl text-primary" />
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold">Add shipment</h1>
         </div>
 
         {/* Shipment Info Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Left Section: Shipment Date + Tracking ID */}
           <Card className="bg-white dark:bg-background border border-border shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-end gap-6">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 lg:gap-6">
                 {/* Shipment Date */}
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium mb-1">
@@ -1065,8 +1065,8 @@ const AddShipmentPage = () => {
 
           {/* Right Section: List of Agencies + Office of origin */}
           <Card className="bg-card border border-border shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-end gap-6">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 lg:gap-6">
                 {/* List of Agencies */}
                 <div className="flex flex-col gap-2 w-full">
                   <Label className="text-sm font-medium mb-1">
@@ -1122,10 +1122,10 @@ const AddShipmentPage = () => {
         </div>
 
         {/* Sender/Recipient Info Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Sender Card */}
           <Card className="bg-card border border-border shadow-sm">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
               {/* Header */}
               <div className="flex items-center gap-2 mb-4">
                 <FaInfoCircle className="text-primary" />
@@ -1313,7 +1313,7 @@ const AddShipmentPage = () => {
 
           {/* Recipient Card */}
           <Card className="bg-card border border-border shadow-sm">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6">
               {/* Header */}
               <div className="flex items-center gap-2 mb-4">
                 <FaInfoCircle className="text-primary" />
@@ -1555,28 +1555,52 @@ const AddShipmentPage = () => {
         </Card>
 
         {/* Package Information Section */}
-        <Card className="bg-card border border-border shadow-sm mb-4">
-          <CardContent className="p-4">
+        <Card className="bg-card border border-border shadow-sm mb-4 sm:mb-6">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 mb-4">
               <FaBoxOpen className="text-primary" />
               <span className="font-medium">Package Information</span>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border border-border">
+              <table className="min-w-full text-xs sm:text-sm border border-border">
                 <thead>
                   <tr className="bg-muted">
-                    <th className="py-1 border border-border">Pieces</th>
-                    <th className="border border-border">
-                      Package Description
+                    <th className="py-1 px-1 sm:px-2 border border-border text-center">
+                      <span className="hidden sm:inline">Pieces</span>
+                      <span className="sm:hidden">Pcs</span>
                     </th>
-                    <th className="py-1 border border-border">Weight</th>
-                    <th className="py-1 border border-border">Length</th>
-                    <th className="py-1 border border-border">Width</th>
-                    <th className="py-1 border border-border">Height</th>
-                    <th className="py-1 border border-border">Weight Vol.</th>
-
-                    <th className="px-2 py-1 border border-border">DecValue</th>
-                    <th className="px-2 py-1 border border-border">Action</th>
+                    <th className="border border-border px-1 sm:px-2">
+                      <span className="hidden sm:inline">Package Description</span>
+                      <span className="sm:hidden">Desc</span>
+                    </th>
+                    <th className="py-1 px-1 sm:px-2 border border-border text-center">
+                      <span className="hidden sm:inline">Weight</span>
+                      <span className="sm:hidden">W</span>
+                    </th>
+                    <th className="py-1 px-1 sm:px-2 border border-border text-center">
+                      <span className="hidden sm:inline">Length</span>
+                      <span className="sm:hidden">L</span>
+                    </th>
+                    <th className="py-1 px-1 sm:px-2 border border-border text-center">
+                      <span className="hidden sm:inline">Width</span>
+                      <span className="sm:hidden">W</span>
+                    </th>
+                    <th className="py-1 px-1 sm:px-2 border border-border text-center">
+                      <span className="hidden sm:inline">Height</span>
+                      <span className="sm:hidden">H</span>
+                    </th>
+                    <th className="py-1 px-1 sm:px-2 border border-border text-center">
+                      <span className="hidden sm:inline">Weight Vol.</span>
+                      <span className="sm:hidden">Vol</span>
+                    </th>
+                    <th className="px-1 sm:px-2 py-1 border border-border text-center">
+                      <span className="hidden sm:inline">DecValue</span>
+                      <span className="sm:hidden">Val</span>
+                    </th>
+                    <th className="px-1 sm:px-2 py-1 border border-border text-center">
+                      <span className="hidden sm:inline">Action</span>
+                      <span className="sm:hidden">A</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1729,22 +1753,25 @@ const AddShipmentPage = () => {
               <Button
                 type="button"
                 variant="outline"
-                className="mt-2"
+                className="mt-2 w-full sm:w-auto"
                 onClick={addPackage}
               >
-                + Add Box or Packages
+                <span className="hidden sm:inline">+ Add Box or Packages</span>
+                <span className="sm:hidden">+ Add Package</span>
               </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Rate & Taxes Information Section */}
-        <Card className="bg-card border border-border shadow-sm mb-4">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <FaFileInvoice className="text-primary" />
-              <span className="font-medium">Rate & Taxes information</span>
-              <span className="ml-auto flex items-center gap-2 mr-8">
+        <Card className="bg-card border border-border shadow-sm mb-4 sm:mb-6">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <FaFileInvoice className="text-primary" />
+                <span className="font-medium">Rate & Taxes information</span>
+              </div>
+              <span className="flex items-center gap-2 ml-0 sm:ml-auto">
                 <Label className="mr-2 text-sm font-medium">Manual Rate</Label>
                 <Switch
                   checked={form.manualRate}
@@ -1758,7 +1785,7 @@ const AddShipmentPage = () => {
                 />
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <Label className="mb-2 block">Price kg</Label>
                 <Input
@@ -1853,34 +1880,38 @@ const AddShipmentPage = () => {
                   placeholder="0"
                 />
               </div>
-              <div className="col-span-2 flex flex-col justify-end">
-                <div className="flex items-center gap-4 mt-4">
-                  <span className="font-medium">Subtotal</span>
-                  <span className="text-green-600">
-                    PKR{" "}
-                    {calculatedValues.subtotal > 0
-                      ? calculatedValues.subtotal.toFixed(2)
-                      : "0.00"}
-                  </span>
-                  <span className="font-medium ml-8">TOTAL</span>
-                  <span className="text-green-600">
-                    PKR{" "}
-                    {calculatedValues.total > 0
-                      ? calculatedValues.total.toFixed(2)
-                      : "0.00"}
-                  </span>
+              <div className="col-span-1 sm:col-span-2 flex flex-col justify-end">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Subtotal</span>
+                    <span className="text-green-600">
+                      PKR{" "}
+                      {calculatedValues.subtotal > 0
+                        ? calculatedValues.subtotal.toFixed(2)
+                        : "0.00"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">TOTAL</span>
+                    <span className="text-green-600">
+                      PKR{" "}
+                      {calculatedValues.total > 0
+                        ? calculatedValues.total.toFixed(2)
+                        : "0.00"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-4 mt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 mt-4 sm:mt-6">
               <Button
                 type="button"
-                className="bg-blue-500"
+                className="bg-blue-500 w-full sm:w-auto"
                 onClick={calculateRate}
               >
                 Price list calculation
               </Button>
-              <Button type="submit" className="bg-green-500">
+              <Button type="submit" className="bg-green-500 w-full sm:w-auto">
                 Save
               </Button>
             </div>

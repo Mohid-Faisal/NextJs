@@ -326,34 +326,35 @@ const ManageRateListPage = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-6xl mx-auto px-4 mt-10"
-    >
-      {/* Back Button */}
-      <div className="mb-6">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-      </div>
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-6xl mx-auto"
+      >
+        {/* Back Button */}
+        <div className="mb-4 sm:mb-6">
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="flex items-center gap-2 w-full sm:w-auto"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+        </div>
 
-      <Card className="bg-white dark:bg-gray-900 border shadow-sm rounded-2xl">
-        <CardContent className="p-8 space-y-8">
-          <h1 className="text-2xl font-semibold text-primary text-center">
-            Manage Rate List
-          </h1>
+        <Card className="bg-white dark:bg-gray-900 border shadow-sm rounded-2xl">
+          <CardContent className="p-3 sm:p-4 lg:p-8 space-y-4 sm:space-y-8">
+            <h1 className="text-xl sm:text-2xl font-semibold text-primary text-center">
+              Manage Rate List
+            </h1>
 
-                     {/* Vendor + Search row */}
-           <div className="flex flex-col gap-4">
-             <div className="flex flex-col md:flex-row gap-2 w-full">
-                              {/* Select Vendor */}
-                <div className="space-y-1.5 w-full md:w-48">
+            {/* Vendor + Search row */}
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex flex-col lg:flex-row gap-2 w-full">
+                {/* Select Vendor */}
+                <div className="space-y-1.5 w-full lg:w-48">
                   <Select
                     onValueChange={(vendorId) => {
                       const vendor = vendors.find((v) => v.id === vendorId);
@@ -372,12 +373,12 @@ const ManageRateListPage = () => {
                     }}
                     value={selectedVendor}
                   >
-                    <SelectTrigger className="text-sm w-48 h-9">
+                    <SelectTrigger className="text-xs sm:text-sm w-full lg:w-48 h-9">
                       <SelectValue placeholder="Choose a Vendor" />
                     </SelectTrigger>
                     <SelectContent>
                       {vendors.map((v) => (
-                        <SelectItem key={v.id} value={v.id} className="text-sm">
+                        <SelectItem key={v.id} value={v.id} className="text-xs sm:text-sm">
                           {v.name}
                         </SelectItem>
                       ))}
@@ -386,7 +387,7 @@ const ManageRateListPage = () => {
                 </div>
 
                 {/* Select Service */}
-                <div className="space-y-1.5 w-full md:w-48">
+                <div className="space-y-1.5 w-full lg:w-48">
                   <Select
                     onValueChange={(serviceId) => {
                       const service = services.find((s) => s.id === serviceId);
@@ -397,12 +398,12 @@ const ManageRateListPage = () => {
                     }}
                     value={selectedService}
                   >
-                    <SelectTrigger className="text-sm w-48 h-9">
+                    <SelectTrigger className="text-xs sm:text-sm w-full lg:w-48 h-9">
                       <SelectValue placeholder="Choose a Service" />
                     </SelectTrigger>
                     <SelectContent>
                       {services.map((s) => (
-                        <SelectItem key={s.id} value={s.id} className="text-sm">
+                        <SelectItem key={s.id} value={s.id} className="text-xs sm:text-sm">
                           {s.name}
                         </SelectItem>
                       ))}
@@ -410,13 +411,13 @@ const ManageRateListPage = () => {
                   </Select>
                 </div>
 
-                              {/* Search input */}
-                <div className="space-y-1.5 w-full md:w-[240px]">
+                {/* Search input */}
+                <div className="space-y-1.5 w-full lg:w-[240px]">
                   <div className="flex w-full">
                     <Input
                       id="search"
                       placeholder="Search by zone, weight, price, or doc type..."
-                      className="h-9 text-sm rounded-r-none"
+                      className="h-9 text-xs sm:text-sm rounded-r-none"
                       value={search}
                       onChange={handleSearchChange}
                       onKeyPress={handleSearchKeyPress}
@@ -431,217 +432,220 @@ const ManageRateListPage = () => {
                     </Button>
                   </div>
                 </div>
-             </div>
-
-             {/* Upload and Filename row */}
-             <div className="flex flex-col md:flex-row gap-2 items-start md:items-center">
-               <label
-                 htmlFor="file"
-                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                 style={{ opacity: (!selectedVendorName || !selectedServiceName) ? 0.5 : 1 }}
-               >
-                 <Paperclip className="w-4 h-4" />
-                 Upload Excel file
-               </label>
-               <input
-                 id="file"
-                 type="file"
-                 accept=".xlsx,.xls"
-                 onChange={handleUpload}
-                 disabled={!selectedVendorName || !selectedServiceName}
-                 className="hidden"
-               />
-               
-                {/* Display uploaded filename for current vendor-service combination */}
-                 {(() => {
-                   const fileKey = `${selectedVendorName}-${selectedServiceName}`;
-                   const currentFileInfo = uploadedFiles[fileKey];
-                   
-                   return currentFileInfo ? (
-                     <div className="flex flex-col gap-1">
-                       <button
-                         onClick={(e) => {
-                           e.preventDefault();
-                           handleFileOpen(fileKey);
-                         }}
-                         className="inline-flex items-center px-3 py-2 bg-green-100 text-green-800 text-sm font-medium rounded border border-green-300 hover:bg-green-200 transition cursor-pointer max-w-full break-all"
-                       >
-                         {currentFileInfo.fileName}
-                       </button>
-                     </div>
-                   ) : null;
-                 })()}
-               
-               <Button
-                 onClick={handleDeleteRates}
-                 disabled={!selectedVendorName || !selectedServiceName}
-                 className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-               >
-                 <Trash2 className="w-4 h-4" />
-                 Delete Rates
-               </Button>
-             </div>
-           </div>
-
-          {/* Rate Table */}
-          {rates && rates.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <div className="overflow-auto">
-                <table className="min-w-full bg-white dark:bg-gray-800 text-sm border rounded shadow">
-                  <thead className="bg-gray-100 dark:bg-gray-700 text-left">
-                    <tr>
-                      <th className="px-4 py-2 border w-24">Zone</th>
-                      <th className="px-4 py-2 border w-32">Weight (kg)</th>
-                      <th className="px-4 py-2 border w-32">Price</th>
-                      <th className="px-4 py-2 border w-32">Service</th>
-                      <th className="px-4 py-2 border w-32">Doc Type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rates.map((rate, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-4 py-2 border">{rate.zone}</td>
-                        <td className="px-4 py-2 border">{rate.weight}</td>
-                        <td className="px-4 py-2 border">{rate.price}</td>
-                        <td className="px-4 py-2 border">{rate.service}</td>
-                        <td className="px-4 py-2 border">{rate.docType}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, total)} of {total} results
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      Previous
-                    </Button>
-                    
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        const page = i + 1;
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handlePageChange(page)}
-                            className="w-8 h-8"
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* Loading state */}
-          {loading && (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">Loading rates...</p>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!loading && rates?.length === 0 && selectedServiceName && selectedVendorName && (
-            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
-              No rates found for {selectedVendorName} - {selectedServiceName}.
-            </p>
-          )}
-
-          {/* No service selected */}
-          {!selectedServiceName && (
-            <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
-              Please select a service to view rates.
-            </p>
-          )}
-
-          {/* Available Rate Lists Section */}
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-              Available Rate Lists
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {Object.entries(uploadedFiles).map(([fileKey, fileInfo]) => (
-                <div
-                  key={fileKey}
-                  className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900 transition-colors cursor-pointer"
-                  onClick={() => {
-                    setSelectedVendorName(fileInfo.vendor);
-                    setSelectedServiceName(fileInfo.service);
-                    // Find vendor ID from name
-                    const vendor = vendors.find(v => v.name === fileInfo.vendor);
-                    if (vendor) {
-                      setSelectedVendor(vendor.id);
-                    }
-                    // Find service ID from name
-                    const service = services.find(s => s.name === fileInfo.service);
-                    if (service) {
-                      setSelectedService(service.id);
-                    }
-                  }}
+              {/* Upload and Filename row */}
+              <div className="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
+                <label
+                  htmlFor="file"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-md cursor-pointer hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap w-full lg:w-auto"
+                  style={{ opacity: (!selectedVendorName || !selectedServiceName) ? 0.5 : 1 }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm text-green-800 dark:text-green-200">
-                        {fileInfo.vendor}
-                      </p>
-                      <p className="text-xs text-green-600 dark:text-green-300">
-                        {fileInfo.service}
-                      </p>
-                      <p className="text-xs text-green-500 dark:text-green-400 mt-1">
-                        {fileInfo.fileName}
-                      </p>
+                  <Paperclip className="w-4 h-4" />
+                  Upload Excel file
+                </label>
+                <input
+                  id="file"
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleUpload}
+                  disabled={!selectedVendorName || !selectedServiceName}
+                  className="hidden"
+                />
+                
+                {/* Display uploaded filename for current vendor-service combination */}
+                {(() => {
+                  const fileKey = `${selectedVendorName}-${selectedServiceName}`;
+                  const currentFileInfo = uploadedFiles[fileKey];
+                  
+                  return currentFileInfo ? (
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleFileOpen(fileKey);
+                        }}
+                        className="inline-flex items-center px-3 py-2 bg-green-100 text-green-800 text-xs sm:text-sm font-medium rounded border border-green-300 hover:bg-green-200 transition cursor-pointer max-w-full break-all"
+                      >
+                        {currentFileInfo.fileName}
+                      </button>
                     </div>
-                    <div className="text-green-600 dark:text-green-400">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
+                  ) : null;
+                })()}
+                
+                <Button
+                  onClick={handleDeleteRates}
+                  disabled={!selectedVendorName || !selectedServiceName}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-xs sm:text-sm font-medium rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed w-full lg:w-auto"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Rates
+                </Button>
+              </div>
+            </div>
+
+            {/* Rate Table */}
+            {rates && rates.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3 sm:space-y-4"
+              >
+                <div className="overflow-auto">
+                  <table className="min-w-full bg-white dark:bg-gray-800 text-xs sm:text-sm border rounded shadow border-separate border-spacing-y-2 sm:border-spacing-y-4">
+                    <thead className="bg-gray-100 dark:bg-gray-700 text-left">
+                      <tr>
+                        <th className="px-2 sm:px-4 py-2 border w-24 text-xs sm:text-sm">Zone</th>
+                        <th className="px-2 sm:px-4 py-2 border w-32 text-xs sm:text-sm">Weight (kg)</th>
+                        <th className="px-2 sm:px-4 py-2 border w-32 text-xs sm:text-sm">Price</th>
+                        <th className="px-2 sm:px-4 py-2 border w-32 text-xs sm:text-sm">Service</th>
+                        <th className="px-2 sm:px-4 py-2 border w-32 text-xs sm:text-sm">Doc Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rates.map((rate, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-2 sm:px-4 py-2 border text-xs sm:text-sm">{rate.zone}</td>
+                          <td className="px-2 sm:px-4 py-2 border text-xs sm:text-sm">{rate.weight}</td>
+                          <td className="px-2 sm:px-4 py-2 border text-xs sm:text-sm">{rate.price}</td>
+                          <td className="px-2 sm:px-4 py-2 border text-xs sm:text-sm">{rate.service}</td>
+                          <td className="px-2 sm:px-4 py-2 border text-xs sm:text-sm">{rate.docType}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, total)} of {total} results
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="w-full sm:w-auto"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                      </Button>
+                      
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          const page = i + 1;
+                          return (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handlePageChange(page)}
+                              className="w-8 h-8"
+                            >
+                              {page}
+                            </Button>
+                          );
+                        })}
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="w-full sm:w-auto"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            
-            {Object.keys(uploadedFiles).length === 0 && (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-                No rate lists have been uploaded yet. Upload your first rate list above.
+                )}
+              </motion.div>
+            )}
+
+            {/* Loading state */}
+            {loading && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Loading rates...</p>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!loading && rates?.length === 0 && selectedServiceName && selectedVendorName && (
+              <p className="text-center text-gray-500 dark:text-gray-400 mt-4 text-xs sm:text-sm">
+                No rates found for {selectedVendorName} - {selectedServiceName}.
               </p>
             )}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+
+            {/* No service selected */}
+            {!selectedServiceName && (
+              <p className="text-center text-gray-500 dark:text-gray-400 mt-4 text-xs sm:text-sm">
+                Please select a service to view rates.
+              </p>
+            )}
+
+            {/* Available Rate Lists Section */}
+            <div className="mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 sm:mb-4">
+                Available Rate Lists
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3">
+                {Object.entries(uploadedFiles).map(([fileKey, fileInfo]) => (
+                  <div
+                    key={fileKey}
+                    className="p-2 sm:p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setSelectedVendorName(fileInfo.vendor);
+                      setSelectedServiceName(fileInfo.service);
+                      // Find vendor ID from name
+                      const vendor = vendors.find(v => v.name === fileInfo.vendor);
+                      if (vendor) {
+                        setSelectedVendor(vendor.id);
+                      }
+                      // Find service ID from name
+                      const service = services.find(s => s.name === fileInfo.service);
+                      if (service) {
+                        setSelectedService(service.id);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-xs sm:text-sm text-green-800 dark:text-green-200">
+                          {fileInfo.vendor}
+                        </p>
+                        <p className="text-xs text-green-600 dark:text-green-300">
+                          {fileInfo.service}
+                        </p>
+                        <p className="text-xs text-green-500 dark:text-green-400 mt-1">
+                          {fileInfo.fileName}
+                        </p>
+                      </div>
+                      <div className="text-green-600 dark:text-green-400">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {Object.keys(uploadedFiles).length === 0 && (
+                <p className="text-center text-gray-500 dark:text-gray-400 py-4 text-xs sm:text-sm">
+                  No rate lists have been uploaded yet. Upload your first rate list above.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
   );
 };
 

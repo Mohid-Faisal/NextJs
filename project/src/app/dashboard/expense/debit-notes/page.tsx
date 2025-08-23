@@ -201,11 +201,11 @@ export default function DebitNotesPage() {
   };
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
         <div>
-          <h2 className="text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
-            <FileText className="w-10 h-10 text-orange-600" />
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <FileText className="w-8 sm:w-10 h-8 sm:h-10 text-orange-600" />
             Manage Debit Notes
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -213,7 +213,7 @@ export default function DebitNotesPage() {
           </p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
             {total}
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -222,8 +222,9 @@ export default function DebitNotesPage() {
         </div>
       </div>
 
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4 w-full max-w-xl">
+      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+        {/* Left side - Page size and Search bar */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Show:</span>
             <Select
@@ -246,7 +247,7 @@ export default function DebitNotesPage() {
             </Select>
           </div>
 
-          <div className="flex w-full">
+          <div className="flex w-full max-w-sm">
             <Input
               placeholder="Search..."
               value={searchTerm}
@@ -262,8 +263,9 @@ export default function DebitNotesPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex gap-2">
+        {/* Right side - Action buttons */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2 sm:gap-3">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               onClick={() => setOpenCreateDialog(true)}
               className="flex items-center gap-2"
@@ -289,82 +291,100 @@ export default function DebitNotesPage() {
       </div>
 
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <CardContent className="p-6 overflow-x-auto">
-                     {!debitNotes || debitNotes.length === 0 ? (
+        <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
+          {!debitNotes || debitNotes.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
               No debit notes found.
             </p>
           ) : (
-            <table className="min-w-full table-auto border-separate border-spacing-y-4">
+            <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
-                <tr className="text-sm text-gray-500 dark:text-gray-300">
-                  <th className="px-4 py-2 text-left">
+                <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("debitNoteNumber")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      DEBIT NOTE {getSortIcon("debitNoteNumber")}
+                      <span className="hidden sm:inline">DEBIT NOTE</span>
+                      <span className="sm:hidden">DEBIT</span>
+                      {getSortIcon("debitNoteNumber")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("vendor")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      VENDOR {getSortIcon("vendor")}
+                      <span className="hidden sm:inline">VENDOR</span>
+                      <span className="sm:hidden">VENDOR</span>
+                      {getSortIcon("vendor")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">BILL/INVOICE</th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span className="hidden sm:inline">BILL/INVOICE</span>
+                    <span className="sm:hidden">BILL</span>
+                  </th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("date")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      DATE {getSortIcon("date")}
+                      <span className="hidden sm:inline">DATE</span>
+                      <span className="sm:hidden">DATE</span>
+                      {getSortIcon("date")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("amount")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      AMOUNT {getSortIcon("amount")}
+                      <span className="hidden sm:inline">AMOUNT</span>
+                      <span className="sm:hidden">AMOUNT</span>
+                      {getSortIcon("amount")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">DESCRIPTION</th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span className="hidden sm:inline">DESCRIPTION</span>
+                    <span className="sm:hidden">DESC</span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="text-sm text-gray-700 dark:text-gray-200 font-light">
+              <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
                 {debitNotes.map((dn) => (
                   <tr
                     key={dn.id}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
                   >
-                    <td className="px-4 py-3">
-                      <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                        {dn.debitNoteNumber}
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                      <span className="bg-orange-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
+                        <span className="hidden sm:inline">{dn.debitNoteNumber}</span>
+                        <span className="sm:hidden">{dn.debitNoteNumber?.substring(0, 8)}...</span>
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      {dn.vendor?.PersonName || dn.vendor?.CompanyName || "-"}
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                      <span className="hidden sm:inline">{dn.vendor?.PersonName || dn.vendor?.CompanyName || "-"}</span>
+                      <span className="sm:hidden">{dn.vendor?.PersonName?.substring(0, 10) || dn.vendor?.CompanyName?.substring(0, 10) || "-"}...</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       {dn.bill?.invoiceNumber ? (
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                          {dn.bill.invoiceNumber}
+                        <span className="bg-blue-100 text-blue-800 px-1 sm:px-2 py-1 rounded text-xs font-medium">
+                          <span className="hidden sm:inline">{dn.bill.invoiceNumber}</span>
+                          <span className="sm:hidden">{dn.bill.invoiceNumber?.substring(0, 8)}...</span>
                         </span>
                       ) : (
                         <span className="text-gray-400 text-xs">No Bill</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       {new Date(dn.date).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 font-medium">
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">
                       {dn.currency} {dn.amount.toLocaleString()}
                     </td>
-                    <td className="px-4 py-3">
-                      {dn.description || `${dn.debitNoteNumber} Debit Note`}
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                      <span className="hidden sm:inline">{dn.description || `${dn.debitNoteNumber} Debit Note`}</span>
+                      <span className="sm:hidden">{dn.description?.substring(0, 15) || `${dn.debitNoteNumber} Debit Note`.substring(0, 15)}...</span>
                     </td>
                   </tr>
                 ))}
@@ -375,11 +395,11 @@ export default function DebitNotesPage() {
       </Card>
 
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
+        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
           <Button
             disabled={page <= 1}
             onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform"
+            className="hover:scale-105 transition-transform w-full sm:w-auto"
           >
             ← Prev
           </Button>
@@ -389,14 +409,12 @@ export default function DebitNotesPage() {
           <Button
             disabled={page >= totalPages}
             onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform"
+            className="hover:scale-105 transition-transform w-full sm:w-auto"
           >
             Next →
           </Button>
         </div>
       )}
-
-
 
       {/* Create Debit Note Dialog */}
       <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>

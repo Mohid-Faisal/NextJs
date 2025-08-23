@@ -334,19 +334,20 @@ export default function ShipmentSettingsPage() {
   };
 
   return (
-    <Card className="m-4 md:m-8 shadow-xl border rounded-lg">
-      <CardHeader>
-        <CardTitle className="text-xl">Shipment Settings</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue={currentTab} onValueChange={setCurrentTab}>
-                     <TabsList className="flex flex-wrap justify-center gap-2 mb-6 p-1">
-                          {settingTypes.map((type) => (
-                <TabsTrigger key={type} value={type} className="min-w-[110px] text-center">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <Card className="shadow-xl border rounded-lg">
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl">Shipment Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-4 lg:p-6">
+          <Tabs defaultValue={currentTab} onValueChange={setCurrentTab}>
+            <TabsList className="flex flex-wrap justify-center gap-2 mb-4 sm:mb-6 p-1">
+              {settingTypes.map((type) => (
+                <TabsTrigger key={type} value={type} className="min-w-[110px] text-center text-xs sm:text-sm">
                   {formatLabel(type)}
                 </TabsTrigger>
               ))}
-          </TabsList>
+            </TabsList>
 
           {settingTypes.map((type) => (
             <TabsContent key={type} value={type}>
@@ -358,7 +359,7 @@ export default function ShipmentSettingsPage() {
                 {type === "vendorService" ? (
                   // Vendor Service Tab
                   <>
-                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                       <Select value={selectedVendor} onValueChange={setSelectedVendor}>
                         <SelectTrigger className="w-full md:w-[200px]">
                           <SelectValue placeholder="Select vendor" />
@@ -385,7 +386,7 @@ export default function ShipmentSettingsPage() {
                         </SelectContent>
                       </Select>
                       
-                      <Button onClick={handleAdd}>Add Vendor Service</Button>
+                      <Button onClick={handleAdd} className="w-full md:w-auto">Add Vendor Service</Button>
                     </div>
 
                     {options[type]?.length > 0 ? (
@@ -437,7 +438,7 @@ export default function ShipmentSettingsPage() {
                 ) : type === "agencies" || type === "offices" ? (
                   // Agencies and Offices Tab
                   <>
-                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                       <Input
                         placeholder={`${type === "agencies" ? "Agency" : "Office"} Code`}
                         value={newValues[`${type}Code`] || ""}
@@ -460,7 +461,7 @@ export default function ShipmentSettingsPage() {
                         }
                         className="w-full md:w-auto"
                       />
-                      <Button onClick={handleAdd}>Add {type === "agencies" ? "Agency" : "Office"}</Button>
+                      <Button onClick={handleAdd} className="w-full md:w-auto">Add {type === "agencies" ? "Agency" : "Office"}</Button>
                     </div>
 
                     {options[type]?.length > 0 ? (
@@ -480,7 +481,7 @@ export default function ShipmentSettingsPage() {
                 ) : (
                   // Regular Settings Tab
                   <>
-                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                       <Input
                         placeholder={`Add new ${formatLabel(type)}`}
                         value={newValues[type] || ""}
@@ -492,7 +493,7 @@ export default function ShipmentSettingsPage() {
                         }
                         className="w-full md:w-auto"
                       />
-                      <Button onClick={handleAdd}>Add</Button>
+                      <Button onClick={handleAdd} className="w-full md:w-auto">Add</Button>
                     </div>
 
                     {options[type]?.length > 0 ? (
@@ -513,8 +514,9 @@ export default function ShipmentSettingsPage() {
               </motion.div>
             </TabsContent>
           ))}
-        </Tabs>
-      </CardContent>
-    </Card>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

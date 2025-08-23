@@ -265,10 +265,10 @@ const ChartOfAccountsPage = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-7xl mx-auto px-4 py-8"
+      className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0"
     >
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4 sm:mb-8">
         <Button
           variant="outline"
           onClick={() => window.history.back()}
@@ -278,9 +278,9 @@ const ChartOfAccountsPage = () => {
           Back
         </Button>
         
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               Chart of Accounts
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -288,7 +288,7 @@ const ChartOfAccountsPage = () => {
             </p>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             {!isInitialized && (
               <Button onClick={initializeAccounts} variant="outline">
                 Initialize Default Accounts
@@ -303,12 +303,12 @@ const ChartOfAccountsPage = () => {
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex flex-wrap gap-4 items-center">
+      <Card className="mb-4 sm:mb-6">
+        <CardContent className="p-3 sm:p-4 lg:p-6">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start lg:items-center">
             {/* Search */}
-            <div className="flex-1 min-w-[300px]">
-              <div className="relative">
+            <div className="flex w-full max-w-sm">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search accounts..."
@@ -321,7 +321,7 @@ const ChartOfAccountsPage = () => {
 
             {/* Category Filter */}
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
@@ -336,7 +336,7 @@ const ChartOfAccountsPage = () => {
 
             {/* Type Filter */}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -352,7 +352,7 @@ const ChartOfAccountsPage = () => {
             {/* Export */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="w-full sm:w-auto">
                   Export
                 </Button>
               </DropdownMenuTrigger>
@@ -378,53 +378,91 @@ const ChartOfAccountsPage = () => {
       {/* Accounts Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Chart of Accounts ({total} accounts)</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Chart of Accounts ({total} accounts)</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-4 lg:p-6">
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full border-separate border-spacing-y-2 sm:border-spacing-y-4">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">Code</th>
-                    <th className="text-left p-3 font-medium">Account Name</th>
-                    <th className="text-left p-3 font-medium">Category</th>
-                    <th className="text-left p-3 font-medium">Type</th>
-                    <th className="text-left p-3 font-medium">Debit Rule</th>
-                    <th className="text-left p-3 font-medium">Credit Rule</th>
-                    <th className="text-left p-3 font-medium">Status</th>
-                    <th className="text-right p-3 font-medium">Actions</th>
+                  <tr className="border-b text-xs sm:text-sm">
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Code</span>
+                      <span className="sm:hidden">Code</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Account Name</span>
+                      <span className="sm:hidden">Name</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Category</span>
+                      <span className="sm:hidden">Cat</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Type</span>
+                      <span className="sm:hidden">Type</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Debit Rule</span>
+                      <span className="sm:hidden">Debit</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Credit Rule</span>
+                      <span className="sm:hidden">Credit</span>
+                    </th>
+                    <th className="text-left p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Status</span>
+                      <span className="sm:hidden">Status</span>
+                    </th>
+                    <th className="text-right p-2 sm:p-3 font-medium">
+                      <span className="hidden sm:inline">Actions</span>
+                      <span className="sm:hidden">Actions</span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-xs sm:text-sm">
                   {accounts.map((account) => (
                     <tr key={account.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="p-3 font-mono">{account.code}</td>
-                      <td className="p-3">{account.accountName}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
+                      <td className="p-2 sm:p-3 font-mono">{account.code}</td>
+                      <td className="p-2 sm:p-3">
+                        <span className="hidden sm:inline">{account.accountName}</span>
+                        <span className="sm:hidden">{account.accountName?.substring(0, 12)}...</span>
+                      </td>
+                      <td className="p-2 sm:p-3">
+                        <span className={`px-1 sm:px-2 py-1 rounded-full text-xs ${
                           account.category === "Asset" ? "bg-blue-100 text-blue-800" :
                           account.category === "Liability" ? "bg-red-100 text-red-800" :
                           account.category === "Equity" ? "bg-green-100 text-green-800" :
                           account.category === "Expense" ? "bg-orange-100 text-orange-800" :
                           "bg-purple-100 text-purple-800"
                         }`}>
-                          {account.category}
+                          <span className="hidden sm:inline">{account.category}</span>
+                          <span className="sm:hidden">{account.category?.substring(0, 4)}</span>
                         </span>
                       </td>
-                      <td className="p-3 text-sm">{account.type}</td>
-                      <td className="p-3 text-sm">{account.debitRule}</td>
-                      <td className="p-3 text-sm">{account.creditRule}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        <span className="hidden sm:inline">{account.type}</span>
+                        <span className="sm:hidden">{account.type?.substring(0, 8)}...</span>
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        <span className="hidden sm:inline">{account.debitRule}</span>
+                        <span className="sm:hidden">{account.debitRule?.substring(0, 6)}</span>
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        <span className="hidden sm:inline">{account.creditRule}</span>
+                        <span className="sm:hidden">{account.creditRule?.substring(0, 6)}</span>
+                      </td>
+                      <td className="p-2 sm:p-3">
+                        <span className={`px-1 sm:px-2 py-1 rounded-full text-xs ${
                           account.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                         }`}>
-                          {account.isActive ? "Active" : "Inactive"}
+                          <span className="hidden sm:inline">{account.isActive ? "Active" : "Inactive"}</span>
+                          <span className="sm:hidden">{account.isActive ? "Active" : "Inactive"}</span>
                         </span>
                       </td>
-                      <td className="p-3 text-right">
+                      <td className="p-2 sm:p-3 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -455,8 +493,8 @@ const ChartOfAccountsPage = () => {
 
           {/* Pagination */}
           {total > limit && (
-            <div className="flex justify-between items-center mt-6">
-              <div className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 mt-4 sm:mt-6">
+              <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                 Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} accounts
               </div>
               <div className="flex gap-2">
@@ -464,6 +502,7 @@ const ChartOfAccountsPage = () => {
                   variant="outline"
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
+                  className="w-full sm:w-auto"
                 >
                   Previous
                 </Button>
@@ -471,6 +510,7 @@ const ChartOfAccountsPage = () => {
                   variant="outline"
                   onClick={() => setPage(page + 1)}
                   disabled={page >= Math.ceil(total / limit)}
+                  className="w-full sm:w-auto"
                 >
                   Next
                 </Button>
@@ -482,11 +522,11 @@ const ChartOfAccountsPage = () => {
 
       {/* Add Account Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-full">
           <DialogHeader>
             <DialogTitle>Add New Account</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
               <Label htmlFor="code">Account Code</Label>
               <Input
@@ -584,11 +624,11 @@ const ChartOfAccountsPage = () => {
 
       {/* Edit Account Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-full">
           <DialogHeader>
             <DialogTitle>Edit Account</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
               <Label htmlFor="edit-code">Account Code</Label>
               <Input

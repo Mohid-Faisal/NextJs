@@ -518,15 +518,15 @@ export default function ShipmentsPage() {
   };
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <h2 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 text-gray-800 dark:text-white">
         📦 All Shipments
       </h2>
 
       {/* Filters */}
-      <div className="mb-6 flex justify-between items-end gap-4">
+      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
         {/* Left side - Search field */}
-        <div className="w-full max-w-2xl">
+        <div className="w-full lg:max-w-2xl">
           <div className="flex w-full max-w-sm">
             <Input
               placeholder="Search by invoice #, sender, receiver, destination, type, tracking..."
@@ -544,7 +544,7 @@ export default function ShipmentsPage() {
         </div>
 
         {/* Right side - Export, Delivery Status and Date Range */}
-        <div className="flex gap-4 items-end">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
           {/* Export Dropdown */}
           <div>
             <DropdownMenu>
@@ -612,14 +612,14 @@ export default function ShipmentsPage() {
                    onBlur={handleInputBlur}
                    onKeyDown={handleInputKeyDown}
                    onClick={() => !isEditing && setShowDatePicker(!showDatePicker)}
-                   className="w-64 bg-muted cursor-text"
+                   className="w-full sm:w-64 bg-muted cursor-text"
                  />
                                  {!isEditing && (
                    <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                  )}
                 {showDatePicker && (
-                  <div className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4" style={{ minWidth: "600px" }}>
-                    <div className="flex gap-4">
+                  <div className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 sm:p-4 w-[280px] sm:w-[400px] lg:w-[600px]" style={{ minWidth: "280px" }}>
+                    <div className="flex flex-col lg:flex-row gap-2 sm:gap-4">
                       {/* Left Calendar */}
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
@@ -762,108 +762,133 @@ export default function ShipmentsPage() {
 
       {/* Shipments Table */}
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <CardContent className="p-6 overflow-x-auto">
+        <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
           {shipments.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
               No shipments found.
             </p>
           ) : (
-            <table className="min-w-full table-auto border-separate border-spacing-y-4">
+            <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
-                <tr className="text-sm text-gray-500 dark:text-gray-300">
-                  <th className="px-4 py-2 text-left">
+                <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("shipmentDate")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Date {getSortIcon("shipmentDate")}
+                      <span className="hidden sm:inline">Date</span>
+                      <span className="sm:hidden">D</span>
+                      {getSortIcon("shipmentDate")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("invoiceNumber")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Receipt {getSortIcon("invoiceNumber")}
+                      <span className="hidden sm:inline">Receipt</span>
+                      <span className="sm:hidden">R</span>
+                      {getSortIcon("invoiceNumber")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("senderName")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Sender {getSortIcon("senderName")}
+                      <span className="hidden sm:inline">Sender</span>
+                      <span className="sm:hidden">S</span>
+                      {getSortIcon("senderName")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("recipientName")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Receiver {getSortIcon("recipientName")}
+                      <span className="hidden sm:inline">Receiver</span>
+                      <span className="sm:hidden">R</span>
+                      {getSortIcon("recipientName")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("destination")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Destination {getSortIcon("destination")}
+                      <span className="hidden sm:inline">Destination</span>
+                      <span className="sm:hidden">D</span>
+                      {getSortIcon("destination")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("packaging")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Type {getSortIcon("packaging")}
+                      <span className="hidden sm:inline">Type</span>
+                      <span className="sm:hidden">T</span>
+                      {getSortIcon("packaging")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("amount")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Pcs {getSortIcon("amount")}
+                      <span className="hidden sm:inline">Pcs</span>
+                      <span className="sm:hidden">P</span>
+                      {getSortIcon("amount")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("totalWeight")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Weight {getSortIcon("totalWeight")}
+                      <span className="hidden sm:inline">Weight</span>
+                      <span className="sm:hidden">W</span>
+                      {getSortIcon("totalWeight")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("trackingId")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Tracking {getSortIcon("trackingId")}
+                      <span className="hidden sm:inline">Tracking</span>
+                      <span className="sm:hidden">T</span>
+                      {getSortIcon("trackingId")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("totalCost")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Total Cost {getSortIcon("totalCost")}
+                      <span className="hidden sm:inline">Total Cost</span>
+                      <span className="sm:hidden">C</span>
+                      {getSortIcon("totalCost")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("invoiceStatus")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      Invoice Status {getSortIcon("invoiceStatus")}
+                      <span className="hidden sm:inline">Invoice Status</span>
+                      <span className="sm:hidden">I</span>
+                      {getSortIcon("invoiceStatus")}
                     </button>
                   </th>
-                  <th className="px-4 py-2 text-left">Actions</th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span className="hidden sm:inline">Actions</span>
+                    <span className="sm:hidden">A</span>
+                  </th>
                 </tr>
               </thead>
               <AnimatePresence>
-                <tbody className="text-sm text-gray-700 dark:text-gray-200 font-light">
+                <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
                   {shipments.map((shipment) => (
                     <motion.tr
                       key={shipment.id}
@@ -873,37 +898,55 @@ export default function ShipmentsPage() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         {formatDate(shipment.shipmentDate || shipment.createdAt)}
                       </td>
-                      <td className="px-4 py-3 font-bold text-blue-600">
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold text-blue-600">
                         {shipment.invoiceNumber}
                       </td>
-                      <td className="px-4 py-3">{shipment.senderName}</td>
-                      <td className="px-4 py-3">{shipment.recipientName}</td>
-                      <td className="px-4 py-3">
-                        {getCountryName(shipment.destination)}
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{shipment.senderName}</span>
+                        <span className="sm:hidden">{shipment.senderName?.substring(0, 10)}...</span>
                       </td>
-                      <td className="px-4 py-3">{shipment.packaging || "N/A"}</td>
-                      <td className="px-4 py-3">{shipment.amount || 1}</td>
-                      <td className="px-4 py-3">{shipment.totalWeight || shipment.weight || 0}</td>
-                      <td className="px-4 py-3 font-bold text-purple-600">
-                        {shipment.trackingId}
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{shipment.recipientName}</span>
+                        <span className="sm:hidden">{shipment.recipientName?.substring(0, 10)}...</span>
                       </td>
-                      <td className="px-4 py-3">Rs. {shipment.totalCost}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{getCountryName(shipment.destination)}</span>
+                        <span className="sm:hidden">{getCountryName(shipment.destination)?.substring(0, 8)}...</span>
+                      </td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.packaging || "N/A"}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || shipment.weight || 0}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold text-purple-600">
+                        <span className="hidden sm:inline">{shipment.trackingId}</span>
+                        <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                      </td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">Rs. {shipment.totalCost}</span>
+                        <span className="sm:hidden">Rs.{shipment.totalCost}</span>
+                      </td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(
+                          className={`px-1 sm:px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(
                             shipment.invoices?.[0]?.status ||
                               shipment.invoiceStatus
                           )}`}
                         >
-                          {shipment.invoices?.[0]?.status ||
-                            shipment.invoiceStatus ||
-                            "N/A"}
+                          <span className="hidden sm:inline">
+                            {shipment.invoices?.[0]?.status ||
+                              shipment.invoiceStatus ||
+                              "N/A"}
+                          </span>
+                          <span className="sm:hidden">
+                            {shipment.invoices?.[0]?.status?.substring(0, 3) ||
+                              shipment.invoiceStatus?.substring(0, 3) ||
+                              "N/A"}
+                          </span>
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -982,21 +1025,21 @@ export default function ShipmentsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
+        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
           <Button
             disabled={page <= 1}
             onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform"
+            className="hover:scale-105 transition-transform w-full sm:w-auto"
           >
             ← Prev
           </Button>
-          <span>
+          <span className="text-center">
             Page {page} of {totalPages}
           </span>
           <Button
             disabled={page >= totalPages}
             onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform"
+            className="hover:scale-105 transition-transform w-full sm:w-auto"
           >
             Next →
           </Button>

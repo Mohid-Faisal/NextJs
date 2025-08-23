@@ -27,8 +27,8 @@ type ChartOfAccount = {
 export default function AddPaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isEditMode = searchParams.get('mode') === 'edit';
-  const paymentId = searchParams.get('id');
+  const isEditMode = searchParams.get("mode") === "edit";
+  const paymentId = searchParams.get("id");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -39,7 +39,6 @@ export default function AddPaymentPage() {
     description: "",
     reference: "",
     paymentMethod: "CASH",
-    dueDate: "",
   });
 
   // Chart of accounts
@@ -50,35 +49,57 @@ export default function AddPaymentPage() {
 
   // Transaction type configurations
   const transactionTypes = [
-    { value: "EXPENSE", label: "Expense", description: "Company spending money" },
-    { value: "INCOME", label: "Income", description: "Company receiving money" },
-    { value: "TRANSFER", label: "Transfer", description: "Moving money between accounts" },
-    { value: "EQUITY", label: "Equity", description: "Owner investments and withdrawals" },
-    { value: "ADJUSTMENT", label: "Adjustment", description: "Account balance adjustments" },
+    {
+      value: "EXPENSE",
+      label: "Expense",
+      description: "Company spending money",
+    },
+    {
+      value: "INCOME",
+      label: "Income",
+      description: "Company receiving money",
+    },
+    {
+      value: "TRANSFER",
+      label: "Transfer",
+      description: "Moving money between accounts",
+    },
+    {
+      value: "EQUITY",
+      label: "Equity",
+      description: "Owner investments and withdrawals",
+    },
+    {
+      value: "ADJUSTMENT",
+      label: "Adjustment",
+      description: "Account balance adjustments",
+    },
   ];
 
   const categories = {
     EXPENSE: [
-      "Operations Cost",
-      "Fuel Costs", 
-      "Vehicle Maintenance",
-      "Driver Salaries",
-      "Warehouse Rent",
-      "Utilities Expense",
-      "Administrative Salaries",
-      "Insurance Expense",
-      "Depreciation Expense",
+      "Vendor Expense",
+      "Bank Charges",
+      "Equipments",
+      "Fuel",
+      "Insurance",
+      "Legal and Accounting",
+      "License and Permit",
+      "Maintenance and Repair",
+      "Marketing and Advertising",
       "Office Supplies",
-      "Travel Expense",
-      "Marketing Expense",
+      "Packaging Material",
+      "Petty",
+      "Salary and Wages",
+      "Taxes",
+      "Tools",
+      "Transportation",
+      "Utilities",
     ],
     INCOME: [
-      "Freight Revenue",
-      "Logistics Services Revenue", 
-      "Vehicle Leasing Revenue",
-      "Other Income",
-      "Interest Income",
-      "Commission Income",
+      "Logistics Services Revenue",
+      "Packaging Revenue",
+      "Other Revenue",
     ],
     TRANSFER: [
       "Cash to Bank",
@@ -86,14 +107,7 @@ export default function AddPaymentPage() {
       "Account Transfer",
       "Investment Transfer",
     ],
-    EQUITY: [
-      "Owner Investment",
-      "Owner Withdrawal",
-      "Capital Contribution",
-      "Dividend Payment",
-      "Retained Earnings",
-      "Share Capital",
-    ],
+    EQUITY: ["Owner's Equity", "Current year earnings", "Retained Earnings"],
     ADJUSTMENT: [
       "Balance Adjustment",
       "Write-off",
@@ -145,7 +159,7 @@ export default function AddPaymentPage() {
     try {
       const response = await fetch(`/api/accounts/payments/${paymentId}`);
       const data = await response.json();
-      
+
       if (data.success && data.payment) {
         const payment = data.payment;
         setFormData({
@@ -156,7 +170,6 @@ export default function AddPaymentPage() {
           description: payment.description || "",
           reference: payment.reference || "",
           paymentMethod: payment.mode || "CASH",
-          dueDate: payment.dueDate ? new Date(payment.dueDate).toISOString().slice(0, 10) : "",
         });
       }
     } catch (error) {
@@ -171,7 +184,7 @@ export default function AddPaymentPage() {
       const response = await fetch("/api/chart-of-accounts", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "initialize" })
+        body: JSON.stringify({ action: "initialize" }),
       });
 
       const data = await response.json();
@@ -193,55 +206,77 @@ export default function AddPaymentPage() {
   const setDefaultAccounts = () => {
     const transactionType = formData.transactionType;
     const category = formData.category;
-    
+
     switch (transactionType) {
       case "EXPENSE":
         // Debit: Expense account, Credit: Cash/Bank
-        const expenseAccount = accounts.find(a => 
-          a.category === "Expense" && 
-          (a.accountName.includes("Fuel") || a.accountName.includes("Maintenance") || a.accountName.includes("Salaries"))
+        const expenseAccount = accounts.find(
+          (a) =>
+            a.category === "Expense" &&
+            (a.accountName.includes("Fuel") ||
+              a.accountName.includes("Maintenance") ||
+              a.accountName.includes("Salaries"))
         );
-        const cashAccount = accounts.find(a => a.accountName === "Cash");
-        
+        const cashAccount = accounts.find((a) => a.accountName === "Cash");
+
         if (expenseAccount) setDebitAccountId(expenseAccount.id);
         if (cashAccount) setCreditAccountId(cashAccount.id);
         break;
 
       case "INCOME":
         // Debit: Cash/Bank, Credit: Revenue account
-        const revenueAccount = accounts.find(a => 
-          a.category === "Revenue" && 
-          (a.accountName.includes("Freight") || a.accountName.includes("Services"))
+        const revenueAccount = accounts.find(
+          (a) =>
+            a.category === "Revenue" &&
+            (a.accountName.includes("Freight") ||
+              a.accountName.includes("Services"))
         );
-        const bankAccount = accounts.find(a => a.accountName === "Cash");
-        
+        const bankAccount = accounts.find((a) => a.accountName === "Cash");
+
         if (bankAccount) setDebitAccountId(bankAccount.id);
         if (revenueAccount) setCreditAccountId(revenueAccount.id);
         break;
 
       case "TRANSFER":
         // Debit: Destination account, Credit: Source account
-        const bankAccountTransfer = accounts.find(a => a.accountName.includes("Bank") || a.accountName === "Accounts Receivable");
-        const cashAccountTransfer = accounts.find(a => a.accountName === "Cash");
-        
+        const bankAccountTransfer = accounts.find(
+          (a) =>
+            a.accountName.includes("Bank") ||
+            a.accountName === "Accounts Receivable"
+        );
+        const cashAccountTransfer = accounts.find(
+          (a) => a.accountName === "Cash"
+        );
+
         if (bankAccountTransfer) setDebitAccountId(bankAccountTransfer.id);
         if (cashAccountTransfer) setCreditAccountId(cashAccountTransfer.id);
         break;
 
       case "EQUITY":
         // For equity transactions, the direction depends on the category
-        const cashEquity = accounts.find(a => a.accountName === "Cash");
-        const ownerEquity = accounts.find(a => a.category === "Equity" && a.accountName.includes("Owner"));
-        const retainedEarnings = accounts.find(a => a.category === "Equity" && a.accountName.includes("Retained"));
-        const shareCapital = accounts.find(a => a.category === "Equity" && a.accountName.includes("Share"));
-        
+        const cashEquity = accounts.find((a) => a.accountName === "Cash");
+        const ownerEquity = accounts.find(
+          (a) => a.category === "Equity" && a.accountName.includes("Owner")
+        );
+        const retainedEarnings = accounts.find(
+          (a) => a.category === "Equity" && a.accountName.includes("Retained")
+        );
+        const shareCapital = accounts.find(
+          (a) => a.category === "Equity" && a.accountName.includes("Share")
+        );
+
         // Default equity account (prefer Owner Equity, then Retained Earnings, then Share Capital)
-        const defaultEquityAccount = ownerEquity || retainedEarnings || shareCapital;
-        
+        const defaultEquityAccount =
+          ownerEquity || retainedEarnings || shareCapital;
+
         // Determine direction based on category
-        const isInvestment = category === "Owner Investment" || category === "Capital Contribution" || category === "Share Capital";
-        const isWithdrawal = category === "Owner Withdrawal" || category === "Dividend Payment";
-        
+        const isInvestment =
+          category === "Owner Investment" ||
+          category === "Capital Contribution" ||
+          category === "Share Capital";
+        const isWithdrawal =
+          category === "Owner Withdrawal" || category === "Dividend Payment";
+
         if (isInvestment) {
           // Owner putting money in: Debit Cash, Credit Equity
           if (cashEquity) setDebitAccountId(cashEquity.id);
@@ -259,9 +294,11 @@ export default function AddPaymentPage() {
 
       case "ADJUSTMENT":
         // Default to Cash for adjustments
-        const cashAdjustment = accounts.find(a => a.accountName === "Cash");
-        const adjustmentAccount = accounts.find(a => a.category === "Asset" && a.accountName !== "Cash");
-        
+        const cashAdjustment = accounts.find((a) => a.accountName === "Cash");
+        const adjustmentAccount = accounts.find(
+          (a) => a.category === "Asset" && a.accountName !== "Cash"
+        );
+
         if (cashAdjustment) setDebitAccountId(cashAdjustment.id);
         if (adjustmentAccount) setCreditAccountId(adjustmentAccount.id);
         break;
@@ -296,23 +333,23 @@ export default function AddPaymentPage() {
         description: formData.description,
         reference: formData.reference,
         paymentMethod: formData.paymentMethod,
-        dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null,
-        
+
         // Chart of accounts
         debitAccountId,
         creditAccountId,
-        
+
         // All internal transactions (no external parties)
         fromPartyType: "US",
         toPartyType: "US",
       };
 
-      const url = isEditMode && paymentId 
-        ? `/api/accounts/payments/${paymentId}`
-        : `/api/accounts/payments`;
-      
+      const url =
+        isEditMode && paymentId
+          ? `/api/accounts/payments/${paymentId}`
+          : `/api/accounts/payments`;
+
       const method = isEditMode ? "PUT" : "POST";
-      
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -322,10 +359,14 @@ export default function AddPaymentPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        toast.success(`Payment ${isEditMode ? 'updated' : 'added'} successfully`);
+        toast.success(
+          `Payment ${isEditMode ? "updated" : "added"} successfully`
+        );
         router.push("/dashboard/accounts/payments");
       } else {
-        toast.error(data.message || `Failed to ${isEditMode ? 'update' : 'add'} payment`);
+        toast.error(
+          data.message || `Failed to ${isEditMode ? "update" : "add"} payment`
+        );
       }
     } catch (error) {
       console.error("Error saving payment:", error);
@@ -334,7 +375,7 @@ export default function AddPaymentPage() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -348,12 +389,13 @@ export default function AddPaymentPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        
+
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-3">
-          {isEditMode ? 'Edit Payment' : 'Add Payment'}
+          {isEditMode ? "Edit Transaction" : "Add Transaction"}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 text-lg">
-          Create internal company transactions with proper chart of accounts integration
+          Create internal company transactions with proper chart of accounts
+          integration
         </p>
       </div>
 
@@ -367,21 +409,25 @@ export default function AddPaymentPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label className="text-base font-medium mb-3 block">Transaction Type *</Label>
-                  <Select 
-                    value={formData.transactionType} 
-                    onValueChange={(value) => handleInputChange('transactionType', value)}
+                  <Label className="text-base font-medium mb-3 block">
+                    Transaction Type *
+                  </Label>
+                  <Select
+                    value={formData.transactionType}
+                    onValueChange={(value) =>
+                      handleInputChange("transactionType", value)
+                    }
                   >
-                    <SelectTrigger className="h-12">
+                    <SelectTrigger className="w-full h-12">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {transactionTypes.map(type => (
+                      {transactionTypes.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
-                          <div>
-                            <div className="font-medium">{type.label}</div>
-                            <div className="text-xs text-gray-500">{type.description}</div>
-                          </div>
+                          <div className="font-medium">{type.label}</div>
+                          <span className="text-xs text-gray-500">
+                            {type.description}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -389,16 +435,22 @@ export default function AddPaymentPage() {
                 </div>
 
                 <div>
-                  <Label className="text-base font-medium mb-3 block">Category *</Label>
-                  <Select 
-                    value={formData.category} 
-                    onValueChange={(value) => handleInputChange('category', value)}
+                  <Label className="text-base font-medium mb-3 block">
+                    Category *
+                  </Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) =>
+                      handleInputChange("category", value)
+                    }
                   >
-                    <SelectTrigger className="h-12">
+                    <SelectTrigger className="w-full h-12">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories[formData.transactionType as keyof typeof categories]?.map(category => (
+                      {categories[
+                        formData.transactionType as keyof typeof categories
+                      ]?.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>
@@ -410,74 +462,81 @@ export default function AddPaymentPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label className="text-base font-medium mb-3 block">Date *</Label>
+                  <Label className="text-base font-medium mb-3 block">
+                    Date *
+                  </Label>
                   <Input
                     type="date"
                     value={formData.date}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
-                    className="h-12"
+                    onChange={(e) => handleInputChange("date", e.target.value)}
                     required
                   />
                 </div>
+
                 <div>
-                  <Label className="text-base font-medium mb-3 block">Due Date</Label>
+                  <Label className="text-base font-medium mb-3 block">
+                    Amount *
+                  </Label>
                   <Input
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => handleInputChange('dueDate', e.target.value)}
-                    className="h-12"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.amount}
+                    onChange={(e) =>
+                      handleInputChange("amount", e.target.value)
+                    }
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label className="text-base font-medium mb-3 block">
+                    Payment Method
+                  </Label>
+                  <Select
+                    value={formData.paymentMethod}
+                    onValueChange={(value) =>
+                      handleInputChange("paymentMethod", value)
+                    }
+                  >
+                    <SelectTrigger className="w-full h-12">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {paymentMethods.map((method) => (
+                        <SelectItem key={method.value} value={method.value}>
+                          {method.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-base font-medium mb-3 block">
+                    Reference
+                  </Label>
+                  <Input
+                    value={formData.reference}
+                    onChange={(e) =>
+                      handleInputChange("reference", e.target.value)
+                    }
+                    placeholder="Transaction reference number"
                   />
                 </div>
               </div>
 
               <div>
-                <Label className="text-base font-medium mb-3 block">Amount *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) => handleInputChange('amount', e.target.value)}
-                  placeholder="0.00"
-                  className="h-12"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label className="text-base font-medium mb-3 block">Payment Method</Label>
-                <Select 
-                  value={formData.paymentMethod} 
-                  onValueChange={(value) => handleInputChange('paymentMethod', value)}
-                >
-                  <SelectTrigger className="h-12">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {paymentMethods.map(method => (
-                      <SelectItem key={method.value} value={method.value}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-base font-medium mb-3 block">Reference</Label>
-                <Input
-                  value={formData.reference}
-                  onChange={(e) => handleInputChange('reference', e.target.value)}
-                  placeholder="Transaction reference number"
-                  className="h-12"
-                />
-              </div>
-
-              <div>
-                <Label className="text-base font-medium mb-3 block">Description</Label>
+                <Label className="text-base font-medium mb-3 block">
+                  Description
+                </Label>
                 <Input
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
                   placeholder="Transaction description"
                   className="h-12"
                 />
@@ -493,34 +552,47 @@ export default function AddPaymentPage() {
             <CardContent className="space-y-6">
               {accounts.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-red-500 mb-4">No chart of accounts found</p>
+                  <p className="text-red-500 mb-4">
+                    No chart of accounts found
+                  </p>
                   <Button
                     type="button"
                     onClick={initializeChartOfAccounts}
                     disabled={accountsLoading}
                     variant="outline"
                   >
-                    {accountsLoading ? "Initializing..." : "Initialize Chart of Accounts"}
+                    {accountsLoading
+                      ? "Initializing..."
+                      : "Initialize Chart of Accounts"}
                   </Button>
                 </div>
               ) : (
                 <>
                   <div>
-                    <Label className="text-base font-medium mb-3 block">Debit Account *</Label>
-                    <Select 
-                      value={String(debitAccountId)} 
-                      onValueChange={(value) => setDebitAccountId(parseInt(value))}
+                    <Label className="text-base font-medium mb-3 block">
+                      Debit Account *
+                    </Label>
+                    <Select
+                      value={String(debitAccountId)}
+                      onValueChange={(value) =>
+                        setDebitAccountId(parseInt(value))
+                      }
                     >
-                      <SelectTrigger className="h-12">
+                      <SelectTrigger className="w-full h-12">
                         <SelectValue placeholder="Select debit account" />
                       </SelectTrigger>
                       <SelectContent>
-                        {accounts.map(account => (
-                          <SelectItem key={account.id} value={String(account.id)}>
-                            <div>
-                              <div className="font-medium">{account.code} - {account.accountName}</div>
-                              <div className="text-xs text-gray-500">{account.category} • {account.type}</div>
+                        {accounts.map((account) => (
+                          <SelectItem
+                            key={account.id}
+                            value={String(account.id)}
+                          >
+                            <div className="font-medium">
+                              {account.code} - {account.accountName}
                             </div>
+                            <span className="text-xs text-gray-500">
+                              {account.category} • {account.type}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -528,21 +600,30 @@ export default function AddPaymentPage() {
                   </div>
 
                   <div>
-                    <Label className="text-base font-medium mb-3 block">Credit Account *</Label>
-                    <Select 
-                      value={String(creditAccountId)} 
-                      onValueChange={(value) => setCreditAccountId(parseInt(value))}
+                    <Label className="text-base font-medium mb-3 block">
+                      Credit Account *
+                    </Label>
+                    <Select
+                      value={String(creditAccountId)}
+                      onValueChange={(value) =>
+                        setCreditAccountId(parseInt(value))
+                      }
                     >
-                      <SelectTrigger className="h-12">
+                      <SelectTrigger className="w-full h-12">
                         <SelectValue placeholder="Select credit account" />
                       </SelectTrigger>
                       <SelectContent>
-                        {accounts.map(account => (
-                          <SelectItem key={account.id} value={String(account.id)}>
-                            <div>
-                              <div className="font-medium">{account.code} - {account.accountName}</div>
-                              <div className="text-xs text-gray-500">{account.category} • {account.type}</div>
+                        {accounts.map((account) => (
+                          <SelectItem
+                            key={account.id}
+                            value={String(account.id)}
+                          >
+                            <div className="font-medium">
+                              {account.code} - {account.accountName}
                             </div>
+                            <span className="text-xs text-gray-500">
+                              {account.category} • {account.type}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -554,20 +635,43 @@ export default function AddPaymentPage() {
                     <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg border">
                       <div className="flex items-center gap-3 mb-4">
                         <Info className="w-5 h-5 text-blue-600" />
-                        <span className="font-semibold text-base">Transaction Preview</span>
+                        <span className="font-semibold text-base">
+                          Transaction Preview
+                        </span>
                       </div>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-red-600 font-medium">Debit:</span>
-                          <span className="font-medium">{accounts.find(a => a.id === debitAccountId)?.accountName}</span>
+                          <span className="text-red-600 font-medium">
+                            Debit:
+                          </span>
+                          <span className="font-medium">
+                            {
+                              accounts.find((a) => a.id === debitAccountId)
+                                ?.accountName
+                            }
+                          </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-green-600 font-medium">Credit:</span>
-                          <span className="font-medium">{accounts.find(a => a.id === creditAccountId)?.accountName}</span>
+                          <span className="text-green-600 font-medium">
+                            Credit:
+                          </span>
+                          <span className="font-medium">
+                            {
+                              accounts.find((a) => a.id === creditAccountId)
+                                ?.accountName
+                            }
+                          </span>
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t">
-                          <span className="font-semibold text-base">Amount:</span>
-                          <span className="font-semibold text-base">PKR {parseFloat(formData.amount || '0').toLocaleString()}</span>
+                          <span className="font-semibold text-base">
+                            Amount:
+                          </span>
+                          <span className="font-semibold text-base">
+                            PKR{" "}
+                            {parseFloat(
+                              formData.amount || "0"
+                            ).toLocaleString()}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -580,17 +684,15 @@ export default function AddPaymentPage() {
 
         {/* Submit Button */}
         <div className="mt-10 flex justify-end">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 text-lg font-medium"
             disabled={accountsLoading || accounts.length === 0}
           >
-            {isEditMode ? 'Update Payment' : 'Save Payment'}
+            {isEditMode ? "Update Transaction" : "Save Transaction"}
           </Button>
         </div>
       </form>
     </div>
   );
 }
-
-

@@ -291,8 +291,8 @@ export default function ExpensePaymentsPage() {
   };
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <div className="mb-4 sm:mb-6">
         <Button
           variant="outline"
           onClick={() => router.back()}
@@ -303,8 +303,8 @@ export default function ExpensePaymentsPage() {
         </Button>
 
         <div className="flex items-center gap-3 mb-2">
-          <ShoppingCart className="w-10 h-10 text-orange-600" />
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-white">
+          <ShoppingCart className="w-8 sm:w-10 h-8 sm:h-10 text-orange-600" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">
             Vendor Payments
           </h1>
         </div>
@@ -316,7 +316,7 @@ export default function ExpensePaymentsPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {/* Invoice Selection */}
         <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <CardHeader>
@@ -344,7 +344,7 @@ export default function ExpensePaymentsPage() {
                 filteredInvoices.map((invoice) => (
                   <div
                     key={invoice.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                    className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all ${
                       selectedInvoice?.id === invoice.id
                         ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
                         : "border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-600"
@@ -368,23 +368,24 @@ export default function ExpensePaymentsPage() {
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">
                           {invoice.invoiceNumber}
                         </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                           {invoice.vendor?.CompanyName ||
                             invoice.vendor?.PersonName}
                         </p>
                       </div>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
                           invoice.status
                         )}`}
                       >
-                        {invoice.status}
+                        <span className="hidden sm:inline">{invoice.status}</span>
+                        <span className="sm:hidden">{invoice.status?.substring(0, 3)}</span>
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <span className="text-gray-500">Total:</span>
                         <span className="ml-2 font-medium">
@@ -418,16 +419,16 @@ export default function ExpensePaymentsPage() {
           </CardHeader>
           <CardContent>
             {selectedInvoice ? (
-              <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                <h3 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <h3 className="font-semibold text-orange-800 dark:text-orange-200 mb-2 text-sm sm:text-base">
                   Selected Invoice: {selectedInvoice.invoiceNumber}
                 </h3>
-                <p className="text-sm text-orange-700 dark:text-orange-300">
+                <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300">
                   Vendor:{" "}
                   {selectedInvoice.vendor?.CompanyName ||
                     selectedInvoice.vendor?.PersonName}
                 </p>
-                <p className="text-sm text-orange-700 dark:text-orange-300">
+                <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300">
                   Remaining Amount: $
                   {(
                     selectedInvoice.remainingAmount ||
@@ -436,14 +437,14 @@ export default function ExpensePaymentsPage() {
                 </p>
               </div>
             ) : (
-              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <p className="text-gray-500 text-center">
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <p className="text-gray-500 text-center text-sm sm:text-base">
                   Please select a vendor invoice to process payment
                 </p>
               </div>
             )}
 
-            <form onSubmit={handlePayment} className="space-y-4">
+            <form onSubmit={handlePayment} className="space-y-3 sm:space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="paymentAmount" className="text-sm font-medium">
                   Payment Amount
@@ -464,7 +465,7 @@ export default function ExpensePaymentsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="paymentMethod" className="text-sm font-medium">
                     Payment Method
@@ -523,8 +524,8 @@ export default function ExpensePaymentsPage() {
               </div>
 
               {/* Chart of Accounts Selection */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white text-base">
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">
                   Chart of Accounts
                 </h3>
 
@@ -606,8 +607,8 @@ export default function ExpensePaymentsPage() {
             </form>
 
             {!accountsInitialized && (
-              <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p className="text-yellow-800 dark:text-yellow-200 text-sm mb-2">
+              <div className="mt-4 p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-yellow-800 dark:text-yellow-200 text-xs sm:text-sm mb-2">
                   Chart of accounts not initialized. Please initialize to
                   proceed.
                 </p>

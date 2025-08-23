@@ -376,8 +376,8 @@ export default function AccountBooksPage() {
 
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <div className="mb-4 sm:mb-6">
         <Button
           variant="outline"
           onClick={() => router.back()}
@@ -387,7 +387,7 @@ export default function AccountBooksPage() {
           Back
         </Button>
         
-        <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
           Account Books
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
@@ -395,19 +395,19 @@ export default function AccountBooksPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6">
         {/* Filters */}
-        <Card className="lg:col-span-1 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <Card className="xl:col-span-1 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <CardHeader>
-            <CardTitle className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+            <CardTitle className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white flex items-center">
               <Filter className="w-5 h-5 mr-2" />
               Filters
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4">
 
             <div>
-              <Label htmlFor="category" className="font-bold">
+              <Label htmlFor="category" className="font-bold text-sm sm:text-base">
                 Category
               </Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -425,7 +425,7 @@ export default function AccountBooksPage() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="account" className="font-bold">
+              <Label htmlFor="account" className="font-bold text-sm sm:text-base">
                 Account
               </Label>
               <Select value={String(selectedAccount)} onValueChange={(value) => setSelectedAccount(parseInt(value))}>
@@ -444,7 +444,7 @@ export default function AccountBooksPage() {
             </div>
 
             <div>
-              <Label htmlFor="dateFrom" className="font-bold">
+              <Label htmlFor="dateFrom" className="font-bold text-sm sm:text-base">
                 Date From
               </Label>
               <Input
@@ -456,7 +456,7 @@ export default function AccountBooksPage() {
             </div>
 
             <div>
-              <Label htmlFor="dateTo" className="font-bold">
+              <Label htmlFor="dateTo" className="font-bold text-sm sm:text-base">
                 Date To
               </Label>
               <Input
@@ -478,10 +478,10 @@ export default function AccountBooksPage() {
         </Card>
 
         {/* Entries List */}
-        <Card className="lg:col-span-3 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <Card className="xl:col-span-3 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-xl font-bold text-gray-800 dark:text-white">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+              <CardTitle className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
                 Journal Entries & Transactions
               </CardTitle>
               <div className="flex gap-2">
@@ -498,12 +498,12 @@ export default function AccountBooksPage() {
             </div>
             
             {/* Balance Summary */}
-            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="mt-4 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {selectedAccount > 0 ? (
                   <div className="text-center">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Account Balance</div>
-                    <div className={`text-lg font-bold ${getAccountBalance() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Account Balance</div>
+                    <div className={`text-base sm:text-lg font-bold ${getAccountBalance() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       ${getAccountBalance().toLocaleString()}
                     </div>
                     <div className="text-xs text-gray-500">
@@ -513,20 +513,20 @@ export default function AccountBooksPage() {
                 ) : (
                   <>
                     <div className="text-center">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Total Balance</div>
-                      <div className={`text-lg font-bold ${getTotalBalance() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Balance</div>
+                      <div className={`text-base sm:text-lg font-bold ${getTotalBalance() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         ${getTotalBalance().toLocaleString()}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Total Entries</div>
-                      <div className="text-lg font-bold text-blue-600">
+                      <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Entries</div>
+                      <div className="text-base sm:text-lg font-bold text-blue-600">
                         {filteredEntries.length}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Total Amount</div>
-                      <div className="text-lg font-bold text-purple-600">
+                      <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Amount</div>
+                      <div className="text-base sm:text-lg font-bold text-purple-600">
                         ${filteredEntries.reduce((sum, entry) => sum + (entry.amount || 0), 0).toLocaleString()}
                       </div>
                     </div>
@@ -537,8 +537,8 @@ export default function AccountBooksPage() {
               {/* Balance Breakdown for All Accounts */}
               {selectedAccount === 0 && filteredEntries.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Balance Breakdown by Category</div>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                  <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Balance Breakdown by Category</div>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3 text-xs">
                     {(() => {
                       const breakdown = getBalanceBreakdown();
                       return [
@@ -561,7 +561,7 @@ export default function AccountBooksPage() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 lg:p-6">
             <div className="mb-4">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -591,51 +591,60 @@ export default function AccountBooksPage() {
                 {filteredEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    className="p-3 sm:p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-0">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-gray-800 dark:text-white">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base">
                             {new Date(entry.date).toLocaleDateString()}
                           </span>
-                          <span className={`text-xs px-2 py-1 rounded ${
+                          <span className={`text-xs px-1 sm:px-2 py-1 rounded ${
                             entry.transactionType === 'DEBIT' 
                               ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' 
                               : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           }`}>
-                            {entry.transactionType}
+                            <span className="hidden sm:inline">{entry.transactionType}</span>
+                            <span className="sm:hidden">{entry.transactionType?.substring(0, 3)}</span>
                           </span>
                           {entry.category && (
-                            <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded">
-                              {entry.category}
+                            <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 px-1 sm:px-2 py-1 rounded">
+                              <span className="hidden sm:inline">{entry.category}</span>
+                              <span className="sm:hidden">{entry.category?.substring(0, 4)}</span>
                             </span>
                           )}
                           {entry.accountCode && (
-                            <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded">
-                              {entry.accountCode}
+                            <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-1 sm:px-2 py-1 rounded">
+                              <span className="hidden sm:inline">{entry.accountCode}</span>
+                              <span className="sm:hidden">{entry.accountCode?.substring(0, 6)}...</span>
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          {entry.description}
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <span className="hidden sm:inline">{entry.description}</span>
+                          <span className="sm:hidden">{entry.description?.substring(0, 50)}...</span>
                         </p>
-                        <div className="grid grid-cols-2 gap-4 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs">
                           <div>
-                            <span className="font-medium">Account:</span> {entry.accountName}
+                            <span className="font-medium">Account:</span> 
+                            <span className="hidden sm:inline"> {entry.accountName}</span>
+                            <span className="sm:hidden"> {entry.accountName?.substring(0, 15)}...</span>
                           </div>
                           <div>
-                            <span className="font-medium">Entry:</span> {entry.journalEntryNumber}
+                            <span className="font-medium">Entry:</span> 
+                            <span className="hidden sm:inline"> {entry.journalEntryNumber}</span>
+                            <span className="sm:hidden"> {entry.journalEntryNumber?.substring(0, 8)}...</span>
                           </div>
                         </div>
                         {entry.reference && (
                           <p className="text-xs text-gray-500 mt-1">
-                            Ref: {entry.reference}
+                            <span className="hidden sm:inline">Ref: {entry.reference}</span>
+                            <span className="sm:hidden">Ref: {entry.reference?.substring(0, 20)}...</span>
                           </p>
                         )}
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg text-gray-800 dark:text-white">
+                        <div className="font-bold text-base sm:text-lg text-gray-800 dark:text-white">
                           ${entry.amount.toLocaleString()}
                         </div>
                       </div>
@@ -647,7 +656,7 @@ export default function AccountBooksPage() {
 
             {filteredEntries.length > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   <span>Total Entries: {filteredEntries.length}</span>
                   <span>
                     Total Amount: ${filteredEntries.reduce((sum, entry) => sum + entry.amount, 0).toLocaleString()}

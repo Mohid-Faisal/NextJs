@@ -339,8 +339,8 @@ export default function BalanceSheetPage() {
   );
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <div className="mb-4 sm:mb-6">
         <Button
           variant="outline"
           onClick={() => router.back()}
@@ -350,9 +350,9 @@ export default function BalanceSheetPage() {
           Back
         </Button>
         
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
               Balance Sheet
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
@@ -360,7 +360,7 @@ export default function BalanceSheetPage() {
             </p>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-gray-500" />
               <Label htmlFor="asOfDate" className="text-sm font-medium">As of:</Label>
@@ -369,7 +369,7 @@ export default function BalanceSheetPage() {
                 type="date"
                 value={asOfDate}
                 onChange={(e) => setAsOfDate(e.target.value)}
-                className="w-40"
+                className="w-full sm:w-40"
               />
             </div>
             <Button
@@ -390,16 +390,16 @@ export default function BalanceSheetPage() {
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading balance sheet...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8">
           {/* Assets */}
           <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-green-50 dark:bg-green-900/20">
-              <CardTitle className="text-2xl font-bold text-green-800 dark:text-green-200 flex items-center">
-                <TrendingUp className="w-6 h-6 mr-2" />
+              <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-green-800 dark:text-green-200 flex items-center">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
                 Assets
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
+            <CardContent className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
               {renderSection("Current Assets", balanceSheetData.assets.current, 
                 balanceSheetData.assets.current.reduce((sum, acc) => sum + acc.balance, 0), 
                 "text-green-600")}
@@ -418,15 +418,15 @@ export default function BalanceSheetPage() {
           </Card>
 
           {/* Liabilities & Equity */}
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-8">
             {/* Liabilities */}
             <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
               <CardHeader className="bg-red-50 dark:bg-red-900/20">
-                <CardTitle className="text-2xl font-bold text-red-800 dark:text-red-200">
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-red-800 dark:text-red-200">
                   Liabilities
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
                 {renderSection("Current Liabilities", balanceSheetData.liabilities.current, 
                   balanceSheetData.liabilities.current.reduce((sum, acc) => sum + acc.balance, 0), 
                   "text-red-600")}
@@ -447,11 +447,11 @@ export default function BalanceSheetPage() {
             {/* Equity */}
             <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
               <CardHeader className="bg-blue-50 dark:bg-blue-900/20">
-                <CardTitle className="text-2xl font-bold text-blue-800 dark:text-blue-200">
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-800 dark:text-blue-200">
                   Equity
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
                 {balanceSheetData.equity.length > 0 ? (
                   <>
                     {balanceSheetData.equity.map(account => renderAccountRow(account, true))}
@@ -473,44 +473,44 @@ export default function BalanceSheetPage() {
 
       {/* Summary */}
       {!loading && (
-        <Card className="mt-8 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
+        <Card className="mt-4 sm:mt-8 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700">
           <CardHeader className="bg-gray-50 dark:bg-gray-800">
-            <CardTitle className="text-xl font-bold text-gray-800 dark:text-white">
+            <CardTitle className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
               Financial Summary
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
               <div className="text-center">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total Assets</div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Assets</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">
                   {formatCurrency(balanceSheetData.assets.total)}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total Liabilities</div>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Liabilities</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
                   {formatCurrency(balanceSheetData.liabilities.total)}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total Equity</div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Equity</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
                   {formatCurrency(balanceSheetData.totalEquity)}
                 </div>
               </div>
             </div>
             
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-bold">Total Liabilities & Equity</span>
-                <span className="text-lg font-bold">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                <span className="text-base sm:text-lg font-bold">Total Liabilities & Equity</span>
+                <span className="text-base sm:text-lg font-bold">
                   {formatCurrency(balanceSheetData.totalLiabilitiesAndEquity)}
                 </span>
               </div>
               
               {Math.abs(balanceSheetData.assets.total - balanceSheetData.totalLiabilitiesAndEquity) > 0.01 && (
-                <div className="mt-2 text-sm text-orange-600 bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+                <div className="mt-2 text-xs sm:text-sm text-orange-600 bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
                   ⚠️ Balance sheet is not balanced. Difference: {formatCurrency(
                     balanceSheetData.assets.total - balanceSheetData.totalLiabilitiesAndEquity
                   )}

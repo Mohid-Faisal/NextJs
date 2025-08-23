@@ -440,11 +440,11 @@ export default function IncomeInvoicesPage() {
   };
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
         <div>
-          <h2 className="text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
-            <TrendingUp className="w-10 h-10 text-green-600" />
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <TrendingUp className="w-8 sm:w-10 h-8 sm:h-10 text-green-600" />
             Customer Invoices
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -455,7 +455,7 @@ export default function IncomeInvoicesPage() {
           </p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
             {total}
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -464,8 +464,9 @@ export default function IncomeInvoicesPage() {
         </div>
       </div>
 
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4 w-full max-w-lg">
+      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+        {/* Left side - Page size and Search bar */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Show:</span>
             <Select
@@ -488,7 +489,7 @@ export default function IncomeInvoicesPage() {
             </Select>
           </div>
 
-          <div className="flex w-full">
+          <div className="flex w-full max-w-sm">
             <Input
               placeholder="Search by invoice #, tracking #, customer..."
               value={searchTerm}
@@ -504,7 +505,8 @@ export default function IncomeInvoicesPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right side - Status, Date Range, and Export */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
           <Select
             value={statusFilter}
             onValueChange={(v) => {
@@ -539,17 +541,17 @@ export default function IncomeInvoicesPage() {
                 onBlur={handleInputBlur}
                 onKeyDown={handleInputKeyDown}
                 onClick={() => !isEditing && setShowDatePicker(!showDatePicker)}
-                className="w-64 bg-muted cursor-text"
+                className="w-full sm:w-64 bg-muted cursor-text"
               />
               {!isEditing && (
                 <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               )}
               {showDatePicker && (
                 <div
-                  className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4"
-                  style={{ minWidth: "600px" }}
+                  className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 sm:p-4 w-[280px] sm:w-[400px] lg:w-[600px]"
+                  style={{ minWidth: "280px" }}
                 >
-                  <div className="flex gap-4">
+                  <div className="flex flex-col lg:flex-row gap-2 sm:gap-4">
                     {/* Left Calendar */}
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
@@ -706,6 +708,7 @@ export default function IncomeInvoicesPage() {
               )}
             </div>
           </div>
+          
           {/* Export Dropdown */}
           <div>
             <DropdownMenu>
@@ -731,94 +734,115 @@ export default function IncomeInvoicesPage() {
       </div>
 
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <CardContent className="p-6 overflow-x-auto">
+        <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
           {invoices.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
               No customer invoices found.
             </p>
           ) : (
             <>
-              <table className="min-w-full table-auto border-separate border-spacing-y-4">
+              <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
                 <thead>
-                  <tr className="text-sm text-gray-500 dark:text-gray-300">
-                    <th className="px-4 py-2 text-left">
+                  <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <button
                         onClick={() => handleSort("id")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        ID {getSortIcon("id")}
+                        <span className="hidden sm:inline">ID</span>
+                        <span className="sm:hidden">ID</span>
+                        {getSortIcon("id")}
                       </button>
                     </th>
-                    <th className="px-4 py-2 text-left">
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <button
                         onClick={() => handleSort("invoiceNumber")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        Invoice# {getSortIcon("invoiceNumber")}
+                        <span className="hidden sm:inline">Invoice#</span>
+                        <span className="sm:hidden">Inv#</span>
+                        {getSortIcon("invoiceNumber")}
                       </button>
                     </th>
-                    <th className="px-4 py-2 text-left">
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <button
                         onClick={() => handleSort("invoiceDate")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        Date {getSortIcon("invoiceDate")}
+                        <span className="hidden sm:inline">Date</span>
+                        <span className="sm:hidden">Date</span>
+                        {getSortIcon("invoiceDate")}
                       </button>
                     </th>
-                    <th className="px-4 py-2 text-left">
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <button
                         onClick={() => handleSort("trackingNumber")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        Tracking# {getSortIcon("trackingNumber")}
+                        <span className="hidden sm:inline">Tracking#</span>
+                        <span className="sm:hidden">Track#</span>
+                        {getSortIcon("trackingNumber")}
                       </button>
                     </th>
-                    <th className="px-4 py-2 text-left">
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <button
                         onClick={() => handleSort("destination")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        Destination {getSortIcon("destination")}
+                        <span className="hidden sm:inline">Destination</span>
+                        <span className="sm:hidden">Dest</span>
+                        {getSortIcon("destination")}
                       </button>
                     </th>
-                    <th className="px-4 py-2 text-left">
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <button
                         onClick={() => handleSort("status")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        Status {getSortIcon("status")}
+                        <span className="hidden sm:inline">Status</span>
+                        <span className="sm:hidden">Status</span>
+                        {getSortIcon("status")}
                       </button>
                     </th>
-                    <th className="px-4 py-2 text-left">
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <button
                         onClick={() => handleSort("totalAmount")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        Total Amount {getSortIcon("totalAmount")}
+                        <span className="hidden sm:inline">Total Amount</span>
+                        <span className="sm:hidden">Amount</span>
+                        {getSortIcon("totalAmount")}
                       </button>
                     </th>
-                    <th className="px-4 py-2 text-left">Customer</th>
-                    <th className="px-4 py-2 text-left">Actions</th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">Customer</span>
+                      <span className="sm:hidden">Customer</span>
+                    </th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">Actions</span>
+                      <span className="sm:hidden">Actions</span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="text-sm text-gray-700 dark:text-gray-200 font-light">
+                <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
                   {invoices.map((i) => (
                     <tr
                       key={i.id}
                       className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
                     >
-                      <td className="px-4 py-3 font-medium">{i.id}</td>
-                      <td className="px-4 py-3">{i.invoiceNumber}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{i.id}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{i.invoiceNumber}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         {new Date(i.invoiceDate).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3">{i.trackingNumber || "-"}</td>
-                      <td className="px-4 py-3">
-                        {getCountryNameFromCode(i.destination)}
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{i.trackingNumber || "-"}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{getCountryNameFromCode(i.destination)}</span>
+                        <span className="sm:hidden">{getCountryNameFromCode(i.destination)?.substring(0, 8)}...</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium ${
                             i.status === "Paid"
                               ? "bg-green-100 text-green-800"
                               : i.status === "Pending"
@@ -828,18 +852,19 @@ export default function IncomeInvoicesPage() {
                               : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {i.status}
+                          <span className="hidden sm:inline">{i.status}</span>
+                          <span className="sm:hidden">{i.status?.substring(0, 3)}</span>
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        {i.currency} {i.totalAmount.toLocaleString()}
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{i.currency} {i.totalAmount.toLocaleString()}</span>
+                        <span className="sm:hidden">{i.currency} {i.totalAmount.toLocaleString()}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        {i.customer?.PersonName ||
-                          i.customer?.CompanyName ||
-                          "-"}
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{i.customer?.PersonName || i.customer?.CompanyName || "-"}</span>
+                        <span className="sm:hidden">{i.customer?.PersonName?.substring(0, 10) || i.customer?.CompanyName?.substring(0, 10) || "-"}...</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -951,11 +976,11 @@ export default function IncomeInvoicesPage() {
       </Card>
 
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
+        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
           <Button
             disabled={page <= 1}
             onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform"
+            className="hover:scale-105 transition-transform w-full sm:w-auto"
           >
             ← Prev
           </Button>
@@ -965,7 +990,7 @@ export default function IncomeInvoicesPage() {
           <Button
             disabled={page >= totalPages}
             onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform"
+            className="hover:scale-105 transition-transform w-full sm:w-auto"
           >
             Next →
           </Button>
