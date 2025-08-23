@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { addCustomerTransaction} from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -22,13 +23,22 @@ async function getAccountIds() {
       }
     });
 
+    // Get Other Expense account (usually in Expense category)
+    const expenseAccount = await prisma.chartOfAccount.findFirst({
+      where: {
+        category: "Expense",
+        accountName: { contains: "Other Expense", mode: "insensitive" }
+      }
+    });
+
     return {
       cashId: cashAccount?.id || 2, // Fallback to ID 2
-      revenueId: revenueAccount?.id || 3 // Fallback to ID 3
+      revenueId: revenueAccount?.id || 3, // Fallback to ID 3
+      expenseId: expenseAccount?.id || 4 // Fallback to ID 4
     };
   } catch (error) {
     console.error("Error getting account IDs:", error);
-    return { cashId: 2, revenueId: 3 }; // Default fallback
+    return { cashId: 2, revenueId: 3, expenseId: 4 }; // Default fallback
   }
 }
 
@@ -133,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get account IDs for journal entries
-    const { cashId, revenueId } = await getAccountIds();
+    const { cashId, revenueId, expenseId } = await getAccountIds();
 
     // Generate credit note number
     const lastCreditNote = await prisma.creditNote.findFirst({
@@ -142,6 +152,8 @@ export async function POST(request: NextRequest) {
 
     const nextId = (lastCreditNote?.id || 0) + 1;
     const creditNoteNumber = `#CREDIT${nextId.toString().padStart(5, "0")}`;
+
+    if (amount > 0) {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {
@@ -232,23 +244,127 @@ export async function POST(request: NextRequest) {
       });
 
       // Create customer transaction (credit)
-      await tx.customerTransaction.create({
-        data: {
-          customerId: parseInt(customerId),
-          type: "CREDIT",
-          amount: parseFloat(amount),
-          description: `Credit Note: ${description || creditNoteNumber}`,
-          reference: creditNoteNumber,
-          invoice: invoiceId ? `Invoice ${invoiceId}` : undefined,
-          previousBalance: 0, // Will be calculated by the system
-          newBalance: 0, // Will be calculated by the system
-        },
-      });
+      await addCustomerTransaction(
+        tx,
+        parseInt(customerId),
+        "CREDIT",
+        parseFloat(amount),
+        `Credit Note: ${description || creditNoteNumber}`,
+        creditNoteNumber,
+        invoiceId ? `Invoice ${invoiceId}` : undefined
+      );
 
       return { creditNote, payment, journalEntry };
     });
 
     return NextResponse.json(result.creditNote, { status: 201 });
+  }
+  else{
+    
+    // Use transaction to ensure all operations succeed or fail together
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the credit note
+      const creditNote = await tx.creditNote.create({
+        data: {
+          creditNoteNumber,
+          invoiceId: invoiceId ? parseInt(invoiceId) : null,
+          customerId: parseInt(customerId),
+          amount: parseFloat(amount),
+          date: new Date(date),
+          description,
+          currency,
+        },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              PersonName: true,
+              CompanyName: true,
+            },
+          },
+          invoice: {
+            select: {
+              id: true,
+              invoiceNumber: true,
+              totalAmount: true,
+            },
+          },
+        },
+      });
+
+      // Create payment record
+      const payment = await tx.payment.create({
+        data: {
+          transactionType: "EXPENSE",
+          category: "Customer Credit",
+          date: new Date(date),
+          amount: Math.abs(parseFloat(amount)), // Use absolute value for payment amount
+          fromPartyType: "CUSTOMER",
+          fromCustomer: "Customer",
+          toPartyType: "US",
+          toVendor: "Company",
+          mode: "CASH",
+          reference: creditNoteNumber,
+          invoice: invoiceId ? `Invoice ${invoiceId}` : undefined,
+          description: `Credit Note: ${description || creditNoteNumber}`,
+        },
+      });
+
+      // Create journal entry
+      const journalEntry = await tx.journalEntry.create({
+        data: {
+          entryNumber: `JE-${Date.now()}`,
+          date: new Date(date),
+          description: `Credit Note: ${description || creditNoteNumber}`,
+          reference: creditNoteNumber,
+          totalDebit: Math.abs(parseFloat(amount)),
+          totalCredit: Math.abs(parseFloat(amount)),
+          isPosted: true,
+          postedAt: new Date(),
+        },
+      });
+
+      // Create journal entry lines for negative amount
+      // Debit: Other Expense Account
+      await tx.journalEntryLine.create({
+        data: {
+          journalEntryId: journalEntry.id,
+          accountId: expenseId,
+          debitAmount: Math.abs(parseFloat(amount)),
+          creditAmount: 0,
+          description: `Credit Note: ${description || creditNoteNumber}`,
+          reference: creditNoteNumber,
+        },
+      });
+
+      // Credit: Cash Account
+      await tx.journalEntryLine.create({
+        data: {
+          journalEntryId: journalEntry.id,
+          accountId: cashId,
+          debitAmount: 0,
+          creditAmount: Math.abs(parseFloat(amount)),
+          description: `Credit Note: ${description || creditNoteNumber}`,
+          reference: creditNoteNumber,
+        },
+      });
+
+      // Create customer transaction (debit)
+      await addCustomerTransaction(
+        tx,
+        parseInt(customerId),
+        "DEBIT",
+        parseFloat(amount),
+        `Credit Note: ${description || creditNoteNumber}`,
+        creditNoteNumber,
+        invoiceId ? `Invoice ${invoiceId}` : undefined
+      );
+
+      return { creditNote, payment, journalEntry };
+    });
+
+    return NextResponse.json(result.creditNote, { status: 201 });
+  }
   } catch (error) {
     console.error("Error creating credit note:", error);
     return NextResponse.json(

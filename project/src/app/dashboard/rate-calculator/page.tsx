@@ -30,7 +30,7 @@ const RateCalculator = () => {
     origin: "Pakistan",
     destination: "",
     docType: "",
-    profitPercentage: "",
+    profitPercentage: "0",
   });
 
   const [countries, setCountries] = useState<any[]>([]);
@@ -73,6 +73,7 @@ const RateCalculator = () => {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showFixedCharges, setShowFixedCharges] = useState(false);
 
   // Load countries on component mount
   useEffect(() => {
@@ -470,9 +471,25 @@ const RateCalculator = () => {
                 {/* All Available Rates Table */}
                 <Card>
                   <CardContent className="p-3 sm:p-4">
-                    <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">
-                      All Available Rates ({results.zones.length} zones)
-                    </h3>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4">
+                      <h3 className="font-semibold text-sm sm:text-base lg:text-lg">
+                        All Available Rates ({results.zones.length} zones)
+                      </h3>
+                      {results.fixedCharge && (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="showFixedCharges"
+                            checked={showFixedCharges}
+                            onChange={(e) => setShowFixedCharges(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                          />
+                          <label htmlFor="showFixedCharges" className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                            Show Charges
+                          </label>
+                        </div>
+                      )}
+                    </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs sm:text-sm border-separate border-spacing-y-1 sm:border-spacing-y-2">
                         <thead>
@@ -493,6 +510,12 @@ const RateCalculator = () => {
                               <span className="hidden sm:inline">Weight (kg)</span>
                               <span className="sm:hidden">W</span>
                             </th>
+                            {results.fixedCharge && showFixedCharges && (
+                              <th className="text-left py-2 px-2 sm:px-4">
+                                <span className="hidden sm:inline">Fixed Charge (Rs.)</span>
+                                <span className="sm:hidden">Fixed</span>
+                              </th>
+                            )}
                             <th className="text-left py-2 px-2 sm:px-4">
                               <span className="hidden sm:inline">Original Price (Rs.)</span>
                               <span className="sm:hidden">Orig</span>
@@ -505,12 +528,6 @@ const RateCalculator = () => {
                               <span className="hidden sm:inline">Price per kg (Rs.)</span>
                               <span className="sm:hidden">Rs/kg</span>
                             </th>
-                            {results.fixedCharge && (
-                              <th className="text-left py-2 px-2 sm:px-4">
-                                <span className="hidden sm:inline">Fixed Charge (Rs.)</span>
-                                <span className="sm:hidden">Fixed</span>
-                              </th>
-                            )}
                             <th className="text-left py-2 px-2 sm:px-4">
                               <span className="hidden sm:inline">Status</span>
                               <span className="sm:hidden">S</span>
@@ -538,17 +555,17 @@ const RateCalculator = () => {
                                 <span className="sm:hidden">{rate.vendor?.substring(0, 6)}...</span>
                               </td>
                               <td className="py-2 px-2 sm:px-4">{rate.weight}</td>
+                              {results.fixedCharge && showFixedCharges && (
+                                <td className="py-2 px-2 sm:px-4 text-purple-600 dark:text-purple-400">
+                                  {results.fixedCharge.amount}
+                                </td>
+                              )}
                               <td className="py-2 px-2 sm:px-4 text-gray-600 dark:text-gray-400">
                                 <span className="hidden sm:inline">{rate.originalPrice}</span>
                                 <span className="sm:hidden">{rate.originalPrice}</span>
                               </td>
                               <td className="py-2 px-2 sm:px-4 font-medium">{rate.price}</td>
                               <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{(rate.price / rate.weight).toFixed(2)}</td>
-                              {results.fixedCharge && (
-                                <td className="py-2 px-2 sm:px-4 text-purple-600 dark:text-purple-400">
-                                  {results.fixedCharge.amount}
-                                </td>
-                              )}
                               <td className="py-2 px-2 sm:px-4">
                                 {rate.zone === results.bestOverallRate.zone && 
                                  rate.weight === results.bestOverallRate.bestRate.weight && 
