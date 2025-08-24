@@ -6,6 +6,9 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  
+  // Connection pooling for Vercel
+  relationMode = "prisma"
 }
 
 model User {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma-vercel";
 
 // Default Chart of Accounts data based on the image
 const defaultAccounts = [
