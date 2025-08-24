@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     // Step 1: Find all zones for the destination country
     const zoneInfos = await prisma.zone.findMany({
       where: {
-        country: {
+        code: {
           contains: finalDestination,
           mode: "insensitive",
         },

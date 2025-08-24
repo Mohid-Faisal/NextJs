@@ -14,8 +14,9 @@ export const config = {
   },
 };
 
-const uploadDir = path.join(process.cwd(), "public/uploads");
-fs.mkdirSync(uploadDir, { recursive: true });
+// For Vercel deployment, we'll handle file uploads differently
+// const uploadDir = path.join(process.cwd(), "public/uploads");
+// fs.mkdirSync(uploadDir, { recursive: true });
 
 async function toNodeIncomingMessage(req: Request): Promise<any> {
   const reader = req.body?.getReader();
@@ -38,7 +39,8 @@ async function parseForm(req: Request): Promise<{ fields: Fields; files: Files }
   const incoming = await toNodeIncomingMessage(req);
 
   const form = formidable({
-    uploadDir,
+    // For Vercel, use memory storage instead of disk
+    uploadDir: undefined,
     keepExtensions: true,
     maxFileSize: 5 * 1024 * 1024, // 5MB
     filename: (_, __, part) => `${Date.now()}_${part.originalFilename}`,
