@@ -74,7 +74,36 @@ export default function ExpensePaymentsPage() {
   // Handle pre-selection of invoice from URL parameter
   useEffect(() => {
     const invoiceParam = searchParams.get("invoice");
-    if (invoiceParam && invoices.length > 0) {
+    const billParam = searchParams.get("bill");
+    const billIdParam = searchParams.get("billId");
+    const amountParam = searchParams.get("amount");
+    const vendorParam = searchParams.get("vendor");
+    const statusParam = searchParams.get("status");
+    
+    // Handle bill parameters (from bills page)
+    if (billParam && billIdParam) {
+      const invoice = invoices.find(
+        (inv) => inv.invoiceNumber === billParam
+      );
+      if (invoice) {
+        setSelectedInvoice(invoice);
+        // Set payment amount from URL parameter
+        if (amountParam) {
+          setFormData((prev) => ({
+            ...prev,
+            paymentAmount: amountParam,
+            invoice: billParam,
+            description: `Payment for ${billParam} - ${vendorParam || 'Vendor'}`,
+          }));
+        }
+        // Set default accounts for the selected invoice
+        if (accountsInitialized && accounts.length > 0) {
+          setDefaultAccountsForInvoice(accounts, invoice);
+        }
+      }
+    }
+    // Handle invoice parameters (from other sources)
+    else if (invoiceParam && invoices.length > 0) {
       const invoice = invoices.find(
         (inv) => inv.invoiceNumber === invoiceParam
       );

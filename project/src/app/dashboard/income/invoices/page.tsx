@@ -875,7 +875,7 @@ export default function IncomeInvoicesPage() {
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem
                               onClick={() => {
-                                window.location.href = `/dashboard/accounts/payments/process?invoice=${i.invoiceNumber}`;
+                                window.location.href = `/dashboard/income/revenue?invoice=${i.invoiceNumber}&invoiceId=${i.id}&amount=${i.totalAmount}&customer=${encodeURIComponent(i.customer?.PersonName || i.customer?.CompanyName || '')}&status=${i.status}`;
                               }}
                               className="text-green-600 font-medium"
                             >

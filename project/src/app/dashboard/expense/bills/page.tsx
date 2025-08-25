@@ -824,7 +824,7 @@ export default function ExpenseBillsPage() {
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
                             onClick={() => {
-                              window.location.href = `/dashboard/accounts/payments/process?invoice=${i.invoiceNumber}`;
+                              window.location.href = `/dashboard/expense/payments?bill=${i.invoiceNumber}&billId=${i.id}&amount=${i.totalAmount}&vendor=${encodeURIComponent(i.vendor?.PersonName || i.vendor?.CompanyName || '')}&status=${i.status}`;
                             }}
                             className="text-orange-600 font-medium"
                           >
