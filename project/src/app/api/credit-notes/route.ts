@@ -8,37 +8,52 @@ const prisma = new PrismaClient();
 async function getAccountIds() {
   try {
     // Get Cash account (usually in Asset category)
-    const cashAccount = await prisma.chartOfAccount.findFirst({
+    let cashAccount = await prisma.chartOfAccount.findFirst({
       where: {
         category: "Asset",
         accountName: { contains: "Cash", mode: "insensitive" }
       }
     });
+    if (!cashAccount) {
+      cashAccount = await prisma.chartOfAccount.findFirst({ where: { category: "Asset" } });
+    }
 
     // Get Logistic Service Revenue account (usually in Revenue category)
-    const revenueAccount = await prisma.chartOfAccount.findFirst({
+    let revenueAccount = await prisma.chartOfAccount.findFirst({
       where: {
         category: "Revenue",
         accountName: { contains: "Logistic", mode: "insensitive" }
       }
     });
+    if (!revenueAccount) {
+      revenueAccount = await prisma.chartOfAccount.findFirst({ where: { category: "Revenue" } });
+    }
 
     // Get Other Expense account (usually in Expense category)
-    const expenseAccount = await prisma.chartOfAccount.findFirst({
+    let expenseAccount = await prisma.chartOfAccount.findFirst({
       where: {
         category: "Expense",
         accountName: { contains: "Other Expense", mode: "insensitive" }
       }
     });
+    if (!expenseAccount) {
+      expenseAccount = await prisma.chartOfAccount.findFirst({ where: { category: "Expense" } });
+    }
+
+    if (!cashAccount || !revenueAccount || !expenseAccount) {
+      throw new Error(
+        "Required accounts not found. Please ensure at least one Asset (Cash), one Revenue, and one Expense account exist."
+      );
+    }
 
     return {
-      cashId: cashAccount?.id || 2, // Fallback to ID 2
-      revenueId: revenueAccount?.id || 3, // Fallback to ID 3
-      expenseId: expenseAccount?.id || 4 // Fallback to ID 4
+      cashId: cashAccount.id,
+      revenueId: revenueAccount.id,
+      expenseId: expenseAccount.id
     };
   } catch (error) {
     console.error("Error getting account IDs:", error);
-    return { cashId: 2, revenueId: 3, expenseId: 4 }; // Default fallback
+    throw error;
   }
 }
 
@@ -109,11 +124,20 @@ export async function GET(request: NextRequest) {
       take: pageSize,
     });
 
+    // Attach a computed type field for UI consumption
+    const withType = creditNotes.map((cn: any) => ({
+      ...cn,
+      type:
+        typeof cn.description === "string" && cn.description.toLowerCase().startsWith("debit note")
+          ? "DEBIT"
+          : "CREDIT",
+    }));
+
     // Get total count for pagination
     const total = await prisma.creditNote.count({ where });
 
     return NextResponse.json({
-      creditNotes,
+      creditNotes: withType,
       total,
       page,
       pageSize: pageSize || total,
@@ -132,7 +156,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { invoiceId, customerId, amount, date, description, currency = "USD" } = body;
+    const { invoiceNumber, customerId, amount, date, description, currency = "PKR", type } = body;
+
+    // Resolve invoiceNumber to invoiceId (nullable)
+    let resolvedInvoiceId: number | null = null;
+    if (invoiceNumber) {
+      const found = await prisma.invoice.findFirst({
+        where: { invoiceNumber: String(invoiceNumber) },
+        select: { id: true },
+      });
+      resolvedInvoiceId = found ? found.id : null;
+    }
 
     // Validate required fields
     if (!customerId || !amount || !date) {
@@ -143,7 +177,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get account IDs for journal entries
-    const { cashId, revenueId, expenseId } = await getAccountIds();
+    let cashId: number, revenueId: number, expenseId: number;
+    try {
+      const ids = await getAccountIds();
+      cashId = ids.cashId; revenueId = ids.revenueId; expenseId = ids.expenseId;
+    } catch (e: any) {
+      return NextResponse.json(
+        { error: e?.message || "Required accounts missing. Please configure Chart of Accounts." },
+        { status: 400 }
+      );
+    }
 
     // Generate credit note number
     const lastCreditNote = await prisma.creditNote.findFirst({
@@ -153,7 +196,7 @@ export async function POST(request: NextRequest) {
     const nextId = (lastCreditNote?.id || 0) + 1;
     const creditNoteNumber = `#CREDIT${nextId.toString().padStart(5, "0")}`;
 
-    if (amount > 0) {
+    if (type === "CREDIT") {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {
@@ -161,7 +204,7 @@ export async function POST(request: NextRequest) {
       const creditNote = await tx.creditNote.create({
         data: {
           creditNoteNumber,
-          invoiceId: invoiceId ? parseInt(invoiceId) : null,
+          invoiceId: resolvedInvoiceId,
           customerId: parseInt(customerId),
           amount: parseFloat(amount),
           date: new Date(date),
@@ -199,7 +242,7 @@ export async function POST(request: NextRequest) {
           toVendor: "Company",
           mode: "CASH",
           reference: creditNoteNumber,
-          invoice: invoiceId ? `Invoice ${invoiceId}` : undefined,
+          invoice: invoiceNumber ? `Invoice ${invoiceNumber}` : undefined,
           description: `Credit Note: ${description || creditNoteNumber}`,
         },
       });
@@ -251,7 +294,7 @@ export async function POST(request: NextRequest) {
         parseFloat(amount),
         `Credit Note: ${description || creditNoteNumber}`,
         creditNoteNumber,
-        invoiceId ? `Invoice ${invoiceId}` : undefined
+        invoiceNumber ? invoiceNumber : undefined
       );
 
       return { creditNote, payment, journalEntry };
@@ -259,7 +302,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result.creditNote, { status: 201 });
   }
-  else{
+  else if (type === "DEBIT") {
     
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {
@@ -267,7 +310,7 @@ export async function POST(request: NextRequest) {
       const creditNote = await tx.creditNote.create({
         data: {
           creditNoteNumber,
-          invoiceId: invoiceId ? parseInt(invoiceId) : null,
+          invoiceId: resolvedInvoiceId,
           customerId: parseInt(customerId),
           amount: parseFloat(amount),
           date: new Date(date),
@@ -305,8 +348,8 @@ export async function POST(request: NextRequest) {
           toVendor: "Company",
           mode: "CASH",
           reference: creditNoteNumber,
-          invoice: invoiceId ? `Invoice ${invoiceId}` : undefined,
-          description: `Credit Note: ${description || creditNoteNumber}`,
+          invoice: invoiceNumber ? `Invoice ${invoiceNumber}` : undefined,
+          description: `Debit Note: ${description || creditNoteNumber}`,
         },
       });
 
@@ -315,7 +358,7 @@ export async function POST(request: NextRequest) {
         data: {
           entryNumber: `JE-${Date.now()}`,
           date: new Date(date),
-          description: `Credit Note: ${description || creditNoteNumber}`,
+          description: `Debit Note: ${description || creditNoteNumber}`,
           reference: creditNoteNumber,
           totalDebit: Math.abs(parseFloat(amount)),
           totalCredit: Math.abs(parseFloat(amount)),
@@ -332,7 +375,7 @@ export async function POST(request: NextRequest) {
           accountId: expenseId,
           debitAmount: Math.abs(parseFloat(amount)),
           creditAmount: 0,
-          description: `Credit Note: ${description || creditNoteNumber}`,
+          description: `Debit Note: ${description || creditNoteNumber}`,
           reference: creditNoteNumber,
         },
       });
@@ -344,7 +387,7 @@ export async function POST(request: NextRequest) {
           accountId: cashId,
           debitAmount: 0,
           creditAmount: Math.abs(parseFloat(amount)),
-          description: `Credit Note: ${description || creditNoteNumber}`,
+          description: `Debit Note: ${description || creditNoteNumber}`,
           reference: creditNoteNumber,
         },
       });
@@ -355,15 +398,21 @@ export async function POST(request: NextRequest) {
         parseInt(customerId),
         "DEBIT",
         parseFloat(amount),
-        `Credit Note: ${description || creditNoteNumber}`,
+        `Debit Note: ${description || creditNoteNumber}`,
         creditNoteNumber,
-        invoiceId ? `Invoice ${invoiceId}` : undefined
+        invoiceNumber ? invoiceNumber : undefined
       );
 
       return { creditNote, payment, journalEntry };
     });
 
     return NextResponse.json(result.creditNote, { status: 201 });
+  }
+  else {
+    return NextResponse.json(
+      { error: "Invalid type" },
+      { status: 400 }
+    );
   }
   } catch (error) {
     console.error("Error creating credit note:", error);

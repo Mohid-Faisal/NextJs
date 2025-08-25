@@ -43,6 +43,7 @@ type CreditNote = {
   description?: string;
   currency: string;
   createdAt: string;
+  type?: "DEBIT" | "CREDIT";
 };
 
 type SortField = keyof CreditNote;
@@ -109,6 +110,7 @@ export default function CreditNotesPage() {
     const headers = [
       "ID",
       "Credit Note #",
+      "Type",
       "Customer",
       "Invoice #",
       "Date",
@@ -118,6 +120,7 @@ export default function CreditNotesPage() {
     const rows = creditNotes?.map((cn) => [
       cn.id,
       cn.creditNoteNumber,
+      cn.type || (cn.description?.toLowerCase().startsWith("debit note") ? "DEBIT" : "CREDIT"),
       cn.customer?.PersonName || cn.customer?.CompanyName || "-",
       cn.invoice?.invoiceNumber || "-",
       new Date(cn.date).toLocaleDateString(),
@@ -143,6 +146,7 @@ export default function CreditNotesPage() {
           <tr>
             <td>${cn.id}</td>
             <td>${cn.creditNoteNumber}</td>
+            <td>${cn.type || (cn.description?.toLowerCase().startsWith("debit note") ? "DEBIT" : "CREDIT")}</td>
             <td>${cn.customer?.PersonName || cn.customer?.CompanyName || "-"}</td>
             <td>${cn.invoice?.invoiceNumber || "-"}</td>
             <td>${new Date(cn.date).toLocaleDateString()}</td>
@@ -171,6 +175,7 @@ export default function CreditNotesPage() {
               <tr>
                 <th>ID</th>
                 <th>Credit Note #</th>
+                <th>Type</th>
                 <th>Customer</th>
                 <th>Invoice #</th>
                 <th>Date</th>
@@ -300,6 +305,10 @@ export default function CreditNotesPage() {
                     </button>
                   </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span className="hidden sm:inline">TYPE</span>
+                    <span className="sm:hidden">TYPE</span>
+                  </th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("customer")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
@@ -349,6 +358,11 @@ export default function CreditNotesPage() {
                       <span className="bg-green-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
                         <span className="hidden sm:inline">{cn.creditNoteNumber}</span>
                         <span className="sm:hidden">{cn.creditNoteNumber?.substring(0, 8)}...</span>
+                      </span>
+                    </td>
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${cn.type === "DEBIT" ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"}`}>
+                        {cn.type || (cn.description?.toLowerCase().startsWith("debit note") ? "DEBIT" : "CREDIT")}
                       </span>
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">

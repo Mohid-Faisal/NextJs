@@ -44,8 +44,8 @@ const SignupPage = () => {
       const data = await response.json();
   
       if (response.ok && data.success) {
-        toast.success("Signup successful! Redirecting to login...");
-        setTimeout(() => router.push("/auth/login"), 1500);
+        toast.success(data.message || "Signup successful! Please wait for admin approval.");
+        setTimeout(() => router.push("/auth/login"), 3000);
       } else {
         toast.error(data.message || "Signup failed. Try again.");
       }

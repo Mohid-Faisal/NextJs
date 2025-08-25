@@ -26,6 +26,22 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check if user is approved
+    if (!user.isApproved) {
+      return NextResponse.json(
+        { success: false, message: "Your account is pending approval. Please wait for an administrator to approve your account." },
+        { status: 403 }
+      );
+    }
+
+    // Check if user is active
+    if (user.status !== "ACTIVE") {
+      return NextResponse.json(
+        { success: false, message: "Your account is not active. Please contact an administrator." },
+        { status: 403 }
+      );
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {

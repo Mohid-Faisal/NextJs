@@ -37,6 +37,7 @@ const links = [
   { href: "/dashboard/customers", label: "Customers", icon: User },
   { href: "/dashboard/recipients", label: "Recipients", icon: Users },
   { href: "/dashboard/vendors", label: "Vendors", icon: Building2 },
+  { href: "/dashboard/users", label: "Users", icon: Users },
 ];
 
 interface DecodedToken {

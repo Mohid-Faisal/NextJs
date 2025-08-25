@@ -47,7 +47,7 @@ export async function GET(req: Request) {
   }
 
   // Validate sort field
-  const validSortFields = ["id", "CompanyName", "PersonName", "Phone", "City", "Country", "ActiveStatus", "createdAt"];
+  const validSortFields = ["id", "CompanyName", "PersonName", "Phone", "City", "Country", "ActiveStatus", "createdAt", "currentBalance"];
   const validSortOrder = ["asc", "desc"];
   
   const finalSortField = validSortFields.includes(sortField) ? sortField : "id";
@@ -69,8 +69,46 @@ export async function GET(req: Request) {
     prisma.customers.count({ where }),
   ]);
 
+  // Get shipment information for each customer
+  const customersWithShipments = await Promise.all(
+    customers.map(async (customer) => {
+      // Get shipments where this customer is the sender
+      const shipments = await prisma.shipment.findMany({
+        where: {
+          senderName: customer.CompanyName
+        },
+        select: {
+          id: true,
+          trackingId: true,
+          recipientName: true,
+          destination: true,
+          totalCost: true,
+          shipmentDate: true,
+          deliveryStatus: true,
+          invoiceStatus: true
+        },
+        orderBy: {
+          shipmentDate: 'desc'
+        }
+      });
+
+      // Get unique recipients
+      const uniqueRecipients = [...new Set(shipments.map(s => s.recipientName))];
+      
+      // Calculate total shipment value
+      const totalShipmentValue = shipments.reduce((sum, shipment) => sum + shipment.totalCost, 0);
+
+      return {
+        ...customer,
+        shipmentCount: shipments.length,
+        uniqueRecipients: uniqueRecipients,
+        totalShipmentValue: totalShipmentValue,
+        recentShipments: shipments.slice(0, 5) // Get last 5 shipments
+      };
+    })
+  );
+
 //   console.log("customers",customers);
 
-
-  return NextResponse.json({ customers, total });
+  return NextResponse.json({ customers: customersWithShipments, total });
 }

@@ -49,6 +49,7 @@ type DebitNote = {
   description?: string;
   currency: string;
   createdAt: string;
+  type?: "DEBIT" | "CREDIT";
 };
 
 type SortField = keyof DebitNote;
@@ -120,6 +121,7 @@ export default function DebitNotesPage() {
          const headers = [
        "ID",
        "Debit Note #",
+       "Type",
        "Vendor",
        "Bill/Invoice #",
        "Date",
@@ -129,6 +131,7 @@ export default function DebitNotesPage() {
          const rows = debitNotes?.map((dn) => [
       dn.id,
       dn.debitNoteNumber,
+      dn.type || (dn.amount < 0 ? "CREDIT" : "DEBIT"),
       dn.vendor?.PersonName || dn.vendor?.CompanyName || "-",
       dn.bill?.invoiceNumber || "-",
       new Date(dn.date).toLocaleDateString(),
@@ -154,6 +157,7 @@ export default function DebitNotesPage() {
                  <tr>
            <td>${dn.id}</td>
            <td>${dn.debitNoteNumber}</td>
+           <td>${dn.type || (dn.amount < 0 ? "CREDIT" : "DEBIT")}</td>
            <td>${dn.vendor?.PersonName || dn.vendor?.CompanyName || "-"}</td>
            <td>${dn.bill?.invoiceNumber || "-"}</td>
            <td>${new Date(dn.date).toLocaleDateString()}</td>
@@ -182,6 +186,7 @@ export default function DebitNotesPage() {
               <tr>
                                  <th>ID</th>
                  <th>Debit Note #</th>
+                 <th>Type</th>
                  <th>Vendor</th>
                  <th>Bill/Invoice #</th>
                  <th>Date</th>
@@ -311,6 +316,10 @@ export default function DebitNotesPage() {
                     </button>
                   </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span className="hidden sm:inline">TYPE</span>
+                    <span className="sm:hidden">TYPE</span>
+                  </th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("vendor")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
@@ -360,6 +369,11 @@ export default function DebitNotesPage() {
                       <span className="bg-orange-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
                         <span className="hidden sm:inline">{dn.debitNoteNumber}</span>
                         <span className="sm:hidden">{dn.debitNoteNumber?.substring(0, 8)}...</span>
+                      </span>
+                    </td>
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${ (dn.type || (dn.amount < 0 ? "CREDIT" : "DEBIT")) === "DEBIT" ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"}`}>
+                        {dn.type || (dn.amount < 0 ? "CREDIT" : "DEBIT")}
                       </span>
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">

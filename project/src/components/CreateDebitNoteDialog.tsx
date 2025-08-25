@@ -50,6 +50,7 @@ export default function CreateDebitNoteDialog({
   const [date, setDate] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [entryType, setEntryType] = useState<"DEBIT" | "CREDIT">("DEBIT");
 
   // Fetch available bills and vendors
   useEffect(() => {
@@ -99,6 +100,12 @@ export default function CreateDebitNoteDialog({
     setIsLoading(true);
 
     try {
+      const parsed = parseFloat(amount);
+      const numericAmount = Math.abs(parsed);
+      const typePrefix = entryType === "DEBIT" ? "Debit Note" : "Credit Note";
+      const prefixedDescription = description
+        ? `${typePrefix}: ${description}`
+        : typePrefix;
       const response = await fetch("/api/debit-notes", {
         method: "POST",
         headers: {
@@ -107,9 +114,10 @@ export default function CreateDebitNoteDialog({
         body: JSON.stringify({
           billId: selectedBill || null,
           vendorId: selectedVendor,
-          amount: parseFloat(amount),
+          amount: numericAmount,
           date,
-          description,
+          description: prefixedDescription,
+          type: entryType,
         }),
       });
 
@@ -185,21 +193,41 @@ export default function CreateDebitNoteDialog({
           />
         </div>
 
-        {/* Date */}
-        <div className="space-y-2">
-          <Label htmlFor="date" className="text-sm font-medium">
-            Date <span className="text-red-500">*</span>
-          </Label>
-          <div className="relative">
-            <Input
-              id="date"
-              type="date"
-              placeholder="dd/mm/yyyy"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-            <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        {/* Date + Type (one line) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+          {/* Date */}
+          <div className="space-y-2">
+            <Label htmlFor="date" className="text-sm font-medium">
+              Date <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative">
+              <Input
+                id="date"
+                type="date"
+                placeholder="dd/mm/yyyy"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-10"
+                required
+              />
+              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+
+          {/* Type (DEBIT/CREDIT) */}
+          <div className="space-y-2">
+            <Label htmlFor="type" className="text-sm font-medium">
+              Type <span className="text-red-500">*</span>
+            </Label>
+            <Select value={entryType} onValueChange={(v) => setEntryType(v as "DEBIT" | "CREDIT")}>
+              <SelectTrigger id="type" className="w-full h-10">
+                <SelectValue placeholder="Select Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="DEBIT">DEBIT</SelectItem>
+                <SelectItem value="CREDIT">CREDIT</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
   
   // Connection pooling for Vercel
   relationMode = "prisma"
@@ -16,6 +15,11 @@ model User {
   name      String
   email     String   @unique
   password  String
+  role      String   @default("USER") // ADMIN, USER, MANAGER, etc.
+  status    String   @default("PENDING") // PENDING, ACTIVE, INACTIVE, SUSPENDED
+  isApproved Boolean @default(false)
+  approvedAt DateTime?
+  approvedBy Int?
   createdAt DateTime @default(now())
 }
 

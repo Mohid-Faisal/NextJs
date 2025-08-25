@@ -50,6 +50,7 @@ export default function CreateCreditNoteDialog({
   const [date, setDate] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [entryType, setEntryType] = useState<"DEBIT" | "CREDIT">("CREDIT");
 
   // Fetch available invoices and customers
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function CreateCreditNoteDialog({
   // Auto-fill customer when invoice is selected
   useEffect(() => {
     if (selectedInvoice) {
-      const invoice = invoices.find(i => i.id.toString() === selectedInvoice);
+      const invoice = invoices.find(i => i.invoiceNumber === selectedInvoice);
       if (invoice) {
         setSelectedCustomer(invoice.customer.id.toString());
         setAmount(invoice.totalAmount.toString());
@@ -99,17 +100,22 @@ export default function CreateCreditNoteDialog({
     setIsLoading(true);
 
     try {
+      const typePrefix = entryType === "DEBIT" ? "Debit Note" : "Credit Note";
+      const prefixedDescription = description
+        ? `${typePrefix}: ${description}`
+        : typePrefix;
       const response = await fetch("/api/credit-notes", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          invoiceId: selectedInvoice || null,
+          invoiceNumber: selectedInvoice || null,
           customerId: selectedCustomer,
           amount: parseFloat(amount),
           date,
-          description,
+          description: prefixedDescription,
+          type: entryType,
         }),
       });
 
@@ -152,7 +158,7 @@ export default function CreateCreditNoteDialog({
             </SelectTrigger>
             <SelectContent>
               {invoices.map((invoice) => (
-                <SelectItem key={invoice.id} value={invoice.id.toString()}>
+                <SelectItem key={invoice.id} value={invoice.invoiceNumber}>
                   {invoice.invoiceNumber} - {invoice.customer.PersonName || invoice.customer.CompanyName} 
                   ({invoice.currency} {invoice.totalAmount.toLocaleString()})
                 </SelectItem>
@@ -177,21 +183,41 @@ export default function CreateCreditNoteDialog({
           />
         </div>
 
-        {/* Date */}
-        <div className="space-y-2">
-          <Label htmlFor="date" className="text-sm font-medium">
-            Date <span className="text-red-500">*</span>
-          </Label>
-          <div className="relative">
-            <Input
-              id="date"
-              type="date"
-              placeholder="dd/mm/yyyy"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-            <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        {/* Date + Type (one line) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+          {/* Date */}
+          <div className="space-y-2">
+            <Label htmlFor="date" className="text-sm font-medium">
+              Date <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative">
+              <Input
+                id="date"
+                type="date"
+                placeholder="dd/mm/yyyy"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-10"
+                required
+              />
+              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+
+          {/* Type (DEBIT/CREDIT) */}
+          <div className="space-y-2">
+            <Label htmlFor="type" className="text-sm font-medium">
+              Type <span className="text-red-500">*</span>
+            </Label>
+            <Select value={entryType} onValueChange={(v) => setEntryType(v as "DEBIT" | "CREDIT")}> 
+              <SelectTrigger id="type" className="w-full h-10">
+                <SelectValue placeholder="Select Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CREDIT">CREDIT</SelectItem>
+                <SelectItem value="DEBIT">DEBIT</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

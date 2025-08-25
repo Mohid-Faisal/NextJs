@@ -109,11 +109,19 @@ export async function GET(request: NextRequest) {
       take: pageSize,
     });
 
+    const withType = debitNotes.map((dn: any) => ({
+      ...dn,
+      type:
+        typeof dn.description === "string" && dn.description.toLowerCase().startsWith("credit note")
+          ? "CREDIT"
+          : "DEBIT",
+    }));
+
     // Get total count for pagination
     const total = await prisma.debitNote.count({ where });
 
     return NextResponse.json({
-      debitNotes,
+      debitNotes: withType,
       total,
       page,
       pageSize: pageSize || total,
@@ -132,7 +140,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { billId, vendorId, amount, date, description, currency = "USD" } = body;
+    const { billId, vendorId, amount, date, description, currency = "USD", type } = body;
+    console.log(body);
 
     // Validate required fields
     if (!vendorId || !amount || !date) {
@@ -153,7 +162,7 @@ export async function POST(request: NextRequest) {
     const nextId = (lastDebitNote?.id || 0) + 1;
     const debitNoteNumber = `#DEBIT${nextId.toString().padStart(5, "0")}`;
 
-    if (amount > 0) {
+    if (type === "CREDIT") {
       // Use transaction to ensure all operations succeed or fail together
       const result = await prisma.$transaction(async (tx) => {
         // Create the debit note
@@ -200,7 +209,7 @@ export async function POST(request: NextRequest) {
             mode: "CASH",
             reference: debitNoteNumber,
             invoice: billId ? `Bill ${billId}` : undefined,
-            description: `Debit Note: ${description || debitNoteNumber}`,
+            description: description || `Credit Note: ${debitNoteNumber}`,
           },
         });
 
@@ -209,7 +218,7 @@ export async function POST(request: NextRequest) {
           data: {
             entryNumber: `JE-${Date.now()}`,
             date: new Date(date),
-            description: `Debit Note: ${description || debitNoteNumber}`,
+            description: description || `Credit Note: ${debitNoteNumber}`,
             reference: debitNoteNumber,
             totalDebit: parseFloat(amount),
             totalCredit: parseFloat(amount),
@@ -226,7 +235,7 @@ export async function POST(request: NextRequest) {
             accountId: vendorExpenseId,
             debitAmount: parseFloat(amount),
             creditAmount: 0,
-            description: `Debit Note: ${description || debitNoteNumber}`,
+            description: description || `Credit Note: ${debitNoteNumber}`,
             reference: debitNoteNumber,
           },
         });
@@ -238,7 +247,7 @@ export async function POST(request: NextRequest) {
             accountId: cashId,
             debitAmount: 0,
             creditAmount: parseFloat(amount),
-            description: `Debit Note: ${description || debitNoteNumber}`,
+            description: description || `Credit Note: ${debitNoteNumber}`,
             reference: debitNoteNumber,
           },
         });
@@ -249,7 +258,7 @@ export async function POST(request: NextRequest) {
           parseInt(vendorId),
           "DEBIT",
           parseFloat(amount),
-          `Debit Note: ${description || debitNoteNumber}`,
+          description || `Credit Note: ${debitNoteNumber}`,
           debitNoteNumber,
           billId ? `Bill ${billId}` : undefined
         );
@@ -258,7 +267,7 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(result.debitNote, { status: 201 });
-    } else {
+    } else if (type === "DEBIT") {
       // Use transaction to ensure all operations succeed or fail together
       const result = await prisma.$transaction(async (tx) => {
         // Create the debit note
@@ -304,7 +313,7 @@ export async function POST(request: NextRequest) {
             mode: "CASH",
             reference: debitNoteNumber,
             invoice: billId ? `Bill ${billId}` : undefined,
-            description: `Debit Note: ${description || debitNoteNumber}`,
+            description: description || `Debit Note: ${debitNoteNumber}`,
           },
         });
 
@@ -313,7 +322,7 @@ export async function POST(request: NextRequest) {
           data: {
             entryNumber: `JE-${Date.now()}`,
             date: new Date(date),
-            description: `Debit Note: ${description || debitNoteNumber}`,
+            description: description || `Debit Note: ${debitNoteNumber}`,
             reference: debitNoteNumber,
             totalDebit: Math.abs(parseFloat(amount)),
             totalCredit: Math.abs(parseFloat(amount)),
@@ -330,7 +339,7 @@ export async function POST(request: NextRequest) {
             accountId: cashId,
             debitAmount: Math.abs(parseFloat(amount)),
             creditAmount: 0,
-            description: `Debit Note: ${description || debitNoteNumber}`,
+            description: description || `Debit Note: ${debitNoteNumber}`,
             reference: debitNoteNumber,
           },
         });
@@ -342,7 +351,7 @@ export async function POST(request: NextRequest) {
             accountId: otherIncomeId,
             debitAmount: 0,
             creditAmount: Math.abs(parseFloat(amount)),
-            description: `Debit Note: ${description || debitNoteNumber}`,
+            description: description || `Debit Note: ${debitNoteNumber}`,
             reference: debitNoteNumber,
           },
         });
@@ -353,7 +362,7 @@ export async function POST(request: NextRequest) {
           parseInt(vendorId),
           "CREDIT",
           parseFloat(amount),
-          `Debit Note: ${description || debitNoteNumber}`,
+          description || `Debit Note: ${debitNoteNumber}`,
           debitNoteNumber,
           billId ? `Bill ${billId}` : undefined
         );
@@ -362,6 +371,8 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(result.debitNote, { status: 201 });
+    } else {
+      return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
   } catch (error) {
     console.error("Error creating debit note:", error);

@@ -239,7 +239,7 @@ const RecipientsPage = () => {
                   <SelectContent>
                     {states.map((state) => (
                       <SelectItem key={state.isoCode} value={state.isoCode}>
-                        {state.name}
+                        {state.name} ({state.isoCode})
                       </SelectItem>
                     ))}
                   </SelectContent>
