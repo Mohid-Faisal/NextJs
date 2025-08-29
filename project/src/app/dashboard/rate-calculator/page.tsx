@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Country } from "country-state-city";
 
 const documentTypes = [
@@ -24,9 +25,9 @@ const documentTypes = [
 const RateCalculator = () => {
   const [form, setForm] = useState({
     weight: "",
-    length: "",
-    width: "",
-    height: "",
+    length: "0",
+    width: "0",
+    height: "0",
     origin: "Pakistan",
     destination: "",
     docType: "",
@@ -40,6 +41,18 @@ const RateCalculator = () => {
       weight: number;
       amount: number;
     } | null;
+    top3Rates: Array<{
+      rank: number;
+      zone: number;
+      country: string;
+      service: string;
+      bestRate: { 
+        weight: number; 
+        price: number; 
+        vendor: string;
+        originalPrice: number;
+      };
+    }>;
     zones: Array<{
       zone: number;
       country: string;
@@ -102,8 +115,8 @@ const RateCalculator = () => {
     const profit = parseFloat(profitPercentage);
     console.log(`📍 Weight:`, w);
 
-    if ([w, l, wd, h].some((v) => isNaN(v) || v <= 0)) {
-      setError("Please enter valid positive numbers for all dimensions and weight.");
+    if ([w, l, wd, h].some((v) => isNaN(v) || v < 0)) {
+      setError("Please enter valid non-negative numbers for all dimensions and weight.");
       setResults(null);
       return;
     }
@@ -168,7 +181,8 @@ const RateCalculator = () => {
               Rate Calculator
             </h1>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {/* Row 1: Origin, Destination, Document Type, Weight */}
               <div className="space-y-2">
                 <Label htmlFor="origin" className="text-xs sm:text-sm">Origin</Label>
                 <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
@@ -218,7 +232,7 @@ const RateCalculator = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="docType" className="text-xs sm:text-sm">Document Type</Label>
+                <Label htmlFor="docType" className="text-xs sm:text-sm">Type</Label>
                 <Select onValueChange={(value) => handleSelect(value, "docType")} value={form.docType}>
                   <SelectTrigger className="w-full text-xs sm:text-sm">
                     <SelectValue placeholder="Select document type" />
@@ -242,21 +256,6 @@ const RateCalculator = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="profitPercentage" className="text-xs sm:text-sm">Profit Percentage (%)</Label>
-                <Input
-                  id="profitPercentage"
-                  name="profitPercentage"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={form.profitPercentage}
-                  onChange={handleChange}
-                  placeholder="10"
-                  className="text-xs sm:text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="weight" className="text-xs sm:text-sm">Weight (kg)</Label>
                 <Input
                   id="weight"
@@ -271,6 +270,7 @@ const RateCalculator = () => {
                 />
               </div>
 
+              {/* Row 2: Length, Width, Height, Profit Percentage */}
               <div className="space-y-2">
                 <Label htmlFor="length" className="text-xs sm:text-sm">Length (cm)</Label>
                 <Input
@@ -280,7 +280,7 @@ const RateCalculator = () => {
                   min="0"
                   value={form.length}
                   onChange={handleChange}
-                  placeholder="10"
+                  placeholder="0"
                   className="text-xs sm:text-sm"
                 />
               </div>
@@ -294,7 +294,7 @@ const RateCalculator = () => {
                   min="0"
                   value={form.width}
                   onChange={handleChange}
-                  placeholder="10"
+                  placeholder="0"
                   className="text-xs sm:text-sm"
                 />
               </div>
@@ -307,6 +307,21 @@ const RateCalculator = () => {
                   type="number"
                   min="0"
                   value={form.height}
+                  onChange={handleChange}
+                  placeholder="0"
+                  className="text-xs sm:text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="profitPercentage" className="text-xs sm:text-sm">Profit Percentage (%)</Label>
+                <Input
+                  id="profitPercentage"
+                  name="profitPercentage"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={form.profitPercentage}
                   onChange={handleChange}
                   placeholder="10"
                   className="text-xs sm:text-sm"
@@ -334,139 +349,114 @@ const RateCalculator = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-4 sm:mt-6 space-y-3 sm:space-y-4"
               >
-                {/* Fixed Charges Information */}
-                {results.fixedCharge && (
-                  <Card className="bg-purple-50 dark:bg-purple-950 border border-purple-300 dark:border-purple-700">
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 lg:gap-0">
-                        <div>
-                          <h3 className="font-semibold text-purple-800 dark:text-purple-200 text-sm sm:text-base lg:text-lg">
-                            💰 Fixed Charges
-                          </h3>
-                          <p className="text-xs sm:text-sm text-purple-600 dark:text-purple-300">
-                            <span className="hidden sm:inline">Weight: {results.fixedCharge.weight}kg | Applied to shipments ≥ {results.fixedCharge.weight}kg</span>
-                            <span className="sm:hidden">W: {results.fixedCharge.weight}kg | ≥ {results.fixedCharge.weight}kg</span>
-                          </p>
-                        </div>
-                        <div className="text-left lg:text-right">
-                          <p className="text-sm sm:text-base lg:text-lg font-bold text-purple-800 dark:text-purple-200">
-                            Rs. {results.fixedCharge.amount}
-                          </p>
-                          <p className="text-xs text-purple-500 dark:text-purple-400">
-                            <span className="hidden sm:inline">Additional fixed charge</span>
-                            <span className="sm:hidden">Fixed charge</span>
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
-                {/* Best Overall Rate */}
-                <Card className="bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-700">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 lg:gap-0">
-                      <div>
-                        <h3 className="font-semibold text-green-800 dark:text-green-200 text-sm sm:text-base lg:text-lg">
-                          🏆 Best Overall Rate
-                        </h3>
-                        <p className="text-xs sm:text-sm text-green-600 dark:text-green-300">
-                          <span className="hidden sm:inline">Country: {results.bestOverallRate.country} | Zone: {results.bestOverallRate.zone} | Service: {results.bestOverallRate.service}</span>
-                          <span className="sm:hidden">{results.bestOverallRate.country} | Z{results.bestOverallRate.zone} | {results.bestOverallRate.service}</span>
-                        </p>
-                        {results.profitPercentage > 0 && (
-                          <p className="text-xs text-green-500 dark:text-green-400">
-                            <span className="hidden sm:inline">Profit: +{results.profitPercentage}% | Original: Rs. {results.bestOverallRate.bestRate.originalPrice}</span>
-                            <span className="sm:hidden">+{results.profitPercentage}% | Orig: Rs. {results.bestOverallRate.bestRate.originalPrice}</span>
-                          </p>
-                        )}
-                        {results.fixedCharge && (
-                          <p className="text-xs text-green-500 dark:text-green-400">
-                            <span className="hidden sm:inline">Fixed Charge: Rs. {results.fixedCharge.amount} | Total: Rs. {results.bestOverallRate.bestRate.price + results.fixedCharge.amount}</span>
-                            <span className="sm:hidden">Fixed: Rs. {results.fixedCharge.amount} | Total: Rs. {results.bestOverallRate.bestRate.price + results.fixedCharge.amount}</span>
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-left lg:text-right">
-                        <p className="text-sm sm:text-base lg:text-lg font-bold text-green-800 dark:text-green-200">
-                          Rs. {results.bestOverallRate.bestRate.price}
-                        </p>
-                        <p className="text-xs sm:text-sm text-green-600 dark:text-green-300">
-                          <span className="hidden sm:inline">Weight: {results.bestOverallRate.bestRate.weight}kg | Vendor: {results.bestOverallRate.bestRate.vendor}</span>
-                          <span className="sm:hidden">{results.bestOverallRate.bestRate.weight}kg | {results.bestOverallRate.bestRate.vendor}</span>
-                        </p>
-                        <p className="text-xs text-green-500 dark:text-green-400">
-                          <span className="hidden sm:inline">Price per kg: Rs. {(results.bestOverallRate.bestRate.price / results.bestOverallRate.bestRate.weight).toFixed(2)}</span>
-                          <span className="sm:hidden">Rs. {(results.bestOverallRate.bestRate.price / results.bestOverallRate.bestRate.weight).toFixed(2)}/kg</span>
-                        </p>
-                        {results.fixedCharge && (
-                          <p className="text-xs text-green-500 dark:text-green-400">
-                            <span className="hidden sm:inline">+ Fixed: Rs. {results.fixedCharge.amount}</span>
-                            <span className="sm:hidden">+ Fixed: Rs. {results.fixedCharge.amount}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* All Zones Information */}
-                <Card className="bg-blue-50 dark:bg-blue-950 border border-blue-300 dark:border-blue-700">
-                  <CardContent className="p-3 sm:p-4">
-                    <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2 sm:mb-3 text-sm sm:text-base">
-                      Available Zones & Services
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3">
-                      {results.zones.map((zone, index) => (
-                        <div 
-                          key={index}
-                          className={`p-2 sm:p-3 rounded border ${
-                            zone.zone === results.bestOverallRate.zone 
-                              ? 'bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-600' 
-                              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-xs sm:text-sm">
-                                Zone {zone.zone}
-                              </p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                {zone.service} • {zone.bestRate.vendor}
-                              </p>
-                              {results.profitPercentage > 0 && (
-                                <p className="text-xs text-blue-500 dark:text-blue-400">
-                                  +{results.profitPercentage}% | Orig: Rs. {zone.bestRate.originalPrice}
-                                </p>
-                              )}
-                              {results.fixedCharge && (
-                                <p className="text-xs text-purple-500 dark:text-purple-400">
-                                  Fixed: Rs. {results.fixedCharge.amount}
-                                </p>
-                              )}
+                {/* Top 3 Rates */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+                  {results.top3Rates.map((rate, index) => (
+                    <Card 
+                      key={index}
+                      className={`${
+                        index === 0 
+                          ? 'bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700' 
+                          : index === 1 
+                          ? 'bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700'
+                          : 'bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700'
+                      } border`}
+                    >
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex flex-col justify-between items-start gap-3 h-full">
+                          <div className="w-full">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className={`font-semibold text-sm sm:text-base lg:text-lg ${
+                                index === 0 
+                                  ? 'text-green-800 dark:text-green-200' 
+                                  : index === 1 
+                                  ? 'text-blue-800 dark:text-blue-200'
+                                  : 'text-orange-800 dark:text-orange-200'
+                              }`}>
+                                {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'} {index === 0 ? 'Best' : index === 1 ? '2nd Best' : '3rd Best'} Rate
+                              </h3>
+                              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                index === 0 
+                                  ? 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200' 
+                                  : index === 1 
+                                  ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
+                                  : 'bg-orange-200 text-orange-800 dark:bg-orange-800 dark:text-orange-200'
+                              }`}>
+                                #{rate.rank}
+                              </span>
                             </div>
-                            <div className="text-right">
-                              <p className="font-bold text-xs sm:text-sm">
-                                Rs. {zone.bestRate.price}
+                            <p className={`text-xs sm:text-sm mb-2 ${
+                              index === 0 
+                                ? 'text-green-600 dark:text-green-300' 
+                                : index === 1 
+                                ? 'text-blue-600 dark:text-blue-300'
+                                : 'text-orange-600 dark:text-orange-300'
+                            }`}>
+                              <span className="hidden sm:inline">Country: {rate.country} | Zone: {rate.zone} | Service: {rate.service}</span>
+                              <span className="sm:hidden">{rate.country} | Z{rate.zone} | {rate.service}</span>
+                            </p>
+                            {results.profitPercentage > 0 && (
+                              <p className={`text-xs mb-1 ${
+                                index === 0 
+                                  ? 'text-green-500 dark:text-green-400' 
+                                  : index === 1 
+                                  ? 'text-blue-500 dark:text-blue-400'
+                                  : 'text-orange-500 dark:text-orange-400'
+                              }`}>
+                                <span className="hidden sm:inline">Profit: +{results.profitPercentage}% | Original: Rs. {rate.bestRate.originalPrice}</span>
+                                <span className="sm:hidden">+{results.profitPercentage}% | Orig: Rs. {rate.bestRate.originalPrice}</span>
                               </p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                {zone.bestRate.weight}kg
+                            )}
+                            {results.fixedCharge && (
+                              <p className={`text-xs ${
+                                index === 0 
+                                  ? 'text-green-500 dark:text-green-400' 
+                                  : index === 1 
+                                  ? 'text-blue-500 dark:text-blue-400'
+                                  : 'text-orange-500 dark:text-orange-400'
+                              }`}>
+                                <span className="hidden sm:inline">Fixed Charge: Rs. {results.fixedCharge.amount} | Total: Rs. {rate.bestRate.price + results.fixedCharge.amount}</span>
+                                <span className="sm:hidden">Fixed: Rs. {results.fixedCharge.amount} | Total: Rs. {rate.bestRate.price + results.fixedCharge.amount}</span>
                               </p>
-                              <p className="text-xs text-blue-500 dark:text-blue-400">
-                                Rs. {(zone.bestRate.price / zone.bestRate.weight).toFixed(2)}/kg
-                              </p>
-                              {results.fixedCharge && (
-                                <p className="text-xs text-purple-500 dark:text-purple-400">
-                                  Total: Rs. {zone.bestRate.price + results.fixedCharge.amount}
-                                </p>
-                              )}
-                            </div>
+                            )}
+                          </div>
+                          <div className="w-full text-left">
+                            <p className={`text-sm sm:text-base lg:text-lg font-bold ${
+                              index === 0 
+                                ? 'text-green-800 dark:text-green-200' 
+                                : index === 1 
+                                ? 'text-blue-800 dark:text-blue-200'
+                                : 'text-orange-800 dark:text-orange-200'
+                            }`}>
+                              Rs. {rate.bestRate.price}
+                            </p>
+                            <p className={`text-xs sm:text-sm ${
+                              index === 0 
+                                ? 'text-green-600 dark:text-green-300' 
+                                : index === 1 
+                                ? 'text-blue-600 dark:text-blue-300'
+                                : 'text-orange-600 dark:text-orange-300'
+                            }`}>
+                              <span className="hidden sm:inline">Weight: {rate.bestRate.weight}kg | Vendor: {rate.bestRate.vendor}</span>
+                              <span className="sm:hidden">{rate.bestRate.weight}kg | {rate.bestRate.vendor}</span>
+                            </p>
+                            <p className={`text-xs ${
+                              index === 0 
+                                ? 'text-green-500 dark:text-green-400' 
+                                : index === 1 
+                                ? 'text-blue-500 dark:text-blue-400'
+                                : 'text-orange-500 dark:text-orange-400'
+                            }`}>
+                              <span className="hidden sm:inline">Price per kg: Rs. {((rate.bestRate.price + (results.fixedCharge?.amount ?? 0)) / rate.bestRate.weight).toFixed(2)}</span>
+                              <span className="sm:hidden">Rs. {((rate.bestRate.price + (results.fixedCharge?.amount ?? 0)) / rate.bestRate.weight).toFixed(2)}/kg</span>
+                            </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
 
                 {/* All Available Rates Table */}
                 <Card>
@@ -477,16 +467,14 @@ const RateCalculator = () => {
                       </h3>
                       {results.fixedCharge && (
                         <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="showFixedCharges"
+                          <Switch
                             checked={showFixedCharges}
-                            onChange={(e) => setShowFixedCharges(e.target.checked)}
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                            onCheckedChange={(checked) => setShowFixedCharges(!!checked)}
+                            className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                           />
-                          <label htmlFor="showFixedCharges" className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                          <Label className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                             Show Charges
-                          </label>
+                          </Label>
                         </div>
                       )}
                     </div>
@@ -495,22 +483,22 @@ const RateCalculator = () => {
                         <thead>
                           <tr className="border-b">
                             <th className="text-left py-2 px-2 sm:px-4">
-                              <span className="hidden sm:inline">Service</span>
-                              <span className="sm:hidden">Svc</span>
+                              <span className="hidden sm:inline">Vendor</span>
+                              <span className="sm:hidden">V</span>
                             </th>
                             <th className="text-left py-2 px-2 sm:px-4">
                               <span className="hidden sm:inline">Zone</span>
                               <span className="sm:hidden">Z</span>
                             </th>
                             <th className="text-left py-2 px-2 sm:px-4">
-                              <span className="hidden sm:inline">Vendor</span>
-                              <span className="sm:hidden">V</span>
+                              <span className="hidden sm:inline">Service</span>
+                              <span className="sm:hidden">Svc</span>
                             </th>
                             <th className="text-left py-2 px-2 sm:px-4">
                               <span className="hidden sm:inline">Weight (kg)</span>
                               <span className="sm:hidden">W</span>
                             </th>
-                            {results.fixedCharge && showFixedCharges && (
+                            {results.fixedCharge && !showFixedCharges && (
                               <th className="text-left py-2 px-2 sm:px-4">
                                 <span className="hidden sm:inline">Fixed Charge (Rs.)</span>
                                 <span className="sm:hidden">Fixed</span>
@@ -539,47 +527,64 @@ const RateCalculator = () => {
                             <tr 
                               key={index} 
                               className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                rate.zone === results.bestOverallRate.zone && 
-                                rate.weight === results.bestOverallRate.bestRate.weight && 
-                                rate.price === results.bestOverallRate.bestRate.price ? 
+                                results.top3Rates.some(topRate => 
+                                  rate.zone === topRate.zone && 
+                                  rate.weight === topRate.bestRate.weight && 
+                                  rate.price === topRate.bestRate.price
+                                ) ? 
                                 'bg-green-50 dark:bg-green-950' : ''
                               }`}
                             >
                               <td className="py-2 px-2 sm:px-4 font-medium">
-                                <span className="hidden sm:inline">{rate.service}</span>
-                                <span className="sm:hidden">{rate.service?.substring(0, 8)}...</span>
-                              </td>
-                              <td className="py-2 px-2 sm:px-4">{rate.zone}</td>
-                              <td className="py-2 sm:px-4">
                                 <span className="hidden sm:inline">{rate.vendor}</span>
                                 <span className="sm:hidden">{rate.vendor?.substring(0, 6)}...</span>
                               </td>
+                              <td className="py-2 px-2 sm:px-4">{rate.zone}</td>
+                              <td className="py-2 sm:px-4">
+                                <span className="hidden sm:inline">{rate.service}</span>
+                                <span className="sm:hidden">{rate.service?.substring(0, 8)}...</span>
+                              </td>
                               <td className="py-2 px-2 sm:px-4">{rate.weight}</td>
-                              {results.fixedCharge && showFixedCharges && (
+                              {results.fixedCharge && !showFixedCharges && (
                                 <td className="py-2 px-2 sm:px-4 text-purple-600 dark:text-purple-400">
                                   {results.fixedCharge.amount}
                                 </td>
                               )}
                               <td className="py-2 px-2 sm:px-4 text-gray-600 dark:text-gray-400">
-                                <span className="hidden sm:inline">{rate.originalPrice}</span>
-                                <span className="sm:hidden">{rate.originalPrice}</span>
+                                <span className="hidden sm:inline">{rate.originalPrice + (results.fixedCharge?.amount ?? 0)}</span>
+                                <span className="sm:hidden">{rate.originalPrice + (results.fixedCharge?.amount ?? 0)}</span>
                               </td>
-                              <td className="py-2 px-2 sm:px-4 font-medium">{rate.price}</td>
-                              <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{(rate.price / rate.weight).toFixed(2)}</td>
+                              <td className="py-2 px-2 sm:px-4 font-medium">{rate.price + (results.fixedCharge?.amount ?? 0)}</td>
+                              <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{((rate.price + (results.fixedCharge?.amount ?? 0) )/ rate.weight).toFixed(2)}</td>
                               <td className="py-2 px-2 sm:px-4">
-                                {rate.zone === results.bestOverallRate.zone && 
-                                 rate.weight === results.bestOverallRate.bestRate.weight && 
-                                 rate.price === results.bestOverallRate.bestRate.price ? (
-                                  <span className="text-green-600 dark:text-green-400 font-medium">
-                                    <span className="hidden sm:inline">✓ Best Overall</span>
-                                    <span className="sm:hidden">✓ Best</span>
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-500">
-                                    <span className="hidden sm:inline">Available</span>
-                                    <span className="sm:hidden">Avail</span>
-                                  </span>
-                                )}
+                                {(() => {
+                                  const topRate = results.top3Rates.find(topRate => 
+                                    rate.zone === topRate.zone && 
+                                    rate.weight === topRate.bestRate.weight && 
+                                    rate.price === topRate.bestRate.price
+                                  );
+                                  
+                                  if (topRate) {
+                                    const rankText = topRate.rank === 1 ? '🥇 Best' : topRate.rank === 2 ? '🥈 2nd' : '🥉 3rd';
+                                    const rankColor = topRate.rank === 1 ? 'text-green-600 dark:text-green-400' : 
+                                                   topRate.rank === 2 ? 'text-blue-600 dark:text-blue-400' : 
+                                                   'text-orange-600 dark:text-orange-400';
+                                    
+                                    return (
+                                      <span className={`${rankColor} font-medium`}>
+                                        <span className="hidden sm:inline">{rankText}</span>
+                                        <span className="sm:hidden">{rankText}</span>
+                                      </span>
+                                    );
+                                  } else {
+                                    return (
+                                      <span className="text-gray-500">
+                                        <span className="hidden sm:inline">Available</span>
+                                        <span className="sm:hidden">Avail</span>
+                                      </span>
+                                    );
+                                  }
+                                })()}
                               </td>
                             </tr>
                           ))}

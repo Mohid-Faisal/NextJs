@@ -243,16 +243,15 @@ export async function POST(req: NextRequest) {
 
     const zones = Array.from(zonesMap.values());
 
-    // Find the best overall rate from filtered rates (lowest price)
-    const bestOverallRate = filteredRates.reduce((best, current) => {
-      return current.price < best.price ? current : best;
-    });
+    // Find the top 3 overall rates from filtered rates (lowest price first)
+    const sortedRates = [...filteredRates].sort((a, b) => a.price - b.price);
+    const top3Rates = sortedRates.slice(0, 3);
 
     // Find the corresponding zone info for best overall rate
     const bestZoneInfo = zones.find(
       (zone) =>
-        zone.zone === bestOverallRate.zone &&
-        zone.service === bestOverallRate.service
+        zone.zone === top3Rates[0].zone &&
+        zone.service === top3Rates[0].service
     );
 
     return NextResponse.json({
@@ -273,15 +272,34 @@ export async function POST(req: NextRequest) {
           originalPrice: zone.bestRate.price,
         },
       })),
+      top3Rates: top3Rates.map((rate, index) => {
+        const zoneInfo = zones.find(
+          (zone) =>
+            zone.zone === rate.zone &&
+            zone.service === rate.service
+        );
+        return {
+          rank: index + 1,
+          zone: rate.zone,
+          country: zoneInfo?.country || "Unknown",
+          service: rate.service,
+          bestRate: {
+            weight: rate.weight,
+            price: Math.round(rate.price * profitMultiplier),
+            vendor: rate.vendor,
+            originalPrice: rate.price,
+          },
+        };
+      }),
       bestOverallRate: {
-        zone: bestOverallRate.zone,
+        zone: top3Rates[0].zone,
         country: bestZoneInfo?.country || "Unknown",
-        service: bestOverallRate.service,
+        service: top3Rates[0].service,
         bestRate: {
-          weight: bestOverallRate.weight,
-          price: Math.round(bestOverallRate.price * profitMultiplier),
-          vendor: bestOverallRate.vendor,
-          originalPrice: bestOverallRate.price,
+          weight: top3Rates[0].weight,
+          price: Math.round(top3Rates[0].price * profitMultiplier),
+          vendor: top3Rates[0].vendor,
+          originalPrice: top3Rates[0].price,
         },
       },
       allRates: filteredRates.map((rate) => ({
