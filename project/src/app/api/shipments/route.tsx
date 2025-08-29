@@ -66,6 +66,7 @@ export async function GET(req: Request) {
     
     where.OR = [
       { trackingId: { contains: search, mode: "insensitive" } },
+      { referenceNumber: { contains: search, mode: "insensitive" } },
       { invoiceNumber: { contains: search, mode: "insensitive" } },
       { agency: { contains: search, mode: "insensitive" } },
       { office: { contains: search, mode: "insensitive" } },

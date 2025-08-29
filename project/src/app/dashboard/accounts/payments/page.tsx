@@ -441,25 +441,8 @@ export default function PaymentsPage() {
      // Navigate to add payment page with edit mode and payment data
      const queryParams = new URLSearchParams({
        mode: 'edit',
-       id: payment.id.toString(),
-       transactionType: payment.transactionType,
-       category: payment.category,
-       date: payment.date,
-       amount: payment.amount.toString(),
-       fromAccount: payment.fromAccount,
-       toAccount: payment.toAccount,
-       paymentMode: payment.mode, // Changed from 'mode' to 'paymentMode' to avoid conflict
-       reference: payment.reference || '',
-       invoice: payment.invoice || '',
-       description: payment.description || ''
+       id: payment.id.toString()
      });
-     
-     // Add customer ID for Return transactions
-     if (payment.transactionType === "Adjustment" && payment.toAccount !== "Us") {
-       // Extract customer ID from toAccount if it's a customer name
-       // This assumes the toAccount contains the customer ID when it's a customer
-       queryParams.append('toCustomerId', payment.toAccount);
-     }
      
      window.location.href = `/dashboard/accounts/payments/add?${queryParams.toString()}`;
    };

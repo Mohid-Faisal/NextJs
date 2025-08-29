@@ -86,7 +86,7 @@ const RateCalculator = () => {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showFixedCharges, setShowFixedCharges] = useState(false);
+  const [showFixedCharges, setShowFixedCharges] = useState(true);
 
   // Load countries on component mount
   useEffect(() => {
@@ -169,11 +169,11 @@ const RateCalculator = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+    <div className="p-2 sm:p-4 lg:p-6 xl:p-8 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-7xl mx-auto"
+        className="w-full max-w-none mx-auto"
       >
         <Card className="w-full min-h-[calc(100vh-10rem)] border border-gray-200 dark:border-gray-700 overflow-hidden">
           <CardContent className="p-3 sm:p-4 lg:p-6 overflow-y-auto h-full">
@@ -416,8 +416,8 @@ const RateCalculator = () => {
                                   ? 'text-blue-500 dark:text-blue-400'
                                   : 'text-orange-500 dark:text-orange-400'
                               }`}>
-                                <span className="hidden sm:inline">Fixed Charge: Rs. {results.fixedCharge.amount} | Total: Rs. {rate.bestRate.price + results.fixedCharge.amount}</span>
-                                <span className="sm:hidden">Fixed: Rs. {results.fixedCharge.amount} | Total: Rs. {rate.bestRate.price + results.fixedCharge.amount}</span>
+                                <span className="hidden sm:inline">Total: Rs. {rate.bestRate.price + results.fixedCharge.amount}</span>
+                                <span className="sm:hidden">Total: Rs. {rate.bestRate.price + results.fixedCharge.amount}</span>
                               </p>
                             )}
                           </div>

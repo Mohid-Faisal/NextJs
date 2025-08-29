@@ -488,6 +488,7 @@ const AddShipmentPage = () => {
   const [form, setForm] = useState({
     shipmentDate: new Date().toLocaleDateString("en-CA"), // Default to today's date in local timezone
     trackingId: "",
+    referenceNumber: "", // Add reference number field
     invoiceNumber: "", // Add invoice number field
     agency: "PSS", // Default to PSS
     office: "LHE", // Default to LHE
@@ -658,6 +659,7 @@ const AddShipmentPage = () => {
           shipmentDate: new Date().toLocaleDateString("en-CA"),
           trackingId: "",
           invoiceNumber: "",
+          referenceNumber: "",
           agency: "PSS",
           office: "LHE",
           senderName: "",
@@ -720,6 +722,7 @@ const AddShipmentPage = () => {
               : new Date().toLocaleDateString("en-CA"),
             trackingId: s.trackingId || "",
             invoiceNumber: s.invoiceNumber || "",
+            referenceNumber: s.referenceNumber || "",
             agency: s.agency || "",
             office: s.office || "",
             senderName: s.senderName || "",
@@ -1013,62 +1016,13 @@ const AddShipmentPage = () => {
         </div>
 
         {/* Shipment Info Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-          {/* Left Section: Shipment Date + Tracking ID */}
+        <div className="mb-4 sm:mb-6">
+          {/* Shipment Information Card */}
           <Card className="bg-white dark:bg-background border border-border shadow-sm">
             <CardContent className="p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 lg:gap-6">
-                {/* Shipment Date */}
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium mb-1">
-                    Shipment Date
-                  </Label>
-                  <Input
-                    id="shipmentDate"
-                    name="shipmentDate"
-                    type="date"
-                    value={form.shipmentDate}
-                    onChange={handleChange}
-                    required
-                    className="bg-muted"
-                  />
-                </div>
-                {/* Invoice/Receipt Number */}
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium mb-1">Receipt #</Label>
-                  <Input
-                    id="invoiceNumber"
-                    name="invoiceNumber"
-                    value={form.invoiceNumber}
-                    readOnly
-                    className="bg-muted"
-                    placeholder="Auto-generated"
-                  />
-                </div>
-
-                {/* Tracking ID */}
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium mb-1">Tracking</Label>
-                  <Input
-                    id="trackingId"
-                    name="trackingId"
-                    value={form.trackingId}
-                    onChange={handleChange}
-                    required
-                    className="bg-muted"
-                    placeholder="Enter tracking"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Right Section: List of Agencies + Office of origin */}
-          <Card className="bg-card border border-border shadow-sm">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 lg:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
                 {/* List of Agencies */}
-                <div className="flex flex-col gap-2 w-full">
+                <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium mb-1">
                     Branch / Agencies
                   </Label>
@@ -1093,7 +1047,7 @@ const AddShipmentPage = () => {
                 </div>
 
                 {/* Office of Origin */}
-                <div className="flex flex-col gap-2 w-full">
+                <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium mb-1">
                     Office of Origin
                   </Label>
@@ -1116,6 +1070,63 @@ const AddShipmentPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Shipment Date */}
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium mb-1">
+                    Shipment Date
+                  </Label>
+                  <Input
+                    id="shipmentDate"
+                    name="shipmentDate"
+                    type="date"
+                    value={form.shipmentDate}
+                    onChange={handleChange}
+                    required
+                    className="bg-muted"
+                  />
+                </div>
+
+                {/* Invoice/Receipt Number */}
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium mb-1">Booking #</Label>
+                  <Input
+                    id="invoiceNumber"
+                    name="invoiceNumber"
+                    value={form.invoiceNumber}
+                    readOnly
+                    className="bg-muted"
+                    placeholder="Auto-generated"
+                  />
+                </div>
+                {/* Reference Number */}
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium mb-1">Reference #</Label>
+                  <Input
+                    id="referenceNumber"
+                    name="referenceNumber"
+                    value={form.referenceNumber}
+                    onChange={handleChange}
+                    required
+                    className="bg-muted"
+                    placeholder="Enter reference"
+                  />
+                </div>
+
+
+                {/* Tracking ID */}
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium mb-1">Tracking #</Label>
+                  <Input
+                    id="trackingId"
+                    name="trackingId"
+                    value={form.trackingId}
+                    onChange={handleChange}
+                    required
+                    className="bg-muted"
+                    placeholder="Enter tracking"
+                  />
+                </div>
+
               </div>
             </CardContent>
           </Card>

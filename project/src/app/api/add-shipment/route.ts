@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     // Extract all required fields from the request body
     const {
       trackingId,
+      referenceNumber,
       shipmentDate,
       agency,
       office,
@@ -67,12 +68,46 @@ export async function POST(req: NextRequest) {
     } = requestBody;
     
     // ============================================================================
-    // SECTION 2: DEBUG LOGGING
+    // SECTION 2: VALIDATION
+    // ============================================================================
+    // Validate required fields
+    if (!trackingId || !referenceNumber) {
+      return NextResponse.json(
+        { error: "Tracking ID and Reference Number are required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if tracking ID already exists
+    const existingTrackingId = await prisma.shipment.findUnique({
+      where: { trackingId }
+    });
+    if (existingTrackingId) {
+      return NextResponse.json(
+        { error: "Tracking ID already exists" },
+        { status: 400 }
+      );
+    }
+
+    // Check if reference number already exists
+    const existingReferenceNumber = await prisma.shipment.findUnique({
+      where: { referenceNumber }
+    });
+    if (existingReferenceNumber) {
+      return NextResponse.json(
+        { error: "Reference Number already exists" },
+        { status: 400 }
+      );
+    }
+
+    // ============================================================================
+    // SECTION 3: DEBUG LOGGING
     // ============================================================================
     // Log all received data for debugging purposes
     console.log('=== SHIPMENT DATA RECEIVED ===');
     console.log('Basic Form Data:', {
       trackingId,
+      referenceNumber,
       agency,
       office,
       senderName,
@@ -134,12 +169,12 @@ export async function POST(req: NextRequest) {
     console.log('Complete Request Body:', requestBody);
     console.log('=== END SHIPMENT DATA ===');
 
-    // ============================================================================
-    // SECTION 3: INPUT VALIDATION
+        // ============================================================================
+    // SECTION 4: INPUT VALIDATION
     // ============================================================================
     // Define required fields for validation
     const requiredFields = [
-      "trackingId",
+      "referenceNumber",
       "senderName",
       "senderAddress",
       "recipientName",
@@ -147,32 +182,10 @@ export async function POST(req: NextRequest) {
       "destination",
     ];
 
-    // Validate tracking ID (must be unique)
-    if (!trackingId || trackingId.trim() === '') {
-      return NextResponse.json(
-        { success: false, message: "Tracking ID is required." },
-        { status: 400 }
-      );
-    }
-
     // Validate destination (required field)
     if (!destination || destination.trim() === '') {
       return NextResponse.json(
         { success: false, message: "Destination is required." },
-        { status: 400 }
-      );
-    }
-
-    // Check for duplicate tracking ID in database
-    const existingShipment = await prisma.shipment.findFirst({
-      where: {
-        trackingId: trackingId,
-      },
-    });
-    
-    if (existingShipment) {
-      return NextResponse.json(
-        { success: false, message: "Shipment with this tracking ID already exists." },
         { status: 400 }
       );
     }
@@ -188,7 +201,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================================================
-    // SECTION 4: PRICING CALCULATIONS
+    // SECTION 5: PRICING CALCULATIONS
     // ============================================================================
     // Parse and calculate all pricing components
     const priceWithProfit = Math.round((parseFloat(price) || 0));
@@ -216,7 +229,7 @@ export async function POST(req: NextRequest) {
     const subtotal = calculatedValues?.subtotal ? Math.round((calculatedValues.subtotal)) : originalPrice;
 
     // ============================================================================
-    // SECTION 5: SHIPMENT CREATION
+    // SECTION 6: SHIPMENT CREATION
     // ============================================================================
     // Generate unique invoice number for this shipment
     const invoiceNumber = await generateInvoiceNumber(prisma);
@@ -225,6 +238,7 @@ export async function POST(req: NextRequest) {
     const shipment = await prisma.shipment.create({
       data: {
         trackingId,
+        referenceNumber,
         invoiceNumber,
         shipmentDate: shipmentDate ? new Date(shipmentDate) : new Date(),
         agency,
@@ -273,6 +287,7 @@ export async function POST(req: NextRequest) {
     console.log('Shipment saved to database:', {
       id: shipment.id,
       trackingId: shipment.trackingId,
+      referenceNumber: shipment.referenceNumber,
       invoiceNumber: shipment.invoiceNumber,
       destination: shipment.destination,
       totalCost: shipment.totalCost,
@@ -283,7 +298,7 @@ export async function POST(req: NextRequest) {
     });
 
     // ============================================================================
-    // SECTION 6: INVOICE CREATION
+    // SECTION 7: INVOICE CREATION
     // ============================================================================
     // Initialize variables for invoice creation
     let customerInvoice = null;
@@ -477,9 +492,9 @@ export async function POST(req: NextRequest) {
         vendorInvoice: vendorInvoice?.invoiceNumber
       });
 
-      // ============================================================================
-      // SECTION 7: FINANCIAL TRANSACTIONS
-      // ============================================================================
+          // ============================================================================
+    // SECTION 8: FINANCIAL TRANSACTIONS
+    // ============================================================================
       try {
         // ============================================================================
         // SECTION 7.1: CUSTOMER TRANSACTIONS
@@ -699,7 +714,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================================================
-    // SECTION 8: RESPONSE
+    // SECTION 9: RESPONSE
     // ============================================================================
     // Return success response with all created data
     return NextResponse.json({
