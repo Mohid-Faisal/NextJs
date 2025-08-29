@@ -102,11 +102,82 @@ export async function PUT(
         fromCustomerId: body.fromCustomerId,
         toPartyType: body.toPartyType,
         toVendorId: body.toVendorId,
-        mode: body.mode,
+        mode: body.paymentMethod,
         reference: body.reference,
         description: body.description,
       },
     });
+
+    // If updateJournalEntry flag is true, update the corresponding journal entry
+    if (body.updateJournalEntry && body.debitAccountId && body.creditAccountId) {
+      try {
+        console.log(`Updating journal entry for payment ${paymentId}`);
+        
+        // Find the journal entry for this payment
+        const journalEntry = await prisma.journalEntry.findFirst({
+          where: {
+            OR: [
+              { reference: existingPayment.reference },
+              { reference: `Payment-${existingPayment.id}` }
+            ]
+          },
+        });
+
+        if (journalEntry) {
+          console.log(`Found journal entry ${journalEntry.entryNumber} for payment ${paymentId}`);
+          
+          // Update the journal entry
+          await prisma.journalEntry.update({
+            where: { id: journalEntry.id },
+            data: {
+              date: new Date(body.date),
+              description: `Payment: ${body.category} - ${body.description || 'No description'}`,
+              reference: body.reference || `Payment-${paymentId}`,
+              totalDebit: Number(body.amount),
+              totalCredit: Number(body.amount),
+            },
+          });
+
+          // Delete existing journal entry lines
+          await prisma.journalEntryLine.deleteMany({
+            where: { journalEntryId: journalEntry.id },
+          });
+
+          // Create new journal entry lines with updated accounts
+          await Promise.all([
+            // Debit line
+            prisma.journalEntryLine.create({
+              data: {
+                journalEntryId: journalEntry.id,
+                accountId: body.debitAccountId,
+                debitAmount: Number(body.amount),
+                creditAmount: 0,
+                description: `Debit: ${body.category}`,
+                reference: body.reference || `Payment-${paymentId}`
+              }
+            }),
+            // Credit line
+            prisma.journalEntryLine.create({
+              data: {
+                journalEntryId: journalEntry.id,
+                accountId: body.creditAccountId,
+                debitAmount: 0,
+                creditAmount: Number(body.amount),
+                description: `Credit: ${body.category}`,
+                reference: body.reference || `Payment-${paymentId}`
+              }
+            })
+          ]);
+
+          console.log(`Updated journal entry ${journalEntry.entryNumber} with new accounts and amount`);
+        } else {
+          console.log(`No journal entry found for payment ${paymentId}`);
+        }
+      } catch (journalError) {
+        console.error("Journal entry update error:", journalError);
+        // Don't fail the payment update if journal entry update fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

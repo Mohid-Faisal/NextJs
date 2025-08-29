@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
           },
           allRates: [],
         });
-      }
+      } 
       zonesMap.get(key).allRates.push({
         weight: rate.weight,
         price: rate.price,
@@ -267,9 +267,9 @@ export async function POST(req: NextRequest) {
         service: zone.service,
         bestRate: {
           weight: zone.bestRate.weight,
-          price: Math.round(zone.bestRate.price * profitMultiplier),
+          price: Math.round((zone.bestRate.price+ (fixedCharge?.fixedCharge ?? 0)) * profitMultiplier),
           vendor: zone.bestRate.vendor,
-          originalPrice: zone.bestRate.price,
+          originalPrice: zone.bestRate.price+ (fixedCharge?.fixedCharge ?? 0),
         },
       })),
       top3Rates: top3Rates.map((rate, index) => {
@@ -285,9 +285,9 @@ export async function POST(req: NextRequest) {
           service: rate.service,
           bestRate: {
             weight: rate.weight,
-            price: Math.round(rate.price * profitMultiplier),
+            price: Math.round((rate.price+ (fixedCharge?.fixedCharge ?? 0)) * profitMultiplier),
             vendor: rate.vendor,
-            originalPrice: rate.price,
+            originalPrice: rate.price+ (fixedCharge?.fixedCharge ?? 0),
           },
         };
       }),
@@ -297,18 +297,18 @@ export async function POST(req: NextRequest) {
         service: top3Rates[0].service,
         bestRate: {
           weight: top3Rates[0].weight,
-          price: Math.round(top3Rates[0].price * profitMultiplier),
+          price: Math.round((top3Rates[0].price+ (fixedCharge?.fixedCharge ?? 0)) * profitMultiplier),
           vendor: top3Rates[0].vendor,
-          originalPrice: top3Rates[0].price,
+          originalPrice: top3Rates[0].price+ (fixedCharge?.fixedCharge ?? 0),
         },
       },
       allRates: filteredRates.map((rate) => ({
         zone: rate.zone,
         weight: rate.weight,
-        price: Math.round(rate.price * profitMultiplier),
+        price: Math.round((rate.price+ (fixedCharge?.fixedCharge ?? 0)) * profitMultiplier),
         vendor: rate.vendor,
         service: rate.service,
-        originalPrice: rate.price,
+        originalPrice: rate.price+ (fixedCharge?.fixedCharge ?? 0),
       })),
     });
   } catch (error) {

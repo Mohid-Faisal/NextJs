@@ -67,13 +67,29 @@ export async function POST(req: NextRequest) {
       vendorPrice,
     } = requestBody;
     
+    // Handle nested data structure from frontend
+    const finalSenderName = senderName || requestBody.selectedSender?.Company || "";
+    const finalSenderAddress = senderAddress || requestBody.selectedSender?.Address || "";
+    const finalRecipientName = recipientName || requestBody.selectedRecipient?.Company || "";
+    const finalRecipientAddress = recipientAddress || requestBody.selectedRecipient?.Address || "";
+    const finalDestination = destination || requestBody.selectedRecipient?.Country || "";
+    
+    console.log('Data extraction debug:', {
+      original: { senderName, senderAddress, recipientName, recipientAddress, destination },
+      nested: { 
+        selectedSender: requestBody.selectedSender, 
+        selectedRecipient: requestBody.selectedRecipient 
+      },
+      final: { finalSenderName, finalSenderAddress, finalRecipientName, finalRecipientAddress, finalDestination }
+    });
+    
     // ============================================================================
     // SECTION 2: VALIDATION
     // ============================================================================
     // Validate required fields
-    if (!trackingId || !referenceNumber) {
+    if (!trackingId) {
       return NextResponse.json(
-        { error: "Tracking ID and Reference Number are required" },
+        { error: "Tracking ID is required" },
         { status: 400 }
       );
     }
@@ -89,15 +105,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if reference number already exists
-    const existingReferenceNumber = await prisma.shipment.findUnique({
-      where: { referenceNumber }
-    });
-    if (existingReferenceNumber) {
-      return NextResponse.json(
-        { error: "Reference Number already exists" },
-        { status: 400 }
-      );
+    // Check if reference number already exists (only if provided)
+    if (referenceNumber && referenceNumber.trim() !== '') {
+      const existingReferenceNumber = await prisma.shipment.findUnique({
+        where: { referenceNumber }
+      });
+      if (existingReferenceNumber) {
+        return NextResponse.json(
+          { error: "Reference Number already exists" },
+          { status: 400 }
+        );
+      }
     }
 
     // ============================================================================
@@ -147,7 +165,7 @@ export async function POST(req: NextRequest) {
     });
     
     console.log('Destination Information:', {
-      finalDestination: destination,
+      finalDestination: finalDestination,
     });
     
     console.log('Package Information:', {
@@ -174,7 +192,6 @@ export async function POST(req: NextRequest) {
     // ============================================================================
     // Define required fields for validation
     const requiredFields = [
-      "referenceNumber",
       "senderName",
       "senderAddress",
       "recipientName",
@@ -183,7 +200,7 @@ export async function POST(req: NextRequest) {
     ];
 
     // Validate destination (required field)
-    if (!destination || destination.trim() === '') {
+    if (!finalDestination || finalDestination.trim() === '') {
       return NextResponse.json(
         { success: false, message: "Destination is required." },
         { status: 400 }
@@ -191,8 +208,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate all other required fields
-    for (const field of requiredFields) {
-      if (!eval(field)) {
+    const fieldValidations = [
+      { field: 'senderName', value: finalSenderName },
+      { field: 'senderAddress', value: finalSenderAddress },
+      { field: 'recipientName', value: finalRecipientName },
+      { field: 'recipientAddress', value: finalRecipientAddress },
+    ];
+
+    for (const { field, value } of fieldValidations) {
+      if (!value || value.trim() === '') {
         return NextResponse.json(
           { success: false, message: `${field} is required.` },
           { status: 400 }
@@ -238,16 +262,16 @@ export async function POST(req: NextRequest) {
     const shipment = await prisma.shipment.create({
       data: {
         trackingId,
-        referenceNumber,
+        referenceNumber: referenceNumber,
         invoiceNumber,
         shipmentDate: shipmentDate ? new Date(shipmentDate) : new Date(),
         agency,
         office,
-        senderName,
-        senderAddress,
-        recipientName,
-        recipientAddress,
-        destination,
+        senderName: finalSenderName,
+        senderAddress: finalSenderAddress,
+        recipientName: finalRecipientName,
+        recipientAddress: finalRecipientAddress,
+        destination: finalDestination,
         deliveryTime,
         invoiceStatus,
         deliveryStatus,
@@ -326,9 +350,9 @@ export async function POST(req: NextRequest) {
       let vendorId = null;
 
       // Find customer by name
-      if (senderName) {
+      if (finalSenderName) {
         const customer = await prisma.customers.findFirst({
-          where: { CompanyName: senderName }
+          where: { CompanyName: finalSenderName }
         });
         customerId = customer?.id || null;
         customerBalance = customer?.currentBalance || 0;
@@ -373,7 +397,7 @@ export async function POST(req: NextRequest) {
       if (vendorBalance > 0) {
         // We owe them money, apply their credit to reduce our debt
         vendorRemainingAmount = vendorTotalCost;
-        vendorAppliedBalance = 0
+        vendorAppliedBalance = 0;
       } else {
         // They owe us money, apply their debt to reduce our invoice
         vendorAppliedBalance = Math.min(Math.abs(vendorBalance), vendorTotalCost);
@@ -421,7 +445,7 @@ export async function POST(req: NextRequest) {
           invoiceNumber: invoiceNumber,
           invoiceDate: shipmentDate ? new Date(shipmentDate).toISOString() : new Date().toISOString(),
           trackingNumber: trackingId,
-          destination: destination,
+          destination: finalDestination,
           weight: parseFloat(totalWeight) || 0,
           profile: "Customer",
           fscCharges: Math.round(fuelSurchargeAmount),
@@ -468,7 +492,7 @@ export async function POST(req: NextRequest) {
           invoiceNumber: vendorInvoiceNumber,
           invoiceDate: shipmentDate ? new Date(shipmentDate).toISOString() : new Date().toISOString(),
           trackingNumber: trackingId,
-          destination: destination,
+          destination: finalDestination,
           weight: parseFloat(totalWeight) || 0,
           profile: "Vendor",
           fscCharges: 0,
@@ -546,7 +570,7 @@ export async function POST(req: NextRequest) {
               amount: appliedBalance,
               fromPartyType: "CUSTOMER",
               fromCustomerId: customerId,
-              fromCustomer: senderName || "",
+              fromCustomer: finalSenderName || "",
               toPartyType: "US",
               toVendorId: null,
               toVendor: "",
@@ -748,7 +772,7 @@ export async function POST(req: NextRequest) {
       receivedData: {
         trackingId: trackingId,
         invoiceNumber: invoiceNumber,
-        destination: destination,
+        destination: finalDestination,
         totalPackages: totalPackages,
         totalWeight: totalWeight,
         totalWeightVol: totalWeightVol,

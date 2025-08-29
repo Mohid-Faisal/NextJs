@@ -647,7 +647,7 @@ const AddShipmentPage = () => {
     const data = await res.json();
     console.log("Backend response:", data);
 
-    if (data.success) {
+    if (res.ok && data.success) {
       toast.success(
         isEditing
           ? "Shipment updated successfully!"
@@ -701,7 +701,28 @@ const AddShipmentPage = () => {
         router.push("/dashboard/shipments");
       }
     } else {
-      toast.error(data.message || "Failed to add shipment.");
+      // Handle different error response structures
+      let errorMessage = "Failed to add shipment.";
+      
+      if (data.error) {
+        // API validation errors (e.g., "Tracking ID is required")
+        errorMessage = data.error;
+      } else if (data.message) {
+        // API success: false responses
+        errorMessage = data.message;
+      } else if (!res.ok) {
+        // HTTP error status without specific error message
+        errorMessage = `HTTP ${res.status}: ${res.statusText}`;
+      }
+      
+      console.error("Shipment creation failed:", { 
+        status: res.status, 
+        statusText: res.statusText,
+        data: data,
+        errorMessage: errorMessage 
+      });
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -1106,7 +1127,6 @@ const AddShipmentPage = () => {
                     name="referenceNumber"
                     value={form.referenceNumber}
                     onChange={handleChange}
-                    required
                     className="bg-muted"
                     placeholder="Enter reference"
                   />

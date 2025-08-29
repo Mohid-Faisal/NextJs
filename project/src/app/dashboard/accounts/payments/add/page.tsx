@@ -183,13 +183,39 @@ export default function AddPaymentPage() {
           paymentMethod: payment.mode || "CASH",
         });
         
-        // Note: The Payment model doesn't have chart of accounts fields
-        // The accounts will be determined by the transaction type and category
-        // when the form loads
+        // Get chart of accounts data from the journal entry
+        await loadJournalEntryAccounts(payment.reference || `Payment-${payment.id}`);
       }
     } catch (error) {
       console.error("Error loading edit data:", error);
       toast.error("Failed to load payment data");
+    }
+  };
+
+  const loadJournalEntryAccounts = async (reference: string) => {
+    try {
+      // Find the journal entry for this payment
+      const journalResponse = await fetch(`/api/journal-entries?reference=${encodeURIComponent(reference)}`);
+      const journalData = await journalResponse.json();
+
+      if (journalData.success && journalData.entries && journalData.entries.length > 0) {
+        const journalEntry = journalData.entries[0];
+        
+        // Get the journal entry lines to find the account IDs
+        if (journalEntry.lines && journalEntry.lines.length >= 2) {
+          const debitLine = journalEntry.lines.find((line: any) => line.debitAmount > 0);
+          const creditLine = journalEntry.lines.find((line: any) => line.creditAmount > 0);
+          
+          if (debitLine) {
+            setDebitAccountId(debitLine.accountId);
+          }
+          if (creditLine) {
+            setCreditAccountId(creditLine.accountId);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading journal entry accounts:", error);
     }
   };
 
@@ -584,28 +610,47 @@ export default function AddPaymentPage() {
     }
 
     if (isEditMode) {
-      // In edit mode, only update the amount and journal entry
-      console.log(`Updating payment ${paymentId} with new amount: ${formData.amount}`);
-      console.log(`updateJournalEntry flag: true`);
+      // In edit mode, update all fields and journal entry
+      console.log(`Updating payment ${paymentId} with full data:`, formData);
+      console.log(`Chart of accounts: debit=${debitAccountId}, credit=${creditAccountId}`);
+      
+      // Validation for edit mode
+      if (!debitAccountId || !creditAccountId) {
+        toast.error("Please select both debit and credit accounts");
+        return;
+      }
+
+      if (debitAccountId === creditAccountId) {
+        toast.error("Debit and credit accounts must be different");
+        return;
+      }
       
       try {
         const response = await fetch(`/api/accounts/payments/${paymentId}`, {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            transactionType: formData.transactionType,
+            category: formData.category,
+            date: new Date(formData.date).toISOString(),
             amount: parseFloat(formData.amount),
+            description: formData.description,
+            reference: formData.reference,
+            paymentMethod: formData.paymentMethod,
+            debitAccountId,
+            creditAccountId,
             updateJournalEntry: true // Flag to update journal entry
           }),
         });
 
         const data = await response.json();
-        console.log(`PATCH response:`, data);
+        console.log(`PUT response:`, data);
 
         if (response.ok && data.success) {
-          toast.success("Payment amount updated successfully");
+          toast.success("Payment updated successfully");
           router.push("/dashboard/accounts/payments");
         } else {
-          toast.error(data.message || "Failed to update payment amount");
+          toast.error(data.message || "Failed to update payment");
         }
       } catch (error) {
         console.error("Error updating payment:", error);
@@ -681,18 +726,18 @@ export default function AddPaymentPage() {
         </Button>
 
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2 sm:mb-3">
-          {isEditMode ? "Edit Transaction Amount" : "Add Transaction"}
+          {isEditMode ? "Edit Transaction" : "Add Transaction"}
         </h1>
         <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400">
           {isEditMode 
-            ? "Update the transaction amount and corresponding journal entry"
+            ? "Update the transaction details and corresponding journal entry"
             : "Create internal company transactions with proper chart of accounts integration"
           }
         </p>
         {isEditMode && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-3">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              <strong>Note:</strong> In edit mode, only the amount field can be modified. All other fields are read-only to maintain data integrity.
+              <strong>Note:</strong> In edit mode, all fields can be modified. The chart of accounts data is loaded from the existing journal entry.
             </p>
           </div>
         )}
@@ -716,7 +761,6 @@ export default function AddPaymentPage() {
                     onValueChange={(value) =>
                       handleInputChange("transactionType", value)
                     }
-                    disabled={isEditMode}
                   >
                     <SelectTrigger className="w-full h-8 sm:h-8">
                       <SelectValue />
@@ -743,7 +787,6 @@ export default function AddPaymentPage() {
                     onValueChange={(value) =>
                       handleInputChange("category", value)
                     }
-                    disabled={isEditMode}
                   >
                     <SelectTrigger className="w-full h-8 sm:h-8">
                       <SelectValue placeholder="Select category" />
@@ -772,7 +815,6 @@ export default function AddPaymentPage() {
                     onChange={(e) => handleInputChange("date", e.target.value)}
                     required
                     className="h-8 sm:h-8"
-                    disabled={isEditMode}
                   />
                 </div>
 
@@ -804,7 +846,6 @@ export default function AddPaymentPage() {
                     onValueChange={(value) =>
                       handleInputChange("paymentMethod", value)
                     }
-                    disabled={isEditMode}
                   >
                     <SelectTrigger className="w-full h-8 sm:h-8">
                       <SelectValue />
@@ -830,7 +871,6 @@ export default function AddPaymentPage() {
                     }
                     placeholder="Transaction reference number"
                     className="h-8 sm:h-8"
-                    disabled={isEditMode}
                   />
                 </div>
               </div>
@@ -846,185 +886,180 @@ export default function AddPaymentPage() {
                   }
                   placeholder="Transaction description"
                   className="h-8 sm:h-10"
-                  disabled={isEditMode}
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Chart of Accounts Section */}
-          {!isEditMode && (
-            <Card>
-              <CardHeader className="pb-4 sm:pb-6">
-                <CardTitle className="text-lg sm:text-xl">Chart of Accounts</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6">
-                {accounts.length === 0 ? (
-                  <div className="text-center py-6 sm:py-8">
-                    <p className="text-red-500 mb-4 text-sm sm:text-base">
-                      No chart of accounts found
-                    </p>
-                    <Button
-                      type="button"
-                      onClick={initializeChartOfAccounts}
-                      disabled={accountsLoading}
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                    >
-                      {accountsLoading
-                        ? "Initializing..."
-                        : "Initialize Chart of Accounts"}
-                    </Button>
+          <Card>
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="text-lg sm:text-xl">Chart of Accounts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 sm:space-y-6">
+              {accounts.length === 0 ? (
+                <div className="text-center py-6 sm:py-8">
+                  <p className="text-red-500 mb-4 text-sm sm:text-base">
+                    No chart of accounts found
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={initializeChartOfAccounts}
+                    disabled={accountsLoading}
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                  >
+                    {accountsLoading
+                      ? "Initializing..."
+                      : "Initialize Chart of Accounts"}
+                  </Button>
+                </div>
+              ) : !formData.category ? (
+                <div className="text-center py-8 sm:py-10">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                    <Info className="w-8 h-8 text-gray-400" />
                   </div>
-                ) : !formData.category ? (
-                  <div className="text-center py-8 sm:py-10">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                      <Info className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Select a Category First
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                      Choose a transaction type and category to automatically populate the chart of accounts
-                    </p>
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div className="text-left">
-                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
-                            How it works:
-                          </p>
-                          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                            <li>• <strong>Expense:</strong> Debit expense account, Credit cash/bank</li>
-                            <li>• <strong>Income:</strong> Debit cash/bank, Credit revenue account</li>
-                            <li>• <strong>Transfer:</strong> Debit destination, Credit source account</li>
-                            <li>• <strong>Equity:</strong> Debit cash/bank, Credit equity account</li>
-                          </ul>
-                        </div>
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Select a Category First
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Choose a transaction type and category to automatically populate the chart of accounts
+                  </p>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                          How it works:
+                        </p>
+                        <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                          <li>• <strong>Expense:</strong> Debit expense account, Credit cash/bank</li>
+                          <li>• <strong>Income:</strong> Debit cash/bank, Credit revenue account</li>
+                          <li>• <strong>Transfer:</strong> Debit destination, Credit source account</li>
+                          <li>• <strong>Equity:</strong> Debit cash/bank, Credit equity account</li>
+                        </ul>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <>
-                    <div>
-                      <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
-                        Debit Account *
-                      </Label>
-                      <Select
-                        value={String(debitAccountId)}
-                        onValueChange={(value) => {
-                          if (value && value !== "") {
-                            setDebitAccountId(parseInt(value));
-                          }
-                        }}
-                        disabled={isEditMode}
-                      >
-                        <SelectTrigger className="w-full h-10 sm:h-12">
-                          <SelectValue placeholder="Select debit account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts.map((account) => (
-                            <SelectItem
-                              key={account.id}
-                              value={String(account.id)}
-                            >
-                              <div className="font-medium">
-                                {account.code} - {account.accountName}
-                              </div>
-                              <span className="text-xs text-gray-500">
-                                {account.category} • {account.type}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
+                      Debit Account *
+                    </Label>
+                    <Select
+                      value={String(debitAccountId)}
+                      onValueChange={(value) => {
+                        if (value && value !== "") {
+                          setDebitAccountId(parseInt(value));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full h-10 sm:h-12">
+                        <SelectValue placeholder="Select debit account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts.map((account) => (
+                          <SelectItem
+                            key={account.id}
+                            value={String(account.id)}
+                          >
+                            <div className="font-medium">
+                              {account.code} - {account.accountName}
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {account.category} • {account.type}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    <div>
-                      <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
-                        Credit Account *
-                      </Label>
-                      <Select
-                        value={String(creditAccountId)}
-                        onValueChange={(value) => {
-                          if (value && value !== "") {
-                            setCreditAccountId(parseInt(value));
-                          }
-                        }}
-                        disabled={isEditMode}
-                      >
-                        <SelectTrigger className="w-full h-10 sm:h-12">
-                          <SelectValue placeholder="Select credit account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accounts.map((account) => (
-                            <SelectItem
-                              key={account.id}
-                              value={String(account.id)}
-                            >
-                              <div className="font-medium">
-                                {account.code} - {account.accountName}
-                              </div>
-                              <span className="text-xs text-gray-500">
-                                {account.category} • {account.type}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div>
+                    <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
+                      Credit Account *
+                    </Label>
+                    <Select
+                      value={String(creditAccountId)}
+                      onValueChange={(value) => {
+                        if (value && value !== "") {
+                          setCreditAccountId(parseInt(value));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full h-10 sm:h-12">
+                        <SelectValue placeholder="Select credit account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts.map((account) => (
+                          <SelectItem
+                            key={account.id}
+                            value={String(account.id)}
+                          >
+                            <div className="font-medium">
+                              {account.code} - {account.accountName}
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {account.category} • {account.type}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    {/* Account Balance Preview */}
-                    {debitAccountId && creditAccountId && (
-                      <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                          <Info className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600" />
-                          <span className="font-semibold text-sm sm:text-base">
-                            Transaction Preview
+                  {/* Account Balance Preview */}
+                  {debitAccountId && creditAccountId && (
+                    <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                        <Info className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600" />
+                        <span className="font-semibold text-sm sm:text-base">
+                          Transaction Preview
+                        </span>
+                      </div>
+                      <div className="space-y-2 sm:space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-red-600 font-medium text-sm sm:text-base">
+                            Debit:
+                          </span>
+                          <span className="font-medium text-sm sm:text-base">
+                            {
+                              accounts.find((a) => a.id === debitAccountId)
+                                ?.accountName
+                            }
                           </span>
                         </div>
-                        <div className="space-y-2 sm:space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-red-600 font-medium text-sm sm:text-base">
-                              Debit:
-                            </span>
-                            <span className="font-medium text-sm sm:text-base">
-                              {
-                                accounts.find((a) => a.id === debitAccountId)
-                                  ?.accountName
-                              }
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-green-600 font-medium text-sm sm:text-base">
-                              Credit:
-                            </span>
-                            <span className="font-medium text-sm sm:text-base">
-                              {
-                                accounts.find((a) => a.id === creditAccountId)
-                                  ?.accountName
-                              }
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center pt-2 border-t">
-                            <span className="font-semibold text-sm sm:text-base">
-                              Amount:
-                            </span>
-                            <span className="font-semibold text-sm sm:text-base">
-                              PKR{" "}
-                              {parseFloat(
-                                formData.amount || "0"
-                              ).toLocaleString()}
-                            </span>
-                          </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-green-600 font-medium text-sm sm:text-base">
+                            Credit:
+                          </span>
+                          <span className="font-medium text-sm sm:text-base">
+                            {
+                              accounts.find((a) => a.id === creditAccountId)
+                                ?.accountName
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t">
+                          <span className="font-semibold text-sm sm:text-base">
+                            Amount:
+                          </span>
+                          <span className="font-semibold text-sm sm:text-base">
+                            PKR{" "}
+                            {parseFloat(
+                              formData.amount || "0"
+                            ).toLocaleString()}
+                          </span>
                         </div>
                       </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Submit Button */}
@@ -1032,9 +1067,9 @@ export default function AddPaymentPage() {
           <Button
             type="submit"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 lg:px-10 py-2 sm:py-3 text-base sm:text-lg font-medium w-full sm:w-auto"
-            disabled={isEditMode ? false : (accountsLoading || accounts.length === 0)}
+            disabled={accountsLoading || accounts.length === 0}
           >
-            {isEditMode ? "Update Amount" : "Save Transaction"}
+            {isEditMode ? "Update Transaction" : "Save Transaction"}
           </Button>
         </div>
       </form>

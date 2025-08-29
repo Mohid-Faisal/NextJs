@@ -132,7 +132,7 @@ const RateCalculator = () => {
       setResults(null);
       return;
     }
-
+ 
     setError(null);
     setLoading(true);
     console.log(`📍 weight:`, w);
@@ -416,8 +416,8 @@ const RateCalculator = () => {
                                   ? 'text-blue-500 dark:text-blue-400'
                                   : 'text-orange-500 dark:text-orange-400'
                               }`}>
-                                <span className="hidden sm:inline">Total: Rs. {rate.bestRate.price + results.fixedCharge.amount}</span>
-                                <span className="sm:hidden">Total: Rs. {rate.bestRate.price + results.fixedCharge.amount}</span>
+                                <span className="hidden sm:inline">Total: Rs. {rate.bestRate.price }</span>
+                                <span className="sm:hidden">Total: Rs. {rate.bestRate.price }</span>
                               </p>
                             )}
                           </div>
@@ -448,8 +448,8 @@ const RateCalculator = () => {
                                 ? 'text-blue-500 dark:text-blue-400'
                                 : 'text-orange-500 dark:text-orange-400'
                             }`}>
-                              <span className="hidden sm:inline">Price per kg: Rs. {((rate.bestRate.price + (results.fixedCharge?.amount ?? 0)) / rate.bestRate.weight).toFixed(2)}</span>
-                              <span className="sm:hidden">Rs. {((rate.bestRate.price + (results.fixedCharge?.amount ?? 0)) / rate.bestRate.weight).toFixed(2)}/kg</span>
+                              <span className="hidden sm:inline">Price per kg: Rs. {((rate.bestRate.price) / rate.bestRate.weight).toFixed(2)}</span>
+                              <span className="sm:hidden">Rs. {((rate.bestRate.price) / rate.bestRate.weight).toFixed(2)}/kg</span>
                             </p>
                           </div>
                         </div>
@@ -551,11 +551,11 @@ const RateCalculator = () => {
                                 </td>
                               )}
                               <td className="py-2 px-2 sm:px-4 text-gray-600 dark:text-gray-400">
-                                <span className="hidden sm:inline">{rate.originalPrice + (results.fixedCharge?.amount ?? 0)}</span>
-                                <span className="sm:hidden">{rate.originalPrice + (results.fixedCharge?.amount ?? 0)}</span>
+                                <span className="hidden sm:inline">{rate.originalPrice }</span>
+                                <span className="sm:hidden">{rate.originalPrice }</span>
                               </td>
-                              <td className="py-2 px-2 sm:px-4 font-medium">{rate.price + (results.fixedCharge?.amount ?? 0)}</td>
-                              <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{((rate.price + (results.fixedCharge?.amount ?? 0) )/ rate.weight).toFixed(2)}</td>
+                              <td className="py-2 px-2 sm:px-4 font-medium">{rate.price }</td>
+                              <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{((rate.price)/ rate.weight).toFixed(2)}</td>
                               <td className="py-2 px-2 sm:px-4">
                                 {(() => {
                                   const topRate = results.top3Rates.find(topRate => 
