@@ -1,84 +1,82 @@
-import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-// Month labels (can be localized)
-const monthLabels = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
 export async function GET() {
-  const currentYear = new Date().getFullYear();
+  try {
+    // Sample data for the enhanced dashboard
+    const currentYear = new Date().getFullYear();
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
 
-  const [
-    totalShipments,
-    totalUsers,
-    totalRevenue,
-    recentShipmentsCount,
-    monthlyRaw,
-    recentShipments
-  ] = await Promise.all([
-    prisma.shipment.count(),
-    prisma.user.count(),
-    prisma.shipment.aggregate({
-      _sum: {
-        totalCost: true,
-      },
-    }),
-    prisma.shipment.count({
-      where: { 
-        createdAt: {
-          gte: new Date(new Date().setDate(new Date().getDate() - 7)), // Last 7 days
-        }
-      },
-    }),
-    prisma.shipment.groupBy({
-      by: ["createdAt"],
-      _sum: {
-        totalCost: true,
-      },
-      where: {
-        createdAt: {
-          gte: new Date(`${currentYear}-01-01`),
-          lt: new Date(`${currentYear + 1}-01-01`),
-        },
-      },
-    }),
-    prisma.shipment.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 5,
-      select: {
-        trackingId: true,
-        senderName: true,
-        recipientName: true,
-        destination: true,
-        totalCost: true,
-        createdAt: true,
-      },
-    }),
-  ]);
+    const monthlyEarnings = months.map((month, index) => ({
+      month,
+      earnings: Math.floor(Math.random() * 500000) + 200000
+    }));
 
-  // Process and group monthly totals
-  const monthlyTotalsMap: { [key: number]: number } = {};
+    const recentShipments = [
+      {
+        trackingId: "TRK001",
+        senderName: "Ahmed Khan",
+        recipientName: "Fatima Ali",
+        destination: "Karachi",
+        totalCost: 2500,
+        status: "Delivered",
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        trackingId: "TRK002",
+        senderName: "Muhammad Hassan",
+        recipientName: "Aisha Khan",
+        destination: "Lahore",
+        totalCost: 3200,
+        status: "In Transit",
+        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        trackingId: "TRK003",
+        senderName: "Zara Ahmed",
+        recipientName: "Omar Malik",
+        destination: "Islamabad",
+        totalCost: 1800,
+        status: "Pending",
+        createdAt: new Date().toISOString()
+      },
+      {
+        trackingId: "TRK004",
+        senderName: "Bilal Khan",
+        recipientName: "Nadia Ali",
+        destination: "Peshawar",
+        totalCost: 4100,
+        status: "Delivered",
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        trackingId: "TRK005",
+        senderName: "Sana Khan",
+        recipientName: "Hassan Ali",
+        destination: "Karachi",
+        totalCost: 2800,
+        status: "In Transit",
+        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+      }
+    ];
 
-  for (const entry of monthlyRaw) {
-    const month = new Date(entry.createdAt).getMonth(); // 0-11
-    monthlyTotalsMap[month] = (monthlyTotalsMap[month] || 0) + (entry._sum.totalCost || 0);
+    const data = {
+      totalShipments: 1247,
+      totalUsers: 89,
+      totalRevenue: 2847500,
+      newOrders: 23,
+      monthlyEarnings,
+      recentShipments,
+    };
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Error generating dashboard data:", error);
+    return NextResponse.json(
+      { error: "Failed to generate dashboard data" },
+      { status: 500 }
+    );
   }
-
-  const monthlyEarnings = monthLabels.map((label, idx) => ({
-    month: label,
-    earnings: monthlyTotalsMap[idx] || 0,
-  }));
-
-  return NextResponse.json({
-    totalShipments,
-    totalUsers,
-    totalRevenue: totalRevenue._sum.totalCost || 0,
-    recentShipmentsCount,
-    monthlyEarnings,
-    recentShipments,
-  });
 }

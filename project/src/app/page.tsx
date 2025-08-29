@@ -10,7 +10,7 @@ export default function HomePage() {
     <div className="relative w-full h-screen overflow-hidden">
       {/* Background Image */}
       <Image
-        src="/truck.jpg"
+        src="/banner_new.jpg"
         alt="Courier Truck"
         fill
         priority
@@ -18,7 +18,7 @@ export default function HomePage() {
       />
 
       {/* Overlay Content */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black/70 flex flex-col items-center justify-center text-center px-6">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
         {/* SplitText animation */}
         <SplitText
           text="Fast. Reliable. Affordable."
