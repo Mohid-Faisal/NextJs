@@ -26,13 +26,54 @@ const SignupPage = () => {
   const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<"signup" | "verification">("signup");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [userId, setUserId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleVerificationCodeChange = (index: number, value: string) => {
+    // Only allow single digits
+    if (value.length > 1) return;
+    
+    // Update the verification code at the specific index
+    const newCode = verificationCode.split('');
+    newCode[index] = value;
+    setVerificationCode(newCode.join(''));
+    
+    // Auto-focus to next input if value entered
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`verification-${index + 1}`);
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Handle backspace to go to previous input
+    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
+      const prevInput = document.getElementById(`verification-${index - 1}`);
+      if (prevInput) prevInput.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').slice(0, 6);
+    if (/^\d{6}$/.test(pastedData)) {
+      setVerificationCode(pastedData);
+      // Focus the last filled input
+      const lastIndex = Math.min(pastedData.length - 1, 5);
+      const lastInput = document.getElementById(`verification-${lastIndex}`);
+      if (lastInput) lastInput.focus();
+    }
+  };
+
   const handleSignup = async () => {
     try {
+      setIsLoading(true);
       const validated = signupSchema.parse(form); // throws if invalid
   
       const response = await fetch("/api/signup", {
@@ -44,8 +85,9 @@ const SignupPage = () => {
       const data = await response.json();
   
       if (response.ok && data.success) {
-        toast.success(data.message || "Signup successful! Please wait for admin approval.");
-        setTimeout(() => router.push("/auth/login"), 3000);
+        setUserId(data.userId);
+        setStep("verification");
+        toast.success("Verification code sent to your email!");
       } else {
         toast.error(data.message || "Signup failed. Try again.");
       }
@@ -56,6 +98,42 @@ const SignupPage = () => {
         console.error("Signup error:", err);
         toast.error("An unexpected error occurred.");
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerification = async () => {
+    try {
+      setIsLoading(true);
+      
+      if (!userId) {
+        toast.error("User ID not found. Please try signing up again.");
+        return;
+      }
+
+      const response = await fetch("/api/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          verificationCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message);
+        setTimeout(() => router.push("/auth/login"), 3000);
+      } else {
+        toast.error(data.message || "Verification failed. Try again.");
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      toast.error("An unexpected error occurred during verification.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -66,6 +144,81 @@ const SignupPage = () => {
       : strength === "medium"
       ? "bg-yellow-500"
       : "bg-red-500";
+
+  if (step === "verification") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-background px-4">
+        <motion.div
+          className="w-full max-w-md"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <h1 className="text-3xl font-bold text-center text-primary mb-6">
+            Verify Your Email
+          </h1>
+
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-gray-600 dark:text-gray-300">
+                  We've sent a 6-digit verification code to:
+                </p>
+                <p className="font-semibold text-primary mt-2">{form.email}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="verificationCode">Verification Code</Label>
+                <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <Input
+                      key={index}
+                      id={`verification-${index}`}
+                      type="text"
+                      inputMode="numeric"
+                      value={verificationCode[index] || ''}
+                      onChange={(e) => handleVerificationCodeChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      placeholder="0"
+                      maxLength={1}
+                      className="w-12 h-12 text-center text-xl font-semibold tracking-widest border-2 focus:border-primary"
+                      autoComplete="off"
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+                  Enter the 6-digit code sent to your email
+                </p>
+              </div>
+
+              <Button
+                onClick={handleVerification}
+                className="w-full mt-2 text-lg"
+                disabled={verificationCode.length !== 6 || isLoading}
+              >
+                {isLoading ? "Verifying..." : "Verify Email"}
+              </Button>
+
+              <div className="text-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => setStep("signup")}
+                  className="text-sm"
+                >
+                  ← Back to Signup
+                </Button>
+              </div>
+
+              <div className="text-xs text-center text-gray-500 dark:text-gray-400 mt-4">
+                <p>Didn't receive the code? Check your spam folder.</p>
+                <p>The code will expire in 10 minutes.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-background px-4">
@@ -167,9 +320,9 @@ const SignupPage = () => {
             <Button
               onClick={handleSignup}
               className="w-full mt-2 text-lg"
-              disabled={strength === "weak"}
+              disabled={strength === "weak" || isLoading}
             >
-              Sign Up
+              {isLoading ? "Sending Code..." : "Sign Up"}
             </Button>
 
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">

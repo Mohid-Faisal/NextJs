@@ -69,6 +69,8 @@ const DashboardPage = () => {
       customerSatisfaction: 0,
       revenueGrowth: 0,
     },
+    customerDestinationMap: [] as { customer: string; destination: string; shipments: number }[],
+    topCustomers: [] as { customer: string; shipments: number; totalSpent: number; avgOrderValue: number }[],
   });
 
   const currentYear = new Date().getFullYear();
@@ -104,6 +106,23 @@ const DashboardPage = () => {
             { destination: "Islamabad", shipments: 750, revenue: json.totalRevenue * 0.22 },
             { destination: "Peshawar", shipments: 520, revenue: json.totalRevenue * 0.15 },
           ],
+          customerDestinationMap: [
+            { customer: "Ahmed Khan", destination: "Karachi", shipments: 45 },
+            { customer: "Muhammad Hassan", destination: "Lahore", shipments: 38 },
+            { customer: "Zara Ahmed", destination: "Islamabad", shipments: 32 },
+            { customer: "Bilal Khan", destination: "Peshawar", shipments: 28 },
+            { customer: "Sana Khan", destination: "Karachi", shipments: 42 },
+            { customer: "Omar Malik", destination: "Lahore", shipments: 35 },
+            { customer: "Fatima Ali", destination: "Islamabad", shipments: 29 },
+            { customer: "Aisha Khan", destination: "Peshawar", shipments: 25 },
+          ],
+          topCustomers: [
+            { customer: "Ahmed Khan", shipments: 87, totalSpent: 245000, avgOrderValue: 2816 },
+            { customer: "Muhammad Hassan", shipments: 73, totalSpent: 198000, avgOrderValue: 2712 },
+            { customer: "Zara Ahmed", shipments: 65, totalSpent: 156000, avgOrderValue: 2400 },
+            { customer: "Bilal Khan", shipments: 58, totalSpent: 142000, avgOrderValue: 2448 },
+            { customer: "Sana Khan", shipments: 52, totalSpent: 128000, avgOrderValue: 2462 },
+          ],
           performanceMetrics: {
             deliveryRate: 94.5,
             avgDeliveryTime: 2.3,
@@ -123,30 +142,30 @@ const DashboardPage = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-3 sm:p-4 md:p-6">
+      <div className="max-w-[95%] xl:max-w-[98%] 2xl:max-w-[99%] mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="mb-8"
+          className="mb-6 md:mb-8"
         >
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2">
             Dashboard Overview
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
             Welcome back! Here's what's happening with your logistics business today.
           </p>
         </motion.div>
 
         {/* Key Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
           <MetricCard
             title="Total Revenue"
             value={`PKR ${data.totalRevenue.toLocaleString()}`}
             change={data.performanceMetrics.revenueGrowth}
-            icon={<DollarSign className="w-6 h-6" />}
+            icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-green-500 to-emerald-600"
             iconColor="text-white"
           />
@@ -154,7 +173,7 @@ const DashboardPage = () => {
             title="Total Shipments"
             value={data.totalShipments.toLocaleString()}
             change={8.2}
-            icon={<Truck className="w-6 h-6" />}
+            icon={<Truck className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-blue-500 to-indigo-600"
             iconColor="text-white"
           />
@@ -162,7 +181,7 @@ const DashboardPage = () => {
             title="Active Users"
             value={data.totalUsers.toLocaleString()}
             change={15.3}
-            icon={<Users className="w-6 h-6" />}
+            icon={<Users className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-purple-500 to-pink-600"
             iconColor="text-white"
           />
@@ -170,60 +189,60 @@ const DashboardPage = () => {
             title="New Orders"
             value={data.newOrders.toLocaleString()}
             change={-2.1}
-            icon={<ShoppingCart className="w-6 h-6" />}
+            icon={<ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-orange-500 to-red-600"
             iconColor="text-white"
           />
         </div>
 
         {/* Performance Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
           <PerformanceCard
             title="Delivery Rate"
             value={`${data.performanceMetrics.deliveryRate}%`}
-            icon={<Activity className="w-5 h-5" />}
+            icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5" />}
             color="text-green-600"
             bgColor="bg-green-50 dark:bg-green-900/20"
           />
           <PerformanceCard
             title="Avg Delivery Time"
             value={`${data.performanceMetrics.avgDeliveryTime} days`}
-            icon={<Calendar className="w-5 h-5" />}
+            icon={<Calendar className="w-4 h-4 sm:w-5 sm:h-5" />}
             color="text-blue-600"
             bgColor="bg-blue-50 dark:bg-blue-900/20"
           />
           <PerformanceCard
             title="Customer Satisfaction"
             value={`${data.performanceMetrics.customerSatisfaction}/5.0`}
-            icon={<Users className="w-5 h-5" />}
+            icon={<Users className="w-4 h-4 sm:w-5 sm:h-5" />}
             color="text-purple-600"
             bgColor="bg-purple-50 dark:bg-purple-900/20"
           />
           <PerformanceCard
             title="Revenue Growth"
             value={`+${data.performanceMetrics.revenueGrowth}%`}
-            icon={<TrendingUp className="w-5 h-5" />}
+            icon={<TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />}
             color="text-emerald-600"
             bgColor="bg-emerald-50 dark:bg-emerald-900/20"
           />
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">
           {/* Revenue Trend Chart */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
                 Revenue Trend
               </h3>
-              <TrendingUp className="w-5 h-5 text-green-500" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <AreaChart data={data.monthlyEarnings}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -232,14 +251,15 @@ const DashboardPage = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis dataKey="month" stroke="#6B7280" />
-                <YAxis stroke="#6B7280" />
+                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                <YAxis stroke="#6B7280" fontSize={12} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: '#1F2937', 
                     border: 'none', 
                     borderRadius: '8px',
-                    color: '#F9FAFB'
+                    color: '#F9FAFB',
+                    fontSize: '12px'
                   }}
                 />
                 <Area 
@@ -258,15 +278,15 @@ const DashboardPage = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
                 Shipment Status
               </h3>
-              <PieChart className="w-5 h-5 text-blue-500" />
+              <PieChart className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
             </div>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <RechartsPieChart>
                 <Pie
                   data={data.shipmentStatusDistribution}
@@ -274,7 +294,8 @@ const DashboardPage = () => {
                   cy="50%"
                   labelLine={false}
                   label={({ status, percent }) => `${status} ${(percent ?? 0) * 100}%`}
-                  outerRadius={80}
+                  outerRadius={60}
+                  className="sm:outerRadius={80}"
                   fill="#8884d8"
                   dataKey="count"
                 >
@@ -287,7 +308,8 @@ const DashboardPage = () => {
                     backgroundColor: '#1F2937', 
                     border: 'none', 
                     borderRadius: '8px',
-                    color: '#F9FAFB'
+                    color: '#F9FAFB',
+                    fontSize: '12px'
                   }}
                 />
               </RechartsPieChart>
@@ -296,32 +318,33 @@ const DashboardPage = () => {
         </div>
 
         {/* Additional Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">
           {/* Monthly Shipments vs Revenue */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
                 Shipments vs Revenue
               </h3>
-              <BarChart3 className="w-5 h-5 text-indigo-500" />
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
             </div>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <BarChart data={data.monthlyShipments}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis dataKey="month" stroke="#6B7280" />
-                <YAxis yAxisId="left" stroke="#6B7280" />
-                <YAxis yAxisId="right" orientation="right" stroke="#6B7280" />
+                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
+                <YAxis yAxisId="right" orientation="right" stroke="#6B7280" fontSize={12} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: '#1F2937', 
                     border: 'none', 
                     borderRadius: '8px',
-                    color: '#F9FAFB'
+                    color: '#F9FAFB',
+                    fontSize: '12px'
                   }}
                 />
                 <Bar yAxisId="left" dataKey="shipments" fill="#3B82F6" radius={[4, 4, 0, 0]} />
@@ -335,25 +358,26 @@ const DashboardPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
                 Top Destinations
               </h3>
-              <MapPin className="w-5 h-5 text-red-500" />
+              <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
             </div>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <BarChart data={data.topDestinations} layout="horizontal">
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis type="number" stroke="#6B7280" />
-                <YAxis dataKey="destination" type="category" stroke="#6B7280" />
+                <XAxis type="number" stroke="#6B7280" fontSize={12} />
+                <YAxis dataKey="destination" type="category" stroke="#6B7280" fontSize={12} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: '#1F2937', 
                     border: 'none', 
                     borderRadius: '8px',
-                    color: '#F9FAFB'
+                    color: '#F9FAFB',
+                    fontSize: '12px'
                   }}
                 />
                 <Bar dataKey="shipments" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
@@ -362,46 +386,128 @@ const DashboardPage = () => {
           </motion.div>
         </div>
 
+        {/* Customer Analytics Charts */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">
+          {/* Customer-Destination Relationship */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
+                Customer-Destination Map
+              </h3>
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+            </div>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+              <BarChart data={data.customerDestinationMap} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+                <XAxis type="number" stroke="#6B7280" fontSize={12} />
+                <YAxis dataKey="customer" type="category" stroke="#6B7280" width={80} fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1F2937', 
+                    border: 'none', 
+                    borderRadius: '8px',
+                    color: '#F9FAFB',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value, name) => [value, 'Shipments']}
+                  labelFormatter={(label) => `Customer: ${label}`}
+                />
+                <Bar dataKey="shipments" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
+              Shows shipment count by customer and their preferred destinations
+            </div>
+          </motion.div>
+
+          {/* Top Customers Performance */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
+                Top Customers
+              </h3>
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+            </div>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+              <BarChart data={data.topCustomers}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+                <XAxis dataKey="customer" stroke="#6B7280" angle={-45} textAnchor="end" height={60} fontSize={12} />
+                <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
+                <YAxis yAxisId="right" orientation="right" stroke="#6B7280" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1F2937', 
+                    border: 'none', 
+                    borderRadius: '8px',
+                    color: '#F9FAFB',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value, name) => [
+                    name === 'shipments' ? value : `PKR ${value.toLocaleString()}`,
+                    name === 'shipments' ? 'Shipments' : name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'
+                  ]}
+                />
+                <Bar yAxisId="left" dataKey="shipments" fill="#10B981" radius={[4, 4, 0, 0]} name="shipments" />
+                <Line yAxisId="right" type="monotone" dataKey="totalSpent" stroke="#F59E0B" strokeWidth={3} name="totalSpent" />
+                <Line yAxisId="right" type="monotone" dataKey="avgOrderValue" stroke="#EF4444" strokeWidth={2} name="avgOrderValue" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
+              Shipments (bars), Total Spent (orange line), Avg Order Value (red line)
+            </div>
+          </motion.div>
+        </div>
+
         {/* Recent Shipments Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
-              <Package className="w-6 h-6 text-indigo-500" />
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
               Recent Shipments
             </h2>
-            <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+            <button className="px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
               View All
             </button>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm">
               <thead className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Tracking ID
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Sender
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Receiver
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Destination
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Cost
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Date
                   </th>
                 </tr>
@@ -409,7 +515,7 @@ const DashboardPage = () => {
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {data.recentShipments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={7} className="px-2 py-4 sm:px-4 sm:py-8 text-center text-gray-500 dark:text-gray-400">
                       No recent shipments found.
                     </td>
                   </tr>
@@ -422,19 +528,19 @@ const DashboardPage = () => {
                       transition={{ duration: 0.3, delay: index * 0.1 }}
                       className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                     >
-                      <td className="px-4 py-4 text-indigo-600 dark:text-indigo-400 font-medium">
+                      <td className="px-2 py-2 sm:px-4 sm:py-4 text-indigo-600 dark:text-indigo-400 font-medium text-xs sm:text-sm">
                         {shipment.trackingId}
                       </td>
-                      <td className="px-4 py-4 text-gray-900 dark:text-white">{shipment.senderName}</td>
-                      <td className="px-4 py-4 text-gray-900 dark:text-white">{shipment.recipientName}</td>
-                      <td className="px-4 py-4 text-gray-900 dark:text-white">{shipment.destination}</td>
-                      <td className="px-4 py-4 text-gray-900 dark:text-white font-medium">
+                      <td className="px-2 py-2 sm:px-4 sm:py-4 text-gray-900 dark:text-white text-xs sm:text-sm">{shipment.senderName}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-4 text-gray-900 dark:text-white text-xs sm:text-sm">{shipment.recipientName}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-4 text-gray-900 dark:text-white text-xs sm:text-sm">{shipment.destination}</td>
+                      <td className="px-2 py-2 sm:px-4 sm:py-4 text-gray-900 dark:text-white font-medium text-xs sm:text-sm">
                         PKR {shipment.totalCost.toLocaleString()}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-2 py-2 sm:px-4 sm:py-4">
                         <StatusBadge status={shipment.status} />
                       </td>
-                      <td className="px-4 py-4 text-gray-500 dark:text-gray-400">
+                      <td className="px-2 py-2 sm:px-4 sm:py-4 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                         {new Date(shipment.createdAt).toLocaleDateString()}
                       </td>
                     </motion.tr>
@@ -461,20 +567,20 @@ const MetricCard = ({ title, value, change, icon, bgColor, iconColor }: {
     initial={{ opacity: 0, scale: 0.95 }}
     animate={{ opacity: 1, scale: 1 }}
     transition={{ duration: 0.3 }}
-    className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
+    className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
   >
-    <div className="flex items-center justify-between mb-4">
-      <div className={`${bgColor} ${iconColor} p-3 rounded-xl`}>{icon}</div>
-      <div className={`flex items-center text-sm font-medium ${
+    <div className="flex items-center justify-between mb-3 sm:mb-4">
+      <div className={`${bgColor} ${iconColor} p-2 sm:p-3 rounded-lg sm:rounded-xl`}>{icon}</div>
+      <div className={`flex items-center text-xs sm:text-sm font-medium ${
         change >= 0 ? 'text-green-600' : 'text-red-600'
       }`}>
-        {change >= 0 ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
+        {change >= 0 ? <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> : <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />}
         {Math.abs(change)}%
       </div>
     </div>
     <div>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
-      <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
+      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
+      <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
     </div>
   </motion.div>
 );
@@ -490,13 +596,13 @@ const PerformanceCard = ({ title, value, icon, color, bgColor }: {
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.3 }}
-    className={`${bgColor} p-6 rounded-2xl border border-transparent hover:shadow-lg transition-all duration-300`}
+    className={`${bgColor} p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-transparent hover:shadow-lg transition-all duration-300`}
   >
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 sm:gap-3">
       <div className={`${color} p-2 rounded-lg bg-white dark:bg-slate-700`}>{icon}</div>
       <div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
-        <h3 className={`text-xl font-bold ${color}`}>{value}</h3>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
+        <h3 className={`text-base sm:text-lg lg:text-xl font-bold ${color}`}>{value}</h3>
       </div>
     </div>
   </motion.div>

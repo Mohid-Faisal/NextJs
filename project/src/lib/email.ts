@@ -92,3 +92,44 @@ export async function sendUserApprovedEmail(
     throw error;
   }
 }
+
+export async function sendVerificationEmail(
+  userEmail: string,
+  userName: string,
+  verificationCode: string
+) {
+  try {
+    const { data: emailData, error } = await resend.emails.send({
+      from: "PSS_Support@psswwe.com", // Update this with your verified domain
+      to: userEmail,
+      subject: "Verify Your Email - Signup",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Welcome to Our Platform!</h2>
+          <p>Hi ${userName},</p>
+          <p>Thank you for signing up! To complete your registration, please use the verification code below:</p>
+          
+          <div style="background: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #007bff; font-size: 32px; letter-spacing: 5px; margin: 0;">${verificationCode}</h1>
+          </div>
+          
+          <p><strong>This code will expire in 10 minutes.</strong></p>
+          
+          <p>If you didn't request this verification code, please ignore this email.</p>
+          
+          <p>Best regards,<br>Your Platform Team</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending verification email:", error);
+      throw new Error("Failed to send verification email");
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error("Error in sendVerificationEmail:", error);
+    throw error;
+  }
+}

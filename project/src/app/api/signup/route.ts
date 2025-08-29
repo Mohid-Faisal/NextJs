@@ -1,65 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcrypt";
-import { sendUserApprovalEmail } from "@/lib/email";
+import bcrypt from "bcryptjs";
+import { sendVerificationEmail } from "@/lib/email";
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await req.json();
+    const body = await request.json();
+    const { name, email, password } = body;
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
     if (existingUser) {
       return NextResponse.json(
-        { success: false, message: "User already exists." },
+        { success: false, message: "User with this email already exists" },
         { status: 400 }
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create new user with pending approval
+    // Create user with pending verification status
+    // Store verification data in status field temporarily
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: "USER", // Default role for new signups
-        status: "PENDING",
+        status: `PENDING_VERIFICATION_${verificationCode}_${Date.now() + 10 * 60 * 1000}`, // Store code and expiry in status
         isApproved: false,
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        isApproved: true,
-        createdAt: true,
-      }
     });
 
-    // Send approval email to admin
-    try {
-      const approvalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/users/approve/${user.id}`;
-      await sendUserApprovalEmail({
-        userName: user.name,
-        userEmail: user.email,
-        approvalUrl,
-      });
-    } catch (emailError) {
-      console.error('Failed to send approval email:', emailError);
-      // Don't fail user creation if email fails
+    // Send verification email
+    const emailSent = await sendVerificationEmail(email, name, verificationCode);
+
+    if (!emailSent) {
+      // If email fails, delete the user and return error
+      await prisma.user.delete({ where: { id: user.id } });
+      return NextResponse.json(
+        { success: false, message: "Failed to send verification email. Please try again." },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Account created successfully! Please wait for admin approval before logging in.",
-      user 
+    return NextResponse.json({
+      success: true,
+      message: "Verification code sent to your email. Please check your inbox and enter the 6-digit code.",
+      userId: user.id,
     });
+
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json(
-      { success: false, message: "Signup failed." },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
