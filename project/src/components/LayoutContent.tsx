@@ -11,13 +11,13 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       {/* Navbar */}
-      <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="fixed top-0 left-0 right-0 z-50 no-print">
       <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} isSidebarOpen={sidebarOpen} />
 
       </div>
 
       {/* Sidebar + Main */}
-      <div className="flex pt-[64px] h-screen overflow-hidden">
+      <div className="flex pt-[64px] h-screen overflow-hidden no-print">
         {/* Sidebar with transition and width toggle */}
         <aside
           className={`${

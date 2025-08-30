@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         name: user.name,
       },
       JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "1w" }
     );
 
     return NextResponse.json({

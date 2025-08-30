@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
       Phone: obj.phone,
       DocumentType: obj.documentType,
       DocumentNumber: obj.documentNumber,
+      DocumentExpiry: obj.documentExpiry,
       Country: obj.country,
       State: obj.state,
       City: obj.city,

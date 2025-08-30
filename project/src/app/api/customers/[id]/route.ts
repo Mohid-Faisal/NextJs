@@ -11,6 +11,7 @@ interface CustomerUpdateData {
   phone?: string;
   documenttype?: string;
   documentnumber?: string;
+  documentexpiry?: string;
   country?: string;
   state?: string;
   city?: string;
@@ -78,7 +79,18 @@ export async function PUT(
       );
     }
 
-    const body: CustomerUpdateData = await req.json();
+    // Handle FormData
+    const formData = await req.formData();
+    const formString = formData.get('form') as string;
+    
+    if (!formString) {
+      return NextResponse.json(
+        { error: "Form data is required" },
+        { status: 400 }
+      );
+    }
+
+    const body: CustomerUpdateData = JSON.parse(formString);
     
     const updatedCustomer = await prisma.customers.update({
       where: { id: customerId },
@@ -89,6 +101,7 @@ export async function PUT(
         Phone: body.phone,
         DocumentType: body.documenttype,
         DocumentNumber: body.documentnumber,
+        DocumentExpiry: body.documentexpiry,
         Country: body.country,
         State: body.state,
         City: body.city,

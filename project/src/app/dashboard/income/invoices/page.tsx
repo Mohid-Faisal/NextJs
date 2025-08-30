@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import {
   format,
   parseISO,
@@ -83,6 +84,206 @@ type Invoice = {
 type SortField = keyof Invoice;
 type SortOrder = "asc" | "desc";
 
+// Edit Invoice Form Component
+const EditInvoiceForm = ({ 
+  invoice, 
+  onSuccess, 
+  onCancel 
+}: { 
+  invoice: any; 
+  onSuccess: () => void; 
+  onCancel: () => void; 
+}) => {
+  const [form, setForm] = useState({
+    invoiceNumber: invoice?.invoiceNumber || "",
+    invoiceDate: invoice?.invoiceDate ? new Date(invoice.invoiceDate).toISOString().split('T')[0] : "",
+    trackingNumber: invoice?.trackingNumber || "",
+    destination: invoice?.destination || "",
+    weight: invoice?.weight || 0,
+    fscCharges: invoice?.fscCharges || 0,
+    status: invoice?.status || "Pending",
+    totalAmount: invoice?.totalAmount || 0,
+    currency: invoice?.currency || "USD"
+  });
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const res = await fetch(`/api/accounts/invoices/${invoice.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Invoice updated successfully!");
+        onSuccess();
+      } else {
+        toast.error(data.message || "Failed to update invoice");
+      }
+    } catch (error) {
+      console.error("Error updating invoice:", error);
+      toast.error("Failed to update invoice");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Basic Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label htmlFor="invoiceNumber" className="text-sm font-medium">Invoice Number</label>
+          <Input
+            id="invoiceNumber"
+            name="invoiceNumber"
+            value={form.invoiceNumber}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="invoiceDate" className="text-sm font-medium">Invoice Date</label>
+          <Input
+            id="invoiceDate"
+            name="invoiceDate"
+            type="date"
+            value={form.invoiceDate}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="trackingNumber" className="text-sm font-medium">Tracking Number</label>
+          <Input
+            id="trackingNumber"
+            name="trackingNumber"
+            value={form.trackingNumber}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="status" className="text-sm font-medium">Status</label>
+          <Select
+            value={form.status}
+            onValueChange={(value) =>
+              setForm((prev) => ({ ...prev, status: value }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Paid">Paid</SelectItem>
+              <SelectItem value="Overdue">Overdue</SelectItem>
+              <SelectItem value="Partial">Partial</SelectItem>
+              <SelectItem value="Cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Shipping Details */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label htmlFor="destination" className="text-sm font-medium">Destination</label>
+          <Input
+            id="destination"
+            name="destination"
+            value={form.destination}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="weight" className="text-sm font-medium">Weight</label>
+          <Input
+            id="weight"
+            name="weight"
+            type="number"
+            step="0.01"
+            value={form.weight}
+            onChange={handleChange}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Financial Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <label htmlFor="fscCharges" className="text-sm font-medium">FSC Charges</label>
+          <Input
+            id="fscCharges"
+            name="fscCharges"
+            type="number"
+            step="0.01"
+            value={form.fscCharges}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="totalAmount" className="text-sm font-medium">Total Amount</label>
+          <Input
+            id="totalAmount"
+            name="totalAmount"
+            type="number"
+            step="0.01"
+            value={form.totalAmount}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="currency" className="text-sm font-medium">Currency</label>
+          <Select
+            value={form.currency}
+            onValueChange={(value) =>
+              setForm((prev) => ({ ...prev, currency: value }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select currency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="USD">USD</SelectItem>
+              <SelectItem value="EUR">EUR</SelectItem>
+              <SelectItem value="GBP">GBP</SelectItem>
+              <SelectItem value="PKR">PKR</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+
+
+      <div className="flex justify-end gap-4 pt-4">
+        <Button type="button" variant="ghost" onClick={onCancel} className="text-sm px-4">
+          Cancel
+        </Button>
+        <Button type="submit" className="text-sm px-4">
+          Update Invoice
+        </Button>
+      </div>
+    </form>
+  );
+};
+
 export default function IncomeInvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [total, setTotal] = useState(0);
@@ -122,6 +323,8 @@ export default function IncomeInvoicesPage() {
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -883,7 +1086,8 @@ export default function IncomeInvoicesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                window.location.href = `/dashboard/accounts/invoices/add?id=${i.id}`;
+                                setInvoiceToEdit(i);
+                                setOpenEditDialog(true);
                               }}
                             >
                               <Edit className="mr-2 h-4 w-4" />
@@ -908,7 +1112,7 @@ export default function IncomeInvoicesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                window.location.href = `/api/accounts/invoices/${i.id}/invoice`;
+                                window.location.href = `/dashboard/invoice/${i.id}`;
                               }}
                             >
                               🧾 Download Invoice
@@ -1012,6 +1216,27 @@ export default function IncomeInvoicesPage() {
               setInvoiceToDelete(null);
             }}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Invoice Dialog */}
+      <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+        <DialogContent size="4xl" className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <h2 className="text-2xl text-center mb-6 font-bold">Edit Invoice</h2>
+            <EditInvoiceForm
+              invoice={invoiceToEdit}
+              onSuccess={() => {
+                handleDelete(); // Refresh the list
+                setOpenEditDialog(false);
+                setInvoiceToEdit(null);
+              }}
+              onCancel={() => {
+                setOpenEditDialog(false);
+                setInvoiceToEdit(null);
+              }}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

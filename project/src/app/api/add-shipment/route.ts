@@ -157,6 +157,8 @@ export async function POST(req: NextRequest) {
       tax,
       declaredValue,
       reissue,
+      profitPercentage,
+      vendorPrice,
       manualRate,
     });
     
@@ -246,11 +248,24 @@ export async function POST(req: NextRequest) {
     // Calculate total costs for customer and vendor
     // Customer invoice uses the price with profit (from frontend)
     const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
-    // Vendor invoice uses original price without profit
-    const vendorTotalCost = Math.round(vendorPrice);
+    // Vendor invoice uses vendorPrice + fixedCharge (as provided by frontend)
+    const vendorTotalCost = Math.round((parseFloat(vendorPrice) || 0) + (parseFloat(fixedCharge) || 0));
 
     // Get subtotal from calculated values or use original price
     const subtotal = calculatedValues?.subtotal ? Math.round((calculatedValues.subtotal)) : originalPrice;
+    
+    // Log pricing calculations for debugging
+    console.log('=== PRICING CALCULATIONS ===');
+    console.log('Price from request:', price);
+    console.log('Fuel surcharge:', fuelSurcharge);
+    console.log('Discount percentage:', discount);
+    console.log('Profit percentage:', profitPercentage);
+    console.log('Vendor price:', vendorPrice);
+    console.log('Fixed charge:', fixedCharge);
+    console.log('Original price (no profit):', originalPrice);
+    console.log('Customer total cost (with profit):', customerTotalCost);
+    console.log('Vendor total cost (vendorPrice + fixedCharge):', vendorTotalCost);
+    console.log('=== END PRICING CALCULATIONS ===');
 
     // ============================================================================
     // SECTION 6: SHIPMENT CREATION
@@ -296,6 +311,7 @@ export async function POST(req: NextRequest) {
         tax: parseFloat(tax) || 0,
         declaredValue: parseFloat(declaredValue) || 0,
         reissue: parseFloat(reissue) || 0,
+        profitPercentage: profitPercentageValue, // Store the profit percentage
         totalCost: customerTotalCost, // Use customer total cost for shipment record
         subtotal,
         manualRate: Boolean(manualRate),
@@ -316,6 +332,7 @@ export async function POST(req: NextRequest) {
       destination: shipment.destination,
       totalCost: shipment.totalCost,
       subtotal: shipment.subtotal,
+      profitPercentage: shipment.profitPercentage,
       totalPackages: shipment.totalPackages,
       totalWeight: shipment.totalWeight,
       createdAt: shipment.createdAt,

@@ -21,7 +21,11 @@ export async function GET(
 
     if (!invoice) {
       return NextResponse.json(
-        { error: "Invoice not found" },
+        { 
+          success: false,
+          message: "Invoice not found",
+          error: "Invoice not found" 
+        },
         { status: 404 }
       );
     }
@@ -57,7 +61,11 @@ export async function PUT(
 
     if (!currentInvoice) {
       return NextResponse.json(
-        { error: "Invoice not found" },
+        { 
+          success: false,
+          message: "Invoice not found",
+          error: "Invoice not found" 
+        },
         { status: 404 }
       );
     }
@@ -122,6 +130,8 @@ export async function PUT(
     }
 
     return NextResponse.json({ 
+      success: true,
+      message: "Invoice updated successfully",
       invoice,
       balanceUpdated: oldAmount !== newAmount || oldCustomerId !== newCustomerId || oldVendorId !== newVendorId,
       balanceUpdateResult
@@ -129,7 +139,11 @@ export async function PUT(
   } catch (error) {
     console.error("Error updating invoice:", error);
     return NextResponse.json(
-      { error: "Failed to update invoice" },
+      { 
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to update invoice",
+        error: "Failed to update invoice" 
+      },
       { status: 500 }
     );
   }

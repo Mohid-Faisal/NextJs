@@ -67,6 +67,7 @@ model Shipment {
   tax               Float    @default(0)
   declaredValue     Float    @default(0)
   reissue           Float    @default(0)
+  profitPercentage  Float    @default(0)
   
   // Calculated values
   totalCost         Float
@@ -100,6 +101,7 @@ model Customers {
   Phone             String
   DocumentType      String
   DocumentNumber    String
+  DocumentExpiry    String?
   Country           String
   State             String
   City              String

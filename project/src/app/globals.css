@@ -130,3 +130,136 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
 }
+
+/* Print styles - Hide navigation and UI elements when printing */
+@media print {
+  /* Hide all navigation and UI elements */
+  header,
+  nav,
+  .sidebar,
+  .navbar,
+  .no-print,
+  button,
+  .print-button,
+  .download-button,
+  .back-button {
+    display: none !important;
+  }
+  
+  /* Ensure receipt content takes full page */
+  .receipt-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Remove shadows and borders for clean printing */
+  .shadow-lg,
+  .shadow,
+  .border,
+  .rounded-lg {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+  
+  /* Ensure white background */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Hide scrollbars */
+  * {
+    overflow: visible !important;
+  }
+  
+  /* Receipt-specific print styles */
+  .print-header {
+    display: block !important;
+    margin-bottom: 20px !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .receipt-content {
+    page-break-inside: avoid !important;
+  }
+  
+  /* Remove any background colors that might interfere */
+  .bg-gray-50,
+  .bg-white {
+    background: white !important;
+  }
+  
+  /* Ensure text is readable */
+  .text-gray-800,
+  .text-gray-700,
+  .text-gray-600 {
+    color: black !important;
+  }
+  
+  /* Remove any margins that might cause layout issues */
+  .p-4,
+  .px-4,
+  .py-4 {
+    padding: 0 !important;
+  }
+  
+  .mb-6,
+  .mb-4 {
+    margin-bottom: 20px !important;
+  }
+  
+  /* Additional receipt print styles */
+  .min-h-screen {
+    min-height: auto !important;
+  }
+  
+  .grid {
+    display: grid !important;
+  }
+  
+  /* Fix the escaped backslash issue */
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  
+  .gap-0 {
+    gap: 0 !important;
+  }
+  
+  .min-h-\[800px\] {
+    min-height: auto !important;
+  }
+  
+  /* Ensure proper column layout */
+  .border-r {
+    border-right: 1px solid #e5e7eb !important;
+  }
+  
+  .print\:border-r-0 {
+    border-right: none !important;
+  }
+  
+  /* Ensure proper text sizing */
+  .text-sm {
+    font-size: 12px !important;
+  }
+  
+  .text-lg {
+    font-size: 16px !important;
+  }
+  
+  .text-2xl {
+    font-size: 20px !important;
+  }
+  
+  .text-3xl {
+    font-size: 24px !important;
+  }
+  
+  .text-4xl {
+    font-size: 28px !important;
+  }
+}

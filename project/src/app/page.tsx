@@ -10,7 +10,7 @@ export default function HomePage() {
     <div className="relative w-full h-screen overflow-hidden">
       {/* Background Image */}
       <Image
-        src="/banner_new.jpg"
+        src="/company-image-final.png"
         alt="Courier Truck"
         fill
         priority
@@ -22,7 +22,7 @@ export default function HomePage() {
         {/* SplitText animation */}
         <SplitText
           text="Fast. Reliable. Affordable."
-          className="text-white font-extrabold text-4xl sm:text-5xl md:text-6xl leading-tight tracking-wide"
+          className="text-black font-extrabold text-4xl sm:text-5xl md:text-6xl leading-tight tracking-wide"
           delay={20}
           duration={2}
           ease="elastic.out(1,0.3)"
@@ -34,7 +34,7 @@ export default function HomePage() {
         />
 
         {/* Subheading */}
-        <p className="text-base sm:text-xl md:text-2xl text-gray-300 max-w-2xl mt-4 mb-8 animate-fade-in delay-100">
+        <p className="text-base sm:text-xl md:text-2xl text-white max-w-2xl mt-4 mb-8 animate-fade-in delay-100">
           Experience world-class courier services to 100+ destinations with real-time tracking and unbeatable rates.
         </p>
 
@@ -42,7 +42,6 @@ export default function HomePage() {
         <div className="flex gap-4 flex-wrap justify-center animate-fade-in delay-200">
           <Link href="/auth/login">
             <Button
-              variant="secondary"
               size="lg"
               className="px-8 py-4 text-base sm:text-lg shadow-md hover:scale-105 transition-transform"
             >

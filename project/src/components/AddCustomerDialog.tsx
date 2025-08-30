@@ -29,10 +29,14 @@ import { Paperclip } from "lucide-react";
 
 const AddCustomerDialog = ({ 
   triggerLabel = "Add Customer", 
-  onSuccess 
+  onSuccess,
+  customerToEdit = null,
+  isEditMode = false
 }: { 
   triggerLabel?: string;
   onSuccess?: () => void;
+  customerToEdit?: any;
+  isEditMode?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -44,6 +48,7 @@ const AddCustomerDialog = ({
     password: "",
     documentType: "",
     documentNumber: "",
+    documentExpiry: "",
     country: "",
     state: "",
     city: "",
@@ -61,6 +66,32 @@ const AddCustomerDialog = ({
   const [cities, setCities] = useState<any[]>([]);
 
   const countries = Country.getAllCountries();
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isEditMode && customerToEdit) {
+      setForm({
+        companyname: customerToEdit.CompanyName || "",
+        personname: customerToEdit.PersonName || "",
+        email: customerToEdit.Email || "",
+        phone: customerToEdit.Phone || "",
+        username: customerToEdit.Username || "",
+        password: customerToEdit.Password || "",
+        documentType: customerToEdit.DocumentType || "",
+        documentNumber: customerToEdit.DocumentNumber || "",
+        documentExpiry: customerToEdit.DocumentExpiry || "",
+        country: customerToEdit.Country || "",
+        state: customerToEdit.State || "",
+        city: customerToEdit.City || "",
+        zip: customerToEdit.Zip || "",
+        address: customerToEdit.Address || "",
+        activestatus: customerToEdit.ActiveStatus || ""
+      });
+      setSelectedCountry(customerToEdit.Country || "");
+      setSelectedState(customerToEdit.State || "");
+      setSelectedCity(customerToEdit.City || "");
+    }
+  }, [isEditMode, customerToEdit]);
 
   useEffect(() => {
     if (selectedCountry) {
@@ -99,33 +130,36 @@ const AddCustomerDialog = ({
     }
     formData.append("form", JSON.stringify(form));
 
-    const res = await fetch("/api/add-customers", {
-      method: "POST",
+    const res = await fetch(isEditMode ? `/api/customers/${customerToEdit.id}` : "/api/add-customers", {
+      method: isEditMode ? "PUT" : "POST",
       body: formData,
     });
 
     const data = await res.json();
 
     if (data.success) {
-      toast.success("Customer added successfully!");
-      setForm({
-        companyname: "",
-        personname: "",
-        email: "",
-        phone: "",
-        username: "",
-        password: "",
-        documentType: "",
-        documentNumber: "",
-        country: "",
-        state: "",
-        city: "",
-        zip: "",
-        address: "",
-        activestatus: ""
-      });
-      setRegisterAccount(false);
-      setFile(null);
+      toast.success(isEditMode ? "Customer updated successfully!" : "Customer added successfully!");
+      if (!isEditMode) {
+        setForm({
+          companyname: "",
+          personname: "",
+          email: "",
+          phone: "",
+          username: "",
+          password: "",
+          documentType: "",
+          documentNumber: "",
+          documentExpiry: "",
+          country: "",
+          state: "",
+          city: "",
+          zip: "",
+          address: "",
+          activestatus: ""
+        });
+        setRegisterAccount(false);
+        setFile(null);
+      }
       setOpen(false); // Close dialog after successful submission
       if (onSuccess) {
         onSuccess(); // Call the callback to refresh the list
@@ -142,21 +176,23 @@ const AddCustomerDialog = ({
           {triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent size="4xl" className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
           <DialogHeader>
-            <DialogTitle className="text-2xl text-center mb-4">Add Customer</DialogTitle>
+            <DialogTitle className="text-2xl text-center mb-4">
+              {isEditMode ? "Edit Customer" : "Add Customer"}
+            </DialogTitle>
           </DialogHeader>
           
           <form onSubmit={handleCustomer} className="space-y-6">
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="companyname">Company Name</Label>
+                <Label htmlFor="companyname">Company</Label>
                 <Input
                   id="companyname"
                   name="companyname"
@@ -197,7 +233,7 @@ const AddCustomerDialog = ({
             </div>
 
             {/* Document Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="documentType">Document Type</Label>
                 <Select
@@ -224,6 +260,15 @@ const AddCustomerDialog = ({
                   id="documentNumber"
                   name="documentNumber"
                   value={form.documentNumber}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="documentExpiry">Expiry</Label>
+                <Input
+                  id="documentExpiry"
+                  name="documentExpiry"
+                  value={form.documentExpiry}
                   onChange={handleChange}
                 />
               </div>
@@ -402,14 +447,14 @@ const AddCustomerDialog = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-4 pt-4">
-              <Button type="reset" variant="ghost" className="text-sm px-4">
-                Cancel
-              </Button>
-              <Button type="button" onClick={handleCustomer} className="text-sm px-4">
-                Add Customer
-              </Button>
-            </div>
+                         <div className="flex justify-end gap-4 pt-4">
+               <Button type="reset" variant="ghost" className="text-sm px-4">
+                 Cancel
+               </Button>
+               <Button type="button" onClick={handleCustomer} className="text-sm px-4">
+                 {isEditMode ? "Update Customer" : "Add Customer"}
+               </Button>
+             </div>
           </form>
         </motion.div>
       </DialogContent>

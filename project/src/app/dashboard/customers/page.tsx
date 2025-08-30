@@ -20,17 +20,330 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table } from "lucide-react";
-import Link from "next/link";
 import { Country as country } from "country-state-city";
 import { useRouter } from "next/navigation";
 import DeleteDialog from "@/components/DeleteDialog";
 import ViewCustomerDialog from "@/components/ViewCustomerDialog";
+import AddCustomerDialog from "@/components/AddCustomerDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Country, State, City } from "country-state-city";
+import { toast } from "sonner";
 
 const STATUSES = ["All", "Active", "Inactive"];
 
 type SortField = "id" | "CompanyName" | "PersonName" | "Phone" | "City" | "Country" | "ActiveStatus" | "currentBalance";
 type SortOrder = "asc" | "desc";
+
+// Edit Customer Form Component
+const EditCustomerForm = ({ 
+  customer, 
+  onSuccess, 
+  onCancel 
+}: { 
+  customer: any; 
+  onSuccess: () => void; 
+  onCancel: () => void; 
+}) => {
+  const [form, setForm] = useState({
+    companyname: customer?.CompanyName || "",
+    personname: customer?.PersonName || "",
+    email: customer?.Email || "",
+    phone: customer?.Phone || "",
+    documentType: customer?.DocumentType || "",
+    documentNumber: customer?.DocumentNumber || "",
+    documentExpiry: customer?.DocumentExpiry || "",
+    country: customer?.Country || "",
+    state: customer?.State || "",
+    city: customer?.City || "",
+    zip: customer?.Zip || "",
+    address: customer?.Address || "",
+    activestatus: customer?.ActiveStatus || ""
+  });
+
+  const [selectedCountry, setSelectedCountry] = useState<string>(customer?.Country || "");
+  const [selectedState, setSelectedState] = useState<string>(customer?.State || "");
+  const [selectedCity, setSelectedCity] = useState<string>(customer?.City || "");
+  const [states, setStates] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
+
+  const countries = Country.getAllCountries();
+
+  // Load states and cities when country/state changes
+  useEffect(() => {
+    if (selectedCountry) {
+      const fetchedStates = State.getStatesOfCountry(selectedCountry);
+      setStates(fetchedStates);
+    }
+  }, [selectedCountry]);
+
+  useEffect(() => {
+    if (selectedCountry && selectedState) {
+      const fetchedCities = City.getCitiesOfState(selectedCountry, selectedState);
+      setCities(fetchedCities);
+    }
+  }, [selectedState, selectedCountry]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Map form fields to API expected format
+    const apiFormData = {
+      companyname: form.companyname,
+      personname: form.personname,
+      email: form.email,
+      phone: form.phone,
+      documenttype: form.documentType,
+      documentnumber: form.documentNumber,
+      documentexpiry: form.documentExpiry,
+      country: form.country,
+      state: form.state,
+      city: form.city,
+      zip: form.zip,
+      address: form.address,
+      activestatus: form.activestatus
+    };
+
+    const formData = new FormData();
+    formData.append("form", JSON.stringify(apiFormData));
+
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`, {
+        method: "PUT",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Customer updated successfully!");
+        onSuccess();
+      } else {
+        toast.error(data.message || "Failed to update customer");
+      }
+    } catch (error) {
+      console.error("Error updating customer:", error);
+      toast.error("Failed to update customer");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Basic Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="companyname">Company</Label>
+          <Input
+            id="companyname"
+            name="companyname"
+            value={form.companyname}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="personname">Person Name</Label>
+          <Input
+            id="personname"
+            name="personname"
+            value={form.personname}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">Phone</Label>
+          <Input
+            id="phone"
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+            placeholder="0301 2345678"
+          />
+        </div>
+      </div>
+
+      {/* Document Information */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="documentType">Document Type</Label>
+          <Select
+            value={form.documentType}
+            onValueChange={(value) =>
+              setForm((prev) => ({ ...prev, documentType: value }))
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select Document Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CNIC">CNIC</SelectItem>
+              <SelectItem value="Passport">Passport</SelectItem>
+              <SelectItem value="NTN">NTN</SelectItem>
+              <SelectItem value="DriverLicense">Driver License</SelectItem>
+              <SelectItem value="others">others</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="documentNumber">Document Number</Label>
+          <Input
+            id="documentNumber"
+            name="documentNumber"
+            value={form.documentNumber}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="documentExpiry">Expiry</Label>
+          <Input
+            id="documentExpiry"
+            name="documentExpiry"
+            value={form.documentExpiry}
+            onChange={handleChange}
+          />
+        </div>
+      </div>
+
+      {/* Country, State, City */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="country">Country</Label>
+          <Select
+            onValueChange={(value) => {
+              setForm({ ...form, country: value, state: "", city: "" });
+              setSelectedCountry(value);
+            }}
+            value={form.country}
+          >
+            <SelectTrigger id="country" className="w-full">
+              <SelectValue placeholder="Select a country" />
+            </SelectTrigger>
+            <SelectContent>
+              {countries.map((country) => (
+                <SelectItem key={country.isoCode} value={country.isoCode}>
+                  {country.name} ({country.isoCode})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="state">State/Province</Label>
+          <Select
+            onValueChange={(value) => {
+              setForm({ ...form, state: value, city: "" });
+              setSelectedState(value);
+            }}
+            value={form.state}
+            disabled={!form.country}
+          >
+            <SelectTrigger id="state" className="w-full">
+              <SelectValue placeholder="Select a state/Provinces" />
+            </SelectTrigger>
+            <SelectContent>
+              {states.map((state) => (
+                <SelectItem key={state.isoCode} value={state.isoCode}>
+                  {state.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="city">City</Label>
+          <Select
+            onValueChange={(value) =>
+              setForm((prev) => ({ ...prev, city: value }))
+            }
+            value={form.city}
+            disabled={!form.state}
+          >
+            <SelectTrigger id="city" className="w-full">
+              <SelectValue placeholder="Select a city" />
+            </SelectTrigger>
+            <SelectContent>
+              {cities.map((city) => (
+                <SelectItem key={city.name} value={city.name}>
+                  {city.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Zip, Address & Active Status */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="zip">Zip Code</Label>
+          <Input
+            id="zip"
+            name="zip"
+            value={form.zip}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="address">Address</Label>
+          <Input
+            id="address"
+            name="address"
+            value={form.address}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="activestatus">Active Status</Label>
+          <Select
+            value={form.activestatus}
+            onValueChange={(value) =>
+              setForm((prev) => ({ ...prev, activestatus: value }))
+            }
+            required
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-4 pt-4">
+        <Button type="button" variant="ghost" onClick={onCancel} className="text-sm px-4">
+          Cancel
+        </Button>
+        <Button type="submit" className="text-sm px-4">
+          Update Customer
+        </Button>
+      </div>
+    </form>
+  );
+};
 
 export default function CustomersPage() {
   const router = useRouter();
@@ -41,8 +354,10 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
+  const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -419,12 +734,12 @@ export default function CustomersPage() {
             </div>
 
             {/* Add Customer button */}
-            <Button asChild>
-              <Link href="/dashboard/customers/add-customers">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Customer
-              </Link>
-            </Button>
+            <AddCustomerDialog
+              triggerLabel="Add Customer"
+              onSuccess={() => {
+                fetchCustomers();
+              }}
+            />
           </div>
         </div>
       </div>
@@ -587,9 +902,10 @@ export default function CustomersPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent className="w-36">
                             <DropdownMenuItem
-                              onClick={() =>
-                                router.push(`customers/add-customers?id=${customer.id}`)
-                              }
+                              onClick={() => {
+                                setCustomerToEdit(customer);
+                                setOpenEditDialog(true);
+                              }}
                             >
                               ✏️ Edit
                             </DropdownMenuItem>
@@ -654,6 +970,27 @@ export default function CustomersPage() {
         open={openViewDialog}
         onOpenChange={setOpenViewDialog}
       />
+
+      {/* Edit Customer Dialog */}
+      <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+        <DialogContent size="4xl" className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <h2 className="text-2xl text-center mb-6 font-bold">Edit Customer</h2>
+            <EditCustomerForm
+              customer={customerToEdit}
+              onSuccess={() => {
+                fetchCustomers();
+                setOpenEditDialog(false);
+                setCustomerToEdit(null);
+              }}
+              onCancel={() => {
+                setOpenEditDialog(false);
+                setCustomerToEdit(null);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pagination and Total Count */}
       <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">

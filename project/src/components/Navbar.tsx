@@ -34,7 +34,7 @@ const Navbar = ({
           }`}
         >
           <img 
-            src="/logo.jpg" 
+            src="/logo_final.png" 
             alt="PSS Logo" 
             className="h-10 w-auto object-contain"
           />
