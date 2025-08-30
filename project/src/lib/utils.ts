@@ -692,3 +692,214 @@ export async function createJournalEntryForTransaction(
     throw error;
   }
 }
+
+// Update journal entries for invoice modifications
+export async function updateJournalEntriesForInvoice(
+  prisma: any,
+  invoiceId: number,
+  oldAmount: number,
+  newAmount: number,
+  oldCustomerId: number | null,
+  newCustomerId: number | null,
+  oldVendorId: number | null,
+  newVendorId: number | null,
+  invoiceNumber: string,
+  description: string
+) {
+  try {
+    console.log(`Updating journal entries for invoice ${invoiceNumber}:`, {
+      oldAmount,
+      newAmount,
+      oldCustomerId,
+      newCustomerId,
+      oldVendorId,
+      newVendorId
+    });
+
+    // If amounts haven't changed and customer/vendor IDs haven't changed, no need to update
+    if (oldAmount === newAmount && 
+        oldCustomerId === newCustomerId && 
+        oldVendorId === newVendorId) {
+      console.log(`No changes detected for invoice ${invoiceNumber}, skipping journal entry updates`);
+      return { customerUpdated: false, vendorUpdated: false };
+    }
+
+    const updates = [];
+
+    // Update customer journal entry if customer ID or amount changed
+    if (oldCustomerId !== newCustomerId || oldAmount !== newAmount) {
+      if (oldCustomerId) {
+        // Update existing customer journal entry
+        updates.push(updateCustomerJournalEntry(
+          prisma,
+          oldCustomerId,
+          oldAmount,
+          newAmount,
+          invoiceNumber,
+          description
+        ));
+      }
+      if (newCustomerId && newCustomerId !== oldCustomerId) {
+        // Create new customer journal entry
+        updates.push(createJournalEntryForTransaction(
+          prisma,
+          'CUSTOMER_DEBIT',
+          newAmount,
+          description,
+          invoiceNumber,
+          invoiceNumber
+        ));
+      }
+    }
+
+    // Update vendor journal entry if vendor ID or amount changed
+    if (oldVendorId !== newVendorId || oldAmount !== newAmount) {
+      if (oldVendorId) {
+        // Update existing vendor journal entry
+        updates.push(updateVendorJournalEntry(
+          prisma,
+          oldVendorId,
+          oldAmount,
+          newAmount,
+          invoiceNumber,
+          description
+        ));
+      }
+      if (newVendorId && newVendorId !== oldVendorId) {
+        // Create new vendor journal entry
+        updates.push(createJournalEntryForTransaction(
+          prisma,
+          'VENDOR_DEBIT',
+          newAmount,
+          description,
+          invoiceNumber,
+          invoiceNumber
+        ));
+      }
+    }
+
+    // Execute all updates
+    if (updates.length > 0) {
+      await Promise.all(updates);
+      console.log(`Successfully updated journal entries for invoice ${invoiceNumber}`);
+    }
+
+    return { 
+      customerUpdated: oldCustomerId !== newCustomerId || oldAmount !== newAmount,
+      vendorUpdated: oldVendorId !== newVendorId || oldAmount !== newAmount
+    };
+  } catch (error) {
+    console.error(`Error updating journal entries for invoice ${invoiceNumber}:`, error);
+    throw error;
+  }
+}
+
+// Helper function to update customer journal entry
+export async function updateCustomerJournalEntry(
+  prisma: any,
+  customerId: number,
+  oldAmount: number,
+  newAmount: number,
+  invoiceNumber: string,
+  description: string
+) {
+  try {
+    // Find existing journal entry for this customer invoice
+    const existingEntry = await prisma.journalEntry.findFirst({
+      where: {
+        OR: [
+          { reference: invoiceNumber },
+          { description: { contains: invoiceNumber } }
+        ]
+      },
+      include: { lines: true }
+    });
+
+    if (existingEntry) {
+      // Update the journal entry
+      await prisma.journalEntry.update({
+        where: { id: existingEntry.id },
+        data: {
+          description: description,
+          totalDebit: newAmount,
+          totalCredit: newAmount,
+          updatedAt: new Date()
+        }
+      });
+
+      // Update journal entry lines
+      for (const line of existingEntry.lines) {
+        if (line.debitAmount > 0) {
+          await prisma.journalEntryLine.update({
+            where: { id: line.id },
+            data: { debitAmount: newAmount }
+          });
+        } else if (line.creditAmount > 0) {
+          await prisma.journalEntryLine.update({
+            where: { id: line.id },
+            data: { creditAmount: newAmount }
+          });
+        }
+      }
+      console.log(`Updated customer journal entry ${existingEntry.entryNumber} for invoice ${invoiceNumber}`);
+    }
+  } catch (error) {
+    console.error(`Error updating customer journal entry for invoice ${invoiceNumber}:`, error);
+    throw error;
+  }
+}
+
+// Helper function to update vendor journal entry
+export async function updateVendorJournalEntry(
+  prisma: any,
+  vendorId: number,
+  oldAmount: number,
+  newAmount: number,
+  invoiceNumber: string,
+  description: string
+) {
+  try {
+    // Find existing journal entry for this vendor invoice
+    const existingEntry = await prisma.journalEntry.findFirst({
+      where: {
+        OR: [
+          { reference: invoiceNumber },
+          { description: { contains: invoiceNumber } }
+        ]
+      },
+      include: { lines: true }
+    });
+
+    if (existingEntry) {
+      // Update the journal entry
+      await prisma.journalEntry.update({
+        where: { id: existingEntry.id },
+        data: {
+          description: description,
+          totalDebit: newAmount,
+          totalCredit: newAmount,
+          updatedAt: new Date()
+        }
+      });
+
+      // Update journal entry lines
+      for (const line of existingEntry.lines) {
+        if (line.debitAmount > 0) {
+          await prisma.journalEntryLine.update({
+            where: { id: line.id },
+            data: { debitAmount: newAmount }
+          });
+        } else if (line.creditAmount > 0) {
+          await prisma.journalEntryLine.update({
+            where: { id: line.id },
+            data: { creditAmount: newAmount }
+          });
+        }
+      }
+      console.log(`Updated vendor journal entry ${existingEntry.entryNumber} for invoice ${invoiceNumber}`);
+    }
+  } catch (error) {
+    console.error(`Error updating vendor journal entry for invoice ${invoiceNumber}:`, error);
+    throw error;
+  }
+}

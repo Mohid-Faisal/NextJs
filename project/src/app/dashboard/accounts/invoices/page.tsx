@@ -333,7 +333,7 @@ export default function InvoicesPage() {
       i.trackingNumber || "",
       getCountryNameFromCode(i.destination),
       i.status,
-      `${i.currency} ${i.totalAmount.toLocaleString()}`,
+      `PKR ${i.totalAmount.toLocaleString()}`,
       i.profile,
       (i.customer?.PersonName || i.customer?.CompanyName) || (i.vendor?.PersonName || i.vendor?.CompanyName) || "",
     ]);
@@ -361,7 +361,7 @@ export default function InvoicesPage() {
           <td>${i.trackingNumber || ""}</td>
           <td>${getCountryNameFromCode(i.destination)}</td>
           <td>${i.status}</td>
-          <td>${i.currency} ${i.totalAmount.toLocaleString()}</td>
+          <td>PKR {i.totalAmount.toLocaleString()}</td>
           <td>${i.profile}</td>
           <td>${(i.customer?.PersonName || i.customer?.CompanyName) || (i.vendor?.PersonName || i.vendor?.CompanyName) || ""}</td>
         </tr>`
@@ -381,7 +381,7 @@ export default function InvoicesPage() {
         </head>
         <body>
           <h1>Invoices</h1>
-          <p>Total Amount: ${totalAmount.toLocaleString()}</p>
+          <p>Total Amount: PKR {totalAmount.toLocaleString()}</p>
           <table>
             <thead>
               <tr>

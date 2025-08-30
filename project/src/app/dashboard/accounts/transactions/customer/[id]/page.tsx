@@ -428,7 +428,7 @@ export default function CustomerTransactionsPage() {
     const data = transactions.map(transaction => [
       format(parseISO(transaction.createdAt), "dd-MM-yyyy"),
       transaction.type,
-      `$${transaction.amount.toLocaleString()}`,
+      `PKR ${transaction.amount.toLocaleString()}`,
       transaction.description,
       transaction.reference || "N/A",
       transaction.invoice || "N/A",
@@ -942,14 +942,14 @@ export default function CustomerTransactionsPage() {
                       <td className="px-4 py-3 font-medium">
                         {transaction.type === "DEBIT" ? (
                           <span className="text-red-600 dark:text-red-400">
-                            ${transaction.amount.toLocaleString()}
+                            PKR {transaction.amount.toLocaleString()}
                           </span>
                         ) : "-"}
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {transaction.type === "CREDIT" ? (
                           <span className="text-green-600 dark:text-green-400">
-                            ${transaction.amount.toLocaleString()}
+                            PKR {transaction.amount.toLocaleString()}
                           </span>
                         ) : "-"}
                       </td>
@@ -963,7 +963,7 @@ export default function CustomerTransactionsPage() {
                               : "text-gray-600 dark:text-gray-400"
                           }
                         >
-                          ${transaction.newBalance.toLocaleString()}
+                          PKR {transaction.newBalance.toLocaleString()}
                         </span>
                       </td>
                     </tr>

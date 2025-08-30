@@ -428,11 +428,11 @@ export default function VendorTransactionsPage() {
     const data = transactions.map(transaction => [
       format(parseISO(transaction.createdAt), "dd-MM-yyyy"),
       transaction.type,
-      `$${transaction.amount.toLocaleString()}`,
+      `PKR ${transaction.amount.toLocaleString()}`,
       transaction.description,
       transaction.reference || "N/A",
       transaction.invoice || "N/A",
-      `$${transaction.newBalance.toLocaleString()}`
+      `PKR ${transaction.newBalance.toLocaleString()}`
     ]);
     return { headers, data };
   };
@@ -541,7 +541,7 @@ export default function VendorTransactionsPage() {
             </span>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Credit Limit: ${vendor.creditLimit.toLocaleString()}
+            Credit Limit: PKR {vendor.creditLimit.toLocaleString()}
           </div>
         </div>
       </div>
@@ -942,14 +942,14 @@ export default function VendorTransactionsPage() {
                       <td className="px-4 py-3 font-medium">
                         {transaction.type === "DEBIT" ? (
                           <span className="text-red-600 dark:text-red-400">
-                            ${transaction.amount.toLocaleString()}
+                            PKR {transaction.amount.toLocaleString()}
                           </span>
                         ) : "-"}
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {transaction.type === "CREDIT" ? (
                           <span className="text-green-600 dark:text-green-400">
-                            ${transaction.amount.toLocaleString()}
+                            PKR {transaction.amount.toLocaleString()}
                           </span>
                         ) : "-"}
                       </td>
@@ -963,7 +963,7 @@ export default function VendorTransactionsPage() {
                               : "text-gray-600 dark:text-gray-400"
                           }
                         >
-                          ${transaction.newBalance.toLocaleString()}
+                          PKR {transaction.newBalance.toLocaleString()}
                         </span>
                       </td>
                     </tr>

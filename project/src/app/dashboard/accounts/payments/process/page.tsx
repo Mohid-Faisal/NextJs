@@ -244,7 +244,7 @@ export default function ProcessPaymentPage() {
       
       if (response.ok) {
         toast.success("Payment processed successfully!", {
-          description: `Payment of $${parseFloat(formData.paymentAmount).toLocaleString()} has been processed for invoice ${selectedInvoice.invoiceNumber}`,
+          description: `Payment of PKR ${parseFloat(formData.paymentAmount).toLocaleString()} has been processed for invoice ${selectedInvoice.invoiceNumber}`,
         });
         setSelectedInvoice(null);
         setFormData({
@@ -349,7 +349,7 @@ export default function ProcessPaymentPage() {
                         {invoice.profile}: {invoice.customer?.CompanyName || invoice.vendor?.CompanyName}
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-500">
-                        ${invoice.totalAmount.toLocaleString()} • {invoice.trackingNumber} • {invoice.remainingAmount?.toLocaleString()}
+                        PKR {invoice.totalAmount.toLocaleString()} • {invoice.trackingNumber} • PKR {invoice.remainingAmount?.toLocaleString()}
                       </div>
                     </div>
                     <span
@@ -380,10 +380,10 @@ export default function ProcessPaymentPage() {
                   </h3>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <div>Invoice: {selectedInvoice.invoiceNumber}</div>
-                    <div>Original Amount: ${selectedInvoice.totalAmount.toLocaleString()}</div>
+                    <div>Original Amount: PKR {selectedInvoice.totalAmount.toLocaleString()}</div>
                     {selectedInvoice.remainingAmount !== undefined && (
                       <div className="font-semibold text-blue-600 dark:text-blue-400">
-                        Remaining Amount: ${selectedInvoice.remainingAmount.toLocaleString()}
+                        Remaining Amount: PKR {selectedInvoice.remainingAmount.toLocaleString()}
                       </div>
                     )}
                     <div>Status: {selectedInvoice.status}</div>
@@ -440,15 +440,15 @@ export default function ProcessPaymentPage() {
                       <p className="text-xs text-gray-500 mt-1">
                         {selectedInvoice.remainingAmount !== undefined ? (
                           <>
-                            Original: ${selectedInvoice.totalAmount.toLocaleString()} • 
-                            Remaining: ${selectedInvoice.remainingAmount.toLocaleString()}
+                            Original: PKR {selectedInvoice.totalAmount.toLocaleString()} • 
+                            Remaining: PKR {selectedInvoice.remainingAmount.toLocaleString()}
                             {selectedInvoice.remainingAmount < selectedInvoice.totalAmount && (
                               <span className="text-blue-600"> (balance already applied)</span>
                             )}
                           </>
                         ) : (
                           <>
-                            Invoice amount: ${selectedInvoice.totalAmount.toLocaleString()}
+                            Invoice amount: PKR {selectedInvoice.totalAmount.toLocaleString()}
                             {selectedInvoice.status === "Partial" && " (partial payment already made)"}
                           </>
                         )}

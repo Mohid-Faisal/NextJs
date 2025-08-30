@@ -542,7 +542,7 @@ export default function AddInvoicePage() {
             <div className="border-t pt-4">
               <div className="flex justify-end items-center gap-4">
                 <div className="text-lg font-semibold text-gray-800 dark:text-white">
-                  Total Amount: ${calculateTotal().toLocaleString()}
+                  Total Amount: PKR {calculateTotal().toLocaleString()}
                 </div>
               </div>
             </div>

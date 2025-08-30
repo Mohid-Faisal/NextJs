@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { updateInvoiceBalance } from "@/lib/utils";
+import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/utils";
 
 export async function GET(
   req: NextRequest,
@@ -129,12 +129,37 @@ export async function PUT(
       }
     }
 
+    // Update journal entries if totalAmount, customerId, or vendorId changed
+    let journalUpdateResult = { customerUpdated: false, vendorUpdated: false };
+    if (oldAmount !== newAmount || oldCustomerId !== newCustomerId || oldVendorId !== newVendorId) {
+      try {
+        const description = `Updated invoice: ${body.invoiceNumber || invoice.invoiceNumber} - ${body.destination || invoice.destination || 'N/A'}`;
+        journalUpdateResult = await updateJournalEntriesForInvoice(
+          prisma,
+          invoiceId,
+          oldAmount,
+          newAmount,
+          oldCustomerId,
+          newCustomerId,
+          oldVendorId,
+          newVendorId,
+          body.invoiceNumber || invoice.invoiceNumber,
+          description
+        );
+      } catch (journalError) {
+        console.error("Error updating journal entries:", journalError);
+        // Continue with the response even if journal entry update fails
+      }
+    }
+
     return NextResponse.json({ 
       success: true,
       message: "Invoice updated successfully",
       invoice,
       balanceUpdated: oldAmount !== newAmount || oldCustomerId !== newCustomerId || oldVendorId !== newVendorId,
-      balanceUpdateResult
+      balanceUpdateResult,
+      journalUpdated: oldAmount !== newAmount || oldCustomerId !== newCustomerId || oldVendorId !== newVendorId,
+      journalUpdateResult
     });
   } catch (error) {
     console.error("Error updating invoice:", error);

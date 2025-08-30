@@ -452,7 +452,7 @@ export default function CompanyAccountPage() {
     const data = transactions.map(transaction => [
       format(parseISO(transaction.createdAt), "dd-MM-yyyy"),
       transaction.type,
-      `$${transaction.amount.toLocaleString()}`,
+      `PKR ${transaction.amount.toLocaleString()}`,
       transaction.description,
       transaction.reference || "N/A",
       `$${transaction.newBalance.toLocaleString()}`
@@ -1102,7 +1102,7 @@ export default function CompanyAccountPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        ${transaction.amount.toLocaleString()}
+                        PKR {transaction.amount.toLocaleString()}
                       </td>
                       <td className="px-4 py-3">{transaction.description}</td>
                       <td className="px-4 py-3">{transaction.reference || "-"}</td>

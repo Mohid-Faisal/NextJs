@@ -436,8 +436,8 @@ const JournalEntriesPage = () => {
                           <span className="hidden sm:inline">{entry.reference || "-"}</span>
                           <span className="sm:hidden">{entry.reference?.substring(0, 8) || "-"}...</span>
                         </td>
-                        <td className="p-2 sm:p-3 text-right">${entry.totalDebit.toFixed(2)}</td>
-                        <td className="p-2 sm:p-3 text-right">${entry.totalCredit.toFixed(2)}</td>
+                        <td className="p-2 sm:p-3 text-right">PKR {entry.totalDebit.toFixed(2)}</td>
+                        <td className="p-2 sm:p-3 text-right">PKR {entry.totalCredit.toFixed(2)}</td>
                         <td className="p-2 sm:p-3">
                           <span className={`px-1 sm:px-2 py-1 rounded-full text-xs ${
                             entry.isPosted ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
@@ -637,11 +637,11 @@ const JournalEntriesPage = () => {
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
                   <div>
                     <span className="text-xs sm:text-sm text-gray-600">Total Debit:</span>
-                    <span className="ml-2 font-semibold">${totalDebit.toFixed(2)}</span>
+                    <span className="ml-2 font-semibold">PKR {totalDebit.toFixed(2)}</span>
                   </div>
                   <div>
                     <span className="text-xs sm:text-sm text-gray-600">Total Credit:</span>
-                    <span className="ml-2 font-semibold">${totalCredit.toFixed(2)}</span>
+                    <span className="ml-2 font-semibold">PKR {totalCredit.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -716,10 +716,10 @@ const JournalEntriesPage = () => {
                         <span className="text-xs sm:text-sm text-gray-600">{line.account.code} - {line.account.accountName}</span>
                       </div>
                       <div className="sm:col-span-2 text-right">
-                        <span className="font-mono">${line.debitAmount.toFixed(2)}</span>
+                        <span className="font-mono">PKR {line.debitAmount.toFixed(2)}</span>
                       </div>
                       <div className="sm:col-span-2 text-right">
-                        <span className="font-mono">${line.creditAmount.toFixed(2)}</span>
+                        <span className="font-mono">PKR {line.creditAmount.toFixed(2)}</span>
                       </div>
                       <div className="sm:col-span-4">
                         <span className="text-xs sm:text-sm">{line.description || "-"}</span>
@@ -735,11 +735,11 @@ const JournalEntriesPage = () => {
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
                     <div>
                       <span className="text-xs sm:text-sm text-gray-600">Total Debit:</span>
-                      <span className="ml-2 font-semibold">${viewingEntry.totalDebit.toFixed(2)}</span>
+                      <span className="ml-2 font-semibold">PKR {viewingEntry.totalDebit.toFixed(2)}</span>
                     </div>
                     <div>
                       <span className="text-xs sm:text-sm text-gray-600">Total Credit:</span>
-                      <span className="ml-2 font-semibold">${viewingEntry.totalCredit.toFixed(2)}</span>
+                      <span className="ml-2 font-semibold">PKR {viewingEntry.totalCredit.toFixed(2)}</span>
                     </div>
                   </div>
                   <div className="text-green-600">

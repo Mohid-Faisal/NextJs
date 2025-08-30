@@ -504,7 +504,7 @@ export default function AccountBooksPage() {
                   <div className="text-center">
                     <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Account Balance</div>
                     <div className={`text-base sm:text-lg font-bold ${getAccountBalance() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ${getAccountBalance().toLocaleString()}
+                      PKR {getAccountBalance().toLocaleString()}
                     </div>
                     <div className="text-xs text-gray-500">
                       {accounts.find(acc => acc.id === selectedAccount)?.accountName}
@@ -515,7 +515,7 @@ export default function AccountBooksPage() {
                     <div className="text-center">
                       <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Balance</div>
                       <div className={`text-base sm:text-lg font-bold ${getTotalBalance() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ${getTotalBalance().toLocaleString()}
+                        PKR {getTotalBalance().toLocaleString()}
                       </div>
                     </div>
                     <div className="text-center">
@@ -527,7 +527,7 @@ export default function AccountBooksPage() {
                     <div className="text-center">
                       <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Amount</div>
                       <div className="text-base sm:text-lg font-bold text-purple-600">
-                        ${filteredEntries.reduce((sum, entry) => sum + (entry.amount || 0), 0).toLocaleString()}
+                        PKR {filteredEntries.reduce((sum, entry) => sum + (entry.amount || 0), 0).toLocaleString()}
                       </div>
                     </div>
                   </>
@@ -551,7 +551,7 @@ export default function AccountBooksPage() {
                         <div key={item.label} className="text-center">
                           <div className="text-gray-600 dark:text-gray-400">{item.label}</div>
                           <div className={`font-bold ${item.color}`}>
-                            ${item.value.toLocaleString()}
+                            PKR {item.value.toLocaleString()}
                           </div>
                         </div>
                       ));
@@ -645,7 +645,7 @@ export default function AccountBooksPage() {
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-base sm:text-lg text-gray-800 dark:text-white">
-                          ${entry.amount.toLocaleString()}
+                          PKR {entry.amount.toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -659,7 +659,7 @@ export default function AccountBooksPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   <span>Total Entries: {filteredEntries.length}</span>
                   <span>
-                    Total Amount: ${filteredEntries.reduce((sum, entry) => sum + entry.amount, 0).toLocaleString()}
+                    Total Amount: PKR {filteredEntries.reduce((sum, entry) => sum + entry.amount, 0).toLocaleString()}
                   </span>
                 </div>
               </div>
