@@ -249,7 +249,7 @@ export async function POST(req: NextRequest) {
     // Customer invoice uses the price with profit (from frontend)
     const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
     // Vendor invoice uses vendorPrice + fixedCharge (as provided by frontend)
-    const vendorTotalCost = Math.round((parseFloat(vendorPrice) || 0) + (parseFloat(fixedCharge) || 0));
+    const vendorTotalCost = Math.round((parseFloat(vendorPrice) || 0));
 
     // Get subtotal from calculated values or use original price
     const subtotal = calculatedValues?.subtotal ? Math.round((calculatedValues.subtotal)) : originalPrice;
