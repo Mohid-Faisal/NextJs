@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
     // Check if reference number already exists (only if provided)
     if (referenceNumber && referenceNumber.trim() !== '') {
-      const existingReferenceNumber = await prisma.shipment.findUnique({
+      const existingReferenceNumber = await prisma.shipment.findFirst({
         where: { referenceNumber }
       });
       if (existingReferenceNumber) {
