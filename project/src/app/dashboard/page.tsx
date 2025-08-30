@@ -131,6 +131,90 @@ const DashboardPage = () => {
       }
     };
     fetchData();
+
+    // Set up user activity tracking
+    const trackUserActivity = async () => {
+      try {
+        console.log("🔄 Starting user activity tracking...");
+        
+        // Try to get token from cookies
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("token="))
+          ?.split("=")[1];
+        
+        console.log("🍪 Token from cookies:", token ? "Token found" : "No token found");
+        if (token) {
+          console.log("🔑 Token preview:", token.substring(0, 20) + "...");
+        }
+
+        if (token) {
+          console.log("📡 Sending activity update to /api/user-activity");
+          const response = await fetch("/api/user-activity", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ token }),
+          });
+          
+          console.log("📡 Activity update response status:", response.status);
+          if (response.ok) {
+            const result = await response.json();
+            console.log("✅ Activity update successful:", result);
+          } else {
+            console.log("❌ Activity update failed:", response.status, response.statusText);
+          }
+        } else {
+          console.log("⚠️ No token found, skipping activity update");
+        }
+      } catch (error) {
+        console.error("❌ Error tracking user activity:", error);
+      }
+    };
+
+    // Track activity immediately
+    trackUserActivity();
+
+    // Set up periodic activity tracking (every 2 minutes)
+    const activityInterval = setInterval(trackUserActivity, 2 * 60 * 1000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(activityInterval);
+  }, []);
+
+  // Real-time active users update
+  useEffect(() => {
+    const updateActiveUsers = async () => {
+      try {
+        console.log("🔄 Updating active users count...");
+        const res = await fetch("/api/user-activity");
+        console.log("📡 Active users response status:", res.status);
+        
+        if (res.ok) {
+          const activityData = await res.json();
+          console.log("✅ Active users data received:", activityData);
+          
+          setData(prev => {
+            const newCount = activityData.activeUsers || prev.totalUsers;
+            console.log("👥 Updating active users from", prev.totalUsers, "to", newCount);
+            return {
+              ...prev,
+              totalUsers: newCount
+            };
+          });
+        } else {
+          console.log("❌ Failed to fetch active users:", res.status, res.statusText);
+        }
+      } catch (error) {
+        console.error("❌ Error updating active users:", error);
+      }
+    };
+
+    // Update active users count every 30 seconds
+    const activeUsersInterval = setInterval(updateActiveUsers, 30 * 1000);
+
+    return () => clearInterval(activeUsersInterval);
   }, []);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -181,7 +265,12 @@ const DashboardPage = () => {
             iconColor="text-white"
           />
           <MetricCard
-            title="Active Users"
+            title={
+              <div className="flex items-center gap-2">
+                <span>Active users</span>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              </div>
+            }
             value={data.totalUsers.toLocaleString()}
             change={data.percentageChanges?.customerPercentageChange || 0}
             icon={<Users className="w-5 h-5 sm:w-6 sm:h-6" />}
@@ -837,7 +926,7 @@ const DashboardPage = () => {
                     <div>
                       <p className="text-sm text-blue-600 dark:text-blue-400">Customers with Balances</p>
                       <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                        {data.topCustomers.filter(c => c.currentBalance > 0).length}
+                        {data.topCustomers.filter(c => c.currentBalance < 0).length}
                       </p>
                     </div>
                     <Users className="w-8 h-8 text-blue-600" />
@@ -848,8 +937,8 @@ const DashboardPage = () => {
                     <div>
                       <p className="text-sm text-orange-600 dark:text-orange-400">Largest Balance</p>
                       <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">
-                        PKR {data.topCustomers.length > 0 
-                          ? Math.max(...data.topCustomers.map(c => c.currentBalance)).toLocaleString()
+                        PKR {data.topCustomers.filter(c => c.currentBalance < 0).length > 0 
+                          ? Math.abs(Math.min(...data.topCustomers.filter(c => c.currentBalance < 0).map(c => c.currentBalance))).toLocaleString()
                           : '0'
                         }
                       </p>
@@ -889,8 +978,8 @@ const DashboardPage = () => {
                     </thead>
                     <tbody className="bg-white dark:bg-slate-700 divide-y divide-gray-200 dark:divide-gray-600">
                       {data.topCustomers
-                        .filter(customer => customer.currentBalance > 0)
-                        .sort((a, b) => b.currentBalance - a.currentBalance)
+                        .filter(customer => customer.currentBalance < 0)
+                        .sort((a, b) => a.currentBalance - b.currentBalance) // Sort by most negative first (most owed)
                         .map((customer, index) => (
                           <tr key={index} className="hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -915,7 +1004,7 @@ const DashboardPage = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-red-600 dark:text-red-400">
-                                PKR {customer.currentBalance.toLocaleString()}
+                                PKR {Math.abs(customer.currentBalance).toLocaleString()}
                               </div>
                             </td>
                           </tr>
@@ -955,7 +1044,7 @@ const DashboardPage = () => {
 };
 
 const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick }: {
-  title: string;
+  title: string | React.ReactNode;
   value: string | number;
   change: number;
   icon: React.ReactNode;

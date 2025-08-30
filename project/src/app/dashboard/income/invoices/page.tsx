@@ -988,6 +988,10 @@ export default function IncomeInvoicesPage() {
                       </button>
                     </th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">Customer</span>
+                      <span className="sm:hidden">Customer</span>
+                    </th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <button
                         onClick={() => handleSort("destination")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
@@ -1018,10 +1022,6 @@ export default function IncomeInvoicesPage() {
                       </button>
                     </th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                      <span className="hidden sm:inline">Customer</span>
-                      <span className="sm:hidden">Customer</span>
-                    </th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                       <span className="hidden sm:inline">Actions</span>
                       <span className="sm:hidden">Actions</span>
                     </th>
@@ -1039,6 +1039,10 @@ export default function IncomeInvoicesPage() {
                         {new Date(i.invoiceDate).toLocaleDateString()}
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{i.trackingNumber || "-"}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{i.customer?.CompanyName ||i.customer?.PersonName ||  "-"}</span>
+                        <span className="sm:hidden">{i.customer?.CompanyName?.substring(0, 10) || i.customer?.PersonName?.substring(0, 10) || "-"}...</span>
+                      </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <span className="hidden sm:inline">{getCountryNameFromCode(i.destination)}</span>
                         <span className="sm:hidden">{getCountryNameFromCode(i.destination)?.substring(0, 8)}...</span>
@@ -1062,10 +1066,6 @@ export default function IncomeInvoicesPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <span className="hidden sm:inline">{i.currency} {i.totalAmount.toLocaleString()}</span>
                         <span className="sm:hidden">{i.currency} {i.totalAmount.toLocaleString()}</span>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{i.customer?.CompanyName ||i.customer?.PersonName ||  "-"}</span>
-                        <span className="sm:hidden">{i.customer?.CompanyName?.substring(0, 10) || i.customer?.PersonName?.substring(0, 10) || "-"}...</span>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <DropdownMenu>

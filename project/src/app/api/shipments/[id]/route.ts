@@ -140,9 +140,9 @@ export async function DELETE(
       );
     }
 
-    // Get the request body for password verification
-    const body: { password: string } = await request.json();
-    const { password } = body;
+    // Get the request body for password and verification code
+    const body: { password: string; verificationCode?: string } = await request.json();
+    const { password, verificationCode } = body;
 
     if (!password) {
       return NextResponse.json(
@@ -170,6 +170,54 @@ export async function DELETE(
       return NextResponse.json(
         { error: "Incorrect password" },
         { status: 401 }
+      );
+    }
+
+    // For shipments, require 2FA verification
+    if (!verificationCode) {
+      return NextResponse.json(
+        { error: "Verification code is required for shipment deletion" },
+        { status: 400 }
+      );
+    }
+
+    // Verify the 2FA code
+    if (user.status.startsWith("PENDING_2FA_")) {
+      const statusParts = user.status.split("_");
+      const storedCode = statusParts[2];
+      const timestamp = parseInt(statusParts[3]);
+      const currentTime = Date.now();
+      
+      // Check if code has expired (10 minutes)
+      if (currentTime - timestamp > 10 * 60 * 1000) {
+        // Reset user status and return error
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { status: "ACTIVE" },
+        });
+        return NextResponse.json(
+          { error: "Verification code has expired. Please request a new one." },
+          { status: 400 }
+        );
+      }
+      
+      // Verify the code
+      if (verificationCode !== storedCode) {
+        return NextResponse.json(
+          { error: "Invalid verification code" },
+          { status: 401 }
+        );
+      }
+      
+      // Reset user status after successful verification
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: "ACTIVE" },
+      });
+    } else {
+      return NextResponse.json(
+        { error: "No pending verification found. Please request a new verification code." },
+        { status: 400 }
       );
     }
 

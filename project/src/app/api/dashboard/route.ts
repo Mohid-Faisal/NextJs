@@ -27,8 +27,60 @@ export async function GET() {
     // Get total shipments
     const totalShipments = await prisma.shipment.count();
     
-    // Get total customers
-    const totalUsers = await prisma.customers.count();
+    // Get total users
+    const totalUsers = await prisma.user.count();
+    
+    // Get currently active users (users active in the last 30 minutes)
+    // We'll implement a simple activity tracking system
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    
+    // Try to get active users from the user activity endpoint
+    let activeUsers = 0;
+    
+    try {
+      console.log("🔄 Attempting to call user-activity endpoint...");
+      const activityUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/user-activity`;
+      console.log("🌐 Calling URL:", activityUrl);
+      
+      // Call the user activity endpoint to get current active users
+      const activityResponse = await fetch(activityUrl);
+      console.log("📡 Activity response status:", activityResponse.status);
+      console.log("📡 Activity response ok:", activityResponse.ok);
+      
+      if (activityResponse.ok) {
+        const activityData = await activityResponse.json();
+        console.log("✅ Activity data received:", activityData);
+        activeUsers = activityData.activeUsers || 0;
+        console.log("👥 Active users from endpoint:", activeUsers);
+      } else {
+        console.log("❌ Activity endpoint failed, falling back to status-based counting");
+        // Fallback: count users with ACTIVE status
+        activeUsers = await prisma.user.count({
+          where: {
+            status: "ACTIVE"
+          }
+        });
+        console.log("👥 Fallback active users count:", activeUsers);
+      }
+    } catch (error) {
+      console.log("❌ User activity tracking error:", error);
+      console.log("🔄 Falling back to status-based counting");
+      // Fallback: count users with ACTIVE status
+      activeUsers = await prisma.user.count({
+        where: {
+          status: "ACTIVE"
+        }
+      });
+      console.log("👥 Fallback active users count:", activeUsers);
+    }
+    
+    // If no active users found, fall back to total users
+    if (activeUsers === 0) {
+      activeUsers = totalUsers;
+    }
+    
+    // Use activeUsers if we have them, otherwise fall back to totalUsers
+    const currentActiveUsers = activeUsers > 0 ? activeUsers : totalUsers;
     
     // Get total revenue from customer invoices
     const totalRevenueResult = await prisma.invoice.aggregate({
@@ -506,6 +558,8 @@ export async function GET() {
     const customerGrowth = previousMonthCustomers > 0 ? ((currentMonthCustomers - previousMonthCustomers) / previousMonthCustomers) * 100 : 0;
     
     // Calculate accounts payable and receivable
+    // Note: Customer balances are negative when they owe us money (accounts receivable)
+    // Vendor balances are positive when we owe them money (accounts payable)
     const accountsReceivable = await prisma.customers.aggregate({
       _sum: {
         currentBalance: true
@@ -545,8 +599,10 @@ export async function GET() {
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       monthlyAccountsData.push({
         month: monthNames[month],
-        receivable: monthReceivable._sum.currentBalance || 0,
-        payable: monthPayable._sum.currentBalance || 0
+        // For receivable: negative customer balances become positive (they owe us money)
+        receivable: Math.abs(Math.min(monthReceivable._sum.currentBalance || 0, 0)),
+        // For payable: positive vendor balances stay positive (we owe them money)
+        payable: Math.max(monthPayable._sum.currentBalance || 0, 0)
       });
     }
     
@@ -567,7 +623,7 @@ export async function GET() {
     
     const data = {
       totalShipments,
-      totalUsers,
+      totalUsers: currentActiveUsers, // Show active users instead of total users
       totalRevenue,
       newOrders,
       monthlyEarnings,
@@ -595,8 +651,10 @@ export async function GET() {
         revenuePercentageChange
       },
       accountsData: {
-        accountsReceivable: accountsReceivable._sum.currentBalance || 0,
-        accountsPayable: accountsPayable._sum.currentBalance || 0,
+        // For receivable: negative customer balances become positive (they owe us money)
+        accountsReceivable: Math.abs(Math.min(accountsReceivable._sum.currentBalance || 0, 0)),
+        // For payable: positive vendor balances stay positive (we owe them money)
+        accountsPayable: Math.max(accountsPayable._sum.currentBalance || 0, 0),
         monthlyAccountsData
       }
     };
@@ -633,7 +691,7 @@ export async function GET() {
     // Ensure all arrays have data, if not provide fallback data
     const finalData = {
       totalShipments: totalShipments || 0,
-      totalUsers: totalUsers || 0,
+      totalUsers: currentActiveUsers || 0, // Show active users instead of total users
       totalRevenue: totalRevenue || 0,
       newOrders: newOrders || 0,
       monthlyEarnings: monthlyEarnings.length > 0 ? monthlyEarnings : [

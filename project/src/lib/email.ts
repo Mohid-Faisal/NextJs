@@ -133,3 +133,46 @@ export async function sendVerificationEmail(
     throw error;
   }
 }
+
+export async function send2FACodeEmail(
+  userEmail: string,
+  userName: string,
+  verificationCode: string
+) {
+  try {
+    const { data: emailData, error } = await resend.emails.send({
+      from: "PSS_Support@psswwe.com", // Update this with your verified domain
+      to: userEmail,
+      subject: "2FA Verification Code - Shipment Deletion",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc3545;">Shipment Deletion Verification</h2>
+          <p>Hi ${userName},</p>
+          <p>You have requested to delete a shipment. To complete this action, please use the verification code below:</p>
+          
+          <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+            <h1 style="color: #721c24; font-size: 32px; letter-spacing: 5px; margin: 0;">${verificationCode}</h1>
+          </div>
+          
+          <p><strong>This code will expire in 10 minutes.</strong></p>
+          
+          <p style="color: #721c24; font-weight: bold;">⚠️ Warning: This action will permanently delete the shipment and all related data. This cannot be undone.</p>
+          
+          <p>If you didn't request this verification code, please ignore this email and contact support immediately.</p>
+          
+          <p>Best regards,<br>Your Platform Team</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending 2FA code email:", error);
+      throw new Error("Failed to send 2FA code email");
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error("Error in send2FACodeEmail:", error);
+    throw error;
+  }
+}

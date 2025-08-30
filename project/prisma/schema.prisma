@@ -27,7 +27,7 @@ model Shipment {
   id                Int      @id @default(autoincrement())
   trackingId        String   @unique
   invoiceNumber     String   @unique
-  referenceNumber   String   @unique
+  referenceNumber   String   
   
   // Basic form fields
   agency            String?
