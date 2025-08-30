@@ -49,6 +49,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [userName, setUserName] = useState("User");
+  const [isHovered, setIsHovered] = useState(false);
   const [shipmentOpen, setShipmentOpen] = useState(
     pathname.startsWith("/dashboard/shipments") ||
       pathname.startsWith("/dashboard/add-shipment") ||
@@ -84,6 +85,21 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     Cookies.remove("token");
     router.push("/auth/login");
   };
+
+  const handleMouseEnter = () => {
+    if (!isOpen) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isOpen) {
+      setIsHovered(false);
+    }
+  };
+
+  // Determine if sidebar should be expanded (either permanently open or hovered)
+  const shouldExpand = isOpen || isHovered;
 
   const subLinksShipment = [
     { href: "/dashboard/shipments", label: "All Shipments", icon: Package },
@@ -129,37 +145,73 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       href: "/dashboard/settings",
       label: "General Settings",
       icon: Plus,
-    }
+    },
   ];
 
   const subLinksAccounts = [
-    { href: "/dashboard/chart-of-accounts", label: "Chart of Accounts", icon: ClipboardList },
-    { href: "/dashboard/accounts/account-books", label: "Account Books", icon: BookOpen },
-    { href: "/dashboard/accounts/company", label: "Company Account", icon: Building2 },
-    { href: "/dashboard/journal-entries", label: "Journal Entries", icon: Book },
-    { href: "/dashboard/accounts/balance-sheet", label: "Balance Sheet", icon: BarChart2 },
-    { href: "/dashboard/accounts/income-statement", label: "Income Statement", icon: TrendingUp },
+    {
+      href: "/dashboard/chart-of-accounts",
+      label: "Chart of Accounts",
+      icon: ClipboardList,
+    },
+    {
+      href: "/dashboard/accounts/account-books",
+      label: "Account Books",
+      icon: BookOpen,
+    },
+    {
+      href: "/dashboard/accounts/company",
+      label: "Company Account",
+      icon: Building2,
+    },
+    {
+      href: "/dashboard/journal-entries",
+      label: "Journal Entries",
+      icon: Book,
+    },
+    {
+      href: "/dashboard/accounts/balance-sheet",
+      label: "Balance Sheet",
+      icon: BarChart2,
+    },
+    {
+      href: "/dashboard/accounts/income-statement",
+      label: "Income Statement",
+      icon: TrendingUp,
+    },
   ];
-
-
 
   const subLinksIncome = [
     { href: "/dashboard/income/invoices", label: "Invoices", icon: FileText },
     { href: "/dashboard/income/revenue", label: "Revenue", icon: TrendingUp },
-    { href: "/dashboard/income/credit-notes", label: "Credit Notes", icon: FileText },
+    {
+      href: "/dashboard/income/credit-notes",
+      label: "Credit Notes",
+      icon: FileText,
+    },
   ];
 
   const subLinksExpense = [
     { href: "/dashboard/expense/bills", label: "Bills", icon: FileText },
-    { href: "/dashboard/expense/payments", label: "Payments", icon: CreditCard },
-    { href: "/dashboard/expense/debit-notes", label: "Debit Notes", icon: FileText },
+    {
+      href: "/dashboard/expense/payments",
+      label: "Payments",
+      icon: CreditCard,
+    },
+    {
+      href: "/dashboard/expense/debit-notes",
+      label: "Debit Notes",
+      icon: FileText,
+    },
   ];
 
   return (
     <aside
       className={`h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out ${
-        isOpen ? "w-64" : "w-20"
+        shouldExpand ? "w-64" : "w-20"
       }`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="flex flex-col h-full">
         <nav className="flex-1 px-2 py-6 space-y-2 overflow-y-auto scrollbar-hide">
@@ -191,7 +243,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             <LayoutGrid className="w-5 h-5 flex-shrink-0" />
             <span
               className={`whitespace-nowrap transition-all duration-200 ${
-                isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
               }`}
             >
               Dashboard
@@ -214,13 +266,15 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 <Package className="w-5 h-5 flex-shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
-                    isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                    shouldExpand
+                      ? "opacity-100"
+                      : "opacity-0 w-0 overflow-hidden"
                   }`}
                 >
                   Shipments
                 </span>
               </div>
-              {isOpen &&
+              {shouldExpand &&
                 (shipmentOpen ? (
                   <ChevronUp className="w-4 h-4 ml-auto" />
                 ) : (
@@ -229,7 +283,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </button>
 
             <AnimatePresence>
-              {shipmentOpen && isOpen && (
+              {shipmentOpen && shouldExpand && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
@@ -271,7 +325,9 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
-                    isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                    shouldExpand
+                      ? "opacity-100"
+                      : "opacity-0 w-0 overflow-hidden"
                   }`}
                 >
                   {label}
@@ -295,21 +351,24 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 <TrendingUp className="w-5 h-5 flex-shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
-                    isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                    shouldExpand
+                      ? "opacity-100"
+                      : "opacity-0 w-0 overflow-hidden"
                   }`}
                 >
                   Income
                 </span>
               </div>
-              {isOpen && (incomeOpen ? (
-                <ChevronUp className="w-4 h-4 ml-auto" />
-              ) : (
-                <ChevronDown className="w-4 h-4 ml-auto" />
-              ))}
+              {shouldExpand &&
+                (incomeOpen ? (
+                  <ChevronUp className="w-4 h-4 ml-auto" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 ml-auto" />
+                ))}
             </button>
 
             <AnimatePresence>
-              {incomeOpen && isOpen && (
+              {incomeOpen && shouldExpand && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
@@ -346,25 +405,28 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
             >
-                             <div className="flex items-center gap-4">
-                 <ShoppingCart className="w-5 h-5 flex-shrink-0" />
-                 <span
-                   className={`whitespace-nowrap transition-all duration-200 ${
-                     isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-                   }`}
-                 >
-                   Expense
-                 </span>
-               </div>
-              {isOpen && (expenseOpen ? (
-                <ChevronUp className="w-4 h-4 ml-auto" />
-              ) : (
-                <ChevronDown className="w-4 h-4 ml-auto" />
-              ))}
+              <div className="flex items-center gap-4">
+                <ShoppingCart className="w-5 h-5 flex-shrink-0" />
+                <span
+                  className={`whitespace-nowrap transition-all duration-200 ${
+                    shouldExpand
+                      ? "opacity-100"
+                      : "opacity-0 w-0 overflow-hidden"
+                  }`}
+                >
+                  Expense
+                </span>
+              </div>
+              {shouldExpand &&
+                (expenseOpen ? (
+                  <ChevronUp className="w-4 h-4 ml-auto" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 ml-auto" />
+                ))}
             </button>
 
             <AnimatePresence>
-              {expenseOpen && isOpen && (
+              {expenseOpen && shouldExpand && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
@@ -389,25 +451,25 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               )}
             </AnimatePresence>
           </div>
-                     {/* Transactions */}
-           <Link
-             href="/dashboard/accounts/payments"
-             className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
-               pathname.startsWith("/dashboard/transactions") ||
-               pathname.startsWith("/dashboard/accounts/payments")
-                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-             }`}
-           >
-             <CreditCard className="w-5 h-5 flex-shrink-0" />
-             <span
-               className={`whitespace-nowrap transition-all duration-200 ${
-                 isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-               }`}
-             >
-               Transactions
-             </span>
-           </Link>
+          {/* Transactions */}
+          <Link
+            href="/dashboard/accounts/payments"
+            className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+              pathname.startsWith("/dashboard/transactions") ||
+              pathname.startsWith("/dashboard/accounts/payments")
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            }`}
+          >
+            <CreditCard className="w-5 h-5 flex-shrink-0" />
+            <span
+              className={`whitespace-nowrap transition-all duration-200 ${
+                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+              }`}
+            >
+              Transactions
+            </span>
+          </Link>
 
           {/* Accounts Collapsible */}
           <div>
@@ -424,21 +486,22 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 <DollarSign className="w-5 h-5 flex-shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
-                    isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                    shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
                   }`}
                 >
                   Accounts
                 </span>
               </div>
-              {isOpen && (accountsOpen ? (
-                <ChevronUp className="w-4 h-4 ml-auto" />
-              ) : (
-                <ChevronDown className="w-4 h-4 ml-auto" />
-              ))}
+              {shouldExpand &&
+                (accountsOpen ? (
+                  <ChevronUp className="w-4 h-4 ml-auto" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 ml-auto" />
+                ))}
             </button>
 
             <AnimatePresence>
-              {accountsOpen && isOpen && (
+              {accountsOpen && shouldExpand && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
@@ -464,7 +527,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </AnimatePresence>
           </div>
 
-
           {/* Reports */}
           <Link
             href="/dashboard/reports"
@@ -477,7 +539,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             <ClipboardList className="w-5 h-5 flex-shrink-0" />
             <span
               className={`whitespace-nowrap transition-all duration-200 ${
-                isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
               }`}
             >
               Reports
@@ -498,13 +560,13 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 <Settings className="w-5 h-5 flex-shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
-                    isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                    shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
                   }`}
                 >
                   Settings
                 </span>
               </div>
-              {isOpen &&
+              {shouldExpand &&
                 (settingsOpen ? (
                   <ChevronUp className="w-4 h-4 ml-auto" />
                 ) : (
@@ -513,7 +575,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </button>
 
             <AnimatePresence>
-              {settingsOpen && isOpen && (
+              {settingsOpen && shouldExpand && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
@@ -547,11 +609,11 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             className="flex items-center gap-3 w-full text-sm font-medium text-sidebar-foreground rounded-lg px-3 py-2 hover:bg-sidebar-accent transition-all duration-200"
           >
             <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-white flex-shrink-0">
-              {isOpen ? userName[0]?.toUpperCase() : ""}
+              {shouldExpand ? userName[0]?.toUpperCase() : ""}
             </div>
             <span
               className={`transition-all duration-200 ${
-                isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
               }`}
             >
               {userName}
@@ -565,7 +627,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             <LogOut className="w-5 h-5 flex-shrink-0" />
             <span
               className={`transition-all duration-200 ${
-                isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
               }`}
             >
               Logout
