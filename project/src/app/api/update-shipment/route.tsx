@@ -305,7 +305,7 @@ async function handleShipmentUpdate(req: Request) {
     // Customer invoice uses the price with profit (from frontend)
     const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
     // Vendor invoice uses original price without profit
-    const vendorTotalCost = Math.round(originalPrice + fuelSurchargeAmount - discountAmount);
+    const vendorTotalCost = Math.round(originalPrice);
     
     // For backward compatibility, also calculate the old format
     let calculatedTotalCost: number;

@@ -982,7 +982,7 @@ export default function IncomeInvoicesPage() {
                         onClick={() => handleSort("trackingNumber")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        <span className="hidden sm:inline">Tracking#</span>
+                        <span className="hidden sm:inline">Tracking</span>
                         <span className="sm:hidden">Track#</span>
                         {getSortIcon("trackingNumber")}
                       </button>
@@ -1064,8 +1064,8 @@ export default function IncomeInvoicesPage() {
                         <span className="sm:hidden">{i.currency} {i.totalAmount.toLocaleString()}</span>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{i.customer?.PersonName || i.customer?.CompanyName || "-"}</span>
-                        <span className="sm:hidden">{i.customer?.PersonName?.substring(0, 10) || i.customer?.CompanyName?.substring(0, 10) || "-"}...</span>
+                        <span className="hidden sm:inline">{i.customer?.CompanyName ||i.customer?.PersonName ||  "-"}</span>
+                        <span className="sm:hidden">{i.customer?.CompanyName?.substring(0, 10) || i.customer?.PersonName?.substring(0, 10) || "-"}...</span>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <DropdownMenu>

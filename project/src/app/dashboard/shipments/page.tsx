@@ -786,8 +786,8 @@ export default function ShipmentsPage() {
                       onClick={() => handleSort("invoiceNumber")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Receipt</span>
-                      <span className="sm:hidden">R</span>
+                      <span className="hidden sm:inline">Booking#</span>
+                      <span className="sm:hidden">B</span>
                       {getSortIcon("invoiceNumber")}
                     </button>
                   </th>
@@ -846,7 +846,7 @@ export default function ShipmentsPage() {
                       onClick={() => handleSort("totalWeight")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Weight</span>
+                      <span className="hidden sm:inline">Wght</span>
                       <span className="sm:hidden">W</span>
                       {getSortIcon("totalWeight")}
                     </button>
