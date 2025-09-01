@@ -2,6 +2,35 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+export interface EmailData {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}
+
+export async function sendEmail(data: EmailData) {
+  try {
+    const { data: emailData, error } = await resend.emails.send({
+      from: "PSS_Support@psswwe.com", // Update this with your verified domain
+      to: data.to,
+      subject: data.subject,
+      html: data.html,
+      text: data.text || data.html.replace(/<[^>]*>/g, '') // Strip HTML tags for text version
+    });
+
+    if (error) {
+      console.error("Error sending email:", error);
+      throw new Error("Failed to send email");
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error("Error in sendEmail:", error);
+    throw error;
+  }
+}
+
 export interface UserApprovalEmailData {
   userName: string;
   userEmail: string;

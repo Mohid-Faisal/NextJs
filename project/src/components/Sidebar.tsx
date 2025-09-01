@@ -28,6 +28,7 @@ import {
   ClipboardList,
   Zap,
   TrendingUp,
+  Mail,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -247,6 +248,25 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               }`}
             >
               Dashboard
+            </span>
+          </Link>
+
+          {/* Email Management */}
+          <Link
+            href="/dashboard/email"
+            className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+              pathname === "/dashboard/email"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            }`}
+          >
+            <Mail className="w-5 h-5 flex-shrink-0" />
+            <span
+              className={`whitespace-nowrap transition-all duration-200 ${
+                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+              }`}
+            >
+              Email
             </span>
           </Link>
 

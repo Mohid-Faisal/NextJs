@@ -63,7 +63,7 @@ export default function ProcessPaymentPage() {
     paymentMethod: "CASH",
     invoice: "",
     reference: "",
-    description: ""
+    description: "",
   });
 
   useEffect(() => {
@@ -73,17 +73,19 @@ export default function ProcessPaymentPage() {
 
   // Handle pre-selection of invoice from URL parameter
   useEffect(() => {
-    const invoiceParam = searchParams.get('invoice');
+    const invoiceParam = searchParams.get("invoice");
     if (invoiceParam && invoices.length > 0) {
-      const invoice = invoices.find(inv => inv.invoiceNumber === invoiceParam);
+      const invoice = invoices.find(
+        (inv) => inv.invoiceNumber === invoiceParam
+      );
       if (invoice) {
         setSelectedInvoice(invoice);
         // Set payment amount to remaining amount if available
         const remainingAmount = invoice.remainingAmount;
         if (remainingAmount !== undefined && remainingAmount > 0) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            paymentAmount: remainingAmount.toString()
+            paymentAmount: remainingAmount.toString(),
           }));
         }
         // Set default accounts for the selected invoice
@@ -98,7 +100,7 @@ export default function ProcessPaymentPage() {
     try {
       const response = await fetch("/api/accounts/invoices");
       const data = await response.json();
-      
+
       if (response.ok) {
         setInvoices(data.invoices || []);
       }
@@ -112,7 +114,7 @@ export default function ProcessPaymentPage() {
       setLoading(true);
       const response = await fetch("/api/chart-of-accounts?limit=1000");
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         setAccounts(data.data);
         setDefaultAccounts(data.data);
@@ -136,7 +138,7 @@ export default function ProcessPaymentPage() {
       const response = await fetch("/api/chart-of-accounts", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "initialize" })
+        body: JSON.stringify({ action: "initialize" }),
       });
 
       const data = await response.json();
@@ -158,57 +160,88 @@ export default function ProcessPaymentPage() {
   const setDefaultAccounts = (accounts: ChartOfAccount[]) => {
     // Default accounts will be set when an invoice is selected
     // This function is kept for backward compatibility
-    console.log("Accounts loaded, default accounts will be set when invoice is selected");
+    console.log(
+      "Accounts loaded, default accounts will be set when invoice is selected"
+    );
   };
 
-  const setDefaultAccountsForInvoice = (accounts: ChartOfAccount[], invoice: Invoice) => {
+  const setDefaultAccountsForInvoice = (
+    accounts: ChartOfAccount[],
+    invoice: Invoice
+  ) => {
     if (invoice.profile === "Customer") {
       // For customer payments: Customer has already paid, so we record the income
       // Debit Cash (we received money), Credit Revenue (income earned)
-      const cashAccount = accounts.find(a => a.accountName === "Cash");
-      const revenueAccount = accounts.find(a => 
-        a.category === "Revenue" && 
-        (a.accountName.includes("Freight") || a.accountName.includes("Services") || a.accountName.includes("Revenue"))
+      const cashAccount = accounts.find((a) => a.accountName === "Cash");
+      const revenueAccount = accounts.find(
+        (a) =>
+          a.category === "Revenue" &&
+          (a.accountName.includes("Freight") ||
+            a.accountName.includes("Services") ||
+            a.accountName.includes("Revenue"))
       );
-      
+
       if (cashAccount) {
         setDebitAccountId(cashAccount.id);
-        console.log("Set default debit account for customer payment:", cashAccount.accountName);
+        console.log(
+          "Set default debit account for customer payment:",
+          cashAccount.accountName
+        );
       }
       if (revenueAccount) {
         setCreditAccountId(revenueAccount.id);
-        console.log("Set default credit account for customer payment:", revenueAccount.accountName);
+        console.log(
+          "Set default credit account for customer payment:",
+          revenueAccount.accountName
+        );
       }
     } else if (invoice.profile === "Vendor") {
       // For vendor payments: We are paying the vendor for expenses
       // Debit Expense (cost incurred), Credit Cash (we paid money)
-      const expenseAccount = accounts.find(a => 
-        a.category === "Expense" && 
-        (a.accountName.includes("Operations") || a.accountName.includes("Fuel") || a.accountName.includes("Maintenance") || a.accountName.includes("Expense"))
+      const expenseAccount = accounts.find(
+        (a) =>
+          a.category === "Expense" &&
+          (a.accountName.includes("Operations") ||
+            a.accountName.includes("Fuel") ||
+            a.accountName.includes("Maintenance") ||
+            a.accountName.includes("Expense"))
       );
-      const cashAccount = accounts.find(a => a.accountName === "Cash");
-      
+      const cashAccount = accounts.find((a) => a.accountName === "Cash");
+
       if (expenseAccount) {
         setDebitAccountId(expenseAccount.id);
-        console.log("Set default debit account for vendor payment:", expenseAccount.accountName);
+        console.log(
+          "Set default debit account for vendor payment:",
+          expenseAccount.accountName
+        );
       }
       if (cashAccount) {
         setCreditAccountId(cashAccount.id);
-        console.log("Set default credit account for vendor payment:", cashAccount.accountName);
+        console.log(
+          "Set default credit account for vendor payment:",
+          cashAccount.accountName
+        );
       }
     }
   };
 
-  const filteredInvoices = invoices.filter(invoice => 
-    invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.customer?.CompanyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.vendor?.CompanyName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredInvoices = invoices.filter(
+    (invoice) =>
+      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.trackingNumber
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      invoice.customer?.CompanyName.toLowerCase().includes(
+        searchTerm.toLowerCase()
+      ) ||
+      invoice.vendor?.CompanyName.toLowerCase().includes(
+        searchTerm.toLowerCase()
+      )
   );
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedInvoice) return;
 
     // Validate chart of accounts selection
@@ -218,10 +251,13 @@ export default function ProcessPaymentPage() {
     }
 
     setProcessing(true);
-    
+
     try {
-      const paymentType = selectedInvoice.profile === "Customer" ? "CUSTOMER_PAYMENT" : "VENDOR_PAYMENT";
-      
+      const paymentType =
+        selectedInvoice.profile === "Customer"
+          ? "CUSTOMER_PAYMENT"
+          : "VENDOR_PAYMENT";
+
       const response = await fetch("/api/accounts/payments/process", {
         method: "POST",
         headers: {
@@ -241,10 +277,14 @@ export default function ProcessPaymentPage() {
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         toast.success("Payment processed successfully!", {
-          description: `Payment of PKR ${parseFloat(formData.paymentAmount).toLocaleString()} has been processed for invoice ${selectedInvoice.invoiceNumber}`,
+          description: `Payment of PKR ${parseFloat(
+            formData.paymentAmount
+          ).toLocaleString()} has been processed for invoice ${
+            selectedInvoice.invoiceNumber
+          }`,
         });
         setSelectedInvoice(null);
         setFormData({
@@ -252,12 +292,13 @@ export default function ProcessPaymentPage() {
           paymentMethod: "CASH",
           invoice: "",
           reference: "",
-          description: ""
+          description: "",
         });
         fetchInvoices(); // Refresh invoice list
       } else {
         toast.error("Payment failed", {
-          description: data.error || "An error occurred while processing the payment",
+          description:
+            data.error || "An error occurred while processing the payment",
         });
       }
     } catch (error) {
@@ -294,7 +335,7 @@ export default function ProcessPaymentPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        
+
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
           Process Payment
         </h1>
@@ -346,14 +387,20 @@ export default function ProcessPaymentPage() {
                         {invoice.invoiceNumber}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {invoice.profile}: {invoice.customer?.CompanyName || invoice.vendor?.CompanyName}
+                        {invoice.profile}:{" "}
+                        {invoice.customer?.CompanyName ||
+                          invoice.vendor?.CompanyName}
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-500">
-                        PKR {invoice.totalAmount.toLocaleString()} • {invoice.trackingNumber} • PKR {invoice.remainingAmount?.toLocaleString()}
+                        PKR {invoice.totalAmount.toLocaleString()} •{" "}
+                        {invoice.trackingNumber} • PKR{" "}
+                        {invoice.remainingAmount?.toLocaleString()}
                       </div>
                     </div>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        invoice.status
+                      )}`}
                     >
                       {invoice.status}
                     </span>
@@ -380,10 +427,14 @@ export default function ProcessPaymentPage() {
                   </h3>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <div>Invoice: {selectedInvoice.invoiceNumber}</div>
-                    <div>Original Amount: PKR {selectedInvoice.totalAmount.toLocaleString()}</div>
+                    <div>
+                      Original Amount: PKR{" "}
+                      {selectedInvoice.totalAmount.toLocaleString()}
+                    </div>
                     {selectedInvoice.remainingAmount !== undefined && (
                       <div className="font-semibold text-blue-600 dark:text-blue-400">
-                        Remaining Amount: PKR {selectedInvoice.remainingAmount.toLocaleString()}
+                        Remaining Amount: PKR{" "}
+                        {selectedInvoice.remainingAmount.toLocaleString()}
                       </div>
                     )}
                     <div>Status: {selectedInvoice.status}</div>
@@ -399,10 +450,13 @@ export default function ProcessPaymentPage() {
                     <div className="flex items-start">
                       <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
                       <div className="text-sm text-blue-800 dark:text-blue-200">
-                        <strong>Customer Payment Note:</strong> If the payment amount exceeds the invoice total, 
-                        the excess amount will be added to the customer's credit balance for future invoices.
+                        <strong>Customer Payment Note:</strong> If the payment
+                        amount exceeds the invoice total, the excess amount will
+                        be added to the customer's credit balance for future
+                        invoices.
                         <br />
-                        <strong>Default Accounts:</strong> Debit Cash, Credit Revenue (Freight/Services)
+                        <strong>Default Accounts:</strong> Debit Cash, Credit
+                        Revenue (Freight/Services)
                       </div>
                     </div>
                   </div>
@@ -413,9 +467,11 @@ export default function ProcessPaymentPage() {
                     <div className="flex items-start">
                       <Info className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 mr-2 flex-shrink-0" />
                       <div className="text-sm text-orange-800 dark:text-orange-200">
-                        <strong>Vendor Payment Note:</strong> This payment reduces the amount owed to the vendor.
+                        <strong>Vendor Payment Note:</strong> This payment
+                        reduces the amount owed to the vendor.
                         <br />
-                        <strong>Default Accounts:</strong> Debit Expense (Operations/Fuel/Maintenance), Credit Cash
+                        <strong>Default Accounts:</strong> Debit Expense
+                        (Operations/Fuel/Maintenance), Credit Cash
                       </div>
                     </div>
                   </div>
@@ -431,7 +487,12 @@ export default function ProcessPaymentPage() {
                       type="number"
                       step="0.01"
                       value={formData.paymentAmount}
-                      onChange={(e) => setFormData({ ...formData, paymentAmount: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          paymentAmount: e.target.value,
+                        })
+                      }
                       className="mt-1"
                       required
                       min="0"
@@ -440,16 +501,24 @@ export default function ProcessPaymentPage() {
                       <p className="text-xs text-gray-500 mt-1">
                         {selectedInvoice.remainingAmount !== undefined ? (
                           <>
-                            Original: PKR {selectedInvoice.totalAmount.toLocaleString()} • 
-                            Remaining: PKR {selectedInvoice.remainingAmount.toLocaleString()}
-                            {selectedInvoice.remainingAmount < selectedInvoice.totalAmount && (
-                              <span className="text-blue-600"> (balance already applied)</span>
+                            Original: PKR{" "}
+                            {selectedInvoice.totalAmount.toLocaleString()} •
+                            Remaining: PKR{" "}
+                            {selectedInvoice.remainingAmount.toLocaleString()}
+                            {selectedInvoice.remainingAmount <
+                              selectedInvoice.totalAmount && (
+                              <span className="text-blue-600">
+                                {" "}
+                                (balance already applied)
+                              </span>
                             )}
                           </>
                         ) : (
                           <>
-                            Invoice amount: PKR {selectedInvoice.totalAmount.toLocaleString()}
-                            {selectedInvoice.status === "Partial" && " (partial payment already made)"}
+                            Invoice amount: PKR{" "}
+                            {selectedInvoice.totalAmount.toLocaleString()}
+                            {selectedInvoice.status === "Partial" &&
+                              " (partial payment already made)"}
                           </>
                         )}
                       </p>
@@ -461,18 +530,36 @@ export default function ProcessPaymentPage() {
                     <Label htmlFor="debitAccount" className="font-bold">
                       Debit Account
                     </Label>
-                    <Select value={String(debitAccountId)} onValueChange={(value) => setDebitAccountId(parseInt(value))}>
+                    <Select
+                      value={String(debitAccountId)}
+                      onValueChange={(value) =>
+                        setDebitAccountId(parseInt(value))
+                      }
+                    >
                       <SelectTrigger className="mt-1">
-                        <SelectValue placeholder={loading ? "Loading accounts..." : "Select debit account"} />
+                        <SelectValue
+                          placeholder={
+                            loading
+                              ? "Loading accounts..."
+                              : "Select debit account"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {loading ? (
-                          <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
+                          <SelectItem value="loading" disabled>
+                            Loading accounts...
+                          </SelectItem>
                         ) : accounts.length === 0 ? (
-                          <SelectItem value="no-accounts" disabled>No accounts available</SelectItem>
+                          <SelectItem value="no-accounts" disabled>
+                            No accounts available
+                          </SelectItem>
                         ) : (
                           accounts.map((account) => (
-                            <SelectItem key={account.id} value={String(account.id)}>
+                            <SelectItem
+                              key={account.id}
+                              value={String(account.id)}
+                            >
                               {account.code} - {account.accountName}
                             </SelectItem>
                           ))
@@ -481,7 +568,8 @@ export default function ProcessPaymentPage() {
                     </Select>
                     {accounts.length === 0 && !loading && (
                       <p className="text-xs text-red-500 mt-1">
-                        No chart of accounts found. Please initialize the chart of accounts first.
+                        No chart of accounts found. Please initialize the chart
+                        of accounts first.
                       </p>
                     )}
                     {accounts.length === 0 && !loading && (
@@ -492,7 +580,9 @@ export default function ProcessPaymentPage() {
                         className="mt-2 text-sm"
                         variant="outline"
                       >
-                        {loading ? "Initializing..." : "Initialize Chart of Accounts"}
+                        {loading
+                          ? "Initializing..."
+                          : "Initialize Chart of Accounts"}
                       </Button>
                     )}
                   </div>
@@ -501,18 +591,36 @@ export default function ProcessPaymentPage() {
                     <Label htmlFor="creditAccount" className="font-bold">
                       Credit Account
                     </Label>
-                    <Select value={String(creditAccountId)} onValueChange={(value) => setCreditAccountId(parseInt(value))}>
+                    <Select
+                      value={String(creditAccountId)}
+                      onValueChange={(value) =>
+                        setCreditAccountId(parseInt(value))
+                      }
+                    >
                       <SelectTrigger className="mt-1">
-                        <SelectValue placeholder={loading ? "Loading accounts..." : "Select credit account"} />
+                        <SelectValue
+                          placeholder={
+                            loading
+                              ? "Loading accounts..."
+                              : "Select credit account"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {loading ? (
-                          <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
+                          <SelectItem value="loading" disabled>
+                            Loading accounts...
+                          </SelectItem>
                         ) : accounts.length === 0 ? (
-                          <SelectItem value="no-accounts" disabled>No accounts available</SelectItem>
+                          <SelectItem value="no-accounts" disabled>
+                            No accounts available
+                          </SelectItem>
                         ) : (
                           accounts.map((account) => (
-                            <SelectItem key={account.id} value={String(account.id)}>
+                            <SelectItem
+                              key={account.id}
+                              value={String(account.id)}
+                            >
                               {account.code} - {account.accountName}
                             </SelectItem>
                           ))
@@ -521,7 +629,8 @@ export default function ProcessPaymentPage() {
                     </Select>
                     {accounts.length === 0 && !loading && (
                       <p className="text-xs text-red-500 mt-1">
-                        No chart of accounts found. Please initialize the chart of accounts first.
+                        No chart of accounts found. Please initialize the chart
+                        of accounts first.
                       </p>
                     )}
                   </div>
@@ -532,14 +641,18 @@ export default function ProcessPaymentPage() {
                     </Label>
                     <Select
                       value={formData.paymentMethod}
-                      onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, paymentMethod: value })
+                      }
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="CASH">Cash</SelectItem>
-                        <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                        <SelectItem value="BANK_TRANSFER">
+                          Bank Transfer
+                        </SelectItem>
                         <SelectItem value="CARD">Card</SelectItem>
                         <SelectItem value="CHEQUE">Cheque</SelectItem>
                       </SelectContent>
@@ -565,7 +678,9 @@ export default function ProcessPaymentPage() {
                     <Input
                       id="reference"
                       value={formData.reference}
-                      onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, reference: e.target.value })
+                      }
                       className="mt-1"
                       placeholder="Payment reference number"
                       required
@@ -579,7 +694,12 @@ export default function ProcessPaymentPage() {
                     <Input
                       id="description"
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
                       className="mt-1"
                       placeholder="Payment description"
                     />

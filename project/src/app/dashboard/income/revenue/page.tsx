@@ -246,7 +246,7 @@ export default function IncomeRevenuePage() {
 
       if (response.ok) {
         toast.success("Customer payment processed successfully!", {
-          description: `Payment of $${parseFloat(
+          description: `Payment of PKR ${parseFloat(
             formData.paymentAmount
           ).toLocaleString()} has been processed for invoice ${
             selectedInvoice.invoiceNumber
@@ -381,26 +381,18 @@ export default function IncomeRevenuePage() {
                           invoice.status
                         )}`}
                       >
-                        <span className="hidden sm:inline">{invoice.status}</span>
-                        <span className="sm:hidden">{invoice.status?.substring(0, 3)}</span>
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
-                      <div>
-                        <span className="text-gray-500">Total:</span>
-                        <span className="ml-1 sm:ml-2 font-medium">
-                          ${invoice.totalAmount.toLocaleString()}
+                        <span className="hidden sm:inline">
+                          {invoice.status}
+                        </span>
+                        <span className="sm:hidden">
+                          {invoice.status?.substring(0, 3)}
+                        </span>
                         </span>
                       </div>
-                      <div>
-                        <span className="text-gray-500">Remaining:</span>
-                        <span className="ml-1 sm:ml-2 font-medium text-green-600">
-                          $
-                          {(
-                            invoice.remainingAmount || invoice.totalAmount
-                          ).toLocaleString()}
-                        </span>
-                      </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                      PKR {invoice.totalAmount.toLocaleString()} •{" "}
+                      {invoice.trackingNumber} • PKR{" "}
+                      {invoice.remainingAmount?.toLocaleString()}
                     </div>
                   </div>
                 ))
@@ -419,22 +411,31 @@ export default function IncomeRevenuePage() {
           </CardHeader>
           <CardContent>
             {selectedInvoice ? (
-              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <h3 className="font-semibold text-green-800 dark:text-green-200 mb-2 text-sm sm:text-base">
-                  Selected Invoice: {selectedInvoice.invoiceNumber}
+              <div>
+                <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 dark:text-white mb-2">
+                    Selected Invoice
                 </h3>
-                <p className="text-xs sm:text-sm text-green-700 dark:text-green-300">
-                  Customer:{" "}
-                  {selectedInvoice.customer?.CompanyName ||
-                    selectedInvoice.customer?.PersonName}
-                </p>
-                <p className="text-xs sm:text-sm text-green-700 dark:text-green-300">
-                  Remaining Amount: $
-                  {(
-                    selectedInvoice.remainingAmount ||
-                    selectedInvoice.totalAmount
-                  ).toLocaleString()}
-                </p>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <div>Invoice: {selectedInvoice.invoiceNumber}</div>
+                    <div>
+                      Original Amount: PKR{" "}
+                      {selectedInvoice.totalAmount.toLocaleString()}
+                    </div>
+                    {selectedInvoice.remainingAmount !== undefined && (
+                      <div className="font-semibold text-green-600 dark:text-green-400">
+                        Remaining Amount: PKR{" "}
+                        {selectedInvoice.remainingAmount.toLocaleString()}
+                      </div>
+                    )}
+                    <div>Status: {selectedInvoice.status}</div>
+                    <div>Profile: {selectedInvoice.profile}</div>
+                    {selectedInvoice.trackingNumber && (
+                      <div>Tracking: {selectedInvoice.trackingNumber}</div>
+                    )}
+                    <div>Customer: {selectedInvoice.customer?.CompanyName || selectedInvoice.customer?.PersonName}</div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
@@ -467,7 +468,10 @@ export default function IncomeRevenuePage() {
 
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <div className="space-y-1.5 flex-1">
-                  <Label htmlFor="paymentMethod" className="text-sm font-medium">
+                  <Label
+                    htmlFor="paymentMethod"
+                    className="text-sm font-medium"
+                  >
                     Payment Method
                   </Label>
                   <Select
@@ -481,7 +485,9 @@ export default function IncomeRevenuePage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="CASH">Cash</SelectItem>
-                      <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                      <SelectItem value="BANK_TRANSFER">
+                        Bank Transfer
+                      </SelectItem>
                       <SelectItem value="CHECK">Check</SelectItem>
                       <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
                     </SelectContent>

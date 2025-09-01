@@ -275,7 +275,7 @@ export default function ExpensePaymentsPage() {
 
       if (response.ok) {
         toast.success("Vendor payment processed successfully!", {
-          description: `Payment of $${parseFloat(
+          description: `Payment of PKR ${parseFloat(
             formData.paymentAmount
           ).toLocaleString()} has been processed for invoice ${
             selectedInvoice.invoiceNumber
@@ -320,7 +320,7 @@ export default function ExpensePaymentsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
       <div className="mb-4 sm:mb-6">
         <Button
           variant="outline"
@@ -414,22 +414,10 @@ export default function ExpensePaymentsPage() {
                         <span className="sm:hidden">{invoice.status?.substring(0, 3)}</span>
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
-                      <div>
-                        <span className="text-gray-500">Total:</span>
-                        <span className="ml-2 font-medium">
-                          ${invoice.totalAmount.toLocaleString()}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Remaining:</span>
-                        <span className="ml-2 font-medium text-orange-600">
-                          $
-                          {(
-                            invoice.remainingAmount || invoice.totalAmount
-                          ).toLocaleString()}
-                        </span>
-                      </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                      PKR {invoice.totalAmount.toLocaleString()} •{" "}
+                      {invoice.trackingNumber} • PKR{" "}
+                      {invoice.remainingAmount?.toLocaleString()}
                     </div>
                   </div>
                 ))
@@ -448,22 +436,31 @@ export default function ExpensePaymentsPage() {
           </CardHeader>
           <CardContent>
             {selectedInvoice ? (
-              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                <h3 className="font-semibold text-orange-800 dark:text-orange-200 mb-2 text-sm sm:text-base">
-                  Selected Invoice: {selectedInvoice.invoiceNumber}
-                </h3>
-                <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300">
-                  Vendor:{" "}
-                  {selectedInvoice.vendor?.CompanyName ||
-                    selectedInvoice.vendor?.PersonName}
-                </p>
-                <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300">
-                  Remaining Amount: $
-                  {(
-                    selectedInvoice.remainingAmount ||
-                    selectedInvoice.totalAmount
-                  ).toLocaleString()}
-                </p>
+              <div>
+                <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 dark:text-white mb-2">
+                    Selected Invoice
+                  </h3>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <div>Invoice: {selectedInvoice.invoiceNumber}</div>
+                    <div>
+                      Original Amount: PKR{" "}
+                      {selectedInvoice.totalAmount.toLocaleString()}
+                    </div>
+                    {selectedInvoice.remainingAmount !== undefined && (
+                      <div className="font-semibold text-orange-600 dark:text-orange-400">
+                        Remaining Amount: PKR{" "}
+                        {selectedInvoice.remainingAmount.toLocaleString()}
+                      </div>
+                    )}
+                    <div>Status: {selectedInvoice.status}</div>
+                    <div>Profile: {selectedInvoice.profile}</div>
+                    {selectedInvoice.trackingNumber && (
+                      <div>Tracking: {selectedInvoice.trackingNumber}</div>
+                    )}
+                    <div>Vendor: {selectedInvoice.vendor?.CompanyName || selectedInvoice.vendor?.PersonName}</div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">

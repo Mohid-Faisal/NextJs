@@ -472,7 +472,7 @@ export async function POST(req: NextRequest) {
           shipmentId: shipment.id,
           disclaimer: "Thank you for your business",
           totalAmount: customerTotalCost, // Use original customer total cost (includes profit)
-          currency: "USD",
+          currency: "PKR",
           status: calculatedInvoiceStatus
         })
       });
@@ -519,7 +519,7 @@ export async function POST(req: NextRequest) {
           shipmentId: shipment.id,
           disclaimer: "Vendor invoice - original cost without profit",
           totalAmount: vendorTotalCost, // Use original vendor total cost (no profit)
-          currency: "USD",
+          currency: "PKR",
           status: vendorCalculatedInvoiceStatus
         })
       });
