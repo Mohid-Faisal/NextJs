@@ -299,7 +299,7 @@ export async function updateInvoiceBalance(
   } else if (amountDifference !== 0 && invoice.customerId && invoice.customer) {
     // Update existing customer balance if amount changed
     const previousBalance = invoice.customer.currentBalance;
-    const newBalance = previousBalance + amountDifference; // DEBIT increases with amount
+    const newBalance = previousBalance - amountDifference; // DEBIT increases with amount
 
     await prisma.customers.update({
       where: { id: invoice.customerId },
@@ -829,12 +829,12 @@ export async function updateCustomerJournalEntry(
 
       // Update journal entry lines
       for (const line of existingEntry.lines) {
-        if (line.debitAmount > 0) {
+        if (line.debitAmount >= 0 && line.description.includes('Debit')) {
           await prisma.journalEntryLine.update({
             where: { id: line.id },
             data: { debitAmount: newAmount }
           });
-        } else if (line.creditAmount > 0) {
+        } else if (line.creditAmount >= 0 && line.description.includes('Credit')) {
           await prisma.journalEntryLine.update({
             where: { id: line.id },
             data: { creditAmount: newAmount }
@@ -859,6 +859,7 @@ export async function updateVendorJournalEntry(
   description: string
 ) {
   try {
+    console.log(invoiceNumber);
     // Find existing journal entry for this vendor invoice
     const existingEntry = await prisma.journalEntry.findFirst({
       where: {
@@ -884,18 +885,19 @@ export async function updateVendorJournalEntry(
 
       // Update journal entry lines
       for (const line of existingEntry.lines) {
-        if (line.debitAmount > 0) {
+        if (line.debitAmount >= 0 && line.description.includes('Debit')) {
           await prisma.journalEntryLine.update({
             where: { id: line.id },
             data: { debitAmount: newAmount }
           });
-        } else if (line.creditAmount > 0) {
+        } else if (line.creditAmount >= 0 && line.description.includes('Credit')) {
           await prisma.journalEntryLine.update({
             where: { id: line.id },
             data: { creditAmount: newAmount }
           });
         }
       }
+      console.log(existingEntry);
       console.log(`Updated vendor journal entry ${existingEntry.entryNumber} for invoice ${invoiceNumber}`);
     }
   } catch (error) {
