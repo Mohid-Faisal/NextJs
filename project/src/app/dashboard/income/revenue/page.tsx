@@ -64,6 +64,7 @@ export default function IncomeRevenuePage() {
     invoice: "",
     reference: "",
     description: "",
+    paymentDate: new Date().toISOString().split('T')[0], // Default to today
   });
 
   useEffect(() => {
@@ -236,6 +237,7 @@ export default function IncomeRevenuePage() {
           paymentMethod: formData.paymentMethod,
           reference: formData.reference,
           description: formData.description,
+          paymentDate: formData.paymentDate,
           // Chart of accounts
           debitAccountId,
           creditAccountId,
@@ -259,6 +261,7 @@ export default function IncomeRevenuePage() {
           invoice: "",
           reference: "",
           description: "",
+          paymentDate: new Date().toISOString().split('T')[0],
         });
         fetchInvoices(); // Refresh invoice list
       } else {
@@ -466,8 +469,8 @@ export default function IncomeRevenuePage() {
                 />
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <div className="space-y-1.5 flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1.5">
                   <Label
                     htmlFor="paymentMethod"
                     className="text-sm font-medium"
@@ -494,22 +497,40 @@ export default function IncomeRevenuePage() {
                   </Select>
                 </div>
 
-                <div className="space-y-1.5 flex-1">
-                  <Label htmlFor="reference" className="text-sm font-medium">
-                    Reference
+                <div className="space-y-1.5">
+                  <Label htmlFor="paymentDate" className="text-sm font-medium">
+                    Payment Date
                   </Label>
                   <Input
-                    id="reference"
-                    value={formData.reference}
+                    id="paymentDate"
+                    type="date"
+                    value={formData.paymentDate}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        reference: e.target.value,
+                        paymentDate: e.target.value,
                       }))
                     }
-                    placeholder="Payment reference"
+                    required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="reference" className="text-sm font-medium">
+                  Reference
+                </Label>
+                <Input
+                  id="reference"
+                  value={formData.reference}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      reference: e.target.value,
+                    }))
+                  }
+                  placeholder="Payment reference"
+                />
               </div>
 
               <div className="space-y-1.5">

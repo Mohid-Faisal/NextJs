@@ -181,6 +181,7 @@ export async function POST(req: NextRequest) {
       disclaimer,
       totalAmount,
       currency,
+      status,
     } = body;
 
     const invoice = await prisma.invoice.create({
@@ -201,6 +202,7 @@ export async function POST(req: NextRequest) {
         disclaimer,
         totalAmount: parseFloat(totalAmount),
         currency,
+        status: status || "Pending",
       },
       include: {
         customer: true,

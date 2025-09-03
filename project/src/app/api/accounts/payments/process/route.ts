@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addCustomerTransaction, addVendorTransaction, calculateInvoicePaymentStatus } from "@/lib/utils";
+import { addCustomerTransaction, addVendorTransaction, calculateInvoicePaymentStatus, processPaymentWithAllocation } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,8 +12,10 @@ export async function POST(req: NextRequest) {
       paymentMethod,
       reference,
       description,
+      paymentDate,
       debitAccountId,
-      creditAccountId
+      creditAccountId,
+      enableAllocation = true // New parameter to enable/disable automatic allocation
     } = body;
 
     if (!invoiceNumber || !paymentAmount || !paymentType || !reference) {
@@ -31,6 +33,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Use the new payment processing with allocation if enabled
+    if (enableAllocation) {
+      const result = await processPaymentWithAllocation(
+        prisma,
+        invoiceNumber,
+        paymentAmount,
+        paymentType,
+        paymentMethod || "CASH",
+        reference,
+        description,
+        paymentDate,
+        debitAccountId,
+        creditAccountId
+      );
+
+      // Create journal entry for the main payment
+      await createJournalEntryForPaymentProcess(result.payment, body, result.invoice);
+
+      return NextResponse.json({
+        success: true,
+        message: "Payment processed successfully with automatic allocation",
+        payment: result.payment,
+        invoice: result.invoice,
+        allocation: result.allocation
+      });
+    }
+
+    // Fallback to original logic if allocation is disabled
     // Find the invoice
     const invoice = await prisma.invoice.findUnique({
       where: { invoiceNumber },
@@ -141,7 +171,7 @@ export async function POST(req: NextRequest) {
       data: {
         transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
         category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
-        date: new Date(),
+        date: paymentDate ? new Date(paymentDate) : new Date(),
         amount: paymentAmountNum,
         fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
         fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,

@@ -69,6 +69,9 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/dashboard/shipment-settings")
   );
+  const [reportsOpen, setReportsOpen] = useState(
+    pathname.startsWith("/dashboard/reports") || pathname.startsWith("/dashboard/accounts/ledger")
+  );
 
   useEffect(() => {
     const token = Cookies.get("token");
@@ -204,6 +207,10 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       label: "Debit Notes",
       icon: FileText,
     },
+  ];
+
+  const subLinksReports = [
+    { href: "/dashboard/accounts/ledger", label: "Ledger", icon: BookOpen },
   ];
 
   return (
@@ -497,7 +504,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               onClick={() => setAccountsOpen(!accountsOpen)}
               className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
                 pathname.startsWith("/dashboard/accounts") &&
-                !pathname.startsWith("/dashboard/accounts/payments")
+                !pathname.startsWith("/dashboard/accounts/payments") &&
+                !pathname.startsWith("/dashboard/accounts/ledger")
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
@@ -547,24 +555,62 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </AnimatePresence>
           </div>
 
-          {/* Reports */}
-          <Link
-            href="/dashboard/reports"
-            className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
-              pathname.startsWith("/dashboard/reports")
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            }`}
-          >
-            <ClipboardList className="w-5 h-5 flex-shrink-0" />
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          {/* Reports Collapsible */}
+          <div>
+            <button
+              onClick={() => setReportsOpen(!reportsOpen)}
+              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                pathname.startsWith("/dashboard/reports") || pathname.startsWith("/dashboard/accounts/ledger")
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
             >
-              Reports
-            </span>
-          </Link>
+              <div className="flex items-center gap-4">
+                <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                <span
+                  className={`whitespace-nowrap transition-all duration-200 ${
+                    shouldExpand
+                      ? "opacity-100"
+                      : "opacity-0 w-0 overflow-hidden"
+                  }`}
+                >
+                  Reports
+                </span>
+              </div>
+              {shouldExpand &&
+                (reportsOpen ? (
+                  <ChevronUp className="w-4 h-4 ml-auto" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 ml-auto" />
+                ))}
+            </button>
+
+            <AnimatePresence>
+              {reportsOpen && shouldExpand && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="pl-10 mt-2 space-y-1"
+                >
+                  {subLinksReports.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                        pathname === href
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      {label}
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Settings Collapsible */}
           <div>

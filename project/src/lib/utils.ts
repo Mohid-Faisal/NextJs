@@ -306,18 +306,39 @@ export async function updateInvoiceBalance(
       data: { currentBalance: newBalance }
     });
 
-    // Create transaction record
-    await prisma.customerTransaction.create({
-      data: {
+    // Find and update existing transaction instead of creating new one
+    const existingTransaction = await prisma.customerTransaction.findFirst({
+      where: {
         customerId: invoice.customerId,
-        type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
-        amount: Math.abs(amountDifference),
-        description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
-        reference: `Invoice: ${invoice.invoiceNumber}`,
-        previousBalance,
-        newBalance
+        reference: invoice.invoiceNumber
       }
     });
+
+    if (existingTransaction) {
+      // Update existing transaction
+      await prisma.customerTransaction.update({
+        where: { id: existingTransaction.id },
+        data: {
+          type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
+          amount: Math.abs(newAmount),
+          previousBalance,
+          newBalance
+        }
+      });
+    } else {
+      // Create new transaction if none exists (fallback)
+      await prisma.customerTransaction.create({
+        data: {
+          customerId: invoice.customerId,
+          type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
+          amount: Math.abs(amountDifference),
+          description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
+          reference: `Invoice: ${invoice.invoiceNumber}`,
+          previousBalance,
+          newBalance
+        }
+      });
+    }
 
     customerUpdated = true;
   }
@@ -393,23 +414,407 @@ export async function updateInvoiceBalance(
       data: { currentBalance: newBalance }
     });
 
-    // Create transaction record
-    await prisma.vendorTransaction.create({
-      data: {
+    // Find and update existing transaction instead of creating new one
+    const existingTransaction = await prisma.vendorTransaction.findFirst({
+      where: {
         vendorId: invoice.vendorId,
-        type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
-        amount: Math.abs(amountDifference),
-        description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
-        reference: `Invoice: ${invoice.invoiceNumber}`,
-        previousBalance,
-        newBalance
+        reference: invoice.invoiceNumber
       }
     });
+
+    if (existingTransaction) {
+      // Update existing transaction
+      await prisma.vendorTransaction.update({
+        where: { id: existingTransaction.id },
+        data: {
+          type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
+          amount: Math.abs(newAmount),
+          previousBalance,
+          newBalance
+        }
+      });
+    } else {
+      // Create new transaction if none exists (fallback)
+      await prisma.vendorTransaction.create({
+        data: {
+          vendorId: invoice.vendorId,
+          type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
+          amount: Math.abs(amountDifference),
+          description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
+          reference: `Invoice: ${invoice.invoiceNumber}`,
+          previousBalance,
+          newBalance
+        }
+      });
+    }
 
     vendorUpdated = true;
   }
 
   return { customerUpdated, vendorUpdated };
+}
+
+// Payment allocation utilities for excess payments
+export async function allocateExcessPayment(
+  prisma: any,
+  customerId: number | null,
+  vendorId: number | null,
+  excessAmount: number,
+  originalInvoiceNumber: string,
+  paymentReference: string,
+  paymentType: 'CUSTOMER_PAYMENT' | 'VENDOR_PAYMENT'
+) {
+  const allocations: Array<{
+    invoiceNumber: string;
+    amount: number;
+    status: string;
+  }> = [];
+
+  let remainingAmount = excessAmount;
+
+  if (paymentType === 'CUSTOMER_PAYMENT' && customerId) {
+    // Find outstanding customer invoices (oldest first)
+    const outstandingInvoices = await prisma.invoice.findMany({
+      where: {
+        customerId: customerId,
+        status: { in: ['Pending', 'Partial'] },
+        invoiceNumber: { not: originalInvoiceNumber } // Exclude the original invoice
+      },
+      orderBy: { invoiceDate: 'asc' }, // Oldest first
+      include: {
+        customer: true
+      }
+    });
+
+    // Calculate remaining amounts for each invoice
+    for (const invoice of outstandingInvoices) {
+      if (remainingAmount <= 0) break;
+
+      const totalPaid = await prisma.payment.aggregate({
+        where: {
+          invoice: invoice.invoiceNumber,
+          transactionType: 'INCOME'
+        },
+        _sum: { amount: true }
+      });
+
+      const alreadyPaid = totalPaid._sum.amount || 0;
+      const remainingInvoiceAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
+
+      if (remainingInvoiceAmount > 0) {
+        const allocationAmount = Math.min(remainingAmount, remainingInvoiceAmount);
+        
+        // Create payment record for this allocation
+        await prisma.payment.create({
+          data: {
+            transactionType: 'INCOME',
+            category: 'Customer Payment Allocation',
+            date: new Date(),
+            amount: allocationAmount,
+            fromPartyType: 'CUSTOMER',
+            fromCustomerId: customerId,
+            fromCustomer: invoice.customer?.CompanyName || '',
+            toPartyType: 'US',
+            toVendor: '',
+            mode: 'CASH', // Default mode for allocations
+            reference: `${paymentReference}-ALLOC`,
+            invoice: invoice.invoiceNumber,
+            description: `Excess payment allocation from invoice ${originalInvoiceNumber}`
+          }
+        });
+
+        // Note: Customer transaction will be created in the main payment processing
+        // This allocation just updates the invoice status and creates payment record
+
+        // Update invoice status
+        const newTotalPaid = alreadyPaid + allocationAmount;
+        const newStatus = newTotalPaid >= invoice.totalAmount ? 'Paid' : 'Partial';
+        
+        await prisma.invoice.update({
+          where: { invoiceNumber: invoice.invoiceNumber },
+          data: { status: newStatus }
+        });
+
+        allocations.push({
+          invoiceNumber: invoice.invoiceNumber,
+          amount: allocationAmount,
+          status: newStatus
+        });
+
+        remainingAmount -= allocationAmount;
+      }
+    }
+  } else if (paymentType === 'VENDOR_PAYMENT' && vendorId) {
+    // Find outstanding vendor invoices (oldest first)
+    const outstandingInvoices = await prisma.invoice.findMany({
+      where: {
+        vendorId: vendorId,
+        status: { in: ['Pending', 'Partial'] },
+        invoiceNumber: { not: originalInvoiceNumber } // Exclude the original invoice
+      },
+      orderBy: { invoiceDate: 'asc' }, // Oldest first
+      include: {
+        vendor: true
+      }
+    });
+
+    // Calculate remaining amounts for each invoice
+    for (const invoice of outstandingInvoices) {
+      if (remainingAmount <= 0) break;
+
+      const totalPaid = await prisma.payment.aggregate({
+        where: {
+          invoice: invoice.invoiceNumber,
+          transactionType: 'EXPENSE'
+        },
+        _sum: { amount: true }
+      });
+
+      const alreadyPaid = totalPaid._sum.amount || 0;
+      const remainingInvoiceAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
+
+      if (remainingInvoiceAmount > 0) {
+        const allocationAmount = Math.min(remainingAmount, remainingInvoiceAmount);
+        
+        // Create payment record for this allocation
+        await prisma.payment.create({
+          data: {
+            transactionType: 'EXPENSE',
+            category: 'Vendor Payment Allocation',
+            date: new Date(),
+            amount: allocationAmount,
+            fromPartyType: 'US',
+            fromCustomer: '',
+            toPartyType: 'VENDOR',
+            toVendorId: vendorId,
+            toVendor: invoice.vendor?.CompanyName || '',
+            mode: 'CASH', // Default mode for allocations
+            reference: `${paymentReference}-ALLOC`,
+            invoice: invoice.invoiceNumber,
+            description: `Excess payment allocation from invoice ${originalInvoiceNumber}`
+          }
+        });
+
+        // Note: Vendor transaction will be created in the main payment processing
+        // This allocation just updates the invoice status and creates payment record
+
+        // Update invoice status
+        const newTotalPaid = alreadyPaid + allocationAmount;
+        const newStatus = newTotalPaid >= invoice.totalAmount ? 'Paid' : 'Partial';
+        
+        await prisma.invoice.update({
+          where: { invoiceNumber: invoice.invoiceNumber },
+          data: { status: newStatus }
+        });
+
+        allocations.push({
+          invoiceNumber: invoice.invoiceNumber,
+          amount: allocationAmount,
+          status: newStatus
+        });
+
+        remainingAmount -= allocationAmount;
+      }
+    }
+  }
+
+  return {
+    allocations,
+    remainingUnallocated: remainingAmount,
+    totalAllocated: excessAmount - remainingAmount
+  };
+}
+
+// Enhanced payment processing with automatic allocation
+export async function processPaymentWithAllocation(
+  prisma: any,
+  invoiceNumber: string,
+  paymentAmount: number,
+  paymentType: 'CUSTOMER_PAYMENT' | 'VENDOR_PAYMENT',
+  paymentMethod: string,
+  reference: string,
+  description?: string,
+  paymentDate?: string,
+  debitAccountId?: number,
+  creditAccountId?: number
+) {
+  // Find the invoice
+  const invoice = await prisma.invoice.findUnique({
+    where: { invoiceNumber },
+    include: {
+      customer: true,
+      vendor: true
+    }
+  });
+
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  const paymentAmountNum = parseFloat(paymentAmount.toString());
+  let allocationResult = null;
+
+  if (paymentType === "CUSTOMER_PAYMENT") {
+    if (!invoice.customerId) {
+      throw new Error('This invoice is not associated with a customer');
+    }
+
+    // Calculate how much is still owed on this invoice
+    const totalPaidSoFar = await prisma.payment.aggregate({
+      where: {
+        invoice: invoiceNumber,
+        transactionType: "INCOME"
+      },
+      _sum: { amount: true }
+    });
+
+    const alreadyPaid = totalPaidSoFar._sum.amount || 0;
+    const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
+    
+    // Determine how much goes to the invoice and how much becomes excess
+    const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
+    const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
+
+    // If there's an overpayment, allocate it to other invoices first
+    if (overpaymentAmount > 0) {
+      allocationResult = await allocateExcessPayment(
+        prisma,
+        invoice.customerId,
+        null,
+        overpaymentAmount,
+        invoiceNumber,
+        reference,
+        'CUSTOMER_PAYMENT'
+      );
+    }
+
+    // Create a single comprehensive customer transaction for the entire payment
+    if (paymentAmountNum > 0) {
+      let transactionDescription = description || `Payment for invoice ${invoiceNumber}`;
+      
+      // Add allocation details to the description if there were allocations
+      if (allocationResult && allocationResult.allocations.length > 0) {
+        const allocationDetails = allocationResult.allocations
+          .map(alloc => `invoice ${alloc.invoiceNumber} (${alloc.amount.toFixed(2)})`)
+          .join(', ');
+        transactionDescription += ` and excess allocation to ${allocationDetails}`;
+      }
+
+      await addCustomerTransaction(
+        prisma,
+        invoice.customerId,
+        'CREDIT',
+        paymentAmountNum,
+        transactionDescription,
+        reference,
+        invoiceNumber
+      );
+    }
+
+  } else if (paymentType === "VENDOR_PAYMENT") {
+    if (!invoice.vendorId) {
+      throw new Error('This invoice is not associated with a vendor');
+    }
+
+    // Calculate how much is still owed on this invoice
+    const totalPaidSoFar = await prisma.payment.aggregate({
+      where: {
+        invoice: invoiceNumber,
+        transactionType: "EXPENSE"
+      },
+      _sum: { amount: true }
+    });
+
+    const alreadyPaid = totalPaidSoFar._sum.amount || 0;
+    const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
+    
+    // Determine how much goes to the invoice and how much becomes excess
+    const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
+    const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
+
+    // If there's an overpayment, allocate it to other invoices first
+    if (overpaymentAmount > 0) {
+      allocationResult = await allocateExcessPayment(
+        prisma,
+        null,
+        invoice.vendorId,
+        overpaymentAmount,
+        invoiceNumber,
+        reference,
+        'VENDOR_PAYMENT'
+      );
+    }
+
+    // Create a single comprehensive vendor transaction for the entire payment
+    if (paymentAmountNum > 0) {
+      let transactionDescription = description || `Payment for invoice ${invoiceNumber}`;
+      
+      // Add allocation details to the description if there were allocations
+      if (allocationResult && allocationResult.allocations.length > 0) {
+        const allocationDetails = allocationResult.allocations
+          .map(alloc => `invoice ${alloc.invoiceNumber} (${alloc.amount.toFixed(2)})`)
+          .join(', ');
+        transactionDescription += ` and excess allocation to ${allocationDetails}`;
+      }
+
+      await addVendorTransaction(
+        prisma,
+        invoice.vendorId,
+        'CREDIT',
+        paymentAmountNum,
+        transactionDescription,
+        reference,
+        invoiceNumber
+      );
+    }
+  }
+
+  // Create main payment record
+  const payment = await prisma.payment.create({
+    data: {
+      transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
+      category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
+      date: paymentDate ? new Date(paymentDate) : new Date(),
+      amount: paymentAmountNum,
+      fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
+      fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,
+      fromCustomer: paymentType === "CUSTOMER_PAYMENT" ? invoice.customer?.CompanyName || "" : "",
+      toPartyType: paymentType === "CUSTOMER_PAYMENT" ? "US" : "VENDOR",
+      toVendorId: paymentType === "VENDOR_PAYMENT" ? invoice.vendorId : null,
+      toVendor: paymentType === "VENDOR_PAYMENT" ? invoice.vendor?.CompanyName || "" : "",
+      mode: paymentMethod || "CASH",
+      reference: reference,
+      invoice: invoiceNumber,
+      description: description || `Payment for invoice ${invoiceNumber}`
+    }
+  });
+
+  // Calculate invoice payment status and update
+  const paymentStatus = await calculateInvoicePaymentStatus(
+    prisma,
+    invoiceNumber,
+    invoice.totalAmount
+  );
+
+  // Update invoice status based on total payments
+  await prisma.invoice.update({
+    where: { invoiceNumber },
+    data: { 
+      status: paymentStatus.status
+    }
+  });
+
+  return {
+    payment,
+    invoice: {
+      invoiceNumber: invoice.invoiceNumber,
+      status: paymentStatus.status,
+      totalPaid: paymentStatus.totalPaid,
+      remainingAmount: paymentStatus.remainingAmount,
+      totalAmount: paymentStatus.totalAmount
+    },
+    allocation: allocationResult
+  };
 }
 
 // Invoice payment status utility

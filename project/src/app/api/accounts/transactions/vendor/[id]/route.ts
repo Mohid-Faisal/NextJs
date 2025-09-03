@@ -84,13 +84,63 @@ export async function GET(
       where: whereClause
     });
 
-    // Get transactions with pagination and filtering
+    // Get transactions with pagination and filtering, including shipment info
     const transactions = await prisma.vendorTransaction.findMany({
       where: whereClause,
       orderBy: { [validSortField]: validSortOrder },
       skip,
-      take: limit
+      take: limit,
+      include: {
+        vendor: {
+          select: {
+            CompanyName: true,
+            PersonName: true
+          }
+        }
+      }
     });
+
+    // Fetch shipment information for transactions that have invoice references
+    const transactionsWithShipmentInfo = await Promise.all(
+      transactions.map(async (transaction) => {
+        let shipmentInfo = null;
+        
+        if (transaction.invoice) {
+          // Find the invoice and get shipment info
+          const invoice = await prisma.invoice.findFirst({
+            where: { invoiceNumber: transaction.invoice },
+            include: {
+              shipment: {
+                select: {
+                  trackingId: true,
+                  weight: true,
+                  destination: true,
+                  referenceNumber: true,
+                  deliveryStatus: true,
+                  shipmentDate: true
+                }
+              }
+            }
+          });
+          
+          if (invoice?.shipment) {
+            shipmentInfo = {
+              awbNo: invoice.shipment.trackingId,
+              weight: invoice.shipment.weight,
+              destination: invoice.shipment.destination,
+              referenceNo: invoice.shipment.referenceNumber,
+              status: invoice.shipment.deliveryStatus || 'Sale',
+              shipmentDate: invoice.shipment.shipmentDate
+            };
+          }
+        }
+        
+        return {
+          ...transaction,
+          shipmentInfo
+        };
+      })
+    );
 
     return NextResponse.json({
       vendor: {
@@ -100,7 +150,7 @@ export async function GET(
         currentBalance: vendor.currentBalance,
         creditLimit: vendor.creditLimit
       },
-      transactions,
+      transactions: transactionsWithShipmentInfo,
       total,
       page,
       limit,
