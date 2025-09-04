@@ -54,6 +54,35 @@ async function parseForm(req: Request): Promise<{ fields: Fields; files: Files }
   });
 }
 
+// Function to generate next customer ID starting from 1000 with increment of 5
+async function getNextCustomerId(): Promise<number> {
+  try {
+    // Get the highest existing customer ID
+    const lastCustomer = await prisma.customers.findFirst({
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    });
+
+    if (!lastCustomer) {
+      // If no customers exist, start with 1000
+      return 1000;
+    }
+
+    // If the last ID is less than 1000, start from 1000
+    if (lastCustomer.id < 1000) {
+      return 1000;
+    }
+
+    // Calculate next ID with increment of 5
+    const nextId = lastCustomer.id + 5;
+    return nextId;
+  } catch (error) {
+    console.error("Error getting next customer ID:", error);
+    // Fallback to 1000 if there's an error
+    return 1000;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { fields, files } = await parseForm(req);
@@ -75,7 +104,11 @@ export async function POST(req: NextRequest) {
     //   return Array.isArray(value) ? value[0] : value || "";
     // };
     
+    // Generate custom customer ID
+    const customId = await getNextCustomerId();
+    
     const customerData = {
+      id: customId,
       CompanyName: obj.companyname,
       PersonName: obj.personname,
       Email: obj.email,
@@ -95,7 +128,7 @@ export async function POST(req: NextRequest) {
     // console.log(customerData);
     
 
-    const existingCustomer = await prisma.vendors.findUnique({
+    const existingCustomer = await prisma.customers.findUnique({
       where: {
         CompanyName: customerData.CompanyName,
       },
