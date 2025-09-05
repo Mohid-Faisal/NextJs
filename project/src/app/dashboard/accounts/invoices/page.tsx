@@ -847,7 +847,12 @@ export default function InvoicesPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
-                              window.location.href = `/api/accounts/invoices/${i.id}/invoice`;
+                              const shipmentId = (i.shipment as any)?.id;
+                              if (shipmentId) {
+                                window.open(`/api/accounts/invoices/${shipmentId}/invoice?invID=${i.id}`, '_blank');
+                              } else {
+                                alert('No shipment associated with this invoice');
+                              }
                             }}
                           >
                             🧾 Download Invoice

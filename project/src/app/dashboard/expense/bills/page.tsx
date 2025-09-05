@@ -1059,10 +1059,15 @@ export default function ExpenseBillsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
-                              window.location.href = `/api/accounts/invoices/${i.id}/invoice`;
+                              const shipmentId = (i.shipment as any)?.id;
+                              if (shipmentId) {
+                                window.location.href = `/dashboard/invoices/edit/${shipmentId}?invID=${i.id}`;
+                              } else {
+                                alert('No shipment associated with this invoice');
+                              }
                             }}
                           >
-                            🧾 Download Invoice
+                            🧾 Edit & Download Invoice
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleStatusChange(i.id, "Pending")}

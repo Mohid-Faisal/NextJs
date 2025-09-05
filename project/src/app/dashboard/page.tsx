@@ -45,9 +45,13 @@ import {
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState<'shipments' | 'payments'>('shipments');
   const [showReceivableModal, setShowReceivableModal] = useState(false);
+  const [showCustomersModal, setShowCustomersModal] = useState(false);
   const [data, setData] = useState({
     totalShipments: 0,
     totalUsers: 0,
+    totalCustomers: 0,
+    activeCustomers: 0,
+    inactiveCustomers: 0,
     totalRevenue: 0,
     newOrders: 0,
     monthlyEarnings: [] as { month: string; earnings: number }[],
@@ -183,39 +187,6 @@ const DashboardPage = () => {
     return () => clearInterval(activityInterval);
   }, []);
 
-  // Real-time active users update
-  useEffect(() => {
-    const updateActiveUsers = async () => {
-      try {
-        console.log("🔄 Updating active users count...");
-        const res = await fetch("/api/user-activity");
-        console.log("📡 Active users response status:", res.status);
-        
-        if (res.ok) {
-          const activityData = await res.json();
-          console.log("✅ Active users data received:", activityData);
-          
-          setData(prev => {
-            const newCount = activityData.activeUsers || prev.totalUsers;
-            console.log("👥 Updating active users from", prev.totalUsers, "to", newCount);
-            return {
-              ...prev,
-              totalUsers: newCount
-            };
-          });
-        } else {
-          console.log("❌ Failed to fetch active users:", res.status, res.statusText);
-        }
-      } catch (error) {
-        console.error("❌ Error updating active users:", error);
-      }
-    };
-
-    // Update active users count every 30 seconds
-    const activeUsersInterval = setInterval(updateActiveUsers, 30 * 1000);
-
-    return () => clearInterval(activeUsersInterval);
-  }, []);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -265,17 +236,13 @@ const DashboardPage = () => {
             iconColor="text-white"
           />
           <MetricCard
-            title={
-              <div className="flex items-center gap-2">
-                <span>Active users</span>
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              </div>
-            }
-            value={data.totalUsers.toLocaleString()}
+            title="Total Customers"
+            value={data.totalCustomers.toLocaleString()}
             change={data.percentageChanges?.customerPercentageChange || 0}
             icon={<Users className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-purple-500 to-pink-600"
             iconColor="text-white"
+            onClick={() => setShowCustomersModal(true)}
           />
         </div>
 
@@ -1030,6 +997,165 @@ const DashboardPage = () => {
                       <p>
                         This shows customers with outstanding balances. The "Outstanding" amount is estimated based on typical payment patterns. 
                         For exact amounts, please check individual customer invoices and payment records.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Customers Modal */}
+      {showCustomersModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowCustomersModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+                  Customer Overview
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  Active and inactive customer breakdown
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.location.href = '/dashboard/customers/inactive'}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4" />
+                  Check Inactive
+                </button>
+                <button
+                  onClick={() => setShowCustomersModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-200 dark:border-purple-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-purple-600 dark:text-purple-400">Total Customers</p>
+                      <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">
+                        {data.totalCustomers.toLocaleString()}
+                      </p>
+                    </div>
+                    <Users className="w-8 h-8 text-purple-600" />
+                  </div>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-green-600 dark:text-green-400">Active Customers</p>
+                      <p className="text-2xl font-bold text-green-800 dark:text-green-200">
+                        {data.activeCustomers.toLocaleString()}
+                      </p>
+                    </div>
+                    <Activity className="w-8 h-8 text-green-600" />
+                  </div>
+                </div>
+                <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-red-600 dark:text-red-400">Inactive Customers</p>
+                      <p className="text-2xl font-bold text-red-800 dark:text-red-200">
+                        {data.inactiveCustomers.toLocaleString()}
+                      </p>
+                    </div>
+                    <Users className="w-8 h-8 text-red-600" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-gray-600 p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                    Customer Activity Rate
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Active Rate</span>
+                      <span className="text-lg font-bold text-green-600">
+                        {data.totalCustomers > 0 ? ((data.activeCustomers / data.totalCustomers) * 100).toFixed(1) : 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${data.totalCustomers > 0 ? (data.activeCustomers / data.totalCustomers) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-gray-600 p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+                    Customer Status Summary
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Active</span>
+                      </div>
+                      <span className="text-lg font-bold text-gray-800 dark:text-white">
+                        {data.activeCustomers}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Inactive</span>
+                      </div>
+                      <span className="text-lg font-bold text-gray-800 dark:text-white">
+                        {data.inactiveCustomers}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                      Customer Status Information
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                      <p>
+                        Active customers are those with "Active" status in the system. Inactive customers 
+                        have been marked as "Inactive" and may require attention or reactivation.
                       </p>
                     </div>
                   </div>

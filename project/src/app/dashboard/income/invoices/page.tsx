@@ -1112,10 +1112,15 @@ export default function IncomeInvoicesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                window.location.href = `/dashboard/invoice/${i.id}`;
+                                const shipmentId = (i.shipment as any)?.id;
+                                if (shipmentId) {
+                                  window.location.href = `/dashboard/invoices/edit/${shipmentId}?invID=${i.id}`;
+                                } else {
+                                  alert('No shipment associated with this invoice');
+                                }
                               }}
                             >
-                              🧾 Download Invoice
+                              🧾 Edit & Download Invoice
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>

@@ -30,6 +30,23 @@ export async function GET() {
     // Get total users
     const totalUsers = await prisma.user.count();
     
+    // Get total customers
+    const totalCustomers = await prisma.customers.count();
+    
+    // Get active customers (customers with ActiveStatus = "Active")
+    const activeCustomers = await prisma.customers.count({
+      where: {
+        ActiveStatus: "Active"
+      }
+    });
+    
+    // Get inactive customers (customers with ActiveStatus = "Inactive")
+    const inactiveCustomers = await prisma.customers.count({
+      where: {
+        ActiveStatus: "Inactive"
+      }
+    });
+    
     // Get currently active users (users active in the last 30 minutes)
     // We'll implement a simple activity tracking system
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
@@ -692,6 +709,9 @@ export async function GET() {
     const finalData = {
       totalShipments: totalShipments || 0,
       totalUsers: currentActiveUsers || 0, // Show active users instead of total users
+      totalCustomers: totalCustomers || 0,
+      activeCustomers: activeCustomers || 0,
+      inactiveCustomers: inactiveCustomers || 0,
       totalRevenue: totalRevenue || 0,
       newOrders: newOrders || 0,
       monthlyEarnings: monthlyEarnings.length > 0 ? monthlyEarnings : [
