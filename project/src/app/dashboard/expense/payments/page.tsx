@@ -72,6 +72,13 @@ export default function ExpensePaymentsPage() {
     fetchAccounts();
   }, []);
 
+  // Update accounts when payment method changes
+  useEffect(() => {
+    if (accountsInitialized && accounts.length > 0 && selectedInvoice) {
+      updateAccountsBasedOnPaymentMethod(accounts);
+    }
+  }, [formData.paymentMethod, accountsInitialized, accounts, selectedInvoice]);
+
   // Handle pre-selection of invoice from URL parameter
   useEffect(() => {
     const invoiceParam = searchParams.get("invoice");
@@ -205,24 +212,62 @@ export default function ExpensePaymentsPage() {
   ) => {
     // For vendor payments: We are paying the vendor for expenses
     // Debit Accounts Payable (vendor's liability), Credit Cash (we paid money)
+    updateAccountsBasedOnPaymentMethod(accounts);
+  };
+
+  // Update accounts based on payment method
+  const updateAccountsBasedOnPaymentMethod = (accounts: ChartOfAccount[], paymentMethod?: string) => {
+    const method = paymentMethod || formData.paymentMethod;
     const accountsPayableAccount = accounts.find(
       (a) => a.accountName === "Accounts Payable"
     );
     const cashAccount = accounts.find((a) => a.accountName === "Cash");
+    const bankAccount = accounts.find(
+      (a) => a.accountName === "Bank Account" || 
+            a.accountName === "Bank" ||
+            (a.category === "Asset" && a.accountName.toLowerCase().includes("bank"))
+    );
 
+    // Debit account is always Accounts Payable for vendor payments
     if (accountsPayableAccount) {
       setDebitAccountId(accountsPayableAccount.id);
-      console.log(
-        "Set default debit account for vendor payment:",
-        accountsPayableAccount.accountName
-      );
     }
-    if (cashAccount) {
-      setCreditAccountId(cashAccount.id);
-      console.log(
-        "Set default credit account for vendor payment:",
-        cashAccount.accountName
-      );
+
+    // Credit account depends on payment method
+    switch (method) {
+      case "CASH":
+        if (cashAccount) {
+          setCreditAccountId(cashAccount.id);
+        }
+        break;
+      case "BANK_TRANSFER":
+        if (bankAccount) {
+          setCreditAccountId(bankAccount.id);
+        } else if (cashAccount) {
+          // Fallback to cash if no bank account found
+          setCreditAccountId(cashAccount.id);
+        }
+        break;
+      case "CHECK":
+        // Checks are typically paid from bank, but can be cash
+        if (bankAccount) {
+          setCreditAccountId(bankAccount.id);
+        } else if (cashAccount) {
+          setCreditAccountId(cashAccount.id);
+        }
+        break;
+      case "CREDIT_CARD":
+        // Credit card payments typically come from bank account
+        if (bankAccount) {
+          setCreditAccountId(bankAccount.id);
+        } else if (cashAccount) {
+          setCreditAccountId(cashAccount.id);
+        }
+        break;
+      default:
+        if (cashAccount) {
+          setCreditAccountId(cashAccount.id);
+        }
     }
   };
 
@@ -501,9 +546,13 @@ export default function ExpensePaymentsPage() {
                   </Label>
                   <Select
                     value={formData.paymentMethod}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, paymentMethod: value }))
-                    }
+                    onValueChange={(value) => {
+                      setFormData((prev) => ({ ...prev, paymentMethod: value }));
+                      // Update accounts when payment method changes
+                      if (accountsInitialized && accounts.length > 0) {
+                        updateAccountsBasedOnPaymentMethod(accounts, value);
+                      }
+                    }}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -626,11 +675,28 @@ export default function ExpensePaymentsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {accounts
-                        .filter(
-                          (account) =>
-                            account.accountName === "Cash" ||
-                            account.category === "Asset"
-                        )
+                        .filter((account) => {
+                          // Filter based on payment method
+                          if (formData.paymentMethod === "CASH") {
+                            return account.accountName === "Cash" || 
+                                   (account.category === "Asset" && account.accountName.toLowerCase().includes("cash"));
+                          } else if (formData.paymentMethod === "BANK_TRANSFER") {
+                            return account.accountName === "Bank Account" || 
+                                   account.accountName === "Bank" ||
+                                   (account.category === "Asset" && account.accountName.toLowerCase().includes("bank"));
+                          } else if (formData.paymentMethod === "CHECK" || formData.paymentMethod === "CREDIT_CARD") {
+                            // For check and credit card, show bank accounts first, then cash
+                            return account.accountName === "Bank Account" || 
+                                   account.accountName === "Bank" ||
+                                   account.accountName === "Cash" ||
+                                   (account.category === "Asset" && (
+                                     account.accountName.toLowerCase().includes("bank") ||
+                                     account.accountName.toLowerCase().includes("cash")
+                                   ));
+                          }
+                          // Default: show cash and assets
+                          return account.accountName === "Cash" || account.category === "Asset";
+                        })
                         .map((account) => (
                           <SelectItem
                             key={account.id}
