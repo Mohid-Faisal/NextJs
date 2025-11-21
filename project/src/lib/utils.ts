@@ -36,7 +36,7 @@ export async function generateInvoiceNumber(prisma: any): Promise<string> {
     nextNumber = currentNumber + 5;
   } else {
     // Start from 420000 if no shipments exist
-    nextNumber = 420000;
+    nextNumber = 600000;
   }
 
   // Format as 6-digit string with leading zeros

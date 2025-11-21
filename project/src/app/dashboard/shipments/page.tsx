@@ -26,7 +26,9 @@ import {
   Printer,
   FileText,
   Table,
+  CheckCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Country } from "country-state-city";
 import {
   format,
@@ -296,6 +298,48 @@ export default function ShipmentsPage() {
   ) => {
     setShipmentToDelete(shipment);
     setOpenDeleteDialog(true);
+  };
+
+  const handleMarkAsDelivered = async (
+    shipment: Shipment & { invoices: { status: string }[] }
+  ) => {
+    try {
+      const res = await fetch("/api/update-shipment", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: shipment.id,
+          deliveryStatus: "Delivered",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success("Shipment marked as delivered!");
+        
+        // Refresh the shipments list
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(LIMIT),
+          ...(searchTerm && { search: searchTerm }),
+          ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
+          ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+          ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+          sortField,
+          sortOrder,
+        });
+        const refreshRes = await fetch(`/api/shipments?${params}`);
+        const { shipments, total } = await refreshRes.json();
+        setShipments(shipments);
+        setTotal(total);
+      } else {
+        toast.error(data.message || "Failed to update shipment status");
+      }
+    } catch (error) {
+      console.error("Error marking shipment as delivered:", error);
+      toast.error("Error updating shipment status");
+    }
   };
 
   // Export functions
@@ -968,6 +1012,13 @@ export default function ShipmentsPage() {
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleMarkAsDelivered(shipment)}
+                              className="text-green-600"
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Mark as Delivered
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleDelete(shipment)}

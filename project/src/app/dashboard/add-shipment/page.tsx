@@ -626,6 +626,7 @@ const AddShipmentPage = () => {
       totalPackages: packages.length,
       totalWeight: totals.weight,
       totalWeightVol: totals.weightVol,
+      amount: totals.amount,
     };
 
     console.log("Sending complete shipment data to backend:", shipmentData);

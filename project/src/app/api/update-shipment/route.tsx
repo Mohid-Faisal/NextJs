@@ -282,14 +282,34 @@ async function handleShipmentUpdate(req: Request) {
       return NextResponse.json({ success: false, message: "Missing shipment ID" }, { status: 400 });
     }
 
+    // Fetch existing shipment to use current values when new values aren't provided
+    const existingShipment = await prisma.shipment.findUnique({
+      where: { id },
+      include: { invoices: true },
+    });
+
+    if (!existingShipment) {
+      return NextResponse.json({ success: false, message: "Shipment not found" }, { status: 404 });
+    }
+
+    // Use existing values if new values aren't provided
+    const effectivePrice = price !== undefined ? parseFloat(price) : (existingShipment.price || 0);
+    const effectiveFuelSurcharge = fuelSurcharge !== undefined ? parseFloat(fuelSurcharge) : (existingShipment.fuelSurcharge || 0);
+    const effectiveDiscount = discount !== undefined ? parseFloat(discount) : (existingShipment.discount || 0);
+    const effectiveProfitPercentage = profitPercentage !== undefined ? parseFloat(profitPercentage) : (existingShipment.profitPercentage || 0);
+    const effectiveFixedCharge = fixedCharge !== undefined ? parseFloat(fixedCharge) : (existingShipment.fixedCharge || 0);
+    const effectiveTrackingId = trackingId !== undefined ? trackingId : existingShipment.trackingId;
+    const effectiveDestination = destination !== undefined ? destination : existingShipment.destination;
+    const effectiveTotalWeight = totalWeight !== undefined ? parseFloat(totalWeight) : (existingShipment.totalWeight || existingShipment.weight || 0);
+
     // ============================================================================
     // SECTION: PRICING CALCULATIONS (Same logic as add-shipment)
     // ============================================================================
-    // Parse and calculate all pricing components
-    const priceWithProfit = Math.round((parseFloat(price) || 0));
-    const fuelSurchargeAmount = Math.round((parseFloat(fuelSurcharge) || 0));
-    const discountPercentage = parseFloat(discount) || 0;
-    const profitPercentageValue = parseFloat(profitPercentage) || 0;
+    // Parse and calculate all pricing components using effective values
+    const priceWithProfit = Math.round((effectivePrice || 0));
+    const fuelSurchargeAmount = Math.round((effectiveFuelSurcharge || 0));
+    const discountPercentage = effectiveDiscount || 0;
+    const profitPercentageValue = effectiveProfitPercentage || 0;
     
     // Calculate original price by removing profit from the price with profit
     // This is needed because the frontend sends price with profit included
@@ -305,7 +325,7 @@ async function handleShipmentUpdate(req: Request) {
     // Customer invoice uses the price with profit (from frontend)
     const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
     // Vendor invoice uses original price without profit
-    const vendorTotalCost = Math.round(originalPrice - fixedCharge);
+    const vendorTotalCost = Math.round(originalPrice - effectiveFixedCharge);
     
     // For backward compatibility, also calculate the old format
     let calculatedTotalCost: number;
@@ -314,7 +334,8 @@ async function handleShipmentUpdate(req: Request) {
     } else if (totalCost !== undefined) {
       calculatedTotalCost = parseFloat(totalCost) || 0;
     } else {
-      calculatedTotalCost = 0;
+      // Use existing totalCost if available
+      calculatedTotalCost = existingShipment.totalCost || 0;
     }
     
     // Log pricing calculations for debugging
@@ -382,31 +403,45 @@ async function handleShipmentUpdate(req: Request) {
       });
 
       // 2. Update related invoices with shipment data
-      if (updatedShipment.invoices && updatedShipment.invoices.length > 0) {
+      // Only update invoices if we have pricing data or if tracking/destination changed
+      const shouldUpdateInvoices = (price !== undefined || fuelSurcharge !== undefined || discount !== undefined) || 
+                                    (trackingId !== undefined && trackingId !== existingShipment.trackingId) ||
+                                    (destination !== undefined && destination !== existingShipment.destination);
+      
+      if (updatedShipment.invoices && updatedShipment.invoices.length > 0 && shouldUpdateInvoices) {
         const invoiceUpdates = updatedShipment.invoices.map(async (invoice) => {
           // Update invoice with shipment data
           // For vendor invoices, use vendor cost; for customer invoices, use customer total
           const isVendorInvoice = invoice.vendorId && !invoice.customerId;
-          const invoiceAmount = isVendorInvoice ? vendorTotalCost : customerTotalCost;
+          
+          // Use calculated amounts if pricing data was provided, otherwise keep existing invoice totalAmount
+          let invoiceAmount: number;
+          if (price !== undefined || fuelSurcharge !== undefined || discount !== undefined) {
+            invoiceAmount = isVendorInvoice ? vendorTotalCost : customerTotalCost;
+          } else {
+            // Keep existing invoice totalAmount if no pricing data provided
+            invoiceAmount = invoice.totalAmount || 0;
+          }
           
           console.log(`Updating invoice ${invoice.invoiceNumber}:`, {
             isVendorInvoice,
             vendorCost: vendorTotalCost,
             customerTotal: customerTotalCost,
             finalAmount: invoiceAmount,
-            trackingId,
-            destination
+            trackingId: effectiveTrackingId,
+            destination: effectiveDestination,
+            usingExistingAmount: price === undefined && fuelSurcharge === undefined && discount === undefined
           });
           
           // Ensure invoiceAmount is a valid number
-          const finalInvoiceAmount = typeof invoiceAmount === 'number' ? invoiceAmount : parseFloat(invoiceAmount) || 0;
+          const finalInvoiceAmount = typeof invoiceAmount === 'number' && !isNaN(invoiceAmount) ? invoiceAmount : (invoice.totalAmount || 0);
           
           const updatedInvoice = await tx.invoice.update({
             where: { id: invoice.id },
             data: {
-              trackingNumber: trackingId,
-              destination: destination,
-              weight: totalWeight || weight || 0,
+              trackingNumber: effectiveTrackingId !== undefined ? effectiveTrackingId : invoice.trackingNumber,
+              destination: effectiveDestination !== undefined ? effectiveDestination : invoice.destination,
+              weight: effectiveTotalWeight || invoice.weight || 0,
               // Update line items if they contain shipment-specific information
               lineItems: invoice.lineItems || [], // Keep existing line items but could be updated if needed
               totalAmount: finalInvoiceAmount,
@@ -415,7 +450,8 @@ async function handleShipmentUpdate(req: Request) {
           });
 
           // 3. Update customer transactions if this is a customer invoice
-          if (invoice.customerId) {
+          // Only update if pricing data was provided
+          if (invoice.customerId && (price !== undefined || fuelSurcharge !== undefined || discount !== undefined)) {
             // Find existing customer transaction for this invoice
             const existingTransaction = await tx.customerTransaction.findFirst({
               where: {
@@ -434,7 +470,7 @@ async function handleShipmentUpdate(req: Request) {
                  oldAmount: oldAmount,
                  newAmount: customerTotalCost,
                  oldBalance: oldBalance,
-                 description: `Updated customer invoice for shipment: ${trackingId} - ${destination}`
+                 description: `Updated customer invoice for shipment: ${effectiveTrackingId} - ${effectiveDestination}`
                });
                
                // Calculate new balance: remove old amount, add new amount
@@ -444,7 +480,7 @@ async function handleShipmentUpdate(req: Request) {
                  where: { id: existingTransaction.id },
                  data: {
                    amount: customerTotalCost,
-                   description: `Updated customer invoice for shipment: ${trackingId} - ${destination}`,
+                   description: `Updated customer invoice for shipment: ${effectiveTrackingId} - ${effectiveDestination}`,
                    newBalance: newBalance,
                    // Note: This is a simplified balance calculation
                    // In a real system, you might want more complex balance logic
@@ -461,7 +497,7 @@ async function handleShipmentUpdate(req: Request) {
                   tx,
                   'CUSTOMER_DEBIT',
                   customerTotalCost,
-                  `Updated customer invoice for shipment: ${trackingId} - ${destination}`,
+                  `Updated customer invoice for shipment: ${effectiveTrackingId} - ${effectiveDestination}`,
                   invoice.invoiceNumber,
                   invoice.invoiceNumber
                 );
@@ -474,7 +510,8 @@ async function handleShipmentUpdate(req: Request) {
           }
 
           // 4. Update vendor transactions if this is a vendor invoice
-          if (invoice.vendorId) {
+          // Only update if pricing data was provided
+          if (invoice.vendorId && (price !== undefined || fuelSurcharge !== undefined || discount !== undefined)) {
             // Calculate vendor cost (what we pay to vendor)
             // Vendor cost = original price + fuel surcharge - discount (no profit)
             const vendorCost = vendorTotalCost;
@@ -497,7 +534,7 @@ async function handleShipmentUpdate(req: Request) {
                  oldAmount: oldAmount,
                  newAmount: vendorCost,
                  oldBalance: oldBalance,
-                 description: `Updated vendor cost for shipment: ${trackingId} - ${destination}`
+                 description: `Updated vendor cost for shipment: ${effectiveTrackingId} - ${effectiveDestination}`
                });
                
                // Calculate new balance: remove old amount, add new amount
@@ -507,7 +544,7 @@ async function handleShipmentUpdate(req: Request) {
                  where: { id: existingTransaction.id },
                  data: {
                    amount: vendorCost,
-                   description: `Updated vendor cost for shipment: ${trackingId} - ${destination}`,
+                   description: `Updated vendor cost for shipment: ${effectiveTrackingId} - ${effectiveDestination}`,
                    newBalance: newBalance,
                    // Note: This is a simplified balance calculation
                    // In a real system, you might want more complex balance logic
@@ -524,7 +561,7 @@ async function handleShipmentUpdate(req: Request) {
                   tx,
                   'VENDOR_DEBIT',
                   vendorCost,
-                  `Updated vendor cost for shipment: ${trackingId} - ${destination}`,
+                  `Updated vendor cost for shipment: ${effectiveTrackingId} - ${effectiveDestination}`,
                   invoice.invoiceNumber,
                   invoice.invoiceNumber
                 );
