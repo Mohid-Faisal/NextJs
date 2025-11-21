@@ -55,6 +55,7 @@ type Transaction = {
   previousBalance: number;
   newBalance: number;
   createdAt: string;
+  shipmentDate?: string;
 };
 
 export default function CustomerTransactionsPage() {
@@ -425,15 +426,25 @@ export default function CustomerTransactionsPage() {
 
   const getTransactionExportData = (transactions: Transaction[]) => {
     const headers = ["Date", "Type", "Amount", "Description", "Reference", "Invoice", "Balance"];
-    const data = transactions.map(transaction => [
-      format(parseISO(transaction.createdAt), "dd-MM-yyyy"),
-      transaction.type,
-      `PKR ${transaction.amount.toLocaleString()}`,
-      transaction.description,
-      transaction.reference || "N/A",
-      transaction.invoice || "N/A",
-      `$${transaction.newBalance.toLocaleString()}`
-    ]);
+    const data = transactions.map(transaction => {
+      const dateToUse = transaction.shipmentDate || transaction.createdAt;
+      let formattedDate: string;
+      try {
+        formattedDate = format(parseISO(dateToUse), "dd-MM-yyyy");
+      } catch (e) {
+        formattedDate = new Date(dateToUse).toLocaleDateString('en-GB');
+      }
+      
+      return [
+        formattedDate,
+        transaction.type,
+        `PKR ${transaction.amount.toLocaleString()}`,
+        transaction.description,
+        transaction.reference || "N/A",
+        transaction.invoice || "N/A",
+        `PKR ${transaction.newBalance.toLocaleString()}`
+      ];
+    });
     return { headers, data };
   };
 
@@ -934,7 +945,14 @@ export default function CustomerTransactionsPage() {
                   {transactions.map((transaction) => (
                     <tr key={transaction.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-3">
-                        {format(parseISO(transaction.createdAt), "dd-MM-yyyy")}
+                        {(() => {
+                          const dateToUse = transaction.shipmentDate || transaction.createdAt;
+                          try {
+                            return format(parseISO(dateToUse), "dd-MM-yyyy");
+                          } catch (e) {
+                            return new Date(dateToUse).toLocaleDateString('en-GB');
+                          }
+                        })()}
                       </td>
                       <td className="px-4 py-3">{transaction.invoice || "-"}</td>
                       <td className="px-4 py-3">{transaction.description}</td>

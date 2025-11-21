@@ -104,6 +104,7 @@ export async function GET(
     const transactionsWithShipmentInfo = await Promise.all(
       transactions.map(async (transaction) => {
         let shipmentInfo = null;
+        let shipmentDate: string | undefined = undefined;
         
         if (transaction.invoice) {
           // Find the invoice and get shipment info
@@ -132,12 +133,18 @@ export async function GET(
               status: invoice.shipment.deliveryStatus || 'Sale',
               shipmentDate: invoice.shipment.shipmentDate
             };
+            
+            // Extract shipmentDate for direct access
+            if (invoice.shipment.shipmentDate) {
+              shipmentDate = invoice.shipment.shipmentDate.toISOString();
+            }
           }
         }
         
         return {
           ...transaction,
-          shipmentInfo
+          shipmentInfo,
+          shipmentDate
         };
       })
     );

@@ -111,48 +111,53 @@ export async function GET() {
     });
     const totalRevenue = totalRevenueResult._sum.totalAmount || 0;
     
-    // Get new orders (shipments created this month)
+    // Get new orders (shipments with shipment date this month)
     const newOrders = await prisma.shipment.count({
       where: {
-        createdAt: {
+        shipmentDate: {
           gte: new Date(currentYear, currentMonth, 1),
           lt: new Date(currentYear, currentMonth + 1, 1)
         }
       }
     });
     
-    // Get monthly earnings for the current year
+    // Get monthly earnings for the current year (using shipmentDate from related shipments)
     const monthlyEarnings = [];
     for (let month = 0; month < 12; month++) {
       const startDate = new Date(currentYear, month, 1);
       const endDate = new Date(currentYear, month + 1, 1);
       
-      const monthRevenue = await prisma.invoice.aggregate({
+      // Get invoices with their related shipments, then filter by shipmentDate
+      const invoices = await prisma.invoice.findMany({
         where: {
           customerId: { not: null },
           status: { not: "Cancelled" },
-          createdAt: {
-            gte: startDate,
-            lt: endDate
+          shipment: {
+            shipmentDate: {
+              gte: startDate,
+              lt: endDate
+            }
           }
         },
-        _sum: {
+        select: {
           totalAmount: true
         }
       });
       
+      const monthRevenue = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+      
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       monthlyEarnings.push({
         month: monthNames[month],
-        earnings: monthRevenue._sum.totalAmount || 0
+        earnings: monthRevenue
       });
     }
     
-    // Get recent shipments with real data
+    // Get recent shipments with real data (ordered by shipmentDate)
     const recentShipments = await prisma.shipment.findMany({
       take: 10,
       orderBy: {
-        createdAt: 'desc'
+        shipmentDate: 'desc'
       },
       select: {
         id: true,
@@ -303,7 +308,7 @@ export async function GET() {
     
     const transformedRevenueByDestination = revenueByDestinationWithRevenue;
     
-    // Get monthly shipments count
+    // Get monthly shipments count (using shipmentDate)
     const monthlyShipments = [];
     for (let month = 0; month < 12; month++) {
       const startDate = new Date(currentYear, month, 1);
@@ -311,32 +316,37 @@ export async function GET() {
       
       const monthShipments = await prisma.shipment.count({
         where: {
-          createdAt: {
+          shipmentDate: {
             gte: startDate,
             lt: endDate
           }
         }
       });
       
-      const monthRevenue = await prisma.invoice.aggregate({
+      // Get revenue for invoices with shipments in this month (using shipmentDate)
+      const invoices = await prisma.invoice.findMany({
         where: {
           customerId: { not: null },
           status: { not: "Cancelled" },
-          createdAt: {
-            gte: startDate,
-            lt: endDate
+          shipment: {
+            shipmentDate: {
+              gte: startDate,
+              lt: endDate
+            }
           }
         },
-        _sum: {
+        select: {
           totalAmount: true
         }
       });
+      
+      const monthRevenue = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
       
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       monthlyShipments.push({
         month: monthNames[month],
         shipments: monthShipments,
-        revenue: monthRevenue._sum.totalAmount || 0
+        revenue: monthRevenue
       });
     }
     
@@ -499,43 +509,47 @@ export async function GET() {
       else customerSatisfaction = 2.5;
     }
     
-    // Calculate revenue growth (comparing current month with previous month)
-    const currentMonthRevenue = await prisma.invoice.aggregate({
+    // Calculate revenue growth (comparing current month with previous month using shipmentDate)
+    const currentMonthInvoices = await prisma.invoice.findMany({
       where: {
         customerId: { not: null },
         status: { not: "Cancelled" },
-        createdAt: {
-          gte: new Date(currentYear, currentMonth, 1),
-          lt: new Date(currentYear, currentMonth + 1, 1)
+        shipment: {
+          shipmentDate: {
+            gte: new Date(currentYear, currentMonth, 1),
+            lt: new Date(currentYear, currentMonth + 1, 1)
+          }
         }
       },
-      _sum: {
+      select: {
         totalAmount: true
       }
     });
     
-    const previousMonthRevenue = await prisma.invoice.aggregate({
+    const previousMonthInvoices = await prisma.invoice.findMany({
       where: {
         customerId: { not: null },
         status: { not: "Cancelled" },
-        createdAt: {
-          gte: new Date(currentYear, currentMonth - 1, 1),
-          lt: new Date(currentYear, currentMonth, 1)
+        shipment: {
+          shipmentDate: {
+            gte: new Date(currentYear, currentMonth - 1, 1),
+            lt: new Date(currentYear, currentMonth, 1)
+          }
         }
       },
-      _sum: {
+      select: {
         totalAmount: true
       }
     });
     
-    const currentMonthTotal = currentMonthRevenue._sum.totalAmount || 0;
-    const previousMonthTotal = previousMonthRevenue._sum.totalAmount || 0;
+    const currentMonthTotal = currentMonthInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+    const previousMonthTotal = previousMonthInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
     const revenueGrowth = previousMonthTotal > 0 ? ((currentMonthTotal - previousMonthTotal) / previousMonthTotal) * 100 : 0;
     
-    // Calculate shipment growth rate (comparing current month with previous month)
+    // Calculate shipment growth rate (comparing current month with previous month using shipmentDate)
     const currentMonthShipments = await prisma.shipment.count({
       where: {
-        createdAt: {
+        shipmentDate: {
           gte: new Date(currentYear, currentMonth, 1),
           lt: new Date(currentYear, currentMonth + 1, 1)
         }
@@ -544,7 +558,7 @@ export async function GET() {
     
     const previousMonthShipments = await prisma.shipment.count({
       where: {
-        createdAt: {
+        shipmentDate: {
           gte: new Date(currentYear, currentMonth - 1, 1),
           lt: new Date(currentYear, currentMonth, 1)
         }
