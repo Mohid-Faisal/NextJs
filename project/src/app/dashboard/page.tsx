@@ -764,14 +764,15 @@ const DashboardPage = () => {
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Pcs</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Weight</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Tracking</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Total Cost</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Delivery Status</th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Total Cost</th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Payment Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
                   {data.recentShipments.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="px-2 sm:px-3 lg:px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={12} className="px-2 sm:px-3 lg:px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                         No recent shipments found.
                       </td>
                     </tr>
@@ -811,10 +812,6 @@ const DashboardPage = () => {
                           <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">PKR {shipment.totalCost.toLocaleString()}</span>
-                          <span className="sm:hidden">PKR {shipment.totalCost.toLocaleString()}</span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                           <span
                             className={`px-1 sm:px-2 py-1 rounded text-xs font-medium ${getDeliveryStatusColor(
                               shipment.status
@@ -825,6 +822,24 @@ const DashboardPage = () => {
                             </span>
                             <span className="sm:hidden">
                               {shipment.status?.substring(0, 3) || "N/A"}
+                            </span>
+                          </span>
+                        </td>
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <span className="hidden sm:inline">PKR {shipment.totalCost.toLocaleString()}</span>
+                          <span className="sm:hidden">PKR {shipment.totalCost.toLocaleString()}</span>
+                        </td>
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <span
+                            className={`px-1 sm:px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(
+                              shipment.invoiceStatus
+                            )}`}
+                          >
+                            <span className="hidden sm:inline">
+                              {shipment.invoiceStatus || "N/A"}
+                            </span>
+                            <span className="sm:hidden">
+                              {shipment.invoiceStatus?.substring(0, 3) || "N/A"}
                             </span>
                           </span>
                         </td>
