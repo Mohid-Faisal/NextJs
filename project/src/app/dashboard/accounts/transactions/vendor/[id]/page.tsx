@@ -56,6 +56,7 @@ type Transaction = {
   newBalance: number;
   createdAt: string;
   shipmentDate?: string;
+  paymentDate?: string;
 };
 
 export default function VendorTransactionsPage() {
@@ -105,20 +106,34 @@ export default function VendorTransactionsPage() {
   const [sortField, setSortField] = useState<SortField>("voucherDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   
-  // Sort transactions by voucherDate (createdAt) by default, or shipmentDate when sorting by date
+  // Sort transactions by voucherDate or shipmentDate based on the logic
   const sortedTransactions = useMemo(() => {
     if (sortField === "voucherDate") {
-      // Sort by voucher date (createdAt - when transaction was created)
+      // Sort by voucher date (using the same logic as display)
       return [...transactions].sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
+        const getVoucherDate = (t: Transaction) => {
+          const isShipmentTransaction = t.type === "DEBIT" && t.invoice;
+          const isPaymentTransaction = t.type === "CREDIT" && t.invoice;
+          if (isShipmentTransaction) {
+            return t.shipmentDate || t.createdAt;
+          }
+          if (isPaymentTransaction) {
+            return t.paymentDate || t.createdAt;
+          }
+          return t.createdAt;
+        };
+        const dateA = new Date(getVoucherDate(a)).getTime();
+        const dateB = new Date(getVoucherDate(b)).getTime();
         return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
       });
     } else if (sortField === "createdAt") {
-      // When sorting by date, use shipmentDate
+      // When sorting by shipment date, use shipmentDate
       return [...transactions].sort((a, b) => {
-        const dateA = a.shipmentDate ? new Date(a.shipmentDate).getTime() : new Date(a.createdAt).getTime();
-        const dateB = b.shipmentDate ? new Date(b.shipmentDate).getTime() : new Date(b.createdAt).getTime();
+        const getShipmentDate = (t: Transaction) => {
+          return t.shipmentDate || t.createdAt;
+        };
+        const dateA = new Date(getShipmentDate(a)).getTime();
+        const dateB = new Date(getShipmentDate(b)).getTime();
         return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
       });
     }
@@ -448,8 +463,28 @@ export default function VendorTransactionsPage() {
   const getTransactionExportData = (transactions: Transaction[]) => {
     const headers = ["Voucher Date", "Date", "Type", "Amount", "Description", "Reference", "Invoice", "Balance"];
     const data = transactions.map(transaction => {
-      // Voucher date (createdAt)
-      const voucherDateToUse = transaction.createdAt;
+      // Determine voucher date and shipment date based on transaction type
+      let voucherDateToUse: string;
+      let shipmentDateToUse: string;
+      
+      // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
+      const isShipmentTransaction = transaction.type === "DEBIT" && transaction.invoice;
+      const isPaymentTransaction = transaction.type === "CREDIT" && transaction.invoice;
+      
+      if (isShipmentTransaction) {
+        // For shipment transactions: voucher date = shipment date (both use shipmentDate)
+        voucherDateToUse = transaction.shipmentDate || transaction.createdAt;
+        shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+      } else if (isPaymentTransaction) {
+        // For payment transactions: voucher date = payment date (from Payment table), shipment date = original shipment date
+        voucherDateToUse = transaction.paymentDate || transaction.createdAt;
+        shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+      } else {
+        // For other transactions: use createdAt for voucher date, shipmentDate for shipment date
+        voucherDateToUse = transaction.createdAt;
+        shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+      }
+      
       let formattedVoucherDate: string;
       try {
         formattedVoucherDate = format(parseISO(voucherDateToUse), "dd-MM-yyyy");
@@ -457,13 +492,11 @@ export default function VendorTransactionsPage() {
         formattedVoucherDate = new Date(voucherDateToUse).toLocaleDateString('en-GB');
       }
       
-      // Shipment date (shipmentDate or createdAt)
-      const dateToUse = transaction.shipmentDate || transaction.createdAt;
       let formattedDate: string;
       try {
-        formattedDate = format(parseISO(dateToUse), "dd-MM-yyyy");
+        formattedDate = format(parseISO(shipmentDateToUse), "dd-MM-yyyy");
       } catch (e) {
-        formattedDate = new Date(dateToUse).toLocaleDateString('en-GB');
+        formattedDate = new Date(shipmentDateToUse).toLocaleDateString('en-GB');
       }
       
       return [
@@ -982,12 +1015,33 @@ export default function VendorTransactionsPage() {
                   </tr>
                 </thead>
                 <tbody className="text-sm text-gray-700 dark:text-gray-200">
-                  {sortedTransactions.map((transaction) => (
+                  {sortedTransactions.map((transaction) => {
+                    // Determine voucher date and shipment date based on transaction type
+                    let voucherDateToUse: string;
+                    let shipmentDateToUse: string;
+                    
+                    // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
+                    const isShipmentTransaction = transaction.type === "DEBIT" && transaction.invoice;
+                    const isPaymentTransaction = transaction.type === "CREDIT" && transaction.invoice;
+                    
+                    if (isShipmentTransaction) {
+                      // For shipment transactions: voucher date = shipment date (both use shipmentDate)
+                      voucherDateToUse = transaction.shipmentDate || transaction.createdAt;
+                      shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+                    } else if (isPaymentTransaction) {
+                      // For payment transactions: voucher date = payment date (createdAt), shipment date = original shipment date
+                      voucherDateToUse = transaction.createdAt;
+                      shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+                    } else {
+                      // For other transactions: use createdAt for voucher date, shipmentDate for shipment date
+                      voucherDateToUse = transaction.createdAt;
+                      shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+                    }
+                    
+                    return (
                     <tr key={transaction.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-3">
                         {(() => {
-                          // Voucher date (createdAt - when transaction was created)
-                          const voucherDateToUse = transaction.createdAt;
                           try {
                             return format(parseISO(voucherDateToUse), "dd-MM-yyyy");
                           } catch (e) {
@@ -997,12 +1051,10 @@ export default function VendorTransactionsPage() {
                       </td>
                       <td className="px-4 py-3">
                         {(() => {
-                          // Shipment date (shipmentDate or createdAt)
-                          const dateToUse = transaction.shipmentDate || transaction.createdAt;
                           try {
-                            return format(parseISO(dateToUse), "dd-MM-yyyy");
+                            return format(parseISO(shipmentDateToUse), "dd-MM-yyyy");
                           } catch (e) {
-                            return new Date(dateToUse).toLocaleDateString('en-GB');
+                            return new Date(shipmentDateToUse).toLocaleDateString('en-GB');
                           }
                         })()}
                       </td>
@@ -1037,7 +1089,8 @@ export default function VendorTransactionsPage() {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

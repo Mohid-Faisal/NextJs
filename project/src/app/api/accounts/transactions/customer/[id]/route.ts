@@ -100,11 +100,12 @@ export async function GET(
       }
     });
 
-    // Fetch shipment information for transactions that have invoice references
+    // Fetch shipment information and payment date for transactions that have invoice references
     const transactionsWithShipmentInfo = await Promise.all(
       transactions.map(async (transaction) => {
         let shipmentInfo = null;
         let shipmentDate: string | undefined = undefined;
+        let paymentDate: string | undefined = undefined;
         
         if (transaction.invoice) {
           // Find the invoice and get shipment info
@@ -139,12 +140,34 @@ export async function GET(
               shipmentDate = invoice.shipment.shipmentDate.toISOString();
             }
           }
+          
+          // For payment transactions (CREDIT), fetch payment date from Payment table
+          if (transaction.type === "CREDIT") {
+            const payment = await prisma.payment.findFirst({
+              where: {
+                invoice: transaction.invoice,
+                fromCustomerId: customerId,
+                transactionType: "INCOME"
+              },
+              orderBy: {
+                date: 'desc' // Get the most recent payment for this invoice
+              },
+              select: {
+                date: true
+              }
+            });
+            
+            if (payment?.date) {
+              paymentDate = payment.date.toISOString();
+            }
+          }
         }
         
         return {
           ...transaction,
           shipmentInfo,
-          shipmentDate
+          shipmentDate,
+          paymentDate
         };
       })
     );
