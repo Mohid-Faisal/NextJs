@@ -446,8 +446,8 @@ export async function GET() {
       .sort((a, b) => b.shipments - a.shipments)
       .slice(0, 8);
     
-    // Get top customers by shipment count and revenue
-    const topCustomers = await prisma.customers.findMany({
+    // Get all customers with their invoices to calculate shipment counts
+    const allCustomers = await prisma.customers.findMany({
       select: {
         CompanyName: true,
         currentBalance: true,
@@ -459,11 +459,11 @@ export async function GET() {
             totalAmount: true
           }
         }
-      },
-      take: 10
+      }
     });
     
-    const transformedTopCustomers = topCustomers.map(customer => {
+    // Calculate metrics for each customer and sort by shipment count
+    const customersWithMetrics = allCustomers.map(customer => {
       const totalSpent = customer.invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
       const shipments = customer.invoices.length;
       const avgOrderValue = shipments > 0 ? totalSpent / shipments : 0;
@@ -476,6 +476,11 @@ export async function GET() {
         currentBalance: customer.currentBalance || 0
       };
     });
+    
+    // Sort by shipment count (descending) and take top 10
+    const transformedTopCustomers = customersWithMetrics
+      .sort((a, b) => b.shipments - a.shipments)
+      .slice(0, 10);
     
     // Calculate performance metrics
     const totalDelivered = await prisma.shipment.count({

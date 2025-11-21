@@ -455,26 +455,30 @@ const DashboardPage = () => {
               <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
             </div>
             {data.topDestinations && data.topDestinations.length > 0 && data.topDestinations[0].destination !== "No Data" && data.topDestinations.some(d => d.shipments > 0) ? (
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
                 <BarChart 
-                  data={data.topDestinations.filter(d => d.shipments > 0)} 
-                  layout="horizontal"
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  data={data.topDestinations
+                    .filter(d => d.shipments > 0)
+                    .sort((a, b) => b.shipments - a.shipments)
+                    .slice(0, 10)
+                  } 
+                  margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                   <XAxis 
-                    type="number" 
+                    dataKey="destination" 
+                    stroke="#6B7280" 
+                    fontSize={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={40}
+                    tick={{ fill: '#6B7280', fontSize: 10 }}
+                    interval={0}
+                  />
+                  <YAxis 
                     stroke="#6B7280" 
                     fontSize={12}
                     tickFormatter={(value) => value.toString()}
-                  />
-                  <YAxis 
-                    dataKey="destination" 
-                    type="category" 
-                    stroke="#6B7280" 
-                    fontSize={11}
-                    width={120}
-                    tick={{ fill: '#6B7280' }}
                   />
                   <Tooltip 
                     contentStyle={{ 
@@ -484,13 +488,13 @@ const DashboardPage = () => {
                       color: '#F9FAFB',
                       fontSize: '12px'
                     }}
-                    formatter={(value: any) => [value, 'Shipments']}
+                    formatter={(value: any) => [`${value} shipments`, 'Shipments']}
                     labelFormatter={(label) => `Destination: ${label}`}
                   />
                   <Bar 
                     dataKey="shipments" 
                     fill="#8B5CF6" 
-                    radius={[0, 4, 4, 0]}
+                    radius={[4, 4, 0, 0]}
                     name="Shipments"
                   />
                 </BarChart>
@@ -515,18 +519,42 @@ const DashboardPage = () => {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
           >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="flex items-center justify-between sm:mb-6">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
                 Revenue by Destination
               </h3>
               <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
-            {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" ? (
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-                <BarChart data={data.revenueByDestination} layout="horizontal">
+            {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && data.revenueByDestination.some(d => d.revenue > 0) ? (
+              <ResponsiveContainer width="100%" height={350} className="sm:h-[400px]">
+                <BarChart 
+                  data={data.revenueByDestination
+                    .filter(d => d.revenue > 0)
+                    .sort((a, b) => b.revenue - a.revenue)
+                    .slice(0, 10)
+                  } 
+                  margin={{ top: 10, right: 30, left: 5, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                  <XAxis type="number" stroke="#6B7280" fontSize={12} />
-                  <YAxis dataKey="destination" type="category" stroke="#6B7280" fontSize={12} />
+                  <XAxis 
+                    dataKey="destination" 
+                    stroke="#6B7280" 
+                    fontSize={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={45}
+                    tick={{ fill: '#6B7280', fontSize: 10 }}
+                    interval={0}
+                  />
+                  <YAxis 
+                    stroke="#6B7280" 
+                    fontSize={12}
+                    tickFormatter={(value) => {
+                      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                      if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+                      return value.toString();
+                    }}
+                  />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: '#1F2937', 
@@ -535,12 +563,20 @@ const DashboardPage = () => {
                       color: '#F9FAFB',
                       fontSize: '12px'
                     }}
-                    formatter={(value, name) => [
-                      name === 'revenue' ? `PKR ${value.toLocaleString()}` : value,
-                      name === 'revenue' ? 'Revenue' : 'Shipments'
-                    ]}
+                    formatter={(value: any, name: string, props: any) => {
+                      if (name === 'revenue') {
+                        return [`PKR ${value.toLocaleString()}`, 'Revenue'];
+                      }
+                      return [value, 'Shipments'];
+                    }}
+                    labelFormatter={(label) => `Destination: ${label}`}
                   />
-                  <Bar dataKey="revenue" fill="#10B981" radius={[0, 4, 4, 0]} />
+                  <Bar 
+                    dataKey="revenue" 
+                    fill="#10B981" 
+                    radius={[4, 4, 0, 0]}
+                    name="Revenue"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -571,26 +607,30 @@ const DashboardPage = () => {
               <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
             </div>
             {data.customerDestinationMap && data.customerDestinationMap.length > 0 && data.customerDestinationMap[0].customer !== "No Data" && data.customerDestinationMap.some(d => d.shipments > 0) ? (
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
                 <BarChart 
-                  data={data.customerDestinationMap.filter(d => d.shipments > 0).slice(0, 10)} 
-                  layout="horizontal"
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  data={data.customerDestinationMap
+                    .filter(d => d.shipments > 0)
+                    .sort((a, b) => b.shipments - a.shipments)
+                    .slice(0, 10)
+                  } 
+                  margin={{ top: 5, right: 10, left: 0, bottom: 15 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                   <XAxis 
-                    type="number" 
+                    dataKey="customer" 
+                    stroke="#6B7280" 
+                    fontSize={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={50}
+                    tick={{ fill: '#6B7280', fontSize: 10 }}
+                    interval={0}
+                  />
+                  <YAxis 
                     stroke="#6B7280" 
                     fontSize={12}
                     tickFormatter={(value) => value.toString()}
-                  />
-                  <YAxis 
-                    dataKey="customer" 
-                    type="category" 
-                    stroke="#6B7280" 
-                    width={120}
-                    fontSize={11}
-                    tick={{ fill: '#6B7280' }}
                   />
                   <Tooltip 
                     contentStyle={{ 
@@ -609,7 +649,7 @@ const DashboardPage = () => {
                   <Bar 
                     dataKey="shipments" 
                     fill="#8B5CF6" 
-                    radius={[0, 4, 4, 0]}
+                    radius={[4, 4, 0, 0]}
                     name="Shipments"
                   />
                 </BarChart>
