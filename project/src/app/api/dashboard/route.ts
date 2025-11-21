@@ -350,38 +350,58 @@ export async function GET() {
       });
     }
     
-    // Get top destinations with revenue - fix to properly calculate revenue
-    const topDestinations = await prisma.shipment.groupBy({
+    // Get top destinations with revenue - filter out null/empty destinations
+    const allDestinations = await prisma.shipment.groupBy({
       by: ['destination'],
       _count: {
         id: true
-      },
-      orderBy: {
-        _count: {
-          id: 'desc'
-        }
-      },
-      take: 5
+      }
     });
     
-    // Calculate revenue for each destination
+    // Filter out null/empty destinations and sort by count
+    const topDestinations = allDestinations
+      .filter(dest => dest.destination && dest.destination.trim() !== "")
+      .sort((a, b) => b._count.id - a._count.id)
+      .slice(0, 5);
+    
+    // Calculate revenue for each destination using shipment-invoice relationship
     const topDestinationsWithRevenue = await Promise.all(
       topDestinations.map(async (dest) => {
-        const destinationRevenue = await prisma.invoice.aggregate({
+        // Get revenue from invoices linked to shipments with this destination via shipmentId
+        const shipmentsWithDestination = await prisma.shipment.findMany({
           where: {
-            destination: dest.destination,
-            customerId: { not: null },
-            status: { not: "Cancelled" }
+            destination: dest.destination
           },
-          _sum: {
-            totalAmount: true
+          select: {
+            id: true,
+            invoiceNumber: true
           }
         });
+        
+        // Get invoices for these shipments using shipmentId relationship
+        const shipmentIds = shipmentsWithDestination.map(s => s.id);
+        
+        let destinationRevenue = 0;
+        if (shipmentIds.length > 0) {
+          const revenueResult = await prisma.invoice.aggregate({
+            where: {
+              shipmentId: {
+                in: shipmentIds
+              },
+              customerId: { not: null },
+              status: { not: "Cancelled" }
+            },
+            _sum: {
+              totalAmount: true
+            }
+          });
+          destinationRevenue = revenueResult._sum.totalAmount || 0;
+        }
         
         return {
           destination: dest.destination,
           shipments: dest._count.id,
-          revenue: destinationRevenue._sum.totalAmount || 0
+          revenue: destinationRevenue
         };
       })
     );

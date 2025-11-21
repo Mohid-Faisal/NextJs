@@ -454,12 +454,28 @@ const DashboardPage = () => {
               </h3>
               <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
             </div>
-            {data.topDestinations && data.topDestinations.length > 0 && data.topDestinations[0].destination !== "No Data" ? (
+            {data.topDestinations && data.topDestinations.length > 0 && data.topDestinations[0].destination !== "No Data" && data.topDestinations.some(d => d.shipments > 0) ? (
               <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-                <BarChart data={data.topDestinations} layout="horizontal">
+                <BarChart 
+                  data={data.topDestinations.filter(d => d.shipments > 0)} 
+                  layout="horizontal"
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                  <XAxis type="number" stroke="#6B7280" fontSize={12} />
-                  <YAxis dataKey="destination" type="category" stroke="#6B7280" fontSize={12} />
+                  <XAxis 
+                    type="number" 
+                    stroke="#6B7280" 
+                    fontSize={12}
+                    tickFormatter={(value) => value.toString()}
+                  />
+                  <YAxis 
+                    dataKey="destination" 
+                    type="category" 
+                    stroke="#6B7280" 
+                    fontSize={11}
+                    width={120}
+                    tick={{ fill: '#6B7280' }}
+                  />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: '#1F2937', 
@@ -468,9 +484,15 @@ const DashboardPage = () => {
                       color: '#F9FAFB',
                       fontSize: '12px'
                     }}
-                    formatter={(value, name) => [value, 'Shipments']}
+                    formatter={(value: any) => [value, 'Shipments']}
+                    labelFormatter={(label) => `Destination: ${label}`}
                   />
-                  <Bar dataKey="shipments" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
+                  <Bar 
+                    dataKey="shipments" 
+                    fill="#8B5CF6" 
+                    radius={[0, 4, 4, 0]}
+                    name="Shipments"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

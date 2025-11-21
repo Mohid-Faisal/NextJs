@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +55,7 @@ type Transaction = {
   previousBalance: number;
   newBalance: number;
   createdAt: string;
+  shipmentDate?: string;
 };
 
 export default function VendorTransactionsPage() {
@@ -103,6 +104,20 @@ export default function VendorTransactionsPage() {
   type SortOrder = "asc" | "desc";
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  
+  // Sort transactions by shipmentDate when sorting by date (client-side sorting)
+  const sortedTransactions = useMemo(() => {
+    if (sortField === "createdAt") {
+      // When sorting by date, use shipmentDate
+      return [...transactions].sort((a, b) => {
+        const dateA = a.shipmentDate ? new Date(a.shipmentDate).getTime() : new Date(a.createdAt).getTime();
+        const dateB = b.shipmentDate ? new Date(b.shipmentDate).getTime() : new Date(b.createdAt).getTime();
+        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      });
+    }
+    // For other fields, use backend sorting (already sorted)
+    return transactions;
+  }, [transactions, sortField, sortOrder]);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -425,30 +440,40 @@ export default function VendorTransactionsPage() {
 
   const getTransactionExportData = (transactions: Transaction[]) => {
     const headers = ["Date", "Type", "Amount", "Description", "Reference", "Invoice", "Balance"];
-    const data = transactions.map(transaction => [
-      format(parseISO(transaction.createdAt), "dd-MM-yyyy"),
-      transaction.type,
-      `PKR ${transaction.amount.toLocaleString()}`,
-      transaction.description,
-      transaction.reference || "N/A",
-      transaction.invoice || "N/A",
-      `PKR ${transaction.newBalance.toLocaleString()}`
-    ]);
+    const data = transactions.map(transaction => {
+      const dateToUse = transaction.shipmentDate || transaction.createdAt;
+      let formattedDate: string;
+      try {
+        formattedDate = format(parseISO(dateToUse), "dd-MM-yyyy");
+      } catch (e) {
+        formattedDate = new Date(dateToUse).toLocaleDateString('en-GB');
+      }
+      
+      return [
+        formattedDate,
+        transaction.type,
+        `PKR ${transaction.amount.toLocaleString()}`,
+        transaction.description,
+        transaction.reference || "N/A",
+        transaction.invoice || "N/A",
+        `PKR ${transaction.newBalance.toLocaleString()}`
+      ];
+    });
     return { headers, data };
   };
 
   const handleExportExcel = () => {
-    const { headers, data } = getTransactionExportData(transactions);
+    const { headers, data } = getTransactionExportData(sortedTransactions);
     exportToExcel(data, headers, 'vendor_transactions');
   };
 
   const handleExportPrint = () => {
-    const { headers, data } = getTransactionExportData(transactions);
+    const { headers, data } = getTransactionExportData(sortedTransactions);
     exportToPrint(data, headers, 'Vendor Transactions Report', total);
   };
 
   const handleExportPDF = () => {
-    const { headers, data } = getTransactionExportData(transactions);
+    const { headers, data } = getTransactionExportData(sortedTransactions);
     exportToPDF(data, headers, 'Vendor Transactions Report', total);
   };
 
@@ -931,10 +956,17 @@ export default function VendorTransactionsPage() {
                   </tr>
                 </thead>
                 <tbody className="text-sm text-gray-700 dark:text-gray-200">
-                  {transactions.map((transaction) => (
+                  {sortedTransactions.map((transaction) => (
                     <tr key={transaction.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-3">
-                        {format(parseISO(transaction.createdAt), "dd-MM-yyyy")}
+                        {(() => {
+                          const dateToUse = transaction.shipmentDate || transaction.createdAt;
+                          try {
+                            return format(parseISO(dateToUse), "dd-MM-yyyy");
+                          } catch (e) {
+                            return new Date(dateToUse).toLocaleDateString('en-GB');
+                          }
+                        })()}
                       </td>
                       <td className="px-4 py-3">{transaction.invoice || "-"}</td>
                       <td className="px-4 py-3">{transaction.description}</td>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,6 +104,20 @@ export default function CustomerTransactionsPage() {
   type SortOrder = "asc" | "desc";
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  
+  // Sort transactions by shipmentDate when sorting by date (client-side sorting)
+  const sortedTransactions = useMemo(() => {
+    if (sortField === "createdAt") {
+      // When sorting by date, use shipmentDate
+      return [...transactions].sort((a, b) => {
+        const dateA = a.shipmentDate ? new Date(a.shipmentDate).getTime() : new Date(a.createdAt).getTime();
+        const dateB = b.shipmentDate ? new Date(b.shipmentDate).getTime() : new Date(b.createdAt).getTime();
+        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      });
+    }
+    // For other fields, use backend sorting (already sorted)
+    return transactions;
+  }, [transactions, sortField, sortOrder]);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -449,17 +463,17 @@ export default function CustomerTransactionsPage() {
   };
 
   const handleExportExcel = () => {
-    const { headers, data } = getTransactionExportData(transactions);
+    const { headers, data } = getTransactionExportData(sortedTransactions);
     exportToExcel(data, headers, 'customer_transactions');
   };
 
   const handleExportPrint = () => {
-    const { headers, data } = getTransactionExportData(transactions);
+    const { headers, data } = getTransactionExportData(sortedTransactions);
     exportToPrint(data, headers, 'Customer Transactions Report', total);
   };
 
   const handleExportPDF = () => {
-    const { headers, data } = getTransactionExportData(transactions);
+    const { headers, data } = getTransactionExportData(sortedTransactions);
     exportToPDF(data, headers, 'Customer Transactions Report', total);
   };
 
@@ -942,7 +956,7 @@ export default function CustomerTransactionsPage() {
                   </tr>
                 </thead>
                 <tbody className="text-sm text-gray-700 dark:text-gray-200">
-                  {transactions.map((transaction) => (
+                  {sortedTransactions.map((transaction) => (
                     <tr key={transaction.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-3">
                         {(() => {
