@@ -100,14 +100,21 @@ export default function VendorTransactionsPage() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Sorting states
-  type SortField = "createdAt" | "amount" | "type" | "description" | "reference";
+  type SortField = "voucherDate" | "createdAt" | "amount" | "type" | "description" | "reference";
   type SortOrder = "asc" | "desc";
-  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortField, setSortField] = useState<SortField>("voucherDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   
-  // Sort transactions by shipmentDate when sorting by date (client-side sorting)
+  // Sort transactions by voucherDate (createdAt) by default, or shipmentDate when sorting by date
   const sortedTransactions = useMemo(() => {
-    if (sortField === "createdAt") {
+    if (sortField === "voucherDate") {
+      // Sort by voucher date (createdAt - when transaction was created)
+      return [...transactions].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      });
+    } else if (sortField === "createdAt") {
       // When sorting by date, use shipmentDate
       return [...transactions].sort((a, b) => {
         const dateA = a.shipmentDate ? new Date(a.shipmentDate).getTime() : new Date(a.createdAt).getTime();
@@ -358,7 +365,7 @@ export default function VendorTransactionsPage() {
           flexDirection: 'row',
         },
         tableColHeader: {
-          width: '16.66%',
+          width: '12.5%',
           borderStyle: 'solid',
           borderWidth: 1,
           borderLeftWidth: 0,
@@ -367,7 +374,7 @@ export default function VendorTransactionsPage() {
           backgroundColor: '#4285f4',
         },
         tableCol: {
-          width: '16.66%',
+          width: '12.5%',
           borderStyle: 'solid',
           borderWidth: 1,
           borderLeftWidth: 0,
@@ -439,8 +446,18 @@ export default function VendorTransactionsPage() {
   };
 
   const getTransactionExportData = (transactions: Transaction[]) => {
-    const headers = ["Date", "Type", "Amount", "Description", "Reference", "Invoice", "Balance"];
+    const headers = ["Voucher Date", "Date", "Type", "Amount", "Description", "Reference", "Invoice", "Balance"];
     const data = transactions.map(transaction => {
+      // Voucher date (createdAt)
+      const voucherDateToUse = transaction.createdAt;
+      let formattedVoucherDate: string;
+      try {
+        formattedVoucherDate = format(parseISO(voucherDateToUse), "dd-MM-yyyy");
+      } catch (e) {
+        formattedVoucherDate = new Date(voucherDateToUse).toLocaleDateString('en-GB');
+      }
+      
+      // Shipment date (shipmentDate or createdAt)
       const dateToUse = transaction.shipmentDate || transaction.createdAt;
       let formattedDate: string;
       try {
@@ -450,6 +467,7 @@ export default function VendorTransactionsPage() {
       }
       
       return [
+        formattedVoucherDate,
         formattedDate,
         transaction.type,
         `PKR ${transaction.amount.toLocaleString()}`,
@@ -913,10 +931,18 @@ export default function VendorTransactionsPage() {
                   <tr className="text-sm text-gray-500 dark:text-gray-300 border-b">
                     <th className="px-4 py-2 text-left">
                       <button
+                        onClick={() => handleSort("voucherDate")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        Voucher Date {getSortIcon("voucherDate")}
+                      </button>
+                    </th>
+                    <th className="px-4 py-2 text-left">
+                      <button
                         onClick={() => handleSort("createdAt")}
                         className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                       >
-                        Date {getSortIcon("createdAt")}
+                        Shipment Date {getSortIcon("createdAt")}
                       </button>
                     </th>
                     <th className="px-4 py-2 text-left">Invoice</th>
@@ -960,6 +986,18 @@ export default function VendorTransactionsPage() {
                     <tr key={transaction.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-3">
                         {(() => {
+                          // Voucher date (createdAt - when transaction was created)
+                          const voucherDateToUse = transaction.createdAt;
+                          try {
+                            return format(parseISO(voucherDateToUse), "dd-MM-yyyy");
+                          } catch (e) {
+                            return new Date(voucherDateToUse).toLocaleDateString('en-GB');
+                          }
+                        })()}
+                      </td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          // Shipment date (shipmentDate or createdAt)
                           const dateToUse = transaction.shipmentDate || transaction.createdAt;
                           try {
                             return format(parseISO(dateToUse), "dd-MM-yyyy");

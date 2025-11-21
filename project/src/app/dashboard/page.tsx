@@ -570,12 +570,28 @@ const DashboardPage = () => {
               </h3>
               <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
             </div>
-            {data.customerDestinationMap && data.customerDestinationMap.length > 0 && data.customerDestinationMap[0].customer !== "No Data" ? (
+            {data.customerDestinationMap && data.customerDestinationMap.length > 0 && data.customerDestinationMap[0].customer !== "No Data" && data.customerDestinationMap.some(d => d.shipments > 0) ? (
               <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-                <BarChart data={data.customerDestinationMap} layout="horizontal">
+                <BarChart 
+                  data={data.customerDestinationMap.filter(d => d.shipments > 0).slice(0, 10)} 
+                  layout="horizontal"
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                  <XAxis type="number" stroke="#6B7280" fontSize={12} />
-                  <YAxis dataKey="customer" type="category" stroke="#6B7280" width={80} fontSize={12} />
+                  <XAxis 
+                    type="number" 
+                    stroke="#6B7280" 
+                    fontSize={12}
+                    tickFormatter={(value) => value.toString()}
+                  />
+                  <YAxis 
+                    dataKey="customer" 
+                    type="category" 
+                    stroke="#6B7280" 
+                    width={120}
+                    fontSize={11}
+                    tick={{ fill: '#6B7280' }}
+                  />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: '#1F2937', 
@@ -584,10 +600,18 @@ const DashboardPage = () => {
                       color: '#F9FAFB',
                       fontSize: '12px'
                     }}
-                    formatter={(value, name) => [value, 'Shipments']}
+                    formatter={(value: any, name: string, props: any) => [
+                      `${value} shipments`,
+                      `Destination: ${props.payload.destination || 'N/A'}`
+                    ]}
                     labelFormatter={(label) => `Customer: ${label}`}
                   />
-                  <Bar dataKey="shipments" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
+                  <Bar 
+                    dataKey="shipments" 
+                    fill="#8B5CF6" 
+                    radius={[0, 4, 4, 0]}
+                    name="Shipments"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -618,7 +642,7 @@ const DashboardPage = () => {
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
             <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <BarChart data={data.topCustomers}>
+              <BarChart data={data.topCustomers.slice(0, 10)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                 <XAxis dataKey="customer" stroke="#6B7280" angle={-45} textAnchor="end" height={60} fontSize={12} />
                 <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
