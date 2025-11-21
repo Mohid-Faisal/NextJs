@@ -759,7 +759,7 @@ const DashboardPage = () => {
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Booking#</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Sender</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Receiver</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Destination</th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Country</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Type</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Pcs</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Weight</th>

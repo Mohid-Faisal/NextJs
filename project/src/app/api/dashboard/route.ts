@@ -178,23 +178,49 @@ export async function GET() {
       }
     });
     
+    // Get invoice statuses for all shipments
+    const invoiceNumbers = recentShipments.map(s => s.invoiceNumber).filter(Boolean);
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        invoiceNumber: {
+          in: invoiceNumbers
+        }
+      },
+      select: {
+        invoiceNumber: true,
+        status: true
+      }
+    });
+    
+    // Create a map of invoiceNumber -> status for quick lookup
+    const invoiceStatusMap = new Map(
+      invoices.map(inv => [inv.invoiceNumber, inv.status])
+    );
+    
     // Transform recent shipments to match expected format
-    const transformedRecentShipments = recentShipments.map(shipment => ({
-      id: shipment.id,
-      trackingId: shipment.trackingId,
-      invoiceNumber: shipment.invoiceNumber,
-      senderName: shipment.senderName,
-      recipientName: shipment.recipientName,
-      destination: shipment.destination,
-      totalCost: shipment.totalCost,
-      status: shipment.deliveryStatus || "Pending",
-      invoiceStatus: shipment.invoiceStatus || "Pending",
-      packaging: shipment.packaging || "N/A",
-      amount: shipment.amount || 1,
-      totalWeight: shipment.totalWeight || shipment.weight || 0,
-      shipmentDate: shipment.shipmentDate || shipment.createdAt,
-      createdAt: shipment.createdAt.toISOString()
-    }));
+    const transformedRecentShipments = recentShipments.map(shipment => {
+      // Get invoice status from Invoice table, fallback to shipment's invoiceStatus, then "Pending"
+      const invoiceStatus = invoiceStatusMap.get(shipment.invoiceNumber) 
+        || shipment.invoiceStatus 
+        || "Pending";
+      
+      return {
+        id: shipment.id,
+        trackingId: shipment.trackingId,
+        invoiceNumber: shipment.invoiceNumber,
+        senderName: shipment.senderName,
+        recipientName: shipment.recipientName,
+        destination: shipment.destination,
+        totalCost: shipment.totalCost,
+        status: shipment.deliveryStatus || "Pending",
+        invoiceStatus: invoiceStatus,
+        packaging: shipment.packaging || "N/A",
+        amount: shipment.amount || 1,
+        totalWeight: shipment.totalWeight || shipment.weight || 0,
+        shipmentDate: shipment.shipmentDate || shipment.createdAt,
+        createdAt: shipment.createdAt.toISOString()
+      };
+    });
     
     // Get recent payments from the main Payment table
     const recentPayments = await prisma.payment.findMany({
