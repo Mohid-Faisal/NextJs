@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Save, ArrowLeft, Plus, Trash2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
+import { Country } from 'country-state-city';
 
 interface InvoiceData {
   id: number;
@@ -209,6 +210,11 @@ export default function EditInvoicePage() {
         if (data.disclaimer) {
           setDisclaimer(data.disclaimer);
         }
+
+        // Set note if available
+        if (data.note) {
+          setNote(data.note);
+        }
       } else {
         console.error('Failed to fetch invoice data');
       }
@@ -248,6 +254,7 @@ export default function EditInvoicePage() {
         discount: discount,
         lineItems: lineItems,
         disclaimer: disclaimer,
+        note: note,
         shipment: {
           id: parseInt(shipmentId as string),
           trackingId: invoiceData.shipment?.trackingId || '',
@@ -394,6 +401,16 @@ export default function EditInvoicePage() {
 
   const isVendor = !!invoiceData.vendor;
 
+  // Helper function to get full country name from code
+  const getCountryName = (countryCode: string | undefined): string => {
+    if (!countryCode) return '';
+    // If it's already a full name (more than 2 characters), return as is
+    if (countryCode.length > 2) return countryCode;
+    // Try to get full country name from code
+    const country = Country.getCountryByCode(countryCode);
+    return country ? country.name : countryCode;
+  };
+
   return (
     <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
       <div className="mb-4 sm:mb-6">
@@ -413,331 +430,392 @@ export default function EditInvoicePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-5 p-4 sm:p-6">
-            {/* General Invoice Details Section */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-              <div className="col-span-1">
-                <Label htmlFor="date" className="font-bold text-sm">
-                  Date
-                </Label>
-                <Input
-                  id="date"
-                  type="text"
-                  value={invoiceData.shipment?.shipmentDate 
-                    ? new Date(invoiceData.shipment.shipmentDate).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "2-digit",
-                      })
-                    : invoiceData.invoiceDate
-                    ? new Date(invoiceData.invoiceDate).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "2-digit",
-                      })
-                    : invoiceData.createdAt
-                    ? new Date(invoiceData.createdAt).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "2-digit",
-                      })
-                    : ''}
-                  readOnly
-                  className="mt-1 text-sm bg-gray-50"
-                />
-              </div>
-              <div className="col-span-1">
-                <Label htmlFor="receiptNumber" className="font-bold text-sm">
-                  Receipt #
-                </Label>
-                <Input
-                  id="receiptNumber"
-                  value={invoiceData.invoiceNumber || ''}
-                  onChange={(e) => setInvoiceData({
-                    ...invoiceData,
-                    shipment: {...invoiceData.shipment!, trackingId: e.target.value}
-                  })}
-                  readOnly
-                  className="mt-1 text-sm bg-gray-50"
-                />
-              </div>
-              <div className="col-span-1">
-                <Label htmlFor="trackingNumber" className="font-bold text-sm">
-                  Tracking #
-                </Label>
-                <Input
-                  id="trackingNumber"
-                  value={invoiceData.shipment?.trackingId || ''}
-                  onChange={(e) => setInvoiceData({
-                    ...invoiceData,
-                    shipment: {...invoiceData.shipment!, trackingId: e.target.value}
-                  })}
-                  readOnly
-                  className="mt-1 text-sm bg-gray-50"
-                />
-              </div>
-              <div className="col-span-1">
-                <Label htmlFor="referenceNumber" className="font-bold text-sm">
-                  Reference #
-                </Label>
-                <Input
-                  id="referenceNumber"
-                  value={invoiceData.referenceNumber || ''}
-                  onChange={(e) => setInvoiceData({...invoiceData, referenceNumber: e.target.value})}
-                  className="mt-1 text-sm"
-                />
-              </div>
-              <div className="col-span-1">
-                <Label htmlFor="destination" className="font-bold text-sm">
-                  Dest
-                </Label>
-                <Input
-                  id="destination"
-                  value={invoiceData.shipment?.destination || ''}
-                  onChange={(e) => setInvoiceData({
-                    ...invoiceData,
-                    shipment: {...invoiceData.shipment!, destination: e.target.value}
-                  })}
-                  readOnly
-                  className="mt-1 text-sm bg-gray-50"
-                />
-              </div>
-              <div className="col-span-1">
-                <Label htmlFor="dayWeek" className="font-bold text-sm">
-                  D/W
-                </Label>
-                <Input
-                  id="dayWeek"
-                  value={invoiceData.shipment?.dayWeek ? 'D' : 'W'}
-                  onChange={(e) => setInvoiceData({
-                    ...invoiceData,
-                    shipment: {...invoiceData.shipment!, dayWeek: e.target.value === 'D'}
-                  })}
-                  readOnly
-                  className="mt-1 text-sm bg-gray-50"
-                />
-              </div>
-              <div className="col-span-1">
-                <Label htmlFor="pieces" className="font-bold text-sm">
-                  Pcs
-                </Label>
-                <Input
-                  id="pieces"
-                  type="number"
-                  step="1"
-                  value={packages.reduce((sum, pkg) => sum + (pkg.amount || 1), 0)}
-                  readOnly
-                  className="mt-1 bg-gray-50 text-sm"
-                />
-              </div>
-              <div className="col-span-1">
-                <Label htmlFor="weight" className="font-bold text-sm">
-                  Wght
-                </Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  step="0.01"
-                  value={packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0)}
-                  onChange={(e) => {
-                    // Update first package weight proportionally
-                    const totalWeight = parseFloat(e.target.value) || 0;
-                    const currentTotal = packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0);
-                    if (packages.length > 0 && currentTotal > 0) {
-                      const ratio = totalWeight / currentTotal;
-                      const updatedPackages = packages.map(pkg => ({
-                        ...pkg,
-                        weight: (pkg.weight || 0) * ratio
-                      }));
-                      setPackages(updatedPackages);
-                    } else if (packages.length > 0) {
-                      updatePackage(0, 'weight', totalWeight);
-                    }
-                  }}
-                  readOnly
-                  className="mt-1 text-sm bg-gray-50"
-                />
-              </div>
-            </div>
-
-            {/* Profile and Invoice Specifics Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="profile" className="font-bold text-sm">
-                  Profile
-                </Label>
-                <Input
-                  id="profile"
-                  value={isVendor ? 'Vendor' : 'Customer'}
-                  readOnly
-                  className="mt-1 bg-gray-50 text-sm"
-                />
-              </div>
-              <div>
-                <Label htmlFor="invoiceNumber" className="font-bold text-sm">
-                  Invoice #
-                </Label>
-                <Input
-                  id="invoiceNumber"
-                  value={invoiceData.invoiceNumber}
-                  readOnly
-                  className="mt-1 text-sm bg-gray-50"
-                />
-              </div>
-              <div>
-                <Label htmlFor="invoiceDate" className="font-bold text-sm">
-                  Invoice Date
-                </Label>
-                <Input
-                  id="invoiceDate"
-                  type="date"
-                  value={new Date(invoiceData.createdAt).toISOString().split('T')[0]}
-                  onChange={(e) => setInvoiceData({...invoiceData, createdAt: e.target.value})}
-                  className="mt-1 text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Invoice Line Items Section */}
-            <div className="space-y-3">
-              <div className="mb-3">
-                <h3 className="text-base font-semibold text-gray-800 dark:text-white">
-                  Invoice Line Items
-                </h3>
-              </div>
-
-              {/* Headers */}
-              <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
-                <div className="w-10">
-                  <Button
-                    type="button"
-                    onClick={addLineItem}
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white w-10 h-10 p-0"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
+            {/* General Invoice Details Section - Matching PHP layout */}
+            <div className="grid grid-cols-36 gap-2">
+              <div className="col-span-6">
+                <div className="form-group">
+                  <Label htmlFor="date" className="font-bold text-sm">
+                    Shipment Date
+                  </Label>
+                  <Input
+                    id="date"
+                    type="text"
+                    value={invoiceData.shipment?.shipmentDate 
+                      ? new Date(invoiceData.shipment.shipmentDate).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "2-digit",
+                        })
+                      : invoiceData.invoiceDate
+                      ? new Date(invoiceData.invoiceDate).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "2-digit",
+                        })
+                      : invoiceData.createdAt
+                      ? new Date(invoiceData.createdAt).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "2-digit",
+                        })
+                      : ''}
+                    readOnly
+                    className="mt-1 text-sm bg-gray-50 w-full"
+                  />
                 </div>
-                <Label className="font-bold text-sm">Description</Label>
-                <Label className="font-bold text-sm">Value</Label>
               </div>
+              <div className="col-span-6">
+                <div className="form-group">
+                  <Label htmlFor="receiptNumber" className="font-bold text-sm">
+                    Receipt #
+                  </Label>
+                  <Input
+                    id="receiptNumber"
+                    value={invoiceData.invoiceNumber || ''}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      shipment: {...invoiceData.shipment!, trackingId: e.target.value}
+                    })}
+                    readOnly
+                    className="mt-1 text-sm bg-gray-50 w-full"
+                  />
+                </div>
+              </div>
+              <div className="col-span-6">
+                <div className="form-group">
+                  <Label htmlFor="trackingNumber" className="font-bold text-sm">
+                    Tracking #
+                  </Label>
+                  <Input
+                    id="trackingNumber"
+                    value={invoiceData.shipment?.trackingId || ''}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      shipment: {...invoiceData.shipment!, trackingId: e.target.value}
+                    })}
+                    readOnly
+                    className="mt-1 text-sm bg-gray-50 w-full"
+                  />
+                </div>
+              </div>
+              <div className="col-span-6">
+                <div className="form-group">
+                  <Label htmlFor="referenceNumber" className="font-bold text-sm">
+                    Reference #
+                  </Label>
+                  <Input
+                    id="referenceNumber"
+                    value={invoiceData.referenceNumber || ''}
+                    onChange={(e) => setInvoiceData({...invoiceData, referenceNumber: e.target.value})}
+                    className="mt-1 text-sm w-full"
+                  />
+                </div>
+              </div>
+              <div className="col-span-6">
+                <div className="form-group">
+                  <Label htmlFor="destination" className="font-bold text-sm">
+                    Country
+                  </Label>
+                  <Input
+                    id="destination"
+                    value={getCountryName(invoiceData.shipment?.destination)}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      shipment: {...invoiceData.shipment!, destination: e.target.value}
+                    })}
+                    readOnly
+                    className="mt-1 text-sm bg-gray-50 w-full"
+                  />
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="form-group">
+                  <Label htmlFor="dayWeek" className="font-bold text-sm">
+                    Type
+                  </Label>
+                  <Input
+                    id="dayWeek"
+                    value={invoiceData.shipment?.dayWeek ? 'D' : 'W'}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      shipment: {...invoiceData.shipment!, dayWeek: e.target.value === 'D'}
+                    })}
+                    readOnly
+                    className="mt-1 text-sm bg-gray-50 w-full"
+                  />
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="form-group">
+                  <Label htmlFor="pieces" className="font-bold text-sm">
+                    Pcs
+                  </Label>
+                  <Input
+                    id="pieces"
+                    type="number"
+                    step="1"
+                    value={packages.reduce((sum, pkg) => sum + (pkg.amount || 1), 0)}
+                    readOnly
+                    className="mt-1 bg-gray-50 text-sm w-full"
+                  />
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="form-group">
+                  <Label htmlFor="weight" className="font-bold text-sm">
+                    Wght
+                  </Label>
+                  <Input
+                    id="weight"
+                    type="number"
+                    step="0.01"
+                    value={packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0)}
+                    onChange={(e) => {
+                      // Update first package weight proportionally
+                      const totalWeight = parseFloat(e.target.value) || 0;
+                      const currentTotal = packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0);
+                      if (packages.length > 0 && currentTotal > 0) {
+                        const ratio = totalWeight / currentTotal;
+                        const updatedPackages = packages.map(pkg => ({
+                          ...pkg,
+                          weight: (pkg.weight || 0) * ratio
+                        }));
+                        setPackages(updatedPackages);
+                      } else if (packages.length > 0) {
+                        updatePackage(0, 'weight', totalWeight);
+                      }
+                    }}
+                    readOnly
+                    className="mt-1 text-sm bg-gray-50 w-full"
+                  />
+                </div>
+              </div>
+            </div>
 
+            <br />
+            <hr />
+            <br />
+
+            {/* Profile and Invoice Specifics Section - Matching PHP layout */}
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-6">
+                <div className="form-group">
+                  <Label htmlFor="profile" className="font-bold text-sm">
+                    Profile
+                  </Label>
+                  <Input
+                    id="profile"
+                    value={isVendor ? 'Vendor' : 'Customer'}
+                    readOnly
+                    className="mt-1 bg-gray-50 text-sm w-full"
+                  />
+                </div>
+              </div>
+              <div className="col-span-3">
+                <div className="form-group">
+                  <Label htmlFor="invoiceNumber" className="font-bold text-sm">
+                    Invoice #
+                  </Label>
+                  <Input
+                    id="invoiceNumber"
+                    value={invoiceData.invoiceNumber}
+                    readOnly
+                    className="mt-1 text-sm bg-gray-50 w-full"
+                  />
+                </div>
+              </div>
+              <div className="col-span-3">
+                <div className="form-group">
+                  <Label htmlFor="invoiceDate" className="font-bold text-sm">
+                    Invoice Date
+                  </Label>
+                  <Input
+                    id="invoiceDate"
+                    type="date"
+                    value={invoiceData.invoiceDate 
+                      ? new Date(invoiceData.invoiceDate).toISOString().split('T')[0]
+                      : new Date(invoiceData.createdAt).toISOString().split('T')[0]}
+                    onChange={(e) => setInvoiceData({...invoiceData, invoiceDate: e.target.value})}
+                    className="mt-1 text-sm w-full"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Invoice Line Items Section - Matching PHP layout */}
+            <div className="space-y-3">
+              {/* Header Row */}
+              <div className="grid grid-cols-12 gap-2">
+                <div className="col-span-1"></div>
+                <div className="col-span-8">
+                  <Label className="font-bold text-sm mb-1 block">Description</Label>
+                </div>
+                <div className="col-span-3">
+                  <Label className="font-bold text-sm mb-1 block">Value</Label>
+                </div>
+              </div>
+              
+              {/* Line Items */}
               {lineItems.map((item, index) => (
-                <div key={index} className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
-                  {/* Action Buttons Column */}
-                  <div className="w-10">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeLineItem(index)}
-                      className="bg-red-500 hover:bg-red-600 text-white border-red-500 w-10 h-10 p-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                  {/* Action Buttons Column - col-1 */}
+                  <div className="col-span-1 flex items-center">
+                    {index === 0 ? (
+                      <Button
+                        type="button"
+                        onClick={addLineItem}
+                        size="sm"
+                        className="bg-blue-500 hover:bg-blue-600 text-white w-full h-10 p-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeLineItem(index)}
+                        className="bg-red-500 hover:bg-red-600 text-white border-red-500 w-full h-10 p-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                   
-                  {/* Description Field */}
-                  <div>
+                  {/* Description Field - col-8 */}
+                  <div className="col-span-8">
                     <Input
                       id={`description-${index}`}
                       value={item.description || ''}
                       onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                      className="text-sm"
+                      className="text-sm w-full h-10"
                       placeholder="Enter your description here."
                     />
                   </div>
                   
-                  {/* Value Field */}
-                  <div style={{ width: `${valueFieldWidth}px` }}>
+                  {/* Value Field - col-3 */}
+                  <div className="col-span-3">
                     <Input
                       id={`value-${index}`}
-                      type="number"
-                      step="0.01"
-                      value={item.value || 0}
-                      onChange={(e) => updateLineItem(index, 'value', parseFloat(e.target.value) || 0)}
-                      className="text-sm w-full"
+                      type="text"
+                      value={item.value ? Number(item.value).toLocaleString() : '0'}
+                      onChange={(e) => {
+                        const numValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
+                        updateLineItem(index, 'value', numValue);
+                      }}
+                      className="text-sm w-full h-10 text-right"
                     />
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Disclaimer and Financial Fields */}
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
-              <div>
-                <Label htmlFor="disclaimer" className="font-bold text-sm mb-1 block">
-                  Disclaimer
-                </Label>
-                <Textarea
-                  id="disclaimer"
-                  value={disclaimer}
-                  onChange={(e) => setDisclaimer(e.target.value)}
-                  className="h-[140px] resize-y text-sm w-full"
-                  placeholder="Enter disclaimer text..."
-                />
+            <br />
+            <br />
+
+            {/* Disclaimer and Financial Fields - Matching PHP layout */}
+            <div className="grid grid-cols-12 gap-2">
+              {/* Notes/Disclaimer - col-7 */}
+              <div className="col-span-7">
+                <div className="form-group">
+                  <Textarea
+                    id="disclaimer"
+                    value={disclaimer}
+                    onChange={(e) => setDisclaimer(e.target.value)}
+                    className="h-[250px] resize-y text-sm w-full"
+                    placeholder="Enter your Notes here.."
+                  />
+                </div>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="fscCharges" className="font-bold text-sm mb-1 block">
-                    Fsc
-                  </Label>
-                  <Input
-                    ref={fscInputRef}
-                    id="fscCharges"
-                    type="number"
-                    step="0.01"
-                    value={invoiceData.fscCharges}
-                    onChange={(e) => setInvoiceData({...invoiceData, fscCharges: parseFloat(e.target.value) || 0})}
-                    className="text-sm w-full"
-                  />
+
+              {/* Financial Fields - col-5 */}
+              <div className="col-span-5">
+                {/* Fsc */}
+                <div className="grid grid-cols-12 gap-0 mb-4">
+                  <div className="col-span-5 text-right pr-2">
+                    <Label className="font-bold text-sm pt-2">Fsc</Label>
+                  </div>
+                  <div className="col-span-7">
+                    <div className="form-group">
+                      <Input
+                        ref={fscInputRef}
+                        id="fscCharges"
+                        type="text"
+                        value={invoiceData.fscCharges ? Number(invoiceData.fscCharges).toLocaleString() : '0'}
+                        onChange={(e) => {
+                          const numValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
+                          setInvoiceData({...invoiceData, fscCharges: numValue});
+                        }}
+                        className="text-sm w-full text-right"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="discount" className="font-bold text-sm mb-1 block">
-                    Discount
-                  </Label>
-                  <Input
-                    id="discount"
-                    type="number"
-                    step="0.01"
-                    value={invoiceData.discount || 0}
-                    onChange={(e) => setInvoiceData({...invoiceData, discount: parseFloat(e.target.value) || 0})}
-                    className="text-sm w-full"
-                  />
+
+                <br />
+                <br />
+
+                {/* Discount */}
+                <div className="grid grid-cols-12 gap-0 mb-4">
+                  <div className="col-span-5 text-right pr-2">
+                    <Label className="font-bold text-sm pt-2">Discount</Label>
+                  </div>
+                  <div className="col-span-7">
+                    <div className="form-group">
+                      <Input
+                        id="discount"
+                        type="text"
+                        value={invoiceData.discount ? Number(invoiceData.discount).toLocaleString() : '0'}
+                        onChange={(e) => {
+                          const numValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
+                          setInvoiceData({...invoiceData, discount: numValue});
+                        }}
+                        className="text-sm w-full text-right"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="total" className="font-bold text-sm mb-1 block">
-                    Total
-                  </Label>
-                  <Input
-                    id="total"
-                    type="text"
-                    value={(lineItems.reduce((sum, item) => sum + (item.value || 0), 0) + (invoiceData.fscCharges || 0) - (invoiceData.discount || 0)).toLocaleString()}
-                    readOnly
-                    className="text-sm w-full bg-gray-100"
-                  />
+
+                <br />
+                <br />
+
+                {/* Total */}
+                <div className="grid grid-cols-12 gap-0">
+                  <div className="col-span-5 text-right pr-2">
+                    <Label className="font-bold text-sm pt-2"><b>Total</b></Label>
+                  </div>
+                  <div className="col-span-7">
+                    <div className="form-group">
+                      <Input
+                        id="total"
+                        type="text"
+                        value={(lineItems.reduce((sum, item) => sum + (item.value || 0), 0) + (invoiceData.fscCharges || 0) - (invoiceData.discount || 0)).toLocaleString()}
+                        readOnly
+                        className="text-sm w-full text-right font-bold bg-gray-100"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Note Section */}
-            <div>
-              <Label htmlFor="note" className="font-bold text-sm mb-1 block">
-                Note
-              </Label>
-              <Textarea
-                id="note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="h-20 resize-none text-sm"
-                placeholder="Enter any additional notes..."
-              />
-            </div>
+            <br />
+            <br />
 
-            {/* Total Calculation */}
-            <div className="border-t pt-4 mt-2">
-              <div className="flex justify-end items-center">
-                <div className="text-lg font-semibold text-gray-800 dark:text-white">
-                  Total Amount: PKR {(lineItems.reduce((sum, item) => sum + (item.value || 0), 0) + (invoiceData.fscCharges || 0) - (invoiceData.discount || 0)).toLocaleString()}
+            {/* Footer/Note Section */}
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-12">
+                <div className="form-group">
+                  <Label htmlFor="note" className="font-bold text-sm mb-2 block">
+                    Footer/Note
+                  </Label>
+                  <Textarea
+                    id="note"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    className="min-h-[100px] resize-y text-sm w-full"
+                    placeholder="Enter footer/note text here..."
+                  />
                 </div>
               </div>
             </div>

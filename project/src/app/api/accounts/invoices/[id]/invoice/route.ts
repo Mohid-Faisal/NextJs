@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import fs from 'fs';
 import path from 'path';
+import { Country } from 'country-state-city';
 
 export async function GET(
   request: NextRequest,
@@ -173,6 +174,16 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
       month: 'short',
       year: '2-digit'
     });
+  };
+
+  // Helper function to get full country name from code
+  const getCountryName = (countryCode: string | undefined | null): string => {
+    if (!countryCode) return 'N/A';
+    // If it's already a full name (more than 2 characters), return as is
+    if (countryCode.length > 2) return countryCode;
+    // Try to get full country name from code
+    const country = Country.getCountryByCode(countryCode);
+    return country ? country.name : countryCode;
   };
 
   // Generate line items HTML
@@ -384,8 +395,8 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
               <th>Receipt #</th>
               <th>Tracking #</th>
               <th>Reference #</th>
-              <th>Dest</th>
-              <th>D/W</th>
+              <th>Country</th>
+              <th>Type</th>
               <th>Pcs</th>
               <th>Wght</th>
           </tr>
@@ -396,7 +407,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
             <td>${shipment?.invoiceNumber || shipment?.id || 'N/A'}</td>
             <td>${shipment?.trackingId || 'N/A'}</td>
             <td>${shipment?.referenceNumber || invoice.referenceNumber || 'N/A'}</td>
-            <td>${shipment?.destination || 'N/A'}</td>
+            <td>${getCountryName(shipment?.destination)}</td>
             <td>${shipment?.dayWeek ? 'D' : 'W'}</td>
             <td>${totalPieces > 0 ? totalPieces : (shipment?.totalPackages || shipment?.amount || 'N/A')}</td>
             <td>${packages.length > 0 ? packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0).toFixed(2) : (shipment?.totalWeight || shipment?.weight || 'N/A')}</td>

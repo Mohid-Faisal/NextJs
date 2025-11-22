@@ -112,6 +112,7 @@ export async function PUT(
           : currentInvoice.dayWeek,
         lineItems: body.lineItems || currentInvoice.lineItems,
         disclaimer: body.disclaimer || currentInvoice.disclaimer,
+        ...(body.note !== undefined && { note: body.note }),
       }
     });
 
