@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, Bell, Maximize2, Minimize2 } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, Bell, Maximize2, Minimize2, Search } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 
 const Navbar = ({
@@ -12,6 +13,7 @@ const Navbar = ({
   onToggleSidebar: () => void;
   isSidebarOpen: boolean;
 }) => {
+  const pathname = usePathname();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Check if fullscreen is supported
@@ -107,6 +109,20 @@ const Navbar = ({
 
       {/* Right section */}
       <div className="flex items-center gap-6">
+        {/* Remote Area Lookup */}
+        <Link
+          href="/dashboard/remote-area-lookup"
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors duration-200 bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 ${
+            pathname.startsWith("/dashboard/remote-area-lookup")
+              ? "ring-2 ring-purple-300 dark:ring-purple-700"
+              : ""
+          }`}
+          title="Remote Area Lookup"
+        >
+          <Search className="w-5 h-5" />
+          <span className="text-sm font-medium">Remote Area Lookup</span>
+        </Link>
+
         {/* Fullscreen button */}
         {isFullscreenSupported && (
           <button

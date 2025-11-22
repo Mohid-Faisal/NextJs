@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { createJournalEntryForTransaction } from "@/lib/utils";
+import { createJournalEntryForTransaction, updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/utils";
 
 // Function to update existing journal entries for transactions
 async function updateJournalEntryForTransaction(
@@ -436,6 +436,10 @@ async function handleShipmentUpdate(req: Request) {
           // Ensure invoiceAmount is a valid number
           const finalInvoiceAmount = typeof invoiceAmount === 'number' && !isNaN(invoiceAmount) ? invoiceAmount : (invoice.totalAmount || 0);
           
+          // Store old amount before updating
+          const oldInvoiceAmount = invoice.totalAmount;
+          
+          // Update invoice with all relevant fields
           const updatedInvoice = await tx.invoice.update({
             where: { id: invoice.id },
             data: {
@@ -445,131 +449,59 @@ async function handleShipmentUpdate(req: Request) {
               // Update line items if they contain shipment-specific information
               lineItems: invoice.lineItems || [], // Keep existing line items but could be updated if needed
               totalAmount: finalInvoiceAmount,
+              // Update FSC charges and discount if pricing data was provided
+              ...(price !== undefined || fuelSurcharge !== undefined || discount !== undefined ? {
+                fscCharges: fuelSurchargeAmount,
+                discount: discountAmount,
+              } : {}),
               updatedAt: new Date(),
             },
           });
 
-          // 3. Update customer transactions if this is a customer invoice
-          // Only update if pricing data was provided
-          if (invoice.customerId && (price !== undefined || fuelSurcharge !== undefined || discount !== undefined)) {
-            // Find existing customer transaction for this invoice
-            const existingTransaction = await tx.customerTransaction.findFirst({
-              where: {
-                customerId: invoice.customerId,
-                invoice: invoice.invoiceNumber,
-              },
-            });
-
-                         if (existingTransaction) {
-               // Store old amount for balance calculation BEFORE updating transaction
-               const oldAmount = existingTransaction.amount;
-               const oldBalance = existingTransaction.newBalance || existingTransaction.previousBalance || 0;
-               
-               console.log(`Updating customer transaction for invoice ${invoice.invoiceNumber}:`, {
-                 customerId: invoice.customerId,
-                 oldAmount: oldAmount,
-                 newAmount: customerTotalCost,
-                 oldBalance: oldBalance,
-                 description: `Updated customer invoice for shipment: ${effectiveTrackingId} - ${effectiveDestination}`
-               });
-               
-               // Calculate new balance: remove old amount, add new amount
-               const newBalance = oldBalance - oldAmount + customerTotalCost;
-               
-               await tx.customerTransaction.update({
-                 where: { id: existingTransaction.id },
-                 data: {
-                   amount: customerTotalCost,
-                   description: `Updated customer invoice for shipment: ${effectiveTrackingId} - ${effectiveDestination}`,
-                   newBalance: newBalance,
-                   // Note: This is a simplified balance calculation
-                   // In a real system, you might want more complex balance logic
-                 },
-               });
-               
-               // Update customer balance - use the transaction's balance logic
-               await updateCustomerBalance(tx, invoice.customerId, oldAmount, customerTotalCost);
+          // 3. Update customer/vendor balances and journal entries if amount changed
+          // Only update if pricing data was provided and amount actually changed
+          // Use the same logic as invoice update route
+          if ((price !== undefined || fuelSurcharge !== undefined || discount !== undefined) && oldInvoiceAmount !== finalInvoiceAmount) {
+            try {
+              // Use the proper utility functions for balance and journal entry updates
+              // These functions handle transactions, balances, and journal entries correctly
+              const description = `Updated invoice for shipment: ${effectiveTrackingId || invoice.trackingNumber || 'N/A'} - ${effectiveDestination || invoice.destination || 'N/A'}`;
               
-              // Update corresponding journal entry for customer transaction
-              try {
-                console.log(`Attempting to update customer journal entry for invoice ${invoice.invoiceNumber}...`);
-                await updateJournalEntryForTransaction(
-                  tx,
-                  'CUSTOMER_DEBIT',
-                  customerTotalCost,
-                  `Updated customer invoice for shipment: ${effectiveTrackingId} - ${effectiveDestination}`,
-                  invoice.invoiceNumber,
-                  invoice.invoiceNumber
-                );
-                console.log(`Successfully updated customer journal entry for invoice ${invoice.invoiceNumber}`);
-              } catch (journalError) {
-                console.error(`Failed to update customer journal entry for invoice ${invoice.invoiceNumber}:`, journalError);
-                // Continue with the transaction even if journal entry update fails
-              }
-            }
-          }
+              // Update balances using the utility function (same as invoice update)
+              // This function handles:
+              // - Finding transactions by reference: invoice.invoiceNumber
+              // - Calculating balance correctly: previousBalance - amountDifference for customers
+              // - Calculating balance correctly: previousBalance + amountDifference for vendors
+              // - Updating transaction amount to full newAmount
+              await updateInvoiceBalance(
+                tx,
+                invoice.id,
+                oldInvoiceAmount,
+                finalInvoiceAmount,
+                invoice.customerId,
+                invoice.customerId,
+                invoice.vendorId,
+                invoice.vendorId
+              );
 
-          // 4. Update vendor transactions if this is a vendor invoice
-          // Only update if pricing data was provided
-          if (invoice.vendorId && (price !== undefined || fuelSurcharge !== undefined || discount !== undefined)) {
-            // Calculate vendor cost (what we pay to vendor)
-            // Vendor cost = original price + fuel surcharge - discount (no profit)
-            const vendorCost = vendorTotalCost;
-            
-            // Find existing vendor transaction for this invoice
-            const existingTransaction = await tx.vendorTransaction.findFirst({
-              where: {
-                vendorId: invoice.vendorId,
-                invoice: invoice.invoiceNumber,
-              },
-            });
-
-                         if (existingTransaction) {
-               // Store old amount for balance calculation BEFORE updating transaction
-               const oldAmount = existingTransaction.amount;
-               const oldBalance = existingTransaction.newBalance || existingTransaction.previousBalance || 0;
-               
-               console.log(`Updating vendor transaction for invoice ${invoice.invoiceNumber}:`, {
-                 vendorId: invoice.vendorId,
-                 oldAmount: oldAmount,
-                 newAmount: vendorCost,
-                 oldBalance: oldBalance,
-                 description: `Updated vendor cost for shipment: ${effectiveTrackingId} - ${effectiveDestination}`
-               });
-               
-               // Calculate new balance: remove old amount, add new amount
-               const newBalance = oldBalance - oldAmount + vendorCost;
-               
-               await tx.vendorTransaction.update({
-                 where: { id: existingTransaction.id },
-                 data: {
-                   amount: vendorCost,
-                   description: `Updated vendor cost for shipment: ${effectiveTrackingId} - ${effectiveDestination}`,
-                   newBalance: newBalance,
-                   // Note: This is a simplified balance calculation
-                   // In a real system, you might want more complex balance logic
-                 },
-               });
-               
-               // Update vendor balance - use the transaction's balance logic
-               await updateVendorBalance(tx, invoice.vendorId, oldAmount, vendorCost);
+              // Update journal entries using the utility function (same as invoice update)
+              await updateJournalEntriesForInvoice(
+                tx,
+                invoice.id,
+                oldInvoiceAmount,
+                finalInvoiceAmount,
+                invoice.customerId,
+                invoice.customerId,
+                invoice.vendorId,
+                invoice.vendorId,
+                invoice.invoiceNumber,
+                description
+              );
               
-              // Update corresponding journal entry for vendor transaction
-              try {
-                console.log(`Attempting to update vendor journal entry for invoice ${invoice.invoiceNumber}...`);
-                await updateJournalEntryForTransaction(
-                  tx,
-                  'VENDOR_DEBIT',
-                  vendorCost,
-                  `Updated vendor cost for shipment: ${effectiveTrackingId} - ${effectiveDestination}`,
-                  invoice.invoiceNumber,
-                  invoice.invoiceNumber
-                );
-                console.log(`Successfully updated vendor journal entry for invoice ${invoice.invoiceNumber}`);
-              } catch (journalError) {
-                console.error(`Failed to update vendor journal entry for invoice ${invoice.invoiceNumber}:`, journalError);
-                // Continue with the transaction even if journal entry update fails
-              }
+              console.log(`Successfully updated balances and journal entries for invoice ${invoice.invoiceNumber}`);
+            } catch (balanceError) {
+              console.error(`Error updating balances and journal entries for invoice ${invoice.invoiceNumber}:`, balanceError);
+              // Continue with the transaction even if balance/journal update fails
             }
           }
 

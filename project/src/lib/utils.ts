@@ -316,10 +316,12 @@ export async function updateInvoiceBalance(
 
     if (existingTransaction) {
       // Update existing transaction
+      // For customer invoices, transaction type should always be DEBIT (customer owes us money)
+      // regardless of whether amount increased or decreased
       await prisma.customerTransaction.update({
         where: { id: existingTransaction.id },
         data: {
-          type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
+          type: 'DEBIT', // Always DEBIT for customer invoices
           amount: Math.abs(newAmount),
           previousBalance,
           newBalance
@@ -327,11 +329,12 @@ export async function updateInvoiceBalance(
       });
     } else {
       // Create new transaction if none exists (fallback)
+      // For customer invoices, transaction type should always be DEBIT
       await prisma.customerTransaction.create({
         data: {
           customerId: invoice.customerId,
-          type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
-          amount: Math.abs(amountDifference),
+          type: 'DEBIT', // Always DEBIT for customer invoices
+          amount: Math.abs(newAmount),
           description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
           reference: `Invoice: ${invoice.invoiceNumber}`,
           previousBalance,
@@ -424,10 +427,12 @@ export async function updateInvoiceBalance(
 
     if (existingTransaction) {
       // Update existing transaction
+      // For vendor invoices, transaction type should always be DEBIT (we owe them money)
+      // regardless of whether amount increased or decreased
       await prisma.vendorTransaction.update({
         where: { id: existingTransaction.id },
         data: {
-          type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
+          type: 'DEBIT', // Always DEBIT for vendor invoices
           amount: Math.abs(newAmount),
           previousBalance,
           newBalance
@@ -435,11 +440,12 @@ export async function updateInvoiceBalance(
       });
     } else {
       // Create new transaction if none exists (fallback)
+      // For vendor invoices, transaction type should always be DEBIT
       await prisma.vendorTransaction.create({
         data: {
           vendorId: invoice.vendorId,
-          type: amountDifference > 0 ? 'DEBIT' : 'CREDIT',
-          amount: Math.abs(amountDifference),
+          type: 'DEBIT', // Always DEBIT for vendor invoices
+          amount: Math.abs(newAmount),
           description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
           reference: `Invoice: ${invoice.invoiceNumber}`,
           previousBalance,

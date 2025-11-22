@@ -105,15 +105,19 @@ export async function POST(req: NextRequest) {
     const highIndex = getColumnIndex("high", ["high"]);
     const cityIndex = getColumnIndex("city", ["city"]);
 
-    if (countryIndex === -1 || iataIndex === -1 || lowIndex === -1 || highIndex === -1) {
+    if (countryIndex === -1 || iataIndex === -1) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid file format. Required columns: Country, IATA Code, Low, High. City is optional.",
+          message: "Invalid file format. Required columns: Country, IATA Code. Low, High, and City are optional.",
         },
         { status: 400 }
       );
     }
+    
+    // Low and High are optional - at least one of (Low+High) or City should be present
+    const hasLowHigh = lowIndex !== -1 && highIndex !== -1;
+    const hasCity = cityIndex !== -1;
 
     const parsedAreas: {
       company: string;
@@ -132,26 +136,42 @@ export async function POST(req: NextRequest) {
 
       const country = String(row[countryIndex] || "").trim();
       const iataCode = String(row[iataIndex] || "").trim();
-      const low = String(row[lowIndex] || "").trim();
-      const high = String(row[highIndex] || "").trim();
-      const city = cityIndex !== -1 ? String(row[cityIndex] || "").trim() : null;
+      const low = hasLowHigh ? String(row[lowIndex] || "").trim() : "";
+      const high = hasLowHigh ? String(row[highIndex] || "").trim() : "";
+      const city = hasCity ? String(row[cityIndex] || "").trim() : null;
 
       // Skip empty rows
-      if (!country && !iataCode && !low && !high) continue;
+      if (!country && !iataCode && !low && !high && !city) continue;
 
       // Validate required fields
-      if (!country || !iataCode || !low || !high) {
-        console.log(`⚠️ Skipping row ${i + 1}: Missing required fields`, { country, iataCode, low, high });
+      if (!country || !iataCode) {
+        console.log(`⚠️ Skipping row ${i + 1}: Missing required fields (country or IATA code)`, { country, iataCode });
         continue;
       }
+
+      // At least one of (low+high) or city should be present
+      // Consider low/high valid if they exist and are not empty (even if "0")
+      const hasLowHighData = hasLowHigh && low !== "" && high !== "";
+      const hasCityData = city && city !== "" && city.toLowerCase() !== "null";
+      
+      if (!hasLowHighData && !hasCityData) {
+        console.log(`⚠️ Skipping row ${i + 1}: Missing both low/high and city data`, { country, iataCode, low, high, city });
+        continue;
+      }
+
+      // If low/high are empty but city exists, set them to "0"
+      // If low/high exist but are "0" and city exists, keep them as "0"
+      const finalLow = hasLowHighData ? low : "0";
+      const finalHigh = hasLowHighData ? high : "0";
+      const finalCity = hasCityData ? city : null;
 
       parsedAreas.push({
         company,
         country,
         iataCode,
-        low,
-        high,
-        city: city && city !== "" ? city : null,
+        low: finalLow,
+        high: finalHigh,
+        city: finalCity,
         filename,
       });
     }

@@ -14,6 +14,7 @@ interface InvoiceData {
   id: number;
   invoiceNumber: string;
   createdAt: string;
+  invoiceDate?: string;
   referenceNumber?: string;
   totalAmount: number;
   fscCharges: number;
@@ -25,6 +26,7 @@ interface InvoiceData {
     dayWeek?: boolean;
     packages?: string;
     calculatedValues?: string;
+    shipmentDate?: string;
   };
   customer?: {
     id: number;
@@ -407,7 +409,7 @@ export default function EditInvoicePage() {
         <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 w-full">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-xl sm:text-2xl font-bold text-center text-gray-800 dark:text-white">
-              Buying Payment Invoice
+              Selling Payment Invoice
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-5 p-4 sm:p-6">
@@ -420,13 +422,27 @@ export default function EditInvoicePage() {
                 <Input
                   id="date"
                   type="text"
-                  value={new Date(invoiceData.createdAt).toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "2-digit",
-                  })}
+                  value={invoiceData.shipment?.shipmentDate 
+                    ? new Date(invoiceData.shipment.shipmentDate).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "2-digit",
+                      })
+                    : invoiceData.invoiceDate
+                    ? new Date(invoiceData.invoiceDate).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "2-digit",
+                      })
+                    : invoiceData.createdAt
+                    ? new Date(invoiceData.createdAt).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "2-digit",
+                      })
+                    : ''}
                   readOnly
-                  className="mt-1 text-sm"
+                  className="mt-1 text-sm bg-gray-50"
                 />
               </div>
               <div className="col-span-1">
@@ -435,12 +451,13 @@ export default function EditInvoicePage() {
                 </Label>
                 <Input
                   id="receiptNumber"
-                  value={invoiceData.shipment?.trackingId || ''}
+                  value={invoiceData.invoiceNumber || ''}
                   onChange={(e) => setInvoiceData({
                     ...invoiceData,
                     shipment: {...invoiceData.shipment!, trackingId: e.target.value}
                   })}
-                  className="mt-1 text-sm"
+                  readOnly
+                  className="mt-1 text-sm bg-gray-50"
                 />
               </div>
               <div className="col-span-1">
@@ -454,7 +471,8 @@ export default function EditInvoicePage() {
                     ...invoiceData,
                     shipment: {...invoiceData.shipment!, trackingId: e.target.value}
                   })}
-                  className="mt-1 text-sm"
+                  readOnly
+                  className="mt-1 text-sm bg-gray-50"
                 />
               </div>
               <div className="col-span-1">
@@ -479,7 +497,8 @@ export default function EditInvoicePage() {
                     ...invoiceData,
                     shipment: {...invoiceData.shipment!, destination: e.target.value}
                   })}
-                  className="mt-1 text-sm"
+                  readOnly
+                  className="mt-1 text-sm bg-gray-50"
                 />
               </div>
               <div className="col-span-1">
@@ -493,7 +512,8 @@ export default function EditInvoicePage() {
                     ...invoiceData,
                     shipment: {...invoiceData.shipment!, dayWeek: e.target.value === 'D'}
                   })}
-                  className="mt-1 text-sm"
+                  readOnly
+                  className="mt-1 text-sm bg-gray-50"
                 />
               </div>
               <div className="col-span-1">
@@ -533,7 +553,8 @@ export default function EditInvoicePage() {
                       updatePackage(0, 'weight', totalWeight);
                     }
                   }}
-                  className="mt-1 text-sm"
+                  readOnly
+                  className="mt-1 text-sm bg-gray-50"
                 />
               </div>
             </div>
