@@ -314,7 +314,7 @@ export default function VendorsPage() {
           <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{total}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">Total Vendors</div>
         </div>
-      </div>
+                </div>
 
       {/* Filters */}
       <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
@@ -332,21 +332,21 @@ export default function VendorsPage() {
             >
               <SelectTrigger className="w-20 h-9">
                 <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
+                    </SelectTrigger>
+                    <SelectContent>
                 <SelectItem value="10">10</SelectItem>
                 <SelectItem value="25">25</SelectItem>
                 <SelectItem value="50">50</SelectItem>
                 <SelectItem value="100">100</SelectItem>
                 <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                    </SelectContent>
+                  </Select>
+                </div>
 
           {/* Search bar with icon */}
           <div className="flex flex-1 max-w-sm">
             {/* Search input */}
-            <Input
+                  <Input
               placeholder="Search by company name, person name, phone, city, or country"
               value={searchTerm}
               onChange={(e) => {
@@ -359,8 +359,8 @@ export default function VendorsPage() {
             <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
               <Search className="text-white w-5 h-5" />
             </div>
-          </div>
-        </div>
+                </div>
+                </div>
 
         {/* Right side - Export and Add buttons */}
         <div className="flex gap-2">
@@ -392,7 +392,7 @@ export default function VendorsPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+                </div>
 
           {/* Add Vendor button */}
           <Button asChild>
@@ -401,8 +401,8 @@ export default function VendorsPage() {
               Add Vendors
             </Link>
           </Button>
-        </div>
-      </div>
+                </div>
+              </div>
 
       {/* Vendors Table */}
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -526,7 +526,7 @@ export default function VendorsPage() {
                           }`}
                         >
                           ${vendor.currentBalance.toLocaleString()}
-                        </span>
+                          </span>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <DropdownMenu>
@@ -594,9 +594,9 @@ export default function VendorsPage() {
                 </tbody>
               </AnimatePresence>
             </table>
-          )}
-        </CardContent>
-      </Card>
+                      )}
+                    </CardContent>
+                  </Card>
 
       {/* View Vendor Dialog */}
       <ViewVendorDialog

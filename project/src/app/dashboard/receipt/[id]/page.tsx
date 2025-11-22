@@ -8,6 +8,19 @@ import Link from 'next/link';
 import { getCountryNameFromCode } from '@/lib/utils';
 import { format } from 'date-fns';
 
+interface Package {
+  id?: string;
+  amount?: number;
+  packageDescription?: string;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  weightVol?: number;
+  fixedCharge?: number;
+  decValue?: number;
+}
+
 interface Shipment {
   id: string;
   trackingId?: string;
@@ -23,6 +36,15 @@ interface Shipment {
   height?: number;
   amount?: number;
   packaging?: string;
+  office?: string;
+  agency?: string;
+  referenceNumber?: string;
+  weightVol?: number;
+  decValue?: number;
+  packages?: string | Package[];
+  totalWeight?: number;
+  totalWeightVol?: number;
+  totalPackages?: number;
 }
 
 interface Invoice {
@@ -38,6 +60,7 @@ interface Invoice {
   status?: string;
   shipment?: Shipment;
   customer?: {
+    id?: string;
     CompanyName?: string;
     PersonName?: string;
     Address?: string;
@@ -82,22 +105,22 @@ export default function ReceiptPage() {
       return;
     }
 
-    // Get the receipt container HTML
-    const receiptContainer = document.querySelector('.receipt-container');
-    if (!receiptContainer) {
-      alert('Receipt content not found');
+    // Get the waybill container HTML
+    const waybillContainer = document.querySelector('.waybill-container');
+    if (!waybillContainer) {
+      alert('Waybill content not found');
       return;
     }
 
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert('Please allow popups to print the receipt');
+      alert('Please allow popups to print the waybill');
       return;
     }
 
-    // Get the receipt HTML content
-    const receiptHTML = receiptContainer.innerHTML;
+    // Get the waybill HTML content
+    const waybillHTML = waybillContainer.innerHTML;
 
     // Create a complete HTML document for printing
     const printHTML = `
@@ -106,183 +129,232 @@ export default function ReceiptPage() {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Receipt ${invoice.invoiceNumber}</title>
+          <title>Waybill ${invoice.invoiceNumber}</title>
           <style>
             :root {
-              --primary-color: #2563eb;
-              --text-dark: #1e293b;
-              --text-light: #64748b;
-              --border-color: #e2e8f0;
-              --bg-color: #f8fafc;
+              --skynet-red: #e30613;
+              --border-color: #000;
+              --bg-grey: #d1d5db;
+              --text-black: #000;
             }
 
             * {
               box-sizing: border-box;
-                margin: 0; 
-                padding: 0; 
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
 
             body {
-              font-family: 'Inter', system-ui, -apple-system, sans-serif;
-              background-color: white;
-              color: var(--text-dark);
-              line-height: 1.5;
+              font-family: Arial, Helvetica, sans-serif;
+              background-color: #f3f4f6;
               padding: 20px;
+              margin: 0;
+              font-size: 10px;
             }
 
-            .receipt-container {
-              max-width: 800px;
+            .waybill-container {
+              max-width: 900px;
               margin: 0 auto;
               background: white;
-              padding: 40px;
-              box-shadow: none;
-            }
-
-            .header {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              margin-bottom: 30px;
-              padding-bottom: 20px;
-              border-bottom: 2px solid var(--border-color);
-            }
-
-            .company-branding img {
-              height: 45px;
-              width: auto;
-              margin-bottom: 6px;
-            }
-
-            .company-branding h1 {
-              color: var(--primary-color);
-              font-size: 24px;
-              font-weight: 800;
-              text-transform: uppercase;
-              letter-spacing: -0.5px;
-            }
-
-            .company-branding p {
-              font-size: 14px;
-              color: var(--text-light);
-              margin-top: 4px;
-              font-weight: 600;
-            }
-
-            .invoice-details {
-              text-align: right;
-            }
-
-            .invoice-details h2 {
-              font-size: 20px;
-              color: var(--text-dark);
-              margin-bottom: 5px;
-            }
-
-            .tag {
-              display: inline-block;
-              background: #dbeafe;
-              color: #1e40af;
-              padding: 4px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-              font-weight: 600;
-              text-transform: uppercase;
-            }
-
-            .route-section {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 30px;
-              gap: 20px;
-            }
-
-            .address-box {
-              flex: 1;
-            }
-
-            .address-box h3 {
-              font-size: 12px;
-              text-transform: uppercase;
-              color: var(--text-light);
-              margin-bottom: 8px;
-              letter-spacing: 1px;
-            }
-
-            .address-box strong {
-              display: block;
-              font-size: 16px;
-              margin-bottom: 4px;
-            }
-
-            .address-box p {
-              font-size: 14px;
-              color: var(--text-light);
-            }
-
-            .details-grid {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 15px;
-              background-color: #f8fafc;
               padding: 20px;
-              border-radius: 6px;
-              border: 1px solid var(--border-color);
-              margin-bottom: 30px;
+              border: 1px solid #ccc;
             }
 
-            .detail-item h4 {
-              font-size: 11px;
-              text-transform: uppercase;
-              color: var(--text-light);
-              margin-bottom: 4px;
-            }
-
-            .detail-item p {
-              font-weight: 600;
-              font-size: 15px;
-            }
-
-            .table-container {
-              margin-bottom: 30px;
-            }
-
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-
-            th {
-              text-align: left;
-              padding: 12px;
-              font-size: 12px;
-              text-transform: uppercase;
-              color: var(--text-light);
-              border-bottom: 1px solid var(--border-color);
-            }
-
-            td {
-              padding: 12px;
-              font-size: 14px;
-              border-bottom: 1px solid var(--border-color);
-            }
-
-            .text-right { text-align: right; }
-            .font-bold { font-weight: 700; }
-
-            .footer-section {
+            .header-area {
               display: flex;
               justify-content: space-between;
-              align-items: flex-start;
+              align-items: center;
+              margin-bottom: 10px;
+              padding-bottom: 5px;
+            }
+
+            .logo {
+              font-style: italic;
+              font-weight: 900;
+              font-size: 28px;
+              color: var(--skynet-red);
+              line-height: 0.8;
+            }
+            .logo span {
+              display: block;
+              font-size: 12px;
+              font-weight: 700;
+              margin-top: 2px;
+            }
+
+            .logo img {
+              height: 50px;
+              width: auto;
+            }
+
+            .warning-text {
+              color: var(--skynet-red);
+              text-align: center;
+              font-weight: bold;
+              font-size: 12px;
+              text-transform: uppercase;
+              line-height: 1.2;
+            }
+
+            .exp-box {
+              background: black;
+              color: white;
+              font-size: 32px;
+              font-weight: bold;
+              padding: 5px 15px;
+            }
+
+            .main-grid {
+              display: grid;
+              grid-template-columns: 34% 33% 33%;
+              border: 2px solid black;
+            }
+
+            .border-right { border-right: 1px solid black; }
+            .border-bottom { border-bottom: 1px solid black; }
+            .bg-grey { background-color: var(--bg-grey); }
+            .bg-red { background-color: var(--skynet-red); color: white; }
+            .bold { font-weight: 700; }
+            .text-center { text-align: center; }
+            .full-height { height: 100%; }
+            .flex { display: flex; }
+            .flex-col { display: flex; flex-direction: column; }
+
+            .sec-num {
+              display: inline-block;
+              background: var(--skynet-red);
+              color: white;
+              width: 16px;
+              height: 16px;
+              text-align: center;
+              line-height: 16px;
+              font-weight: bold;
+              font-size: 11px;
+              margin-right: 4px;
+            }
+
+            .section-header {
+              background: #e5e7eb;
+              padding: 2px 5px;
+              font-weight: bold;
+              font-size: 10px;
+              text-transform: uppercase;
+              border-bottom: 1px solid black;
+            }
+
+            .cell-content {
+              padding: 5px;
+            }
+
+            .col-1 {
+              border-right: 1px solid black;
+            }
+
+            .shipper-container {
+              display: flex;
+              height: 180px;
+            }
+            .vertical-label {
+              background: #d1d5db;
+              width: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-right: 1px solid black;
+              writing-mode: vertical-rl;
+              transform: rotate(180deg);
+              font-weight: bold;
+              font-size: 10px;
+              letter-spacing: 2px;
+            }
+            .address-details {
+              padding: 8px;
+              flex: 1;
+              font-size: 11px;
+              line-height: 1.3;
+            }
+
+            .auth-section {
+              height: 120px;
+              padding: 5px;
+              position: relative;
+              font-size: 9px;
+            }
+            .terms-text {
+              font-size: 7px;
+              margin-bottom: 15px;
+              text-align: justify;
+            }
+            .signature-line {
+              border-top: 1px solid black;
+              width: 80%;
               margin-top: 20px;
             }
-
-            .barcode-area {
-              text-align: center;
+            .timestamp {
+              position: absolute;
+              bottom: 5px;
+              right: 5px;
+              text-align: right;
+              font-family: 'Courier New', Courier, monospace;
             }
 
-            .barcode {
+            .pod-section {
+              height: 100px;
+              padding: 5px;
+            }
+
+            .col-2 {
+              border-right: 1px solid black;
+            }
+            .lhe-header {
+              display: flex;
+              border-bottom: 1px solid black;
+            }
+            .lhe-box {
+              width: 40%;
+              font-size: 18px;
+              font-weight: bold;
+              text-align: center;
+              padding: 5px;
+              border-right: 1px solid black;
+            }
+            .tracking-box {
+              width: 60%;
+              font-size: 16px;
+              font-weight: bold;
+              text-align: right;
+              padding: 5px 10px;
+            }
+            .dap-section {
+              display: flex;
+              border-bottom: 1px solid black;
               height: 40px;
-              width: 200px;
+            }
+            .dap-box {
+              width: 50%;
+              font-size: 20px;
+              font-weight: bold;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-right: 1px solid black;
+            }
+            .currency-box {
+              width: 50%;
+              padding: 2px 5px;
+              font-size: 10px;
+            }
+            .barcode-section {
+              height: 140px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              padding: 10px;
+            }
+            .barcode {
+              height: 60px;
+              width: 90%;
               background: repeating-linear-gradient(
                 to right,
                 #000 0,
@@ -290,62 +362,60 @@ export default function ReceiptPage() {
                 #fff 2px,
                 #fff 4px,
                 #000 4px,
-                #000 8px,
-                #fff 8px,
+                #000 7px,
+                #fff 7px,
                 #fff 9px
               );
-              margin-bottom: 5px;
             }
 
-            .totals-area {
-              width: 250px;
-            }
-
-            .total-row {
+            .col-3 {
               display: flex;
-              justify-content: space-between;
-              padding: 8px 0;
-              font-size: 14px;
+              flex-direction: column;
+            }
+            .ref-box {
+              height: 25px;
+              border-bottom: 1px solid black;
+              display: flex;
+              align-items: center;
+              padding: 0 5px;
+            }
+            .service-section {
+              flex: 1;
+              padding: 5px;
+              border-bottom: 1px solid black;
+            }
+            .size-section {
+              height: 100px;
+              padding: 0;
+            }
+            .dims-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 5px;
+            }
+            .dims-table td {
+              padding: 2px;
             }
 
-            .total-row.final {
-              border-top: 2px solid var(--text-dark);
-              margin-top: 8px;
-              padding-top: 12px;
-              font-weight: 800;
-              font-size: 18px;
-              color: var(--primary-color);
+            .footer-strip {
+              margin-top: 5px;
+              font-size: 12px;
+              font-weight: bold;
             }
 
             @media print {
-              body {
-                padding: 0;
-                margin: 0;
-                background: white;
-                height: auto;
-              }
-              .receipt-container {
-                box-shadow: none;
-                padding: 15px;
-                max-width: 100%;
-                margin: 0;
-                page-break-inside: avoid;
-                page-break-after: avoid;
-              }
+              body { padding: 0; background: white; }
+              .waybill-container { border: none; padding: 0; margin: 0; width: 100%; max-width: 100%; }
               @page {
                 size: landscape;
                 margin: 0.5cm;
-              }
-              * {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
               }
             }
           </style>
         </head>
         <body>
-          <div class="receipt-container">
-            ${receiptHTML}
+          <div class="waybill-container">
+            ${waybillHTML}
             </div>
           <script>
             window.onload = function() {
@@ -368,7 +438,7 @@ export default function ReceiptPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading receipt...</p>
+          <p className="mt-4 text-gray-600">Loading waybill...</p>
                 </div>
                     </div>
     );
@@ -401,6 +471,7 @@ export default function ReceiptPage() {
   const senderState = invoice.customer?.State || '';
   const senderCountry = invoice.customer?.Country ? getCountryNameFromCode(invoice.customer.Country) : '';
   const senderZip = invoice.customer?.Zip || '';
+  const senderPhone = invoice.customer?.Phone || '';
   
   // Format recipient address (from shipment)
   const recipientName = shipment?.recipientName || 'N/A';
@@ -414,10 +485,78 @@ export default function ReceiptPage() {
   
   // Get status
   const status = invoice.status || 'Pending';
-  const statusColor = status === 'Paid' ? '#10b981' : status === 'Pending' ? '#f59e0b' : '#ef4444';
   
-  // Get line items - they use 'value' field, not 'total' or 'amount'
-  // Line items don't include fuel surcharge and discount (they're separate fields)
+  // Parse packages from shipment
+  let parsedPackages: Package[] = [];
+  if (shipment?.packages) {
+    try {
+      parsedPackages = typeof shipment.packages === 'string' 
+        ? JSON.parse(shipment.packages) 
+        : shipment.packages;
+      if (!Array.isArray(parsedPackages)) {
+        parsedPackages = [];
+      }
+    } catch (e) {
+      console.error('Error parsing packages:', e);
+      parsedPackages = [];
+    }
+  }
+
+  // Calculate totals from packages if available
+  let totalPieces = 0;
+  let totalWeight = 0;
+  let totalWeightVol = 0;
+  let totalDecValue = 0;
+  let maxLength = 0;
+  let maxWidth = 0;
+  let maxHeight = 0;
+  const packageDescriptions: string[] = [];
+
+  if (parsedPackages.length > 0) {
+    parsedPackages.forEach((pkg: Package) => {
+      // Sum pieces
+      totalPieces += pkg.amount || 1;
+      
+      // Sum actual weights (not max - we'll calculate charged weight separately)
+      totalWeight += pkg.weight || 0;
+      totalWeightVol += pkg.weightVol || 0;
+      
+      // Sum declared values
+      totalDecValue += pkg.decValue || 0;
+      
+      // Track max dimensions
+      if (pkg.length && pkg.length > maxLength) maxLength = pkg.length;
+      if (pkg.width && pkg.width > maxWidth) maxWidth = pkg.width;
+      if (pkg.height && pkg.height > maxHeight) maxHeight = pkg.height;
+      
+      // Collect package descriptions
+      if (pkg.packageDescription) {
+        packageDescriptions.push(pkg.packageDescription);
+      }
+    });
+  } else {
+    // Fallback to shipment-level data
+    totalPieces = shipment?.totalPackages || shipment?.amount || 1;
+    totalWeight = shipment?.totalWeight || shipment?.weight || invoice.weight || 0;
+    totalWeightVol = shipment?.totalWeightVol || shipment?.weightVol || 0;
+    totalDecValue = shipment?.decValue || 0;
+    maxLength = shipment?.length || 0;
+    maxWidth = shipment?.width || 0;
+    maxHeight = shipment?.height || 0;
+  }
+
+  // Calculate charged weight (max of total weight and total volumetric weight)
+  // This is the weight used for billing purposes
+  const chargedWeight = Math.max(totalWeight, totalWeightVol);
+
+  // Format dimensions
+  const dimensions = (maxLength > 0 && maxWidth > 0 && maxHeight > 0)
+    ? `${maxLength.toFixed(2)} x ${maxWidth.toFixed(2)} x ${maxHeight.toFixed(2)}`
+    : (shipment?.length && shipment?.width && shipment?.height
+        ? `${shipment.length.toFixed(2)} x ${shipment.width.toFixed(2)} x ${shipment.height.toFixed(2)}`
+        : '0.00 x 0.00 x 0.00');
+
+  // Get line items
   const lineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0
     ? invoice.lineItems
     : [
@@ -427,194 +566,271 @@ export default function ReceiptPage() {
         }
       ];
   
-  // Calculate subtotal from line items using 'value' field
-  const subtotal = lineItems.reduce((sum: number, item: any) => {
-    return sum + (item.value || 0);
-  }, 0);
-  
-  // Get fuel surcharge and discount amounts directly (they're stored as amounts, not percentages)
-  const fscAmount = invoice.fscCharges || 0;
-  const discountAmount = invoice.discount || 0; // This is already an amount, not a percentage
-  const taxAmount = 0; // Add tax calculation if needed
-  
-  // Calculate final total: subtotal + fuel surcharge - discount + tax
-  // This matches the invoice generation logic: lineItemsTotal + fscCharges - discount
-  const total = subtotal + fscAmount - discountAmount + taxAmount;
-  
-  // Format dimensions
-  const dimensions = shipment?.length && shipment?.width && shipment?.height
-    ? `${shipment.length}x${shipment.width}x${shipment.height} cm`
-    : 'N/A';
-  
   // Get service type
   const serviceType = shipment?.serviceMode || shipment?.packaging || 'Standard';
+  
+  // Get office (default to LHE)
+  const office = shipment?.office || 'LHE';
+  
+  // Get reference number
+  const referenceNumber = shipment?.referenceNumber || '';
+  
+  // Get account name (from customer)
+  const accountName = invoice.customer?.CompanyName || invoice.customer?.PersonName || senderName;
+  const accountId = invoice.customer?.id || '';
+  
+  // Get contents description from package descriptions or line items
+  const contentsDescription = packageDescriptions.length > 0
+    ? packageDescriptions.join(', ')
+    : (lineItems
+        .map((item: any) => item.description || item.name || '')
+        .filter(Boolean)
+        .join(', ') || 'Shipping Service');
+  
+  // Get declared value (from packages decValue or shipment decValue or total amount)
+  const declaredValue = totalDecValue > 0 
+    ? totalDecValue 
+    : (shipment?.decValue || invoice.totalAmount || 0);
+  
+  // Format date for timestamp
+  const timestampDate = invoice.invoiceDate 
+    ? format(new Date(invoice.invoiceDate), 'dd MMM yy HH:mm:ss')
+    : format(new Date(), 'dd MMM yy HH:mm:ss');
 
   return (
     <div className="w-full p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-full">
       <style jsx>{`
-        .receipt-wrapper {
-          --primary-color: #2563eb;
-          --text-dark: #1e293b;
-          --text-light: #64748b;
-          --border-color: #e2e8f0;
-          --bg-color: #f8fafc;
+        .waybill-wrapper {
+          --skynet-red: #e30613;
+          --border-color: #000;
+          --bg-grey: #d1d5db;
+          --text-black: #000;
         }
 
-        .receipt-wrapper .receipt-container {
-          max-width: 800px;
+        .waybill-wrapper * {
+          box-sizing: border-box;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .waybill-wrapper .waybill-container {
+          max-width: 900px;
               margin: 0 auto;
               background: white;
-          padding: 40px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          border-radius: 8px;
-          font-family: 'Inter', system-ui, -apple-system, sans-serif;
+              padding: 20px;
+          border: 1px solid #ccc;
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 10px;
         }
 
-        .receipt-wrapper .header {
+        .waybill-wrapper .header-area {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 30px;
-          padding-bottom: 20px;
-          border-bottom: 2px solid var(--border-color);
+          align-items: center;
+              margin-bottom: 10px;
+          padding-bottom: 5px;
         }
 
-        .receipt-wrapper .company-branding img {
-          height: 45px;
-          width: auto;
-          margin-bottom: 6px;
+        .waybill-wrapper .logo {
+          font-style: italic;
+          font-weight: 900;
+          font-size: 28px;
+          color: var(--skynet-red);
+          line-height: 0.8;
         }
 
-        .receipt-wrapper .company-branding h1 {
-          color: var(--primary-color);
-          font-size: 24px;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: -0.5px;
-        }
-
-        .receipt-wrapper .company-branding p {
-          font-size: 14px;
-          color: var(--text-light);
-          margin-top: 4px;
-          font-weight: 600;
-        }
-
-        .receipt-wrapper .invoice-details {
-          text-align: right;
-        }
-
-        .receipt-wrapper .invoice-details h2 {
-          font-size: 20px;
-          color: var(--text-dark);
-              margin-bottom: 5px;
-            }
-
-        .receipt-wrapper .tag {
-          display: inline-block;
-          background: #dbeafe;
-          color: #1e40af;
-          padding: 4px 8px;
-              border-radius: 4px;
-          font-size: 12px;
-          font-weight: 600;
-          text-transform: uppercase;
-        }
-
-        .receipt-wrapper .route-section {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 30px;
-          gap: 20px;
-        }
-
-        .receipt-wrapper .address-box {
-          flex: 1;
-        }
-
-        .receipt-wrapper .address-box h3 {
-          font-size: 12px;
-          text-transform: uppercase;
-          color: var(--text-light);
-              margin-bottom: 8px;
-          letter-spacing: 1px;
-        }
-
-        .receipt-wrapper .address-box strong {
+        .waybill-wrapper .logo span {
           display: block;
-          font-size: 16px;
-          margin-bottom: 4px;
-        }
-
-        .receipt-wrapper .address-box p {
-          font-size: 14px;
-          color: var(--text-light);
-        }
-
-        .receipt-wrapper .details-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 15px;
-          background-color: #f8fafc;
-          padding: 20px;
-              border-radius: 6px;
-          border: 1px solid var(--border-color);
-          margin-bottom: 30px;
-        }
-
-        .receipt-wrapper .detail-item h4 {
-          font-size: 11px;
-          text-transform: uppercase;
-          color: var(--text-light);
-          margin-bottom: 4px;
-        }
-
-        .receipt-wrapper .detail-item p {
-          font-weight: 600;
-          font-size: 15px;
-        }
-
-        .receipt-wrapper .table-container {
-          margin-bottom: 30px;
-        }
-
-        .receipt-wrapper table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .receipt-wrapper th {
-          text-align: left;
-          padding: 12px;
           font-size: 12px;
+          font-weight: 700;
+          margin-top: 2px;
+        }
+
+        .waybill-wrapper .logo img {
+          height: 50px;
+          width: auto;
+        }
+
+        .waybill-wrapper .warning-text {
+          color: var(--skynet-red);
+          text-align: center;
+              font-weight: bold;
+          font-size: 12px;
+              text-transform: uppercase;
+          line-height: 1.2;
+        }
+
+        .waybill-wrapper .exp-box {
+          background: black;
+          color: white;
+          font-size: 32px;
+              font-weight: bold;
+          padding: 5px 15px;
+        }
+
+        .waybill-wrapper .main-grid {
+          display: grid;
+          grid-template-columns: 34% 33% 33%;
+          border: 2px solid black;
+        }
+
+        .waybill-wrapper .border-right { border-right: 1px solid black; }
+        .waybill-wrapper .border-bottom { border-bottom: 1px solid black; }
+        .waybill-wrapper .bg-grey { background-color: var(--bg-grey); }
+        .waybill-wrapper .bg-red { background-color: var(--skynet-red); color: white; }
+        .waybill-wrapper .bold { font-weight: 700; }
+        .waybill-wrapper .text-center { text-align: center; }
+        .waybill-wrapper .flex { display: flex; }
+        .waybill-wrapper .flex-col { display: flex; flex-direction: column; }
+
+        .waybill-wrapper .sec-num {
+          display: inline-block;
+          background: var(--skynet-red);
+          color: white;
+          width: 16px;
+          height: 16px;
+              text-align: center;
+          line-height: 16px;
+              font-weight: bold;
+          font-size: 11px;
+          margin-right: 4px;
+        }
+
+        .waybill-wrapper .section-header {
+          background: #e5e7eb;
+          padding: 2px 5px;
+              font-weight: bold;
+          font-size: 10px;
           text-transform: uppercase;
-          color: var(--text-light);
-          border-bottom: 1px solid var(--border-color);
+          border-bottom: 1px solid black;
         }
 
-        .receipt-wrapper td {
-          padding: 12px;
-          font-size: 14px;
-          border-bottom: 1px solid var(--border-color);
+        .waybill-wrapper .cell-content {
+          padding: 5px;
         }
 
-        .receipt-wrapper .text-right { text-align: right; }
-        .receipt-wrapper .font-bold { font-weight: 700; }
+        .waybill-wrapper .col-1 {
+          border-right: 1px solid black;
+        }
 
-        .receipt-wrapper .footer-section {
+        .waybill-wrapper .shipper-container {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+          height: 180px;
+        }
+
+        .waybill-wrapper .vertical-label {
+          background: #d1d5db;
+          width: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-right: 1px solid black;
+          writing-mode: vertical-rl;
+          transform: rotate(180deg);
+              font-weight: bold;
+          font-size: 10px;
+          letter-spacing: 2px;
+        }
+
+        .waybill-wrapper .address-details {
+          padding: 8px;
+          flex: 1;
+          font-size: 11px;
+          line-height: 1.3;
+        }
+
+        .waybill-wrapper .auth-section {
+          height: 120px;
+          padding: 5px;
+          position: relative;
+          font-size: 9px;
+        }
+
+        .waybill-wrapper .terms-text {
+          font-size: 7px;
+          margin-bottom: 15px;
+          text-align: justify;
+        }
+
+        .waybill-wrapper .signature-line {
+          border-top: 1px solid black;
+          width: 80%;
           margin-top: 20px;
         }
 
-        .receipt-wrapper .barcode-area {
-          text-align: center;
+        .waybill-wrapper .timestamp {
+          position: absolute;
+          bottom: 5px;
+          right: 5px;
+          text-align: right;
+          font-family: 'Courier New', Courier, monospace;
         }
 
-        .receipt-wrapper .barcode {
+        .waybill-wrapper .pod-section {
+          height: 100px;
+          padding: 5px;
+        }
+
+        .waybill-wrapper .col-2 {
+          border-right: 1px solid black;
+        }
+
+        .waybill-wrapper .lhe-header {
+          display: flex;
+          border-bottom: 1px solid black;
+        }
+
+        .waybill-wrapper .lhe-box {
+          width: 40%;
+          font-size: 18px;
+              font-weight: bold;
+          text-align: center;
+          padding: 5px;
+          border-right: 1px solid black;
+        }
+
+        .waybill-wrapper .tracking-box {
+          width: 60%;
+          font-size: 16px;
+          font-weight: bold;
+          text-align: right;
+          padding: 5px 10px;
+        }
+
+        .waybill-wrapper .dap-section {
+              display: flex;
+          border-bottom: 1px solid black;
           height: 40px;
-          width: 200px;
+            }
+
+        .waybill-wrapper .dap-box {
+          width: 50%;
+          font-size: 20px;
+              font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-right: 1px solid black;
+        }
+
+        .waybill-wrapper .currency-box {
+          width: 50%;
+          padding: 2px 5px;
+          font-size: 10px;
+        }
+
+        .waybill-wrapper .barcode-section {
+          height: 140px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+              padding: 10px;
+        }
+
+        .waybill-wrapper .barcode {
+          height: 60px;
+          width: 90%;
           background: repeating-linear-gradient(
             to right,
             #000 0,
@@ -622,34 +838,53 @@ export default function ReceiptPage() {
             #fff 2px,
             #fff 4px,
             #000 4px,
-            #000 8px,
-            #fff 8px,
+            #000 7px,
+            #fff 7px,
             #fff 9px
           );
-          margin-bottom: 5px;
         }
 
-        .receipt-wrapper .totals-area {
-          width: 250px;
-        }
-
-        .receipt-wrapper .total-row {
+        .waybill-wrapper .col-3 {
           display: flex;
-          justify-content: space-between;
-          padding: 8px 0;
-          font-size: 14px;
+          flex-direction: column;
         }
 
-        .receipt-wrapper .total-row.final {
-          border-top: 2px solid var(--text-dark);
-          margin-top: 8px;
-          padding-top: 12px;
-          font-weight: 800;
-          font-size: 18px;
-          color: var(--primary-color);
+        .waybill-wrapper .ref-box {
+          height: 25px;
+          border-bottom: 1px solid black;
+          display: flex;
+          align-items: center;
+          padding: 0 5px;
         }
 
-        .receipt-print-btn {
+        .waybill-wrapper .service-section {
+          flex: 1;
+          padding: 5px;
+          border-bottom: 1px solid black;
+        }
+
+        .waybill-wrapper .size-section {
+          height: 100px;
+          padding: 0;
+        }
+
+        .waybill-wrapper .dims-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 5px;
+        }
+
+        .waybill-wrapper .dims-table td {
+          padding: 2px;
+        }
+
+        .waybill-wrapper .footer-strip {
+          margin-top: 5px;
+          font-size: 12px;
+          font-weight: bold;
+        }
+
+        .waybill-print-btn {
           position: fixed;
           bottom: 30px;
           right: 30px;
@@ -665,12 +900,12 @@ export default function ReceiptPage() {
           z-index: 1000;
         }
 
-        .receipt-print-btn:hover {
+        .waybill-print-btn:hover {
           transform: translateY(-2px);
           background: #059669;
         }
 
-        .receipt-back-btn {
+        .waybill-back-btn {
           position: fixed;
           bottom: 30px;
           left: 30px;
@@ -678,169 +913,225 @@ export default function ReceiptPage() {
         }
 
         @media print {
-          .receipt-wrapper .receipt-container {
-            box-shadow: none;
+          .waybill-wrapper .waybill-container {
+            border: none;
             padding: 0;
             width: 100%;
             max-width: 100%;
           }
-          .receipt-print-btn, .receipt-back-btn {
+          .waybill-print-btn, .waybill-back-btn {
             display: none !important;
           }
         }
       `}</style>
 
-      <div className="receipt-wrapper">
-        <div className="receipt-container">
+      <div className="waybill-wrapper">
+        <div className="waybill-container">
           {/* Header */}
-          <header className="header">
-          <div className="company-branding">
-            <img src="/logo_final.png" alt="PSS Logo" style={{height: '45px', width: 'auto', marginBottom: '6px'}} />
-            <br></br>
-            <p style={{fontSize: '12px', marginTop: '2px'}}>Global Shipping Solutions</p>
+          <div className="header-area">
+            <div className="logo">
+              <img src="/logo_final.png" alt="PSS Logo" />
+              <span>PROMPT SURVEY & SERVICES</span>
           </div>
-          <div className="invoice-details">
-            <h2>RECEIPT #{invoice.invoiceNumber}</h2>
-            <p>Date: {invoiceDate}</p>
-            <span className="tag" style={{background: status === 'Paid' ? '#d1fae5' : status === 'Pending' ? '#fef3c7' : '#fee2e2', color: status === 'Paid' ? '#065f46' : status === 'Pending' ? '#92400e' : '#991b1b'}}>
-              {status}
-            </span>
-              </div>
-        </header>
+            <div className="warning-text">
+              Self-Collection is not<br />
+              Available for this shipment
+        </div>
+            <div className="exp-box">EXP</div>
+      </div>
 
-        {/* Address Route */}
-        <section className="route-section">
-          <div className="address-box">
-            <h3>From (Sender)</h3>
-            <strong>{senderName}</strong>
-            {senderAddress && <p>{senderAddress}</p>}
-            {(senderCity || senderState || senderZip) && (
-              <p>
-                {[senderCity, senderState, senderZip].filter(Boolean).join(', ')}
-                {senderCountry && `, ${senderCountry}`}
-              </p>
-            )}
-            {!senderAddress && !senderCity && <p>{senderCountry || 'N/A'}</p>}
-                  </div>
-          <div className="address-box" style={{textAlign: 'right'}}>
-            <h3>To (Receiver)</h3>
-            <strong>{recipientName}</strong>
-            {recipientAddress && <p>{recipientAddress}</p>}
-            {recipientCountry && <p>{recipientCountry}</p>}
-            {!recipientAddress && !recipientCountry && <p>N/A</p>}
-                  </div>
-        </section>
+          {/* Main Grid */}
+          <div className="main-grid">
+            {/* COLUMN 1 (LEFT) */}
+            <div className="col-1">
+              {/* Account Name */}
+              <div className="border-bottom" style={{padding: '2px'}}>
+                <div className="section-header bg-red">
+                  <span style={{color: 'white', fontWeight: 'bold'}}>1</span> ACCOUNT NAME
+          </div>
+                <div className="cell-content bold" style={{fontSize: '12px'}}>
+                  {accountName} {accountId ? `(${office} - ${accountId})` : `(${office})`}
+        </div>
+      </div>
 
-        {/* Shipment Specifics */}
-        <section className="details-grid">
-          <div className="detail-item">
-            <h4>Tracking Number</h4>
-            <p>{trackingNumber}</p>
-                  </div>
-          <div className="detail-item">
-            <h4>Service Type</h4>
-            <p>{serviceType}</p>
-                  </div>
-          <div className="detail-item">
-            <h4>Total Weight</h4>
-            <p>{shipment?.weight || invoice.weight || 0} kg</p>
-                  </div>
-          <div className="detail-item">
-            <h4>Dimensions</h4>
-            <p>{dimensions}</p>
-                </div>
-        </section>
-
-        {/* Itemized List */}
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th className="text-right">Qty</th>
-                <th className="text-right">Unit Price</th>
-                <th className="text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineItems.map((item: any, index: number) => {
-                // Line items use 'value' field, not 'total', 'amount', 'unitPrice', or 'price'
-                const itemValue = item.value || 0;
-                const quantity = item.quantity || 1;
-                const unitPrice = quantity > 0 ? itemValue / quantity : itemValue;
-                
-                return (
-                  <tr key={index}>
-                    <td>
-                      <strong>{item.description || item.name || 'Shipping Service'}</strong>
-                      {item.note && (
-                        <>
-                          <br />
-                          <span style={{color: '#64748b', fontSize: '12px'}}>{item.note}</span>
-                        </>
-                      )}
-                    </td>
-                    <td className="text-right">{quantity}</td>
-                    <td className="text-right">
-                      {invoice.currency || 'USD'} {unitPrice.toFixed(2)}
-                    </td>
-                    <td className="text-right">
-                      {invoice.currency || 'USD'} {itemValue.toFixed(2)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-              </div>
-              
-        {/* Footer */}
-        <div className="footer-section">
-          <div className="barcode-area">
-            <div className="barcode"></div>
-            <p style={{fontSize: '12px', letterSpacing: '2px'}}>{trackingNumber}</p>
-            <p style={{fontSize: '10px', color: '#94a3b8', marginTop: '10px'}}>Thank you for your business!</p>
-              </div>
-              
-          <div className="totals-area">
-            <div className="total-row">
-              <span>Subtotal</span>
-              <span>{invoice.currency || 'USD'} {subtotal.toFixed(2)}</span>
-                </div>
-            {invoice.fscCharges && invoice.fscCharges > 0 && (
-              <div className="total-row">
-                <span>Fuel Surcharge</span>
-                <span>{invoice.currency || 'USD'} {fscAmount.toFixed(2)}</span>
-              </div>
-            )}
-            {invoice.discount && invoice.discount > 0 && (
-              <div className="total-row">
-                <span>Discount</span>
-                <span>-{invoice.currency || 'USD'} {discountAmount.toFixed(2)}</span>
-                  </div>
-            )}
-            {taxAmount > 0 && (
-              <div className="total-row">
-                <span>Tax</span>
-                <span>{invoice.currency || 'USD'} {taxAmount.toFixed(2)}</span>
-                  </div>
-            )}
-            <div className="total-row final">
-              <span>Total Paid</span>
-              <span>{invoice.currency || 'USD'} {total.toFixed(2)}</span>
-                  </div>
+              {/* Shipper Info */}
+              <div className="shipper-container border-bottom">
+                <div className="vertical-label">SHIPPER</div>
+                <div className="address-details">
+                  <div style={{marginBottom: '8px'}}>
+                    <strong>{senderName.toUpperCase()}</strong><br />
+                    {senderAddress}
             </div>
+                  <div style={{marginBottom: '8px'}}>
+                    {senderCity && `${senderCity}`}
+                    {senderState && `, ${senderState}`}
+                    {senderZip && `, ${senderZip}`}
+                    {senderCountry && <><br />{senderCountry}</>}
+          </div>
+                  <div>
+                    {senderName}<br />
+                    {senderPhone || 'N/A'}<br />
+                    CNIC/NTN: N/A
+              </div>
+              </div>
+              </div>
+
+              {/* Sender Authorization */}
+              <div className="auth-section border-bottom">
+                <div className="section-header bg-red">
+                  <span style={{color: 'white'}}>3</span> SENDER'S AUTHORIZATION & SIGNATURE
+            </div>
+                <p className="terms-text">
+                  I / WE AGREE THAT THE CARRIERS STANDARD TERMS AND CONDITIONS APPLY TO THIS SHIPMENT AND LIMIT CARRIERS LIABILITY. THE WARSAW CONVENTION MAY ALSO APPLY. TERMS AND CONDITIONS AVAILABLE AT WWW.PSS.COM
+                </p>
+                <div className="signature-line">SENDER'S SIGNATURE</div>
+                <div className="timestamp">
+                  DATE: {timestampDate}<br />
+                  Received by:
+          </div>
+              </div>
+              
+              {/* POD */}
+              <div className="pod-section">
+                <div className="section-header bg-red">
+                  <span style={{color: 'white'}}>4</span> PROOF OF DELIVERY (POD)
+                  </div>
+                <div style={{padding: '5px'}}>
+                  <div className="flex" style={{justifyContent: 'space-between', marginBottom: '10px'}}>
+                    <span>RECEIVER'S SIGNATURE</span>
+                    <span>DATE &nbsp;&nbsp; / &nbsp;&nbsp; / &nbsp;&nbsp;</span>
+                </div>
+                  <div className="flex" style={{justifyContent: 'flex-end', marginBottom: '10px'}}>
+                    <span>TIME &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; AM/PM</span>
+              </div>
+                  <div style={{borderTop: '1px solid #ccc', paddingTop: '2px', fontSize: '8px'}}>
+                    PRINT NAME<br />
+                    (CAPITAL LETTERS VERY IMPORTANT)
+                  </div>
+                  </div>
+                  </div>
+                </div>
+
+            {/* COLUMN 2 (MIDDLE) */}
+            <div className="col-2">
+              {/* LHE & Tracking */}
+              <div className="lhe-header">
+                <div className="lhe-box">{office}</div>
+                <div className="tracking-box">{trackingNumber}</div>
+              </div>
+              
+              {/* Consignee Info */}
+              <div className="shipper-container border-bottom">
+                <div className="section-header bg-red" style={{position: 'absolute', width: '15px', height: '15px', padding: 0, textAlign: 'center', lineHeight: '15px'}}>2</div>
+                <div className="vertical-label">CONSIGNEE</div>
+                <div className="address-details" style={{paddingLeft: '15px'}}>
+                  <div style={{marginBottom: '8px'}}>
+                    <strong>{recipientName.toUpperCase()}</strong><br />
+                    {recipientAddress}
+                  </div>
+                  <div style={{marginBottom: '8px'}}>
+                    {recipientCountry && <>{recipientCountry}</>}
+                  </div>
+                  <div>
+                    Attn.: {recipientName}<br />
+                    N/A<br />
+                    <br />
+                    EORI
+                  </div>
+                </div>
+              </div>
+              
+              {/* DAP & Value */}
+              <div className="dap-section">
+                <div className="dap-box">** DAP **</div>
+                <div className="currency-box">
+                  DECLARED VALUE FOR<br />
+                  CUSTOMS AND CURRENCY<br />
+                  <strong>{declaredValue.toFixed(2)} PKR.</strong>
+              </div>
+            </div>
+
+              {/* Barcode */}
+              <div className="barcode-section">
+                <div className="barcode"></div>
+                <div style={{fontWeight: 'bold', fontSize: '14px', marginTop: '5px'}}>*{trackingNumber}*</div>
+                </div>
+              </div>
+              
+            {/* COLUMN 3 (RIGHT) */}
+            <div className="col-3">
+              {/* References */}
+              <div className="section-header bg-grey text-center">CUSTOMER REFERENCE</div>
+              <div className="ref-box">{referenceNumber || 'PSS'}</div>
+              
+              <div className="section-header bg-grey text-center">ALTERNATE REFERENCE</div>
+              <div className="ref-box"></div>
+
+              {/* Service Type */}
+              <div className="service-section">
+                <div className="section-header bg-red">
+                  <span style={{color: 'white'}}>5</span> SERVICE TYPE
+                  </div>
+                <div className="bold" style={{margin: '5px 0'}}>{serviceType}</div>
+                <div style={{fontSize: '9px', marginBottom: '8px'}}>
+                  IMPORTANT<br />
+                  ATTACH ORIGINAL THREE COPIES OF COMMERCIAL INVOICES WITH PACKAGE FOR CUSTOM PURPOSE
+                  </div>
+                
+                <div style={{borderTop: '1px solid #ccc', paddingTop: '5px'}}>
+                  FULL DESCRIPTION OF CONTENTS:-<br />
+                  <strong>{contentsDescription.toUpperCase()}</strong>
+                </div>
+                <div style={{marginTop: '5px'}}>
+                  SPECIAL INSTRUCTIONS:-<br />
+                  N/A
+                </div>
+              </div>
+              
+              {/* Size & Weight */}
+              <div className="size-section">
+                <div className="section-header bg-red">
+                  <span style={{color: 'white'}}>6</span> SIZE & WEIGHT
+                </div>
+                <div style={{padding: '5px'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee'}}>
+                    <span>NO. OF PIECES</span>
+                    <strong>{totalPieces}</strong>
+                  </div>
+                  <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black', padding: '2px 0'}}>
+                    <span>WEIGHT</span>
+                    <strong>{totalWeight.toFixed(3)} KGS</strong>
+              </div>
+              
+                  <div style={{marginTop: '2px'}}>DIMENSIONS IN CM <span style={{float: 'right'}}>LxWxH</span></div>
+                  <div style={{textAlign: 'center', margin: '2px 0'}}>{dimensions}</div>
+                  
+                  <div style={{borderTop: '1px solid black', paddingTop: '2px'}}>
+                    VOLUMETRIC / CHARGED WEIGHT
+                    <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}>
+                      <span>{chargedWeight.toFixed(2)}</span>
+                      <span>KGS</span>
+                  </div>
+                  </div>
+                  </div>
+                  </div>
+                </div>
+              </div>
+          {/* End Grid */}
+
+          <div className="footer-strip">
+            SENDER COPY
           </div>
         </div>
       </div>
 
       {/* Floating Print Button */}
-      <button className="receipt-print-btn" onClick={handlePrint}>
-        Print Receipt
+      <button className="waybill-print-btn" onClick={handlePrint}>
+        Print Waybill
       </button>
 
       {/* Back Button */}
-      <div className="receipt-back-btn">
+      <div className="waybill-back-btn">
         <Link href="/dashboard">
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />

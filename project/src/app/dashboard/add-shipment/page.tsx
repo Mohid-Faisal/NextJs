@@ -638,7 +638,7 @@ const AddShipmentPage = () => {
       isEditing ? "/api/update-shipment" : "/api/add-shipment",
       {
         method: isEditing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isEditing ? { id: Number(editId), ...shipmentData } : shipmentData
         ),
@@ -656,17 +656,17 @@ const AddShipmentPage = () => {
       );
       console.log("Shipment saved successfully with data:", data.receivedData);
       if (!isEditing) {
-        setForm({
+      setForm({
           shipmentDate: new Date().toLocaleDateString("en-CA"),
-          trackingId: "",
+        trackingId: "",
           invoiceNumber: "",
           referenceNumber: "",
           agency: "PSS",
           office: "LHE",
-          senderName: "",
-          senderAddress: "",
-          recipientName: "",
-          recipientAddress: "",
+        senderName: "",
+        senderAddress: "",
+        recipientName: "",
+        recipientAddress: "",
           deliveryStatus: "",
           shippingMode: "",
           packaging: "",
@@ -1073,14 +1073,14 @@ const AddShipmentPage = () => {
                   <Label className="text-sm font-medium mb-1">
                     Office of Origin
                   </Label>
-                  <Select
+              <Select
                     onValueChange={(value) => handleSelect("office", value)}
                     value={form.office}
-                  >
+              >
                     <SelectTrigger className="bg-muted w-full">
                       <SelectValue placeholder="Select office" />
-                    </SelectTrigger>
-                    <SelectContent>
+                </SelectTrigger>
+                <SelectContent>
                       {offices.map((office) => (
                         <SelectItem
                           key={office.id}
@@ -1089,9 +1089,9 @@ const AddShipmentPage = () => {
                           {office.code || office.id}
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                </SelectContent>
+              </Select>
+            </div>
                 {/* Shipment Date */}
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium mb-1">
@@ -1170,7 +1170,7 @@ const AddShipmentPage = () => {
                   <Label className="mb-2">Sender/Customer</Label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
-                      <Select
+              <Select
                         value={selectedSender?.Company || ""}
                         onValueChange={(value) => {
                           const sender = senderResults.find(
@@ -1196,11 +1196,11 @@ const AddShipmentPage = () => {
                           }
                         }}
                         onOpenChange={setSenderDropdownOpen}
-                      >
-                        <SelectTrigger className="w-full">
+              >
+                <SelectTrigger className="w-full">
                           <SelectValue placeholder="Search sender name..." />
-                        </SelectTrigger>
-                        <SelectContent>
+                </SelectTrigger>
+                <SelectContent>
                           <div className="p-2">
                             <Input
                               ref={senderSearchRef}
@@ -1233,8 +1233,8 @@ const AddShipmentPage = () => {
                                 </div>
                               )}
                           </div>
-                        </SelectContent>
-                      </Select>
+                </SelectContent>
+              </Select>
                     </div>
                     <AddCustomerDialog
                       triggerLabel="+"
@@ -1259,7 +1259,7 @@ const AddShipmentPage = () => {
                       }}
                     />
                   </div>
-                </div>
+            </div>
 
                 {/* Sender Address */}
                 <div className="flex flex-col text-foreground">
@@ -1358,7 +1358,7 @@ const AddShipmentPage = () => {
                   <Label className="mb-2">Recipient/Client</Label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
-                      <Select
+              <Select
                         value={selectedRecipient?.Company || ""}
                         onValueChange={(value) => {
                           const recipient = recipientResults.find(
@@ -1384,11 +1384,11 @@ const AddShipmentPage = () => {
                           }
                         }}
                         onOpenChange={setRecipientDropdownOpen}
-                      >
-                        <SelectTrigger className="w-full">
+              >
+                <SelectTrigger className="w-full">
                           <SelectValue placeholder="Search recipient name..." />
-                        </SelectTrigger>
-                        <SelectContent>
+                </SelectTrigger>
+                <SelectContent>
                           <div className="p-2">
                             <Input
                               ref={recipientSearchRef}
@@ -1423,8 +1423,8 @@ const AddShipmentPage = () => {
                                 </div>
                               )}
                           </div>
-                        </SelectContent>
-                      </Select>
+                </SelectContent>
+              </Select>
                     </div>
                     <AddRecipientDialog
                       triggerLabel="+"
@@ -1452,7 +1452,7 @@ const AddShipmentPage = () => {
                       }}
                     />
                   </div>
-                </div>
+            </div>
 
                 {/* Recipient Address */}
                 <div className="flex flex-col text-foreground">
@@ -1768,7 +1768,7 @@ const AddShipmentPage = () => {
                             className="text-red-500 hover:text-red-700"
                           >
                             <FaTrash className="w-3 h-3" />
-                          </Button>
+              </Button>
                         )}
                       </td>
                     </tr>
@@ -1781,7 +1781,7 @@ const AddShipmentPage = () => {
                   Amount: {totals.amount} | Weight: {totals.weight} | Weight
                   Vol: {totals.weightVol} | DecValue: {totals.decValue}
                 </span>
-              </div>
+            </div>
               <Button
                 type="button"
                 variant="outline"
@@ -1792,8 +1792,8 @@ const AddShipmentPage = () => {
                 <span className="sm:hidden">+ Add Package</span>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
 
         {/* Rate & Taxes Information Section */}
         <Card className="bg-card border border-border shadow-sm mb-4 sm:mb-6">

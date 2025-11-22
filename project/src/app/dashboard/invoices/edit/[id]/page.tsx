@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,12 +61,36 @@ export default function EditInvoicePage() {
   const [note, setNote] = useState('No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.');
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [updating, setUpdating] = useState(false);
+  const fscInputRef = useRef<HTMLInputElement>(null);
+  const [valueFieldWidth, setValueFieldWidth] = useState<number>(180);
 
   useEffect(() => {
     if (params.id) {
       fetchInvoiceData();
     }
   }, [params.id]);
+
+  // Measure Fsc field width and apply to value fields
+  useEffect(() => {
+    const updateValueFieldWidth = () => {
+      if (fscInputRef.current) {
+        const fscWidth = fscInputRef.current.offsetWidth;
+        setValueFieldWidth(fscWidth);
+      }
+    };
+
+    // Update on mount and window resize
+    updateValueFieldWidth();
+    window.addEventListener('resize', updateValueFieldWidth);
+    
+    // Also update after a short delay to ensure layout is complete
+    const timeout = setTimeout(updateValueFieldWidth, 100);
+
+    return () => {
+      window.removeEventListener('resize', updateValueFieldWidth);
+      clearTimeout(timeout);
+    };
+  }, [invoiceData]);
 
   // Update line items when calculatedValues change
   useEffect(() => {
@@ -362,11 +386,11 @@ export default function EditInvoicePage() {
               Buying Payment Invoice
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5">
             {/* General Invoice Details Section */}
-            <div className="grid grid-cols-7 gap-4">
-              <div>
-                <Label htmlFor="date" className="font-bold">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+              <div className="col-span-1">
+                <Label htmlFor="date" className="font-bold text-sm">
                   Date
                 </Label>
                 <Input
@@ -378,11 +402,11 @@ export default function EditInvoicePage() {
                     year: "2-digit",
                   })}
                   readOnly
-                  className="mt-1"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div>
-                <Label htmlFor="receiptNumber" className="font-bold">
+              <div className="col-span-1">
+                <Label htmlFor="receiptNumber" className="font-bold text-sm">
                   Receipt #
                 </Label>
                 <Input
@@ -392,11 +416,11 @@ export default function EditInvoicePage() {
                     ...invoiceData,
                     shipment: {...invoiceData.shipment!, trackingId: e.target.value}
                   })}
-                  className="mt-1"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div>
-                <Label htmlFor="trackingNumber" className="font-bold">
+              <div className="col-span-1">
+                <Label htmlFor="trackingNumber" className="font-bold text-sm">
                   Tracking #
                 </Label>
                 <Input
@@ -406,12 +430,23 @@ export default function EditInvoicePage() {
                     ...invoiceData,
                     shipment: {...invoiceData.shipment!, trackingId: e.target.value}
                   })}
-                  className="mt-1"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div>
-                <Label htmlFor="destination" className="font-bold">
-                  Destination
+              <div className="col-span-1">
+                <Label htmlFor="referenceNumber" className="font-bold text-sm">
+                  Reference #
+                </Label>
+                <Input
+                  id="referenceNumber"
+                  value={invoiceData.referenceNumber || ''}
+                  onChange={(e) => setInvoiceData({...invoiceData, referenceNumber: e.target.value})}
+                  className="mt-1 text-sm"
+                />
+              </div>
+              <div className="col-span-1">
+                <Label htmlFor="destination" className="font-bold text-sm">
+                  Dest
                 </Label>
                 <Input
                   id="destination"
@@ -420,11 +455,11 @@ export default function EditInvoicePage() {
                     ...invoiceData,
                     shipment: {...invoiceData.shipment!, destination: e.target.value}
                   })}
-                  className="mt-1"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div>
-                <Label htmlFor="dayWeek" className="font-bold">
+              <div className="col-span-1">
+                <Label htmlFor="dayWeek" className="font-bold text-sm">
                   D/W
                 </Label>
                 <Input
@@ -434,54 +469,77 @@ export default function EditInvoicePage() {
                     ...invoiceData,
                     shipment: {...invoiceData.shipment!, dayWeek: e.target.value === 'D'}
                   })}
-                  className="mt-1"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div>
-                <Label htmlFor="weight" className="font-bold">
-                  Weight
+              <div className="col-span-1">
+                <Label htmlFor="pieces" className="font-bold text-sm">
+                  Pcs
+                </Label>
+                <Input
+                  id="pieces"
+                  type="number"
+                  step="1"
+                  value={packages.reduce((sum, pkg) => sum + (pkg.amount || 1), 0)}
+                  readOnly
+                  className="mt-1 bg-gray-50 text-sm"
+                />
+              </div>
+              <div className="col-span-1">
+                <Label htmlFor="weight" className="font-bold text-sm">
+                  Wght
                 </Label>
                 <Input
                   id="weight"
                   type="number"
                   step="0.01"
-                  value={packages.length > 0 ? packages[0].weight || 0 : 0}
+                  value={packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0)}
                   onChange={(e) => {
-                    if (packages.length > 0) {
-                      updatePackage(0, 'weight', parseFloat(e.target.value) || 0);
+                    // Update first package weight proportionally
+                    const totalWeight = parseFloat(e.target.value) || 0;
+                    const currentTotal = packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0);
+                    if (packages.length > 0 && currentTotal > 0) {
+                      const ratio = totalWeight / currentTotal;
+                      const updatedPackages = packages.map(pkg => ({
+                        ...pkg,
+                        weight: (pkg.weight || 0) * ratio
+                      }));
+                      setPackages(updatedPackages);
+                    } else if (packages.length > 0) {
+                      updatePackage(0, 'weight', totalWeight);
                     }
                   }}
-                  className="mt-1"
+                  className="mt-1 text-sm"
                 />
               </div>
             </div>
 
             {/* Profile and Invoice Specifics Section */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <Label htmlFor="profile" className="font-bold">
+                <Label htmlFor="profile" className="font-bold text-sm">
                   Profile
                 </Label>
                 <Input
                   id="profile"
                   value={isVendor ? 'Vendor' : 'Customer'}
                   readOnly
-                  className="mt-1 bg-gray-50"
+                  className="mt-1 bg-gray-50 text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="invoiceNumber" className="font-bold">
+                <Label htmlFor="invoiceNumber" className="font-bold text-sm">
                   Invoice #
                 </Label>
                 <Input
                   id="invoiceNumber"
                   value={invoiceData.invoiceNumber}
-                  onChange={(e) => setInvoiceData({...invoiceData, invoiceNumber: e.target.value})}
-                  className="mt-1"
+                  readOnly
+                  className="mt-1 text-sm bg-gray-50"
                 />
               </div>
               <div>
-                <Label htmlFor="invoiceDate" className="font-bold">
+                <Label htmlFor="invoiceDate" className="font-bold text-sm">
                   Invoice Date
                 </Label>
                 <Input
@@ -489,100 +547,107 @@ export default function EditInvoicePage() {
                   type="date"
                   value={new Date(invoiceData.createdAt).toISOString().split('T')[0]}
                   onChange={(e) => setInvoiceData({...invoiceData, createdAt: e.target.value})}
-                  className="mt-1"
+                  className="mt-1 text-sm"
                 />
               </div>
             </div>
 
             {/* Invoice Line Items Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+            <div className="space-y-3">
+              <div className="mb-3">
+                <h3 className="text-base font-semibold text-gray-800 dark:text-white">
                   Invoice Line Items
                 </h3>
-                <Button
-                  type="button"
-                  onClick={addLineItem}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
-                </Button>
+              </div>
+
+              {/* Headers */}
+              <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
+                <div className="w-10">
+                  <Button
+                    type="button"
+                    onClick={addLineItem}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white w-10 h-10 p-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Label className="font-bold text-sm">Description</Label>
+                <Label className="font-bold text-sm">Value</Label>
               </div>
 
               {lineItems.map((item, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <Label
-                      htmlFor={`description-${index}`}
-                      className="font-bold"
+                <div key={index} className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
+                  {/* Action Buttons Column */}
+                  <div className="w-10">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeLineItem(index)}
+                      className="bg-red-500 hover:bg-red-600 text-white border-red-500 w-10 h-10 p-0"
                     >
-                      Description
-                    </Label>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Description Field */}
+                  <div>
                     <Input
                       id={`description-${index}`}
                       value={item.description || ''}
                       onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                      className="mt-1"
+                      className="text-sm"
+                      placeholder="Enter your description here."
                     />
                   </div>
-                  <div className="w-32">
-                    <Label htmlFor={`value-${index}`} className="font-bold">
-                      Value
-                    </Label>
+                  
+                  {/* Value Field */}
+                  <div style={{ width: `${valueFieldWidth}px` }}>
                     <Input
                       id={`value-${index}`}
                       type="number"
                       step="0.01"
                       value={item.value || 0}
                       onChange={(e) => updateLineItem(index, 'value', parseFloat(e.target.value) || 0)}
-                      className="mt-1"
+                      className="text-sm w-full"
                     />
                   </div>
-                  {lineItems.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => removeLineItem(index)}
-                      className="mt-6"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
                 </div>
               ))}
             </div>
 
-            {/* Disclaimer and Financial Service Charge */}
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-2">
-                <Label htmlFor="disclaimer" className="font-bold">
+            {/* Disclaimer and Financial Fields */}
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
+              <div>
+                <Label htmlFor="disclaimer" className="font-bold text-sm mb-1 block">
                   Disclaimer
                 </Label>
                 <Textarea
                   id="disclaimer"
                   value={disclaimer}
                   onChange={(e) => setDisclaimer(e.target.value)}
-                  className="mt-2 h-32 resize-none"
+                  className="h-[140px] resize-y text-sm w-full"
                   placeholder="Enter disclaimer text..."
                 />
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <Label htmlFor="fscCharges" className="font-bold">
-                    Fsc (Fuel Surcharge)
+                  <Label htmlFor="fscCharges" className="font-bold text-sm mb-1 block">
+                    Fsc
                   </Label>
                   <Input
+                    ref={fscInputRef}
                     id="fscCharges"
                     type="number"
                     step="0.01"
                     value={invoiceData.fscCharges}
                     onChange={(e) => setInvoiceData({...invoiceData, fscCharges: parseFloat(e.target.value) || 0})}
-                    className="mt-1"
+                    className="text-sm w-full"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="discount" className="font-bold">
+                  <Label htmlFor="discount" className="font-bold text-sm mb-1 block">
                     Discount
                   </Label>
                   <Input
@@ -591,7 +656,19 @@ export default function EditInvoicePage() {
                     step="0.01"
                     value={invoiceData.discount || 0}
                     onChange={(e) => setInvoiceData({...invoiceData, discount: parseFloat(e.target.value) || 0})}
-                    className="mt-1"
+                    className="text-sm w-full"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="total" className="font-bold text-sm mb-1 block">
+                    Total
+                  </Label>
+                  <Input
+                    id="total"
+                    type="text"
+                    value={(lineItems.reduce((sum, item) => sum + (item.value || 0), 0) + (invoiceData.fscCharges || 0) - (invoiceData.discount || 0)).toLocaleString()}
+                    readOnly
+                    className="text-sm w-full bg-gray-100"
                   />
                 </div>
               </div>
@@ -599,21 +676,21 @@ export default function EditInvoicePage() {
 
             {/* Note Section */}
             <div>
-              <Label htmlFor="note" className="font-bold">
+              <Label htmlFor="note" className="font-bold text-sm mb-1 block">
                 Note
               </Label>
               <Textarea
                 id="note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="mt-2 h-24 resize-none"
+                className="h-20 resize-none text-sm"
                 placeholder="Enter any additional notes..."
               />
             </div>
 
             {/* Total Calculation */}
-            <div className="border-t pt-4">
-              <div className="flex justify-end items-center gap-4">
+            <div className="border-t pt-4 mt-2">
+              <div className="flex justify-end items-center">
                 <div className="text-lg font-semibold text-gray-800 dark:text-white">
                   Total Amount: PKR {(lineItems.reduce((sum, item) => sum + (item.value || 0), 0) + (invoiceData.fscCharges || 0) - (invoiceData.discount || 0)).toLocaleString()}
                 </div>
@@ -621,7 +698,7 @@ export default function EditInvoicePage() {
             </div>
 
             {/* Form Actions */}
-            <div className="flex justify-end gap-4 pt-6">
+            <div className="flex justify-end gap-4 pt-4">
               <Button
                 type="button"
                 variant="outline"

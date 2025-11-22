@@ -140,43 +140,43 @@ const EditCustomerForm = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="companyname">Company</Label>
-          <Input
+                  <Input
             id="companyname"
             name="companyname"
             value={form.companyname}
-            onChange={handleChange}
+                    onChange={handleChange}
             required
-          />
-        </div>
+                  />
+                </div>
         <div className="space-y-1.5">
           <Label htmlFor="personname">Person Name</Label>
-          <Input
+                  <Input
             id="personname"
             name="personname"
             value={form.personname}
-            onChange={handleChange}
-          />
-        </div>
+                    onChange={handleChange}
+                  />
+                </div>
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
-          <Input
+                    <Input
             id="email"
             name="email"
             type="email"
             value={form.email}
-            onChange={handleChange}
-          />
-        </div>
+                      onChange={handleChange}
+                    />
+                </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone">Phone</Label>
-          <Input
+                  <Input
             id="phone"
             name="phone"
             value={form.phone}
-            onChange={handleChange}
+                    onChange={handleChange}
             placeholder="0301 2345678"
-          />
-        </div>
+                  />
+                </div>
       </div>
 
       {/* Document Information */}
@@ -203,22 +203,22 @@ const EditCustomerForm = ({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="documentNumber">Document Number</Label>
-          <Input
+                  <Input
             id="documentNumber"
             name="documentNumber"
             value={form.documentNumber}
-            onChange={handleChange}
-          />
-        </div>
+                    onChange={handleChange}
+                  />
+                </div>
         <div className="space-y-1.5">
           <Label htmlFor="documentExpiry">Expiry</Label>
-          <Input
+                  <Input
             id="documentExpiry"
             name="documentExpiry"
             value={form.documentExpiry}
-            onChange={handleChange}
-          />
-        </div>
+                    onChange={handleChange}
+                  />
+                </div>
       </div>
 
       {/* Country, State, City */}
@@ -295,23 +295,23 @@ const EditCustomerForm = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="zip">Zip Code</Label>
-          <Input
+                  <Input
             id="zip"
             name="zip"
             value={form.zip}
-            onChange={handleChange}
-          />
-        </div>
+                    onChange={handleChange}
+                  />
+                </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="address">Address</Label>
-          <Input
+                  <Input
             id="address"
             name="address"
             value={form.address}
-            onChange={handleChange}
-          />
-        </div>
+                    onChange={handleChange}
+                  />
+                </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="activestatus">Active Status</Label>

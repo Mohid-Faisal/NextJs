@@ -184,12 +184,15 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
   const lineItemsHTML = lineItems.map((item, index) => 
     `<tr>
       <td colspan="2">${item.description || 'Service Item'}</td>
-      <td>$${vendor ? 
+      <td>PKR ${vendor ? 
         (calculatedValues.vendorPrice || item.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) :
         (item.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       }</td>
     </tr>`
   ).join('');
+  
+  // Calculate total pieces from packages
+  const totalPieces = packages.reduce((sum, pkg) => sum + (pkg.amount || 1), 0);
   console.log('Generated line items HTML:', lineItemsHTML);
   
   // Debug template decision
@@ -383,6 +386,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
               <th>Reference #</th>
               <th>Dest</th>
               <th>D/W</th>
+              <th>Pcs</th>
               <th>Wght</th>
           </tr>
           </thead>
@@ -394,7 +398,8 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
             <td>${shipment?.referenceNumber || invoice.referenceNumber || 'N/A'}</td>
             <td>${shipment?.destination || 'N/A'}</td>
             <td>${shipment?.dayWeek ? 'D' : 'W'}</td>
-            <td>${packages.length > 0 ? packages[0].weight || 'N/A' : 'N/A'}</td>
+            <td>${totalPieces > 0 ? totalPieces : (shipment?.totalPackages || shipment?.amount || 'N/A')}</td>
+            <td>${packages.length > 0 ? packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0).toFixed(2) : (shipment?.totalWeight || shipment?.weight || 'N/A')}</td>
           </tr>
           </tbody>
         </table>
@@ -420,7 +425,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
           ${formData && lineItems.length > 0 ? lineItemsHTML : packages.length > 0 ? packages.map((pkg, index) => `
           <tr>
             <td colspan="2">${pkg.packageDescription || 'Shipping Package'}</td>
-            <td>$${vendor ? 
+            <td>PKR ${vendor ? 
               ((calculatedValues.vendorPrice || calculatedValues.total || 0) / packages.length).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) :
               ((calculatedValues.total || calculatedValues.subtotal || 0) / packages.length).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             }</td>
@@ -428,7 +433,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
           `).join('') : lineItems.length > 0 ? lineItemsHTML : `
           <tr>
             <td colspan="2">No items available</td>
-            <td>$0.00</td>
+            <td>PKR 0.00</td>
           </tr>
           `}
           </tbody>
@@ -448,17 +453,17 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
                 ${invoice.disclaimer || 'Any discrepancy in invoice must be notified within 03 days of receipt of this invoice.You are requested to pay the invoice amount through cash payment or cross cheque in favor of "PSS" with immediate effect.'}
               </th>
               <th>Fsc Charges</th>
-              <td>$${(shipment?.fuelSurcharge || invoice.fscCharges || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td>PKR ${(shipment?.fuelSurcharge || invoice.fscCharges || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
             
             <tr>
               <th class="">Discount</th>
-              <td>$${(shipment?.discount || invoice.discount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td>PKR ${(shipment?.discount || invoice.discount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
             
             <tr>
               <th style="font-size: 20px;"> Total</th>
-              <td style="font-size: 20px;"><b>$${vendor ? 
+              <td style="font-size: 20px;"><b>PKR ${vendor ? 
                 (invoice.totalAmount || calculatedValues.vendorPrice || shipment?.totalCost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) :
                 (invoice.totalAmount || calculatedValues.total || shipment?.totalCost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
               }</b></td>
