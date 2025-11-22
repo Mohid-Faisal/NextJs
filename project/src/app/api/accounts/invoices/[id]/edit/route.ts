@@ -40,7 +40,15 @@ export async function GET(
 
     console.log('Invoice found for editing:', { id: invoice.id, invoiceNumber: invoice.invoiceNumber });
 
-    return NextResponse.json(invoice);
+    // Return invoice with discount (use shipment discount as fallback for backward compatibility)
+    const invoiceWithDiscount = {
+      ...invoice,
+      discount: (invoice as any).discount !== undefined 
+        ? (invoice as any).discount 
+        : (invoice.shipment?.discount || 0)
+    };
+
+    return NextResponse.json(invoiceWithDiscount);
 
   } catch (error) {
     console.error("Error fetching invoice for edit:", error);
@@ -57,63 +65,111 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const invID = searchParams.get('invID');
     const body = await request.json();
     
-    console.log('Updating invoice:', { id, body });
+    if (!invID) {
+      return NextResponse.json({ error: 'Invoice ID is required' }, { status: 400 });
+    }
+
+    const invoiceId = parseInt(invID);
+    const shipmentId = parseInt(id);
+    
+    console.log('Updating invoice:', { invoiceId, shipmentId, body });
+
+    // Get current invoice to check old amount
+    const currentInvoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        customer: true,
+        vendor: true,
+        shipment: true
+      }
+    });
+
+    if (!currentInvoice) {
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+
+    const oldAmount = currentInvoice.totalAmount;
+    const newAmount = parseFloat(body.totalAmount) || 0;
+    const amountChanged = oldAmount !== newAmount;
+
+    // Import utility functions
+    const { updateInvoiceBalance, updateJournalEntriesForInvoice } = await import('@/lib/utils');
 
     // Update invoice
     const updatedInvoice = await prisma.invoice.update({
-      where: { id: parseInt(id) },
+      where: { id: invoiceId },
       data: {
-        invoiceNumber: body.invoiceNumber,
-        totalAmount: body.totalAmount,
-        fscCharges: body.fscCharges,
-        dayWeek: body.shipment?.dayWeek ? 'D' : 'W',
-        lineItems: body.lineItems || [],
+        invoiceNumber: body.invoiceNumber || currentInvoice.invoiceNumber,
+        totalAmount: newAmount,
+        fscCharges: parseFloat(body.fscCharges) || 0,
+        discount: parseFloat(body.discount) || 0,
+        dayWeek: body.shipment?.dayWeek !== undefined 
+          ? (body.shipment.dayWeek === true || body.shipment.dayWeek === 'D' ? 'D' : 'W')
+          : currentInvoice.dayWeek,
+        lineItems: body.lineItems || currentInvoice.lineItems,
+        disclaimer: body.disclaimer || currentInvoice.disclaimer,
       }
     });
 
     // Update shipment if it exists
-    if (body.shipment) {
+    if (body.shipment && currentInvoice.shipment) {
+      const shipmentUpdateData: any = {
+        trackingId: body.shipment.trackingId || currentInvoice.shipment.trackingId,
+        destination: body.shipment.destination || currentInvoice.shipment.destination,
+        ...(body.referenceNumber !== undefined && { referenceNumber: body.referenceNumber }),
+        discount: parseFloat(body.discount) || 0,
+        ...(body.shipment.packages !== undefined && { packages: body.shipment.packages }),
+        ...(body.shipment.calculatedValues !== undefined && { calculatedValues: body.shipment.calculatedValues }),
+      };
+
+      // Update shipment totalCost and price if amount changed
+      if (amountChanged) {
+        shipmentUpdateData.totalCost = newAmount;
+        shipmentUpdateData.price = newAmount; // Update price as well
+      }
+
       await prisma.shipment.update({
-        where: { id: body.shipment.id },
-        data: {
-          trackingId: body.shipment.trackingId,
-          destination: body.shipment.destination,
-          referenceNumber: body.referenceNumber,
-          discount: body.discount,
-          packages: body.shipment.packages,
-          calculatedValues: body.shipment.calculatedValues,
-        }
+        where: { id: shipmentId },
+        data: shipmentUpdateData
       });
     }
 
-    // Update customer if it exists
-    if (body.customer) {
-      await prisma.customers.update({
-        where: { id: body.customer.id },
-        data: {
-          CompanyName: body.customer.CompanyName,
-          PersonName: body.customer.PersonName,
-          Address: body.customer.Address,
-          City: body.customer.City,
-          Country: body.customer.Country,
-        }
-      });
-    }
+    // Update customer/vendor balances and transactions if amount changed
+    if (amountChanged) {
+      try {
+        await updateInvoiceBalance(
+          prisma,
+          invoiceId,
+          oldAmount,
+          newAmount,
+          currentInvoice.customerId,
+          currentInvoice.customerId,
+          currentInvoice.vendorId,
+          currentInvoice.vendorId
+        );
 
-    // Update vendor if it exists
-    if (body.vendor) {
-      await prisma.vendors.update({
-        where: { id: body.vendor.id },
-        data: {
-          CompanyName: body.vendor.CompanyName,
-          PersonName: body.vendor.PersonName,
-          Address: body.vendor.Address,
-          City: body.vendor.City,
-          Country: body.vendor.Country,
-        }
-      });
+        // Update journal entries
+        const description = `Updated invoice: ${updatedInvoice.invoiceNumber} - ${body.shipment?.destination || currentInvoice.destination || 'N/A'}`;
+        await updateJournalEntriesForInvoice(
+          prisma,
+          invoiceId,
+          oldAmount,
+          newAmount,
+          currentInvoice.customerId,
+          currentInvoice.customerId,
+          currentInvoice.vendorId,
+          currentInvoice.vendorId,
+          updatedInvoice.invoiceNumber,
+          description
+        );
+      } catch (balanceError) {
+        console.error("Error updating balances and journal entries:", balanceError);
+        // Continue even if balance update fails
+      }
     }
 
     console.log('Invoice updated successfully:', updatedInvoice.id);
@@ -127,7 +183,7 @@ export async function PUT(
   } catch (error) {
     console.error("Error updating invoice:", error);
     return NextResponse.json(
-      { error: "Failed to update invoice" },
+      { error: "Failed to update invoice", details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

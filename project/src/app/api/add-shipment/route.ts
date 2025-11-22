@@ -437,11 +437,37 @@ export async function POST(req: NextRequest) {
       // SECTION 6.4: CUSTOMER INVOICE CREATION
       // ============================================================================
       // Create customer invoice using the existing accounts API
-      const customerLineItems = [
-        { description: "Shipping Service", value: Math.round(originalPrice) },
-        { description: "Fuel Surcharge", value: Math.round(fuelSurchargeAmount) },
-        { description: "Discount", value: Math.round(-discountAmount) }
-      ];
+      // Use package descriptions from packages array instead of hardcoded "Shipping Service"
+      const customerLineItems: { description: string; value: number }[] = [];
+      
+      // Parse packages if it's a string
+      let parsedPackages = packages;
+      if (typeof packages === 'string') {
+        try {
+          parsedPackages = JSON.parse(packages);
+        } catch (e) {
+          console.error('Error parsing packages:', e);
+          parsedPackages = [];
+        }
+      }
+      
+      // Create line items from packages using their descriptions
+      if (Array.isArray(parsedPackages) && parsedPackages.length > 0) {
+        // Distribute the original price across packages based on their weight/value
+        const totalWeight = parsedPackages.reduce((sum: number, pkg: any) => sum + (Math.max(pkg.weight || 0, pkg.weightVol || 0)), 0);
+        parsedPackages.forEach((pkg: any) => {
+          const packageWeight = Math.max(pkg.weight || 0, pkg.weightVol || 0);
+          const packageProportion = totalWeight > 0 ? packageWeight / totalWeight : 1 / parsedPackages.length;
+          const packageValue = Math.round(originalPrice * packageProportion);
+          const description = pkg.packageDescription || 'Shipping Service';
+          customerLineItems.push({ description, value: packageValue });
+        });
+      } else {
+        // Fallback if no packages: use original price with default description
+        customerLineItems.push({ description: "Shipping Service", value: Math.round(originalPrice) });
+      }
+      
+      // Note: Fuel Surcharge and Discount are NOT added as line items since they're already in fscCharges and discount fields
       
       // Add profit line item if profit percentage is greater than 0
       if (profitPercentageValue > 0) {
@@ -466,6 +492,7 @@ export async function POST(req: NextRequest) {
           weight: parseFloat(totalWeight) || 0,
           profile: "Customer",
           fscCharges: Math.round(fuelSurchargeAmount),
+          discount: Math.round(discountAmount),
           lineItems: customerLineItems,
           customerId: customerId,
           vendorId: null,
@@ -486,11 +513,37 @@ export async function POST(req: NextRequest) {
       // ============================================================================
       // Create vendor invoice using the existing accounts API
       // Vendor invoice uses original price without profit
-      const vendorLineItems = [
-        { description: "Vendor Service", value: Math.round(originalPrice) },
-        { description: "Fuel Surcharge", value: Math.round(fuelSurchargeAmount) },
-        { description: "Discount", value: Math.round(-discountAmount) }
-      ];
+      // Use package descriptions from packages array instead of hardcoded "Vendor Service"
+      const vendorLineItems: { description: string; value: number }[] = [];
+      
+      // Parse packages if it's a string (reuse from customer invoice)
+      let vendorParsedPackages = packages;
+      if (typeof packages === 'string') {
+        try {
+          vendorParsedPackages = JSON.parse(packages);
+        } catch (e) {
+          console.error('Error parsing packages for vendor invoice:', e);
+          vendorParsedPackages = [];
+        }
+      }
+      
+      // Create line items from packages using their descriptions
+      if (Array.isArray(vendorParsedPackages) && vendorParsedPackages.length > 0) {
+        // Distribute the original price across packages based on their weight/value
+        const totalWeight = vendorParsedPackages.reduce((sum: number, pkg: any) => sum + (Math.max(pkg.weight || 0, pkg.weightVol || 0)), 0);
+        vendorParsedPackages.forEach((pkg: any) => {
+          const packageWeight = Math.max(pkg.weight || 0, pkg.weightVol || 0);
+          const packageProportion = totalWeight > 0 ? packageWeight / totalWeight : 1 / vendorParsedPackages.length;
+          const packageValue = Math.round(originalPrice * packageProportion);
+          const description = pkg.packageDescription || 'Vendor Service';
+          vendorLineItems.push({ description, value: packageValue });
+        });
+      } else {
+        // Fallback if no packages: use original price with default description
+        vendorLineItems.push({ description: "Vendor Service", value: Math.round(originalPrice) });
+      }
+      
+      // Note: Fuel Surcharge and Discount are NOT added as line items since they're already in fscCharges and discount fields
       
       // Add balance applied line item if vendor has balance (positive or negative)
       if (vendorAppliedBalance > 0) {
@@ -513,6 +566,7 @@ export async function POST(req: NextRequest) {
           weight: parseFloat(totalWeight) || 0,
           profile: "Vendor",
           fscCharges: 0,
+          discount: Math.round(discountAmount),
           lineItems: vendorLineItems,
           customerId: null,
           vendorId: vendorId,

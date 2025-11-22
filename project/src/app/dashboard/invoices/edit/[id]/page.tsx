@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Save, ArrowLeft, Plus, Trash2, Printer } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface InvoiceData {
   id: number;
@@ -59,6 +60,7 @@ export default function EditInvoicePage() {
   const [disclaimer, setDisclaimer] = useState('Any discrepancy in invoice must be notified within 03 days of receipt of this invoice. You are requested to pay the invoice amount through cash payment or cross cheque in favor of PSS with immediate effect.');
   const [note, setNote] = useState('No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.');
   const [lineItems, setLineItems] = useState<any[]>([]);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -104,12 +106,38 @@ export default function EditInvoicePage() {
           }
         }
         
-        // Parse packages and initialize line items
+        // Parse packages
         if (data.shipment?.packages) {
           try {
-            const parsedPackages = JSON.parse(data.shipment.packages);
+            const parsedPackages = typeof data.shipment.packages === 'string' 
+              ? JSON.parse(data.shipment.packages) 
+              : data.shipment.packages;
             setPackages(parsedPackages);
-            
+          } catch (e) {
+            console.error('Error parsing packages:', e);
+          }
+        }
+
+        // Initialize line items - prefer invoice lineItems, fallback to packages or calculated values
+        if (data.lineItems && Array.isArray(data.lineItems) && data.lineItems.length > 0) {
+          // Use existing line items from invoice, but filter out "Fuel Surcharge" and "Discount"
+          // since they're already separate fields (fscCharges and discount)
+          const invoiceLineItems = data.lineItems
+            .filter((item: any) => 
+              item.description !== "Fuel Surcharge" && 
+              item.description !== "Discount"
+            )
+            .map((item: any, index: number) => ({
+              id: item.id || (index + 1).toString(),
+              description: item.description || '',
+              value: item.value || 0
+            }));
+          setLineItems(invoiceLineItems);
+        } else if (data.shipment?.packages) {
+          try {
+            const parsedPackages = typeof data.shipment.packages === 'string' 
+              ? JSON.parse(data.shipment.packages) 
+              : data.shipment.packages;
             // Initialize line items from packages
             const initialLineItems = parsedPackages.map((pkg: any, index: number) => ({
               id: pkg.id || (index + 1).toString(),
@@ -118,13 +146,18 @@ export default function EditInvoicePage() {
             }));
             setLineItems(initialLineItems);
           } catch (e) {
-            console.error('Error parsing packages:', e);
+            console.error('Error parsing packages for line items:', e);
             // Initialize with line item using calculated values if parsing fails
-            setLineItems([{ id: '1', description: '', value: parsedValues.total || 0 }]);
+            setLineItems([{ id: '1', description: '', value: parsedValues.total || data.totalAmount || 0 }]);
           }
         } else {
-          // Initialize with line item using calculated values if no packages
-          setLineItems([{ id: '1', description: '', value: parsedValues.total || 0 }]);
+          // Initialize with line item using calculated values or totalAmount
+          setLineItems([{ id: '1', description: '', value: parsedValues.total || data.totalAmount || 0 }]);
+        }
+
+        // Set disclaimer if available
+        if (data.disclaimer) {
+          setDisclaimer(data.disclaimer);
         }
       } else {
         console.error('Failed to fetch invoice data');
@@ -137,8 +170,69 @@ export default function EditInvoicePage() {
   };
 
   const handleSave = async () => {
-    // No longer saving to database - just show success message
-    alert('Changes will be applied when you download the invoice!');
+    if (!invoiceData) return;
+
+    setUpdating(true);
+    try {
+      const invID = invoiceData.id;
+      const shipmentId = invoiceData.shipment?.id || params.id;
+
+      // Calculate total amount from line items, FSC charges, and discount
+      const lineItemsTotal = lineItems.reduce((sum, item) => sum + (item.value || 0), 0);
+      const fscCharges = invoiceData.fscCharges || 0;
+      const discount = invoiceData.discount || 0;
+      const totalAmount = lineItemsTotal + fscCharges - discount;
+
+      // Update calculatedValues with new total
+      const updatedCalculatedValues = {
+        ...calculatedValues,
+        subtotal: lineItemsTotal,
+        total: totalAmount,
+      };
+
+      // Prepare update data
+      const updateData = {
+        invoiceNumber: invoiceData.invoiceNumber,
+        totalAmount: totalAmount,
+        fscCharges: fscCharges,
+        discount: discount,
+        lineItems: lineItems,
+        disclaimer: disclaimer,
+        shipment: {
+          id: parseInt(shipmentId as string),
+          trackingId: invoiceData.shipment?.trackingId || '',
+          destination: invoiceData.shipment?.destination || '',
+          dayWeek: invoiceData.shipment?.dayWeek || false,
+          packages: packages,
+          calculatedValues: updatedCalculatedValues,
+        },
+        referenceNumber: invoiceData.referenceNumber || '',
+      };
+
+      // Call the update API
+      const response = await fetch(`/api/accounts/invoices/${shipmentId}/edit?invID=${invID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast.success('Invoice updated successfully!');
+        // Refresh the invoice data to get the latest values
+        await fetchInvoiceData();
+      } else {
+        toast.error(`Error updating invoice: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      toast.error('Failed to update invoice. Please try again.');
+    } finally {
+      setUpdating(false);
+    }
   };
 
 
@@ -534,6 +628,24 @@ export default function EditInvoicePage() {
                 onClick={() => router.back()}
               >
                 Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={updating}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {updating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Update Invoice
+                  </>
+                )}
               </Button>
               <Button
                 type="button"

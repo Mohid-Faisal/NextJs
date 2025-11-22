@@ -389,6 +389,7 @@ model Invoice {
   weight          Float
   profile         String   // Profile dropdown
   fscCharges      Float    @default(0)
+  discount        Float    @default(0)
   
   // Line items as JSON
   lineItems       Json     // Array of { description: string, value: number }
