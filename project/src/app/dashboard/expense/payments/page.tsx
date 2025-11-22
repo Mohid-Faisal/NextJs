@@ -368,7 +368,7 @@ export default function ExpensePaymentsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
+    <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
       <div className="mb-4 sm:mb-6">
         <Button
           variant="outline"

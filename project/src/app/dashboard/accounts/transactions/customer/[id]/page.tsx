@@ -541,7 +541,7 @@ export default function CustomerTransactionsPage() {
 
   if (loading) {
     return (
-      <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
+      <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
         <div className="text-center">Loading...</div>
       </div>
     );
@@ -549,15 +549,15 @@ export default function CustomerTransactionsPage() {
 
   if (!customer) {
     return (
-      <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
+      <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
         <div className="text-center">Customer not found</div>
       </div>
     );
   }
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="mb-6 flex justify-between items-start">
+    <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
           <Button
             variant="outline"
@@ -568,10 +568,10 @@ export default function CustomerTransactionsPage() {
             Back
           </Button>
           
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
             Customer Transactions
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
             {customer.CompanyName} - {customer.PersonName}
           </p>
         </div>

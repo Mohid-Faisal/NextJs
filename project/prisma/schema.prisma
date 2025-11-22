@@ -225,6 +225,18 @@ model ZoneUpload {
   uploadedAt DateTime @default(now())
 }
 
+model RemoteArea {
+  id        Int      @id @default(autoincrement())
+  company   String
+  country   String
+  iataCode  String
+  low       String
+  high      String
+  city      String?
+  filename  String?
+  uploadedAt DateTime @default(now())
+}
+
 model Rate {
   id         Int     @id @default(autoincrement())
   weight     Float

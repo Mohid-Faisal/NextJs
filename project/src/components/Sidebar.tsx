@@ -54,7 +54,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [shipmentOpen, setShipmentOpen] = useState(
     pathname.startsWith("/dashboard/shipments") ||
       pathname.startsWith("/dashboard/add-shipment") ||
-      pathname.startsWith("/dashboard/rate-calculator")
+      pathname.startsWith("/dashboard/rate-calculator") ||
+      pathname.startsWith("/dashboard/remote-area-lookup")
   );
   const [accountsOpen, setAccountsOpen] = useState(
     pathname.startsWith("/dashboard/accounts")
@@ -144,6 +145,11 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       href: "/dashboard/settings/manage-rate-list",
       label: "Manage Rate List",
       icon: DollarSign,
+    },
+    {
+      href: "/dashboard/settings/remote-area-lookup",
+      label: "Remote Area",
+      icon: Search,
     },
     {
       href: "/dashboard/settings",
@@ -284,7 +290,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
                 pathname.startsWith("/dashboard/shipments") ||
                 pathname.startsWith("/dashboard/add-shipment") ||
-                pathname.startsWith("/dashboard/rate-calculator")
+                pathname.startsWith("/dashboard/rate-calculator") ||
+                pathname.startsWith("/dashboard/remote-area-lookup")
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}

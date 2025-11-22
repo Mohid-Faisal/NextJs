@@ -74,21 +74,45 @@ export default function EditInvoicePage() {
   useEffect(() => {
     const updateValueFieldWidth = () => {
       if (fscInputRef.current) {
-        const fscWidth = fscInputRef.current.offsetWidth;
-        setValueFieldWidth(fscWidth);
+        // Use requestAnimationFrame to ensure measurement happens after layout
+        requestAnimationFrame(() => {
+          if (fscInputRef.current) {
+            const fscWidth = fscInputRef.current.offsetWidth;
+            setValueFieldWidth(fscWidth);
+          }
+        });
       }
     };
 
-    // Update on mount and window resize
+    // Update on mount
     updateValueFieldWidth();
+    
+    // Use ResizeObserver to watch for size changes (including sidebar toggle)
+    let resizeObserver: ResizeObserver | null = null;
+    if (fscInputRef.current && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        updateValueFieldWidth();
+      });
+      resizeObserver.observe(fscInputRef.current);
+    }
+
+    // Also listen to window resize
     window.addEventListener('resize', updateValueFieldWidth);
     
-    // Also update after a short delay to ensure layout is complete
-    const timeout = setTimeout(updateValueFieldWidth, 100);
+    // Update after delays to catch layout changes (sidebar transition is 300ms)
+    const timeout1 = setTimeout(updateValueFieldWidth, 100);
+    const timeout2 = setTimeout(updateValueFieldWidth, 350); // After sidebar transition completes
+    const timeout3 = setTimeout(updateValueFieldWidth, 500);
 
     return () => {
+      if (resizeObserver && fscInputRef.current) {
+        resizeObserver.unobserve(fscInputRef.current);
+        resizeObserver.disconnect();
+      }
       window.removeEventListener('resize', updateValueFieldWidth);
-      clearTimeout(timeout);
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+      clearTimeout(timeout3);
     };
   }, [invoiceData]);
 
@@ -369,24 +393,24 @@ export default function EditInvoicePage() {
   const isVendor = !!invoiceData.vendor;
 
   return (
-    <div className="p-10 max-w-7xl mx-auto bg-white dark:bg-zinc-900">
-      <div className="mb-6">
-        <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
+    <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
           Edit Invoice
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
           Update invoice details
         </p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-        <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center text-gray-800 dark:text-white">
+        <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 w-full">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl font-bold text-center text-gray-800 dark:text-white">
               Buying Payment Invoice
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-4 sm:space-y-5 p-4 sm:p-6">
             {/* General Invoice Details Section */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
               <div className="col-span-1">
