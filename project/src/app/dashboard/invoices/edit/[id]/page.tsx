@@ -501,7 +501,7 @@ export default function EditInvoicePage() {
               <div className="col-span-6">
                 <div className="form-group">
                   <Label htmlFor="referenceNumber" className="font-bold text-sm">
-                    Reference #
+                    Reference
                   </Label>
                   <Input
                     id="referenceNumber"

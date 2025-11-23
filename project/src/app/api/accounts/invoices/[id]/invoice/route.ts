@@ -392,9 +392,9 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
           <thead style="background-color: #999 !important;">
             <tr style="background-color: #999 !important;">
               <th>Date</th>
-              <th>Receipt #</th>
-              <th>Tracking #</th>
-              <th>Reference #</th>
+              <th>Consignment No.</th>
+              <th>Tracking</th>
+              <th>Reference</th>
               <th>Country</th>
               <th>Type</th>
               <th>Pcs</th>
@@ -408,7 +408,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
             <td>${shipment?.trackingId || 'N/A'}</td>
             <td>${shipment?.referenceNumber || invoice.referenceNumber || 'N/A'}</td>
             <td>${getCountryName(shipment?.destination)}</td>
-            <td>${shipment?.dayWeek ? 'D' : 'W'}</td>
+            <td>Wpx</td>
             <td>${totalPieces > 0 ? totalPieces : (shipment?.totalPackages || shipment?.amount || 'N/A')}</td>
             <td>${packages.length > 0 ? packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0).toFixed(2) : (shipment?.totalWeight || shipment?.weight || 'N/A')}</td>
           </tr>
@@ -460,8 +460,8 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
               <th colspan="2"></th>
             </tr>
             <tr>
-              <th style="width:60%;" rowspan="4">
-                ${invoice.disclaimer || 'Any discrepancy in invoice must be notified within 03 days of receipt of this invoice.You are requested to pay the invoice amount through cash payment or cross cheque in favor of "PSS" with immediate effect.'}
+              <th style="width:60%; white-space: pre-wrap; font-weight: normal;" rowspan="4">
+                ${String(invoice.disclaimer || 'Any discrepancy in invoice must be notified within 03 days of receipt of this invoice.You are requested to pay the invoice amount through cash payment or cross cheque in favor of "PSS" with immediate effect.').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
               </th>
               <th>Fsc Charges</th>
               <td>PKR ${(shipment?.fuelSurcharge || invoice.fscCharges || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -490,7 +490,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
     <div style="margin-top: 40px;" class="row">
       <!-- accepted payments column -->
       <div style="font-weight: bold;" class="col-12">
-        <p class="lead"> ${invoice.note || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.'}</p>
+        <div style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: 1.5; word-wrap: break-word; font-weight: bold;" class="lead">${String(invoice.note || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
       </div>
       <!-- /.col -->
     </div>
