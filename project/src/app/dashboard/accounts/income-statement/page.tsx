@@ -64,7 +64,7 @@ export default function IncomeStatementPage() {
     }
   });
   const [loading, setLoading] = useState(false);
-  const [periodType, setPeriodType] = useState<'year' | 'quarter' | 'month' | 'custom'>('month');
+  const [periodType, setPeriodType] = useState<'year' | 'month' | 'last3month' | 'last6month' | 'custom'>('month');
 
   useEffect(() => {
     fetchAccounts();
@@ -118,12 +118,20 @@ export default function IncomeStatementPage() {
       case 'year':
         startDate = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
         break;
-      case 'quarter':
-        const currentQuarter = Math.floor(now.getMonth() / 3);
-        startDate = new Date(now.getFullYear(), currentQuarter * 3, 1).toISOString().slice(0, 10);
-        break;
       case 'month':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+        break;
+      case 'last3month':
+        // Last 3 months: go back 3 months from today
+        const threeMonthsAgo = new Date(now);
+        threeMonthsAgo.setMonth(now.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1).toISOString().slice(0, 10);
+        break;
+      case 'last6month':
+        // Last 6 months: go back 6 months from today
+        const sixMonthsAgo = new Date(now);
+        sixMonthsAgo.setMonth(now.getMonth() - 6);
+        startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1).toISOString().slice(0, 10);
         break;
       case 'custom':
         // Keep existing dates for custom period
@@ -300,10 +308,12 @@ export default function IncomeStatementPage() {
     
     if (periodType === 'year') {
       return `for year ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
-    } else if (periodType === 'quarter') {
-      return `for quarter ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
     } else if (periodType === 'month') {
       return `for month ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+    } else if (periodType === 'last3month') {
+      return `for last 3 months ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+    } else if (periodType === 'last6month') {
+      return `for last 6 months ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
     } else {
       return `for period ${startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} to ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
     }
@@ -375,7 +385,8 @@ export default function IncomeStatementPage() {
                 className="px-3 py-1 border border-gray-300 rounded-md text-sm"
               >
                 <option value="month">Current Month</option>
-                <option value="quarter">Current Quarter</option>
+                <option value="last3month">Last 3 Month</option>
+                <option value="last6month">Last 6 Month</option>
                 <option value="year">Current Year</option>
                 <option value="custom">Custom Period</option>
               </select>
