@@ -636,7 +636,8 @@ export default function EditInvoicePage() {
                       ? new Date(invoiceData.invoiceDate).toISOString().split('T')[0]
                       : new Date(invoiceData.createdAt).toISOString().split('T')[0]}
                     onChange={(e) => setInvoiceData({...invoiceData, invoiceDate: e.target.value})}
-                    className="mt-1 text-sm w-full"
+                    className="mt-1 text-sm w-full text-left [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100"
+                    style={{ textAlign: 'left', position: 'relative', paddingRight: '2.5rem' }}
                   />
                 </div>
               </div>
@@ -665,7 +666,7 @@ export default function EditInvoicePage() {
                         type="button"
                         onClick={addLineItem}
                         size="sm"
-                        className="bg-blue-500 hover:bg-blue-600 text-white w-full h-10 p-0"
+                        className="bg-blue-500 hover:bg-blue-600 text-white w-14 h-10 p-0"
                       >
                         <Plus className="w-4 h-4" />
                       </Button>
@@ -675,7 +676,7 @@ export default function EditInvoicePage() {
                         variant="outline"
                         size="sm"
                         onClick={() => removeLineItem(index)}
-                        className="bg-red-500 hover:bg-red-600 text-white border-red-500 w-full h-10 p-0"
+                        className="bg-red-500 hover:bg-red-600 text-white border-red-500 w-14 h-10 p-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

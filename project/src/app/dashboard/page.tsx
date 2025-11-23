@@ -764,7 +764,7 @@ const DashboardPage = () => {
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Pcs</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Weight</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Tracking</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Delivery Status</th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Status</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Total Cost</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Payment Status</th>
                   </tr>
