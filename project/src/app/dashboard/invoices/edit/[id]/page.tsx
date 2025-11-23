@@ -467,7 +467,7 @@ export default function EditInvoicePage() {
               <div className="col-span-6">
                 <div className="form-group">
                   <Label htmlFor="receiptNumber" className="font-bold text-sm">
-                    Receipt #
+                    Consignment No.
                   </Label>
                   <Input
                     id="receiptNumber"
@@ -484,7 +484,7 @@ export default function EditInvoicePage() {
               <div className="col-span-6">
                 <div className="form-group">
                   <Label htmlFor="trackingNumber" className="font-bold text-sm">
-                    Tracking #
+                    Tracking
                   </Label>
                   <Input
                     id="trackingNumber"
