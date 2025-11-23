@@ -46,6 +46,21 @@ export default function AddPaymentPage() {
   const [debitAccountId, setDebitAccountId] = useState<number>(0);
   const [creditAccountId, setCreditAccountId] = useState<number>(0);
   const [accountsLoading, setAccountsLoading] = useState(false);
+  
+  // Dynamically generate categories from chart of accounts
+  const [dynamicCategories, setDynamicCategories] = useState<{
+    EXPENSE: string[];
+    INCOME: string[];
+    TRANSFER: string[];
+    EQUITY: string[];
+    ADJUSTMENT: string[];
+  }>({
+    EXPENSE: [],
+    INCOME: [],
+    TRANSFER: [],
+    EQUITY: [],
+    ADJUSTMENT: [],
+  });
 
   // Transaction type configurations
   const transactionTypes = [
@@ -76,26 +91,8 @@ export default function AddPaymentPage() {
     },
   ];
 
-  const categories = {
-    EXPENSE: [
-      "Vendor Expense",
-      "Bank Charges",
-      "Equipments",
-      "Fuel",
-      "Insurance",
-      "Legal and Accounting",
-      "License and Permit",
-      "Maintenance and Repair",
-      "Marketing and Advertising",
-      "Office Supplies",
-      "Packaging Material",
-      "Petty",
-      "Salary and Wages",
-      "Taxes",
-      "Tools",
-      "Transportation",
-      "Utilities",
-    ],
+  // Static categories for non-expense types (defined outside component to avoid dependency issues)
+  const getStaticCategories = () => ({
     INCOME: [
       "Logistics Services Revenue",
       "Packaging Revenue",
@@ -114,6 +111,12 @@ export default function AddPaymentPage() {
       "Revaluation",
       "Correction Entry",
     ],
+  });
+  
+  // Combined categories object
+  const categories = {
+    EXPENSE: dynamicCategories.EXPENSE,
+    ...getStaticCategories(),
   };
 
   const paymentMethods = [
@@ -126,6 +129,33 @@ export default function AddPaymentPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Generate dynamic categories from accounts
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const staticCats = getStaticCategories();
+      
+      // Extract expense account names as categories
+      const expenseAccounts = accounts
+        .filter(account => account.category === "Expense")
+        .map(account => account.accountName)
+        .sort(); // Sort alphabetically
+      
+      // Extract revenue account names for income categories
+      const revenueAccounts = accounts
+        .filter(account => account.category === "Revenue")
+        .map(account => account.accountName)
+        .sort();
+      
+      setDynamicCategories({
+        EXPENSE: expenseAccounts,
+        INCOME: revenueAccounts.length > 0 ? revenueAccounts : staticCats.INCOME,
+        TRANSFER: staticCats.TRANSFER,
+        EQUITY: staticCats.EQUITY,
+        ADJUSTMENT: staticCats.ADJUSTMENT,
+      });
+    }
+  }, [accounts]);
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -295,117 +325,26 @@ export default function AddPaymentPage() {
 
     switch (transactionType) {
       case "EXPENSE":
-        // Find the specific expense account based on category
-        let expenseAccount = null;
-        switch (category) {
-          case "Fuel":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("fuel") || a.accountName.toLowerCase().includes("petrol") || a.accountName.toLowerCase().includes("diesel"))
-            );
-            break;
-          case "Maintenance and Repair":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("maintenance") || a.accountName.toLowerCase().includes("repair"))
-            );
-            break;
-          case "Salary and Wages":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("salary") || a.accountName.toLowerCase().includes("wage") || a.accountName.toLowerCase().includes("payroll"))
-            );
-            break;
-          case "Office Supplies":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("office") || a.accountName.toLowerCase().includes("supply"))
-            );
-            break;
-          case "Marketing and Advertising":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("marketing") || a.accountName.toLowerCase().includes("advertising"))
-            );
-            break;
-          case "Utilities":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("utility") || a.accountName.toLowerCase().includes("electricity") || a.accountName.toLowerCase().includes("water") || a.accountName.toLowerCase().includes("gas"))
-            );
-            break;
-          case "Transportation":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("transport") || a.accountName.toLowerCase().includes("travel"))
-            );
-            break;
-          case "Insurance":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              a.accountName.toLowerCase().includes("insurance")
-            );
-            break;
-          case "Legal and Accounting":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("legal") || a.accountName.toLowerCase().includes("accounting") || a.accountName.toLowerCase().includes("audit"))
-            );
-            break;
-          case "License and Permit":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("license") || a.accountName.toLowerCase().includes("permit"))
-            );
-            break;
-          case "Tools":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              a.accountName.toLowerCase().includes("tool")
-            );
-            break;
-          case "Equipments":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("equipment") || a.accountName.toLowerCase().includes("asset"))
-            );
-            break;
-          case "Bank Charges":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("bank") || a.accountName.toLowerCase().includes("charge") || a.accountName.toLowerCase().includes("fee"))
-            );
-            break;
-          case "Taxes":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("tax") || a.accountName.toLowerCase().includes("duty"))
-            );
-            break;
-          case "Petty":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              a.accountName.toLowerCase().includes("petty")
-            );
-            break;
-          case "Packaging Material":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("packaging") || a.accountName.toLowerCase().includes("material"))
-            );
-            break;
-          case "Vendor Expense":
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              (a.accountName.toLowerCase().includes("vendor") || a.accountName.toLowerCase().includes("supplier"))
-            );
-            break;
-          default:
-            // Fallback: find any expense account that matches the category name
-            expenseAccount = accounts.find(a => 
-              a.category === "Expense" && 
-              a.accountName.toLowerCase().includes(category.toLowerCase())
-            );
+        // Find the expense account by exact name match (category name = account name)
+        let expenseAccount = accounts.find(a => 
+          a.category === "Expense" && 
+          a.accountName === category
+        );
+        
+        // If exact match not found, try case-insensitive match
+        if (!expenseAccount) {
+          expenseAccount = accounts.find(a => 
+            a.category === "Expense" && 
+            a.accountName.toLowerCase() === category.toLowerCase()
+          );
+        }
+        
+        // If still not found, try partial match
+        if (!expenseAccount) {
+          expenseAccount = accounts.find(a => 
+            a.category === "Expense" && 
+            a.accountName.toLowerCase().includes(category.toLowerCase())
+          );
         }
 
         // Find cash/bank account for credit based on payment method
@@ -433,33 +372,26 @@ export default function AddPaymentPage() {
         break;
 
       case "INCOME":
-        // Find the specific revenue account based on category
-        let revenueAccount = null;
-        switch (category) {
-          case "Logistics Services Revenue":
-            revenueAccount = accounts.find(a => 
-              a.category === "Revenue" && 
-              (a.accountName.toLowerCase().includes("logistics") || a.accountName.toLowerCase().includes("freight") || a.accountName.toLowerCase().includes("shipping"))
-            );
-            break;
-          case "Packaging Revenue":
-            revenueAccount = accounts.find(a => 
-              a.category === "Revenue" && 
-              a.accountName.toLowerCase().includes("packaging")
-            );
-            break;
-          case "Other Revenue":
-            revenueAccount = accounts.find(a => 
-              a.category === "Revenue" && 
-              a.accountName.toLowerCase().includes("other") || a.accountName.toLowerCase().includes("miscellaneous")
-            );
-            break;
-          default:
-            // Fallback: find any revenue account that matches the category name
-            revenueAccount = accounts.find(a => 
-              a.category === "Revenue" && 
-              a.accountName.toLowerCase().includes(category.toLowerCase())
-            );
+        // Find the revenue account by exact name match (category name = account name)
+        let revenueAccount = accounts.find(a => 
+          a.category === "Revenue" && 
+          a.accountName === category
+        );
+        
+        // If exact match not found, try case-insensitive match
+        if (!revenueAccount) {
+          revenueAccount = accounts.find(a => 
+            a.category === "Revenue" && 
+            a.accountName.toLowerCase() === category.toLowerCase()
+          );
+        }
+        
+        // If still not found, try partial match
+        if (!revenueAccount) {
+          revenueAccount = accounts.find(a => 
+            a.category === "Revenue" && 
+            a.accountName.toLowerCase().includes(category.toLowerCase())
+          );
         }
 
         // Find cash/bank account for debit based on payment method
