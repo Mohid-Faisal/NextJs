@@ -771,7 +771,7 @@ export default function InvoicesPage() {
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           i.status === "Paid"
                             ? "bg-green-100 text-green-800"
-                            : i.status === "Pending"
+                            : i.status === "Unpaid"
                             ? "bg-yellow-100 text-yellow-800"
                             : i.status === "Overdue"
                             ? "bg-red-100 text-red-800"
@@ -858,8 +858,8 @@ export default function InvoicesPage() {
                             🧾 Download Invoice
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleStatusChange(i.id, "Pending")}
-                            className={i.status === "Pending" ? "bg-yellow-50" : ""}
+                            onClick={() => handleStatusChange(i.id, "Unpaid")}
+                            className={i.status === "Unpaid" ? "bg-yellow-50" : ""}
                           >
                             <span className="mr-2 h-4 w-4 rounded-full bg-yellow-100 text-yellow-800 text-xs flex items-center justify-center">P</span>
                             Mark as Pending

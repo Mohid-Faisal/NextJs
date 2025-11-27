@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
       const customerInvoices = await prisma.invoice.findMany({
         where: {
           customerId: parseInt(customerId),
-          status: { in: ['Pending', 'Partial'] }
+          status: { in: ['Unpaid', 'Partial'] }
         },
         orderBy: { invoiceDate: 'asc' },
         include: {
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
       const vendorInvoices = await prisma.invoice.findMany({
         where: {
           vendorId: parseInt(vendorId),
-          status: { in: ['Pending', 'Partial'] }
+          status: { in: ['Unpaid', 'Partial'] }
         },
         orderBy: { invoiceDate: 'asc' },
         include: {

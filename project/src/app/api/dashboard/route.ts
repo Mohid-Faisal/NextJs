@@ -199,10 +199,10 @@ export async function GET() {
     
     // Transform recent shipments to match expected format
     const transformedRecentShipments = recentShipments.map(shipment => {
-      // Get invoice status from Invoice table, fallback to shipment's invoiceStatus, then "Pending"
+      // Get invoice status from Invoice table, fallback to shipment's invoiceStatus, then "Unpaid"
       const invoiceStatus = invoiceStatusMap.get(shipment.invoiceNumber) 
         || shipment.invoiceStatus 
-        || "Pending";
+        || "Unpaid";
       
       return {
         id: shipment.id,

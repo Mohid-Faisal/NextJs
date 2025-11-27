@@ -65,8 +65,47 @@ export default function BalanceSheetPage() {
   useEffect(() => {
     if (accounts.length > 0) {
       fetchAccountBalances();
+      // Automatically create closing entries for the period
+      createClosingEntries();
     }
   }, [accounts, asOfDate]);
+
+  const createClosingEntries = async () => {
+    try {
+      // Calculate period start (beginning of current year or financial year)
+      const now = new Date(asOfDate);
+      let startDate: string;
+      
+      // Use financial year: July 1 to June 30
+      if (now.getMonth() >= 6) {
+        // July-December: Financial year starts July 1 of current year
+        startDate = new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10);
+      } else {
+        // January-June: Financial year starts July 1 of previous year
+        startDate = new Date(now.getFullYear() - 1, 6, 1).toISOString().slice(0, 10);
+      }
+
+      // Create closing entry for the period up to asOfDate
+      const response = await fetch("/api/accounts/close-period", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: startDate,
+          endDate: asOfDate
+        })
+      });
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        console.log("Closing entry created/verified:", data.message);
+        // Refresh account balances after closing entry
+        fetchAccountBalances();
+      }
+    } catch (error) {
+      console.error("Error creating closing entries:", error);
+      // Don't show error to user, just log it
+    }
+  };
 
   useEffect(() => {
     if (accountBalances.length > 0) {
@@ -205,19 +244,23 @@ export default function BalanceSheetPage() {
     );
 
     // Categorize liabilities
-    const currentLiabilities = liabilities.filter(acc => 
-      acc.accountName.toLowerCase().includes('payable') ||
-      acc.accountName.toLowerCase().includes('tax') ||
-      acc.accountName.toLowerCase().includes('wage') ||
-      acc.accountName.toLowerCase().includes('short') ||
-      acc.type === 'Current'
-    );
-
+    // First, identify non-current liabilities (loans, mortgages, long-term)
     const nonCurrentLiabilities = liabilities.filter(acc => 
+      acc.type === 'Non-Current' ||
       acc.accountName.toLowerCase().includes('loan') ||
       acc.accountName.toLowerCase().includes('mortgage') ||
-      acc.accountName.toLowerCase().includes('long') ||
-      acc.type === 'Non-Current'
+      acc.accountName.toLowerCase().includes('long')
+    );
+
+    // Current liabilities are everything else (excluding non-current)
+    const currentLiabilities = liabilities.filter(acc => 
+      !nonCurrentLiabilities.includes(acc) && (
+        acc.type === 'Current' ||
+        acc.accountName.toLowerCase().includes('payable') ||
+        acc.accountName.toLowerCase().includes('tax') ||
+        acc.accountName.toLowerCase().includes('wage') ||
+        acc.accountName.toLowerCase().includes('short')
+      )
     );
 
     // Calculate totals

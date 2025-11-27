@@ -484,7 +484,7 @@ export default function ReceiptPage() {
     : format(new Date(), 'MMM dd, yyyy');
   
   // Get status
-  const status = invoice.status || 'Pending';
+  const status = invoice.status || 'Unpaid';
   
   // Parse packages from shipment
   let parsedPackages: Package[] = [];

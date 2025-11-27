@@ -483,7 +483,7 @@ export async function allocateExcessPayment(
     const outstandingInvoices = await prisma.invoice.findMany({
       where: {
         customerId: customerId,
-        status: { in: ['Pending', 'Partial'] },
+        status: { in: ['Unpaid', 'Partial'] },
         invoiceNumber: { not: originalInvoiceNumber } // Exclude the original invoice
       },
       orderBy: { invoiceDate: 'asc' }, // Oldest first
@@ -555,7 +555,7 @@ export async function allocateExcessPayment(
     const outstandingInvoices = await prisma.invoice.findMany({
       where: {
         vendorId: vendorId,
-        status: { in: ['Pending', 'Partial'] },
+        status: { in: ['Unpaid', 'Partial'] },
         invoiceNumber: { not: originalInvoiceNumber } // Exclude the original invoice
       },
       orderBy: { invoiceDate: 'asc' }, // Oldest first
@@ -843,7 +843,7 @@ export async function calculateInvoicePaymentStatus(
   const remainingAmount = Math.max(0, invoiceAmount - totalPaid);
   
   // Determine invoice status based on total payments
-  let status = "Pending";
+  let status = "Unpaid";
   if (totalPaid >= invoiceAmount) {
     status = "Paid";
   } else if (totalPaid > 0) {

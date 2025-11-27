@@ -418,7 +418,7 @@ model Invoice {
   disclaimer      String?  // Editable disclaimer text
   
   // Status and metadata
-  status          String   @default("Pending") // Pending, Paid, Overdue, Cancelled
+  status          String   @default("Unpaid") // Unpaid, Paid, Overdue, Cancelled
   totalAmount     Float
   currency        String   @default("USD")
   

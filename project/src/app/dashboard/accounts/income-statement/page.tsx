@@ -64,7 +64,7 @@ export default function IncomeStatementPage() {
     }
   });
   const [loading, setLoading] = useState(false);
-  const [periodType, setPeriodType] = useState<'year' | 'month' | 'last3month' | 'last6month' | 'custom'>('month');
+  const [periodType, setPeriodType] = useState<'year' | 'month' | 'last3month' | 'last6month' | 'financialyear' | 'custom'>('month');
 
   useEffect(() => {
     fetchAccounts();
@@ -132,6 +132,18 @@ export default function IncomeStatementPage() {
         const sixMonthsAgo = new Date(now);
         sixMonthsAgo.setMonth(now.getMonth() - 6);
         startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1).toISOString().slice(0, 10);
+        break;
+      case 'financialyear':
+        // Financial year: July 1 to June 30
+        // If current month is July-December (6-11), financial year starts July 1 of current year
+        // If current month is January-June (0-5), financial year starts July 1 of previous year
+        if (now.getMonth() >= 6) {
+          // July-December: Financial year is July 1 of current year to today
+          startDate = new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10); // July 1 (month 6)
+        } else {
+          // January-June: Financial year is July 1 of previous year to today
+          startDate = new Date(now.getFullYear() - 1, 6, 1).toISOString().slice(0, 10); // July 1 of previous year
+        }
         break;
       case 'custom':
         // Keep existing dates for custom period
@@ -314,6 +326,8 @@ export default function IncomeStatementPage() {
       return `for last 3 months ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
     } else if (periodType === 'last6month') {
       return `for last 6 months ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+    } else if (periodType === 'financialyear') {
+      return `for financial year ${startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} to ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
     } else {
       return `for period ${startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} to ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
     }
@@ -375,7 +389,7 @@ export default function IncomeStatementPage() {
             </p>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 overflow-visible">
             <div className="flex items-center gap-2">
               <Label htmlFor="periodType" className="text-sm font-medium">Period:</Label>
               <select
@@ -388,32 +402,37 @@ export default function IncomeStatementPage() {
                 <option value="last3month">Last 3 Month</option>
                 <option value="last6month">Last 6 Month</option>
                 <option value="year">Current Year</option>
+                <option value="financialyear">Financial Year</option>
                 <option value="custom">Custom Period</option>
               </select>
             </div>
             
             {periodType === 'custom' && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <Input
-                  type="date"
-                  value={incomeStatementData.period.startDate}
-                  onChange={(e) => setIncomeStatementData(prev => ({
-                    ...prev,
-                    period: { ...prev.period, startDate: e.target.value }
-                  }))}
-                  className="w-full sm:w-32"
-                />
-                <span className="text-gray-500">to</span>
-                <Input
-                  type="date"
-                  value={incomeStatementData.period.endDate}
-                  onChange={(e) => setIncomeStatementData(prev => ({
-                    ...prev,
-                    period: { ...prev.period, endDate: e.target.value }
-                  }))}
-                  className="w-full sm:w-32"
-                />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 relative z-50 overflow-visible">
+                <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0 mt-1" />
+                <div className="relative overflow-visible">
+                  <Input
+                    type="date"
+                    value={incomeStatementData.period.startDate}
+                    onChange={(e) => setIncomeStatementData(prev => ({
+                      ...prev,
+                      period: { ...prev.period, startDate: e.target.value }
+                    }))}
+                    className="w-full sm:w-44 min-w-[160px] relative z-50"
+                  />
+                </div>
+                <span className="text-gray-500 flex-shrink-0">to</span>
+                <div className="relative overflow-visible">
+                  <Input
+                    type="date"
+                    value={incomeStatementData.period.endDate}
+                    onChange={(e) => setIncomeStatementData(prev => ({
+                      ...prev,
+                      period: { ...prev.period, endDate: e.target.value }
+                    }))}
+                    className="w-full sm:w-44 min-w-[160px] relative z-50"
+                  />
+                </div>
               </div>
             )}
             

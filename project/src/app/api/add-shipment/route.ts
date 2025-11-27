@@ -349,11 +349,11 @@ export async function POST(req: NextRequest) {
     let customerBalance = 0;
     let appliedBalance = 0;
     let remainingAmount = 0;
-    let calculatedInvoiceStatus = "Pending";
+    let calculatedInvoiceStatus = "Unpaid";
     let vendorBalance = 0;
     let vendorAppliedBalance = 0;
     let vendorRemainingAmount = 0;
-    let vendorCalculatedInvoiceStatus = "Pending";
+    let vendorCalculatedInvoiceStatus = "Unpaid";
 
     try {
       // Generate vendor invoice number (customer invoice + 5)

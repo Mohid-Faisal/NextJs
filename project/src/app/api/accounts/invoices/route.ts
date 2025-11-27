@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
         disclaimer,
         totalAmount: parseFloat(totalAmount),
         currency,
-        status: status || "Pending",
+        status: status || "Unpaid",
       },
       include: {
         customer: true,

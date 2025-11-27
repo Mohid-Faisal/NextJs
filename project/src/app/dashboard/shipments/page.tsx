@@ -63,7 +63,8 @@ export default function ShipmentsPage() {
   const [total, setTotal] = useState(0);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("Processing");
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("All");
+  const [deliveryStatuses, setDeliveryStatuses] = useState<{ id: number; name: string }[]>([]);
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
     const twoMonthsAgo = new Date(
@@ -105,6 +106,23 @@ export default function ShipmentsPage() {
   type SortOrder = "asc" | "desc";
   const [sortField, setSortField] = useState<SortField>("invoiceNumber");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+
+  useEffect(() => {
+    // Fetch delivery statuses from settings
+    const fetchDeliveryStatuses = async () => {
+      try {
+        const res = await fetch("/api/settings/deliveryStatus");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setDeliveryStatuses(data);
+        }
+      } catch (error) {
+        console.error("Error fetching delivery statuses:", error);
+      }
+    };
+
+    fetchDeliveryStatuses();
+  }, []);
 
   useEffect(() => {
     const fetchShipments = async () => {
@@ -632,9 +650,10 @@ export default function ShipmentsPage() {
                 <SelectValue placeholder="Select delivery status" />
               </SelectTrigger>
               <SelectContent>
-                {["All", "Processing", "Delivered", "Cancelled"].map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
+                <SelectItem value="All">All</SelectItem>
+                {deliveryStatuses.map((status) => (
+                  <SelectItem key={status.id} value={status.name}>
+                    {status.name}
                   </SelectItem>
                 ))}
               </SelectContent>

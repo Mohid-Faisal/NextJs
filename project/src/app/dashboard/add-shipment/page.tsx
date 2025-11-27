@@ -519,7 +519,7 @@ const AddShipmentPage = () => {
     declaredValue: "0",
     reissue: "0",
     profitPercentage: "0",
-    manualRate: false,
+    manualRate: true,
   });
 
   // Store backend-calculated values
@@ -690,7 +690,7 @@ const AddShipmentPage = () => {
           declaredValue: "0",
           reissue: "0",
           profitPercentage: "0",
-          manualRate: false,
+          manualRate: true,
         });
         // Reset calculated values
         setCalculatedValues({
