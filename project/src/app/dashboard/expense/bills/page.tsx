@@ -145,7 +145,7 @@ const EditInvoiceForm = ({
           <label htmlFor="status" className="text-sm font-medium">Status</label>
           <Select
             value={form.status}
-            onValueChange={(value) =>
+            onValueChange={(value: string) =>
               setForm((prev) => ({ ...prev, status: value }))
             }
           >
@@ -220,7 +220,7 @@ const EditInvoiceForm = ({
           <label htmlFor="currency" className="text-sm font-medium">Currency</label>
           <Select
             value={form.currency}
-            onValueChange={(value) =>
+            onValueChange={(value: string) =>
               setForm((prev) => ({ ...prev, currency: value }))
             }
           >
@@ -644,7 +644,7 @@ export default function ExpenseBillsPage() {
             <span className="text-sm text-gray-600">Show:</span>
             <Select
               value={pageSize.toString()}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setPageSize(value === "all" ? "all" : parseInt(value));
                 setPage(1);
               }}
@@ -682,7 +682,7 @@ export default function ExpenseBillsPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
           <Select
             value={statusFilter}
-            onValueChange={(v) => {
+            onValueChange={(v: string) => {
               setStatusFilter(v);
               setPage(1);
             }}

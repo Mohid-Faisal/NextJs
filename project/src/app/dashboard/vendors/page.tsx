@@ -325,7 +325,7 @@ export default function VendorsPage() {
             <span className="text-sm text-gray-600">Show:</span>
             <Select
               value={pageSize.toString()}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setPageSize(value === 'all' ? 'all' : parseInt(value));
                 setPage(1); // Reset to first page when changing page size
               }}
