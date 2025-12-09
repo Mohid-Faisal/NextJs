@@ -865,7 +865,8 @@ export async function createJournalEntryForTransaction(
   amount: number,
   description: string,
   reference?: string,
-  invoice?: string
+  invoice?: string,
+  date?: Date | string
 ) {
   try {
     // Generate journal entry number
@@ -908,17 +909,20 @@ export async function createJournalEntryForTransaction(
 
     // Create journal entry with lines
     const journalEntry = await prisma.$transaction(async (tx: any) => {
+      // Use provided date or default to current date
+      const entryDate = date ? new Date(date) : new Date();
+      
       // Create the journal entry
       const entry = await tx.journalEntry.create({
         data: {
           entryNumber,
-          date: new Date(),
+          date: entryDate,
           description: description,
           reference: reference || `Transaction-${Date.now()}`,
           totalDebit: amount,
           totalCredit: amount,
           isPosted: true,
-          postedAt: new Date()
+          postedAt: entryDate
         }
       });
 

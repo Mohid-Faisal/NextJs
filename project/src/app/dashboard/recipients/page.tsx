@@ -323,7 +323,7 @@ export default function RecipientsPage() {
             <span className="text-sm text-gray-600">Show:</span>
             <Select
               value={pageSize.toString()}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setPageSize(value === 'all' ? 'all' : parseInt(value));
                 setPage(1); // Reset to first page when changing page size
               }}
@@ -484,7 +484,11 @@ export default function RecipientsPage() {
                   {recipients.map((recipient) => (
                     <motion.tr
                       key={recipient.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
+                      className={`rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border ${
+                        recipient.isRemoteArea
+                          ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-500/50 ring-1 ring-red-200/80 dark:ring-red-500/50"
+                          : "bg-white dark:bg-gray-800 border-transparent"
+                      }`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -495,28 +499,20 @@ export default function RecipientsPage() {
                         {recipient.isRemoteArea && (recipient as any).remoteAreaCompanies ? (
                           <>
                             <span 
-                              className={`hidden sm:inline text-red-600 dark:text-red-400 font-semibold cursor-help relative group`}
-                              title={(() => {
-                                try {
-                                  const companies = JSON.parse((recipient as any).remoteAreaCompanies);
-                                  return `Remote Area: ${Array.isArray(companies) ? companies.join(', ') : companies}`;
-                                } catch {
-                                  return `Remote Area: ${(recipient as any).remoteAreaCompanies}`;
-                                }
-                              })()}
+                              className="hidden sm:inline text-red-600 dark:text-red-400 font-semibold cursor-pointer"
+                              onClick={() => {
+                                setSelectedRecipient(recipient);
+                                setOpenViewDialog(true);
+                              }}
                             >
                               {recipient.CompanyName}
                             </span>
                             <span 
-                              className={`sm:hidden text-red-600 dark:text-red-400 font-semibold cursor-help relative group`}
-                              title={(() => {
-                                try {
-                                  const companies = JSON.parse((recipient as any).remoteAreaCompanies);
-                                  return `Remote Area: ${Array.isArray(companies) ? companies.join(', ') : companies}`;
-                                } catch {
-                                  return `Remote Area: ${(recipient as any).remoteAreaCompanies}`;
-                                }
-                              })()}
+                              className="sm:hidden text-red-600 dark:text-red-400 font-semibold cursor-pointer"
+                              onClick={() => {
+                                setSelectedRecipient(recipient);
+                                setOpenViewDialog(true);
+                              }}
                             >
                               {recipient.CompanyName?.substring(0, 15)}...
                             </span>

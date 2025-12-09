@@ -14,6 +14,7 @@ import {
 import { ArrowLeft, Download, Calendar, TrendingUp, TrendingDown, DollarSign, ArrowUp, Table, Printer, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval, addMonths, subMonths } from "date-fns";
 
 type ChartOfAccount = {
   id: number;
@@ -34,6 +35,18 @@ type AccountBalance = {
   creditAmount: number;
 };
 
+type PeriodData = {
+  periodLabel: string;
+  startDate: string;
+  endDate: string;
+  revenues: AccountBalance[];
+  expenses: AccountBalance[];
+  totalRevenue: number;
+  totalExpenses: number;
+  grossProfit: number;
+  netIncome: number;
+};
+
 type IncomeStatementData = {
   revenues: AccountBalance[];
   expenses: AccountBalance[];
@@ -45,6 +58,7 @@ type IncomeStatementData = {
     startDate: string;
     endDate: string;
   };
+  periods?: PeriodData[]; // For multi-column view
 };
 
 export default function IncomeStatementPage() {
@@ -65,6 +79,7 @@ export default function IncomeStatementPage() {
   });
   const [loading, setLoading] = useState(false);
   const [periodType, setPeriodType] = useState<'year' | 'month' | 'last3month' | 'last6month' | 'financialyear' | 'custom'>('month');
+  const [periodsData, setPeriodsData] = useState<PeriodData[]>([]);
 
   useEffect(() => {
     fetchAccounts();
@@ -78,9 +93,55 @@ export default function IncomeStatementPage() {
 
   useEffect(() => {
     if (incomeStatementData.period.startDate && incomeStatementData.period.endDate) {
-      fetchAccountBalances();
+      if (shouldShowMultiColumn()) {
+        fetchMultiPeriodBalances();
+      } else {
+        fetchAccountBalances();
+      }
     }
-  }, [incomeStatementData.period]);
+  }, [incomeStatementData.period, periodType]);
+
+  const shouldShowMultiColumn = () => {
+    return ['last3month', 'last6month', 'year', 'financialyear'].includes(periodType);
+  };
+
+  const generateSubPeriods = (): { label: string; startDate: Date; endDate: Date }[] => {
+    const now = new Date();
+    const endDate = now;
+    let startDate: Date;
+    let months: Date[] = [];
+
+    switch (periodType) {
+      case 'last3month':
+        startDate = startOfMonth(subMonths(now, 2)); // 3 months ago
+        months = eachMonthOfInterval({ start: startDate, end: endDate });
+        break;
+      case 'last6month':
+        startDate = startOfMonth(subMonths(now, 5)); // 6 months ago
+        months = eachMonthOfInterval({ start: startDate, end: endDate });
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1); // January 1
+        months = eachMonthOfInterval({ start: startDate, end: endDate });
+        break;
+      case 'financialyear':
+        if (now.getMonth() >= 6) {
+          startDate = new Date(now.getFullYear(), 6, 1); // July 1 of current year
+        } else {
+          startDate = new Date(now.getFullYear() - 1, 6, 1); // July 1 of previous year
+        }
+        months = eachMonthOfInterval({ start: startDate, end: endDate });
+        break;
+      default:
+        return [];
+    }
+
+    return months.map(month => ({
+      label: format(month, 'MMM yyyy'),
+      startDate: startOfMonth(month),
+      endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+    }));
+  };
 
   useEffect(() => {
     if (accountBalances.length > 0) {
@@ -179,6 +240,95 @@ export default function IncomeStatementPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchMultiPeriodBalances = async () => {
+    try {
+      setLoading(true);
+      const subPeriods = generateSubPeriods();
+      const periodsDataArray: PeriodData[] = [];
+
+      for (const period of subPeriods) {
+        const startDateStr = period.startDate.toISOString().slice(0, 10);
+        const endDateStr = period.endDate.toISOString().slice(0, 10);
+        
+        const response = await fetch(`/api/account-books?limit=all&dateFrom=${startDateStr}&dateTo=${endDateStr}`);
+        const data = await response.json();
+        
+        if (data.success && data.payments) {
+          const balances = calculateAccountBalances(data.payments);
+          const revenues = balances.filter(acc => acc.category === 'Revenue');
+          const expenses = balances.filter(acc => acc.category === 'Expense');
+          const vendorExpense = expenses.find(acc => acc.accountName === 'Vendor Expense');
+          const vendorExpenseAmount = vendorExpense ? vendorExpense.balance : 0;
+          
+          const totalRevenue = revenues.reduce((sum, acc) => sum + acc.balance, 0);
+          const totalExpenses = expenses.reduce((sum, acc) => sum + acc.balance, 0);
+          const grossProfit = totalRevenue - vendorExpenseAmount;
+          const netIncome = totalRevenue - totalExpenses;
+
+          periodsDataArray.push({
+            periodLabel: period.label,
+            startDate: startDateStr,
+            endDate: endDateStr,
+            revenues,
+            expenses,
+            totalRevenue,
+            totalExpenses,
+            grossProfit,
+            netIncome
+          });
+        }
+      }
+
+      setPeriodsData(periodsDataArray);
+      
+      // Calculate totals across all periods
+      const totalRevenue = periodsDataArray.reduce((sum, p) => sum + p.totalRevenue, 0);
+      const totalExpenses = periodsDataArray.reduce((sum, p) => sum + p.totalExpenses, 0);
+      const grossProfit = periodsDataArray.reduce((sum, p) => sum + p.grossProfit, 0);
+      const netIncome = periodsDataArray.reduce((sum, p) => sum + p.netIncome, 0);
+
+      // Combine all revenues and expenses for display
+      const allRevenues = combineAccountBalances(periodsDataArray.map(p => p.revenues));
+      const allExpenses = combineAccountBalances(periodsDataArray.map(p => p.expenses));
+
+      setAccountBalances([...allRevenues, ...allExpenses]);
+      setIncomeStatementData(prev => ({
+        ...prev,
+        revenues: allRevenues,
+        expenses: allExpenses,
+        totalRevenue,
+        totalExpenses,
+        grossProfit,
+        netIncome,
+        periods: periodsDataArray
+      }));
+    } catch (error) {
+      console.error("Error fetching multi-period balances:", error);
+      toast.error("Error loading account balances");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const combineAccountBalances = (balanceArrays: AccountBalance[][]): AccountBalance[] => {
+    const balanceMap = new Map<number, AccountBalance>();
+    
+    balanceArrays.forEach(balances => {
+      balances.forEach(balance => {
+        const existing = balanceMap.get(balance.accountId);
+        if (existing) {
+          existing.balance += balance.balance;
+          existing.debitAmount += balance.debitAmount;
+          existing.creditAmount += balance.creditAmount;
+        } else {
+          balanceMap.set(balance.accountId, { ...balance });
+        }
+      });
+    });
+
+    return Array.from(balanceMap.values());
   };
 
   const calculateAccountBalances = (entries: any[]): AccountBalance[] => {
@@ -333,6 +483,11 @@ export default function IncomeStatementPage() {
     }
   };
 
+  const getAccountBalanceForPeriod = (accountId: number, periodData: PeriodData): number => {
+    const account = [...periodData.revenues, ...periodData.expenses].find(acc => acc.accountId === accountId);
+    return account?.balance || 0;
+  };
+
   const renderAccountRow = (account: AccountBalance) => (
     <div key={account.accountId} className="flex justify-between items-center py-2">
       <div className="flex items-center gap-3">
@@ -345,27 +500,103 @@ export default function IncomeStatementPage() {
     </div>
   );
 
-  const renderSection = (title: string, accounts: AccountBalance[], total: number, color: string, icon: React.ReactNode) => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        {icon}
-        <h3 className={`text-xl font-bold ${color}`}>{title}</h3>
+  const renderMultiColumnAccountRow = (account: AccountBalance, category: 'Revenue' | 'Expense') => {
+    const total = periodsData.reduce((sum, period) => sum + getAccountBalanceForPeriod(account.accountId, period), 0);
+    
+    return (
+      <tr key={account.accountId} className="border-b border-gray-200 dark:border-gray-700">
+        <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 w-16">{account.accountCode}</td>
+        <td className="px-3 py-2 text-sm font-medium">{account.accountName}</td>
+        {periodsData.map((period, idx) => {
+          const balance = getAccountBalanceForPeriod(account.accountId, period);
+          return (
+            <td key={idx} className={`px-3 py-2 text-sm text-right font-medium ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(balance)}
+            </td>
+          );
+        })}
+        <td className={`px-3 py-2 text-sm text-right font-bold ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          {formatCurrency(total)}
+        </td>
+      </tr>
+    );
+  };
+
+  const renderSection = (title: string, accounts: AccountBalance[], total: number, color: string, icon: React.ReactNode) => {
+    if (shouldShowMultiColumn() && periodsData.length > 0) {
+      const category = title === 'Revenues' ? 'Revenue' : 'Expense';
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            {icon}
+            <h3 className={`text-xl font-bold ${color}`}>{title}</h3>
+          </div>
+          {accounts.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-gray-300 dark:border-gray-600">
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Code</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Account Name</th>
+                    {periodsData.map((period, idx) => (
+                      <th key={idx} className="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 min-w-[100px]">
+                        {period.periodLabel}
+                      </th>
+                    ))}
+                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 min-w-[100px]">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accounts.map(account => renderMultiColumnAccountRow(account, category))}
+                  <tr className="border-t-2 border-gray-300 dark:border-gray-600 font-bold">
+                    <td colSpan={2} className="px-3 py-3 text-sm">Total {title}</td>
+                    {periodsData.map((period, idx) => {
+                      const periodTotal = category === 'Revenue' ? period.totalRevenue : period.totalExpenses;
+                      return (
+                        <td key={idx} className={`px-3 py-3 text-sm text-right ${color}`}>
+                          {formatCurrency(periodTotal)}
+                        </td>
+                      );
+                    })}
+                    <td className={`px-3 py-3 text-sm text-right ${color}`}>
+                      {formatCurrency(total)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500 italic py-4">No {title.toLowerCase()} found for this period</div>
+          )}
+        </div>
+      );
+    }
+
+    // Single column view (original)
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          {icon}
+          <h3 className={`text-xl font-bold ${color}`}>{title}</h3>
+        </div>
+        {accounts.length > 0 ? (
+          <>
+            <div className="space-y-1">
+              {accounts.map(account => renderAccountRow(account))}
+            </div>
+            <div className="flex justify-between items-center py-3 border-t-2 border-gray-200 dark:border-gray-700">
+              <span className="text-lg font-bold">Total {title}</span>
+              <span className={`text-lg font-bold ${color}`}>{formatCurrency(total)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="text-sm text-gray-500 italic py-4">No {title.toLowerCase()} found for this period</div>
+        )}
       </div>
-      {accounts.length > 0 ? (
-        <>
-          <div className="space-y-1">
-            {accounts.map(account => renderAccountRow(account))}
-          </div>
-          <div className="flex justify-between items-center py-3 border-t-2 border-gray-200 dark:border-gray-700">
-            <span className="text-lg font-bold">Total {title}</span>
-            <span className={`text-lg font-bold ${color}`}>{formatCurrency(total)}</span>
-          </div>
-        </>
-      ) : (
-        <div className="text-sm text-gray-500 italic py-4">No {title.toLowerCase()} found for this period</div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
@@ -512,19 +743,52 @@ export default function IncomeStatementPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 sm:p-4 lg:p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 py-4">
-                <span className="text-lg sm:text-xl font-bold">Net Income</span>
-                <span className={`text-lg sm:text-xl lg:text-2xl font-bold ${incomeStatementData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(incomeStatementData.netIncome)}
-                </span>
-              </div>
+              {shouldShowMultiColumn() && periodsData.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-gray-300 dark:border-gray-600">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Item</th>
+                        {periodsData.map((period, idx) => (
+                          <th key={idx} className="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 min-w-[100px]">
+                            {period.periodLabel}
+                          </th>
+                        ))}
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 min-w-[100px]">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <td className="px-3 py-2 text-sm font-medium">Net Income</td>
+                        {periodsData.map((period, idx) => (
+                          <td key={idx} className={`px-3 py-2 text-sm text-right font-bold ${period.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(period.netIncome)}
+                          </td>
+                        ))}
+                        <td className={`px-3 py-2 text-sm text-right font-bold ${incomeStatementData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(incomeStatementData.netIncome)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 py-4">
+                  <span className="text-lg sm:text-xl font-bold">Net Income</span>
+                  <span className={`text-lg sm:text-xl lg:text-2xl font-bold ${incomeStatementData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(incomeStatementData.netIncome)}
+                  </span>
+                </div>
+              )}
               
               {incomeStatementData.netIncome >= 0 ? (
-                <div className="text-xs sm:text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-2 sm:p-3 rounded-lg">
+                <div className="text-xs sm:text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-2 sm:p-3 rounded-lg mt-4">
                   ✅ Profitable period with positive net income
                 </div>
               ) : (
-                <div className="text-xs sm:text-sm text-red-600 bg-red-50 dark:bg-green-900/20 p-2 sm:p-3 rounded-lg">
+                <div className="text-xs sm:text-sm text-red-600 bg-red-50 dark:bg-green-900/20 p-2 sm:p-3 rounded-lg mt-4">
                   ⚠️ Net loss for this period
                 </div>
               )}

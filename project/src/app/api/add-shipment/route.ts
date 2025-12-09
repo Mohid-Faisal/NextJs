@@ -288,7 +288,7 @@ export async function POST(req: NextRequest) {
         recipientAddress: finalRecipientAddress,
         destination: finalDestination,
         deliveryTime,
-        invoiceStatus,
+        invoiceStatus: "Unpaid", // Default to Unpaid, will be updated after calculation
         deliveryStatus,
         shippingMode,
         packaging,
@@ -508,6 +508,12 @@ export async function POST(req: NextRequest) {
         customerInvoice = await customerInvoiceResponse.json();
       }
 
+      // Update shipment invoiceStatus to match calculated status
+      await prisma.shipment.update({
+        where: { id: shipment.id },
+        data: { invoiceStatus: calculatedInvoiceStatus }
+      });
+
       // ============================================================================
       // SECTION 6.5: VENDOR INVOICE CREATION
       // ============================================================================
@@ -613,7 +619,8 @@ export async function POST(req: NextRequest) {
             customerTotalCost,
             `Customer invoice for shipment ${trackingId}`,
             invoiceNumber,
-            invoiceNumber
+            invoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
           }
           else {
@@ -624,7 +631,8 @@ export async function POST(req: NextRequest) {
             remainingAmount,
             `Customer invoice for shipment ${trackingId}`,
             invoiceNumber,
-            invoiceNumber
+            invoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
           }
           
@@ -670,7 +678,8 @@ export async function POST(req: NextRequest) {
             appliedBalance,
             `Customer credit applied for invoice ${invoiceNumber}`,
             `CREDIT-${invoiceNumber}`,
-            invoiceNumber
+            invoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
 
           // // Create CREDIT transaction for company (we receive money)
@@ -716,7 +725,8 @@ export async function POST(req: NextRequest) {
             vendorTotalCost,
             `Vendor invoice for shipment ${trackingId}`,
             vendorInvoiceNumber,
-            vendorInvoiceNumber
+            vendorInvoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
           }
           else {
@@ -727,7 +737,8 @@ export async function POST(req: NextRequest) {
             vendorRemainingAmount,
             `Vendor invoice for shipment ${trackingId}`,
             vendorInvoiceNumber,
-            vendorInvoiceNumber
+            vendorInvoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );}
         }
 
@@ -771,7 +782,8 @@ export async function POST(req: NextRequest) {
             vendorAppliedBalance,
             `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
             `CREDIT-${vendorInvoiceNumber}`,
-            vendorInvoiceNumber
+            vendorInvoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
 
           // Create CREDIT transaction for company (reduces our liability)

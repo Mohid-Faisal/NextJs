@@ -190,6 +190,23 @@ export default function ShipmentsPage() {
     }
   };
 
+  const getDeliveryStatusColor = (status: string | null) => {
+    if (!status) return "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200";
+    
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case "delivered":
+        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
+      case "in transit":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200";
+      case "cancelled":
+      case "canceled":
+        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200";
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200";
+    }
+  };
+
   // Function to get country name from country code
   const getCountryName = (countryCode: string | null) => {
     if (!countryCode) return "N/A";
@@ -672,7 +689,7 @@ export default function ShipmentsPage() {
           <div>
             <Select
               value={deliveryStatusFilter}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setPage(1);
                 setDeliveryStatusFilter(value);
               }}
@@ -940,7 +957,7 @@ export default function ShipmentsPage() {
                       onClick={() => handleSort("totalWeight")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Wght</span>
+                      <span className="hidden sm:inline">Weight</span>
                       <span className="sm:hidden">W</span>
                       {getSortIcon("totalWeight")}
                     </button>
@@ -957,7 +974,7 @@ export default function ShipmentsPage() {
                   </th>
                   {deliveryStatusFilter === "All" && (
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                      <span className="hidden sm:inline">Delivery Status</span>
+                      <span className="hidden sm:inline">Status</span>
                       <span className="sm:hidden">DS</span>
                     </th>
                   )}
@@ -1025,7 +1042,11 @@ export default function ShipmentsPage() {
                       </td>
                       {deliveryStatusFilter === "All" && (
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="text-xs sm:text-sm">
+                          <span
+                            className={`px-1 sm:px-2 py-1 rounded text-xs font-medium ${getDeliveryStatusColor(
+                              shipment.deliveryStatus
+                            )}`}
+                          >
                             {shipment.deliveryStatus || "N/A"}
                           </span>
                         </td>

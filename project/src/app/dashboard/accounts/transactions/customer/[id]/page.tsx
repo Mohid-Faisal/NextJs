@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, ArrowLeft, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Table } from "lucide-react";
+import { ArrowLeft, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Table } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import {
   format,
@@ -67,13 +67,6 @@ export default function CustomerTransactionsPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({
-    type: "CREDIT",
-    amount: "",
-    description: "",
-    reference: ""
-  });
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -506,38 +499,6 @@ export default function CustomerTransactionsPage() {
     exportToPDF(data, headers, 'Customer Transactions Report', total);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const response = await fetch(`/api/accounts/transactions/customer/${customerId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        // Reset form and refresh data
-        setFormData({
-          type: "CREDIT",
-          amount: "",
-          description: "",
-          reference: ""
-        });
-        setShowAddForm(false);
-        fetchCustomerData();
-      } else {
-        alert(`Error: ${data.error}`);
-      }
-    } catch (error) {
-      console.error("Error adding transaction:", error);
-      alert("Failed to add transaction");
-    }
-  };
 
   if (loading) {
     return (
@@ -626,7 +587,7 @@ export default function CustomerTransactionsPage() {
           <div>
             <Select
               value={String(limit)}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setLimit(parseInt(value));
                 setPage(1); // Reset to first page when changing limit
               }}
@@ -836,92 +797,6 @@ export default function CustomerTransactionsPage() {
           </div>
         </div>
       </div>
-
-      {/* Add Transaction Button */}
-      <div className="mb-6">
-        <Button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Transaction
-        </Button>
-      </div>
-
-      {/* Add Transaction Form */}
-      {showAddForm && (
-        <Card className="mb-6 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-gray-800 dark:text-white">
-              Add Transaction
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="type" className="font-bold">Type</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value })}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CREDIT">Credit</SelectItem>
-                      <SelectItem value="DEBIT">Debit</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="amount" className="font-bold">Amount</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    className="mt-1"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="description" className="font-bold">Description</Label>
-                <Input
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="mt-1"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="reference" className="font-bold">Reference (Optional)</Label>
-                <Input
-                  id="reference"
-                  value={formData.reference}
-                  onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Add Transaction
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowAddForm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Transactions Table */}
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">

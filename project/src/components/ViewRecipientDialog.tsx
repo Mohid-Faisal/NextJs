@@ -18,6 +18,8 @@ interface Recipient {
   Zip: string;
   Address: string;
   createdAt: string;
+  isRemoteArea?: boolean;
+  remoteAreaCompanies?: string | null;
 }
 
 interface ViewRecipientDialogProps {
@@ -28,6 +30,18 @@ interface ViewRecipientDialogProps {
 
 export default function ViewRecipientDialog({ recipient, open, onOpenChange }: ViewRecipientDialogProps) {
   if (!recipient) return null;
+
+  const remoteCompanies = (() => {
+    if (!recipient.remoteAreaCompanies) return [];
+    try {
+      const parsed = JSON.parse(recipient.remoteAreaCompanies);
+      if (Array.isArray(parsed)) return parsed;
+      if (typeof parsed === "string") return [parsed];
+      return [];
+    } catch {
+      return [recipient.remoteAreaCompanies].filter(Boolean);
+    }
+  })();
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Not specified";
@@ -65,9 +79,16 @@ export default function ViewRecipientDialog({ recipient, open, onOpenChange }: V
                     <p className="text-xs text-muted-foreground">Recipient ID: #{recipient.id}</p>
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-xs px-2 py-1">
-                  Recipient
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs px-2 py-1">
+                    Recipient
+                  </Badge>
+                  {recipient.isRemoteArea && remoteCompanies.length > 0 && (
+                    <Badge variant="destructive" className="text-xs px-2 py-1">
+                      Remote Area
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -129,6 +150,29 @@ export default function ViewRecipientDialog({ recipient, open, onOpenChange }: V
               </div>
             </CardContent>
           </Card>
+
+          {recipient.isRemoteArea && remoteCompanies.length > 0 && (
+            <Card>
+              <CardContent className="p-3">
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Globe className="w-3 h-3 text-red-600" />
+                  Remote Area Details
+                </h4>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    Marked as remote by:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {remoteCompanies.map((c: string) => (
+                      <Badge key={c} variant="destructive" className="text-xs">
+                        {c}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Location Information */}
           <Card>
