@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRemoteArea } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -84,6 +85,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Check if location is a remote area
+    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip);
+
     // Store shipment in the database
     const recipient = await prisma.recipients.create({
       data: {
@@ -96,6 +100,10 @@ export async function POST(req: NextRequest) {
         City: city,
         Zip: zip,
         Address: address,
+        isRemoteArea: remoteAreaCheck.isRemote,
+        remoteAreaCompanies: remoteAreaCheck.companies.length > 0 
+          ? JSON.stringify(remoteAreaCheck.companies) 
+          : null,
       },
     });
 

@@ -224,24 +224,51 @@ export default function BalanceSheetPage() {
     const liabilities = accountBalances.filter(acc => acc.category === 'Liability');
     const equity = accountBalances.filter(acc => acc.category === 'Equity');
 
-    // Categorize assets
-    const currentAssets = assets.filter(acc => 
-      acc.accountName.toLowerCase().includes('cash') ||
-      acc.accountName.toLowerCase().includes('receivable') ||
-      acc.accountName.toLowerCase().includes('inventory') ||
-      acc.accountName.toLowerCase().includes('prepaid') ||
-      acc.accountName.toLowerCase().includes('bank') ||
-      acc.type === 'Current'
-    );
+    // Categorize assets dynamically based on type field
+    // First, identify fixed assets (they take priority)
+    const fixedAssets = assets.filter(acc => {
+      const type = acc.type?.toLowerCase() || '';
+      // Check if type contains "fixed" (e.g., "Fixed Asset", "Fixed")
+      if (type.includes('fixed')) {
+        return true;
+      }
+      // // Fallback: check account name keywords for fixed assets
+      // const name = acc.accountName.toLowerCase();
+      // return name.includes('vehicle') ||
+      //        name.includes('warehouse') ||
+      //        name.includes('equipment') ||
+      //        name.includes('building') ||
+      //        name.includes('fleet');
+    });
 
-    const fixedAssets = assets.filter(acc => 
-      acc.accountName.toLowerCase().includes('vehicle') ||
-      acc.accountName.toLowerCase().includes('warehouse') ||
-      acc.accountName.toLowerCase().includes('equipment') ||
-      acc.accountName.toLowerCase().includes('building') ||
-      acc.accountName.toLowerCase().includes('fleet') ||
-      acc.type === 'Fixed'
+    // Then, identify current assets (excluding those already in fixed assets)
+    const currentAssets = assets.filter(acc => {
+      // Skip if already categorized as fixed asset
+      if (fixedAssets.includes(acc)) {
+        return false;
+      }
+      const type = acc.type?.toLowerCase() || '';
+      // Check if type contains "current" (e.g., "Current Asset", "Current")
+      if (type.includes('current')) {
+        return true;
+      }
+      // // Fallback: check account name keywords for current assets
+      // const name = acc.accountName.toLowerCase();
+      // return name.includes('cash') ||
+      //        name.includes('receivable') ||
+      //        name.includes('inventory') ||
+      //        name.includes('prepaid') ||
+      //        name.includes('bank');
+    });
+
+    // Include any remaining assets that weren't categorized
+    // These will be added to current assets as a default
+    const uncategorizedAssets = assets.filter(acc => 
+      !currentAssets.includes(acc) && !fixedAssets.includes(acc)
     );
+    
+    // Add uncategorized assets to current assets to ensure all assets are shown
+    currentAssets.push(...uncategorizedAssets);
 
     // Categorize liabilities
     // First, identify non-current liabilities (loans, mortgages, long-term)

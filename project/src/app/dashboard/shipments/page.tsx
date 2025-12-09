@@ -115,9 +115,21 @@ export default function ShipmentsPage() {
         const data = await res.json();
         if (Array.isArray(data)) {
           setDeliveryStatuses(data);
+          
+          // Set default filter: "In Transit" if found, otherwise "All"
+          const inTransitStatus = data.find((status: { id: number; name: string }) => 
+            status.name === "In Transit"
+          );
+          if (inTransitStatus) {
+            setDeliveryStatusFilter("In Transit");
+          } else {
+            setDeliveryStatusFilter("All");
+          }
         }
       } catch (error) {
         console.error("Error fetching delivery statuses:", error);
+        // On error, default to "All"
+        setDeliveryStatusFilter("All");
       }
     };
 
@@ -547,20 +559,39 @@ export default function ShipmentsPage() {
   };
 
   const getShipmentExportData = (shipments: any[]) => {
-    const headers = ["Date", "Receipt #", "Sender Name", "Receiver Name", "Destination", "Package", "Pcs", "Weight", "Tracking", "Total Cost", "Invoice Status"];
-    const data = shipments.map(shipment => [
-      formatDate(shipment.shipmentDate || shipment.createdAt),
-      shipment.invoiceNumber,
-      shipment.senderName,
-      shipment.recipientName,
-      getCountryName(shipment.destination),
-      shipment.packaging || "N/A",
-      shipment.amount || 1,
-      `${shipment.totalWeight || shipment.weight || 0}`,
-      shipment.trackingId,
-      `Rs. ${shipment.totalCost}`,
-      shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
-    ]);
+    const baseHeaders = ["Date", "Receipt #", "Sender Name", "Receiver Name", "Destination", "Package", "Pcs", "Weight", "Tracking"];
+    const headers = deliveryStatusFilter === "All" 
+      ? [...baseHeaders, "Delivery Status", "Total Cost", "Invoice Status"]
+      : [...baseHeaders, "Total Cost", "Invoice Status"];
+    
+    const data = shipments.map(shipment => {
+      const baseData = [
+        formatDate(shipment.shipmentDate || shipment.createdAt),
+        shipment.invoiceNumber,
+        shipment.senderName,
+        shipment.recipientName,
+        getCountryName(shipment.destination),
+        shipment.packaging || "N/A",
+        shipment.amount || 1,
+        `${shipment.totalWeight || shipment.weight || 0}`,
+        shipment.trackingId,
+      ];
+      
+      if (deliveryStatusFilter === "All") {
+        return [
+          ...baseData,
+          shipment.deliveryStatus || "N/A",
+          `Rs. ${shipment.totalCost}`,
+          shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
+        ];
+      } else {
+        return [
+          ...baseData,
+          `Rs. ${shipment.totalCost}`,
+          shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
+        ];
+      }
+    });
     return { headers, data };
   };
 
@@ -924,6 +955,12 @@ export default function ShipmentsPage() {
                       {getSortIcon("trackingId")}
                     </button>
                   </th>
+                  {deliveryStatusFilter === "All" && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">Delivery Status</span>
+                      <span className="sm:hidden">DS</span>
+                    </th>
+                  )}
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("totalCost")}
@@ -986,6 +1023,13 @@ export default function ShipmentsPage() {
                         <span className="hidden sm:inline">{shipment.trackingId}</span>
                         <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
                       </td>
+                      {deliveryStatusFilter === "All" && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <span className="text-xs sm:text-sm">
+                            {shipment.deliveryStatus || "N/A"}
+                          </span>
+                        </td>
+                      )}
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <span className="hidden sm:inline">Rs. {shipment.totalCost}</span>
                         <span className="sm:hidden">Rs.{shipment.totalCost}</span>

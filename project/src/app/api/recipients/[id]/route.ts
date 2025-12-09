@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { decodeToken } from "@/lib/utils";
+import { decodeToken, checkRemoteArea } from "@/lib/utils";
 import bcrypt from "bcrypt";
 
 // Define proper types for the request body
@@ -77,6 +77,17 @@ export async function PUT(
 
     const body: RecipientUpdateData = await req.json();
     
+    // Check if location is a remote area (use existing values if not provided in update)
+    const recipient = await prisma.recipients.findUnique({
+      where: { id: recipientId },
+    });
+    
+    const country = body.country || recipient?.Country || "";
+    const city = body.city !== undefined ? body.city : recipient?.City;
+    const zip = body.zip !== undefined ? body.zip : recipient?.Zip;
+    
+    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip);
+    
     const updatedRecipient = await prisma.recipients.update({
       where: { id: recipientId },
       data: {
@@ -89,6 +100,10 @@ export async function PUT(
         City: body.city,
         Zip: body.zip,
         Address: body.address,
+        isRemoteArea: remoteAreaCheck.isRemote,
+        remoteAreaCompanies: remoteAreaCheck.companies.length > 0 
+          ? JSON.stringify(remoteAreaCheck.companies) 
+          : null,
       },
     });
 
@@ -212,6 +227,17 @@ export async function PATCH(
     const idNum = parseInt(id);
     const body: AddressUpdateData = await req.json();
 
+    // Check if location is a remote area (use existing values if not provided in update)
+    const recipient = await prisma.recipients.findUnique({
+      where: { id: idNum },
+    });
+    
+    const country = body.Country || recipient?.Country || "";
+    const city = body.City !== undefined ? body.City : recipient?.City;
+    const zip = body.Zip !== undefined ? body.Zip : recipient?.Zip;
+    
+    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip);
+
     const updatedRecipient = await prisma.recipients.update({
       where: { id: idNum },
       data: {
@@ -220,6 +246,10 @@ export async function PATCH(
         State: body.State,
         Country: body.Country,
         Zip: body.Zip,
+        isRemoteArea: remoteAreaCheck.isRemote,
+        remoteAreaCompanies: remoteAreaCheck.companies.length > 0 
+          ? JSON.stringify(remoteAreaCheck.companies) 
+          : null,
       },
     });
 

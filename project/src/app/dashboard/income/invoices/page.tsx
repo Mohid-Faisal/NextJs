@@ -568,7 +568,7 @@ export default function IncomeInvoicesPage() {
       i.trackingNumber || "",
       getCountryNameFromCode(i.destination),
       i.status,
-      `${i.currency} ${i.totalAmount.toLocaleString()}`,
+      `${i.currency} ${Number(i.totalAmount ?? 0).toLocaleString()}`,
       i.customer?.PersonName || i.customer?.CompanyName || "",
     ]);
     const csv = [headers, ...rows]
@@ -597,7 +597,7 @@ export default function IncomeInvoicesPage() {
           <td>${i.trackingNumber || ""}</td>
           <td>${getCountryNameFromCode(i.destination)}</td>
           <td>${i.status}</td>
-          <td>${i.currency} ${i.totalAmount.toLocaleString()}</td>
+          <td>${i.currency} ${Number(i.totalAmount ?? 0).toLocaleString()}</td>
           <td>${i.customer?.PersonName || i.customer?.CompanyName || ""}</td>
         </tr>`
       )
@@ -616,7 +616,7 @@ export default function IncomeInvoicesPage() {
         </head>
         <body>
           <h1>Customer Invoices</h1>
-          <p>Total Amount: ${totalAmount.toLocaleString()}</p>
+          <p>Total Amount: ${Number(totalAmount ?? 0).toLocaleString()}</p>
           <table>
             <thead>
               <tr>

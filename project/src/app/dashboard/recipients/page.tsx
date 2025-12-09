@@ -492,8 +492,45 @@ export default function RecipientsPage() {
                     >
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{recipient.id}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{recipient.CompanyName}</span>
-                        <span className="sm:hidden">{recipient.CompanyName?.substring(0, 15)}...</span>
+                        {recipient.isRemoteArea && (recipient as any).remoteAreaCompanies ? (
+                          <>
+                            <span 
+                              className={`hidden sm:inline text-red-600 dark:text-red-400 font-semibold cursor-help relative group`}
+                              title={(() => {
+                                try {
+                                  const companies = JSON.parse((recipient as any).remoteAreaCompanies);
+                                  return `Remote Area: ${Array.isArray(companies) ? companies.join(', ') : companies}`;
+                                } catch {
+                                  return `Remote Area: ${(recipient as any).remoteAreaCompanies}`;
+                                }
+                              })()}
+                            >
+                              {recipient.CompanyName}
+                            </span>
+                            <span 
+                              className={`sm:hidden text-red-600 dark:text-red-400 font-semibold cursor-help relative group`}
+                              title={(() => {
+                                try {
+                                  const companies = JSON.parse((recipient as any).remoteAreaCompanies);
+                                  return `Remote Area: ${Array.isArray(companies) ? companies.join(', ') : companies}`;
+                                } catch {
+                                  return `Remote Area: ${(recipient as any).remoteAreaCompanies}`;
+                                }
+                              })()}
+                            >
+                              {recipient.CompanyName?.substring(0, 15)}...
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="hidden sm:inline">
+                              {recipient.CompanyName}
+                            </span>
+                            <span className="sm:hidden">
+                              {recipient.CompanyName?.substring(0, 15)}...
+                            </span>
+                          </>
+                        )}
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <span className="hidden sm:inline">{recipient.PersonName}</span>

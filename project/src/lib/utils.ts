@@ -1316,3 +1316,125 @@ export async function updateVendorJournalEntry(
     throw error;
   }
 }
+
+// Function to check if a location is a remote area
+// Returns an object with isRemote (boolean) and companies (array of company names)
+export async function checkRemoteArea(
+  prisma: any,
+  country: string,
+  city?: string,
+  zip?: string
+): Promise<{ isRemote: boolean; companies: string[] }> {
+  try {
+    if (!country) return { isRemote: false, companies: [] };
+
+    // Fetch all remote areas
+    const remoteAreas = await prisma.remoteArea.findMany({
+      orderBy: {
+        uploadedAt: 'desc',
+      },
+    });
+
+    if (!remoteAreas || remoteAreas.length === 0) return { isRemote: false, companies: [] };
+
+    // Get country name from code
+    const selectedCountry = Country.getCountryByCode(country);
+    const searchCountryName = selectedCountry?.name || country;
+    const searchCountryCode = country.toLowerCase();
+
+    // Filter by country - check country code, country name, and IATA code
+    let matchingAreas = remoteAreas.filter((area: any) => {
+      const areaCountry = (area.country?.toLowerCase() || '').trim();
+      const areaIataCode = (area.iataCode?.toLowerCase() || '').trim();
+      const searchCountryNameLower = searchCountryName.toLowerCase();
+      
+      // Check multiple matching strategies
+      return (
+        areaCountry === searchCountryCode ||
+        areaCountry === searchCountryNameLower ||
+        areaIataCode === searchCountryCode ||
+        areaCountry.includes(searchCountryNameLower) ||
+        searchCountryNameLower.includes(areaCountry)
+      );
+    });
+    
+    // If no matches found by country name/code, try matching by IATA code only
+    if (matchingAreas.length === 0) {
+      matchingAreas = remoteAreas.filter((area: any) => {
+        const areaIataCode = (area.iataCode?.toLowerCase() || '').trim();
+        return areaIataCode === searchCountryCode;
+      });
+    }
+
+    if (matchingAreas.length === 0) return { isRemote: false, companies: [] };
+
+    const matchedCompanies = new Set<string>();
+
+    // Check by zip code if provided
+    if (zip && zip.trim()) {
+      const zipValue = zip.trim();
+      const zipNumber = parseFloat(zipValue);
+      
+      if (!isNaN(zipNumber)) {
+        // Check if zip code falls within any range
+        const rangeMatches = matchingAreas.filter((area: any) => {
+          const low = parseFloat(String(area.low || '').trim());
+          const high = parseFloat(String(area.high || '').trim());
+          
+          if (!isNaN(low) && !isNaN(high)) {
+            return zipNumber >= low && zipNumber <= high;
+          }
+          return false;
+        });
+        
+        rangeMatches.forEach((area: any) => {
+          if (area.company) matchedCompanies.add(area.company);
+        });
+        
+        // Also check for string matches
+        const stringMatches = matchingAreas.filter((area: any) => {
+          const lowStr = String(area.low || '').trim();
+          const highStr = String(area.high || '').trim();
+          return lowStr.includes(zipValue) || highStr.includes(zipValue);
+        });
+        
+        stringMatches.forEach((area: any) => {
+          if (area.company) matchedCompanies.add(area.company);
+        });
+      } else {
+        // String match for zip
+        const stringMatches = matchingAreas.filter((area: any) => {
+          const lowStr = String(area.low || '').trim();
+          const highStr = String(area.high || '').trim();
+          return lowStr.includes(zipValue) || highStr.includes(zipValue);
+        });
+        
+        stringMatches.forEach((area: any) => {
+          if (area.company) matchedCompanies.add(area.company);
+        });
+      }
+    }
+
+    // Check by city if provided
+    if (city && city.trim()) {
+      const cityValue = city.trim().toLowerCase();
+      const cityMatches = matchingAreas.filter((area: any) => {
+        const areaCity = area.city?.toLowerCase();
+        return areaCity === cityValue;
+      });
+      
+      cityMatches.forEach((area: any) => {
+        if (area.company) matchedCompanies.add(area.company);
+      });
+    }
+
+    const companies = Array.from(matchedCompanies);
+    return {
+      isRemote: companies.length > 0,
+      companies: companies
+    };
+  } catch (error) {
+    console.error("Error checking remote area:", error);
+    return { isRemote: false, companies: [] };
+  }
+}

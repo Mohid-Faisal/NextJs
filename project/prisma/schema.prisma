@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  //directUrl = env("DIRECT_URL")
+  directUrl = env("DIRECT_URL")
   // Connection pooling for Vercel
   relationMode = "prisma"
 }
@@ -146,17 +146,19 @@ model Vendors {
 }
 
 model Recipients {
-  id                Int      @id @default(autoincrement()) 
-  CompanyName       String   @unique
-  PersonName        String
-  Email             String   
-  Phone             String
-  Country           String
-  State             String
-  City              String
-  Zip               String
-  Address           String
-  createdAt         DateTime @default(now())
+  id                  Int      @id @default(autoincrement()) 
+  CompanyName         String   @unique
+  PersonName          String
+  Email               String   
+  Phone               String
+  Country             String
+  State               String
+  City                String
+  Zip                 String
+  Address             String
+  isRemoteArea        Boolean  @default(false)
+  remoteAreaCompanies String?  // JSON array of company names
+  createdAt           DateTime @default(now())
 }
 
 model DeliveryTime {
