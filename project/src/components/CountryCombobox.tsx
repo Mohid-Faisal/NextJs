@@ -6,20 +6,27 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown } from "lucide-react";
 import countries from "../../data/countries.json"; // Ensure this is an array of { name, code }
 
+type CountryOption = {
+  name: string;
+  code: string;
+};
+
 export default function CountryCombobox({
   value,
   onChange,
 }: {
-  value: string;
-  onChange: (val: string) => void;
+  value: string | null;
+  onChange: (val: string | null) => void;
 }) {
   const [query, setQuery] = useState("");
-  const parentRef = useRef(null);
+  const parentRef = useRef<HTMLDivElement | null>(null);
+
+  const countryList = countries as CountryOption[];
 
   const filteredCountries = useMemo(() => {
     return query === ""
-      ? countries
-      : countries.filter((c: any) =>
+      ? countryList
+      : countryList.filter((c) =>
           c.name.toLowerCase().includes(query.toLowerCase())
         );
   }, [query]);
@@ -32,7 +39,7 @@ export default function CountryCombobox({
   });
 
   const selectedName =
-    countries.find((c: any) => c.code === value)?.name || "Select a country";
+    countryList.find((c) => c.code === value)?.name || "Select a country";
 
   return (
     <Combobox value={value} onChange={onChange}>
@@ -57,29 +64,32 @@ export default function CountryCombobox({
               position: "relative",
             }}
           >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const country = filteredCountries[virtualRow.index];
-              return (
-                <Combobox.Option
-                  key={country.code}
-                  value={country.code}
-                  className={({ active, selected }) =>
-                    `absolute top-0 left-0 w-full cursor-pointer select-none px-4 py-2 text-sm ${
-                      active
-                        ? "bg-blue-500 text-white"
-                        : selected
-                        ? "bg-blue-100 text-blue-900"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`
-                  }
-                  style={{
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  {country.name} ({country.code})
-                </Combobox.Option>
-              );
-            })}
+            {rowVirtualizer.getVirtualItems().map(
+              (virtualRow: { key: string | number; index: number; start: number }) => {
+                const country = filteredCountries[virtualRow.index] as CountryOption | undefined;
+                if (!country) return null;
+                return (
+                  <Combobox.Option
+                    key={country.code}
+                    value={country.code}
+                    className={({ active, selected }: { active: boolean; selected: boolean }) =>
+                      `absolute top-0 left-0 w-full cursor-pointer select-none px-4 py-2 text-sm ${
+                        active
+                          ? "bg-blue-500 text-white"
+                          : selected
+                          ? "bg-blue-100 text-blue-900"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`
+                    }
+                    style={{
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    {country.name} ({country.code})
+                  </Combobox.Option>
+                );
+              }
+            )}
           </div>
         </Combobox.Options>
       </div>

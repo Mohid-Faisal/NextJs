@@ -381,7 +381,9 @@ const DashboardPage = () => {
                   stroke="#374151"
                   strokeWidth={2}
                   labelLine={false}
-                  label={({ status, percent }) => `${status} ${(percent ?? 0) * 100}%`}
+                  label={({ payload, percent }: { payload?: any; percent?: number }) =>
+                    `${payload?.status ?? ""} ${Math.round((percent ?? 0) * 100)}%`
+                  }
                   outerRadius={60}
                   className="sm:outerRadius={80}"
                   fill="#8884d8"
