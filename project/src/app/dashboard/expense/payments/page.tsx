@@ -412,7 +412,7 @@ export default function ExpensePaymentsPage() {
               />
             </div>
 
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
               {filteredInvoices.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">
                   No vendor invoices found
