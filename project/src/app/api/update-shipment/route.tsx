@@ -402,7 +402,70 @@ async function handleShipmentUpdate(req: Request) {
         },
       });
 
-      // 2. Update related invoices with shipment data
+      // 2. Update journal entry dates if shipment date changed
+      if (shipmentDate) {
+        const newShipmentDate = new Date(shipmentDate);
+        const oldShipmentDate = existingShipment.shipmentDate;
+        
+        // Check if shipment date actually changed
+        if (!oldShipmentDate || newShipmentDate.getTime() !== oldShipmentDate.getTime()) {
+          console.log(`Shipment date changed from ${oldShipmentDate} to ${newShipmentDate}, updating journal entry dates...`);
+          
+          // Build search criteria for related journal entries
+          const searchConditions: any[] = [];
+          
+          // Search by tracking ID
+          if (effectiveTrackingId) {
+            searchConditions.push(
+              { reference: effectiveTrackingId },
+              { description: { contains: effectiveTrackingId } }
+            );
+          }
+          
+          // Search by invoice numbers if invoices exist
+          if (updatedShipment.invoices && updatedShipment.invoices.length > 0) {
+            const invoiceNumbers = updatedShipment.invoices.map(inv => inv.invoiceNumber);
+            
+            // Search by invoice number as reference (using in operator)
+            if (invoiceNumbers.length > 0) {
+              searchConditions.push({ reference: { in: invoiceNumbers } });
+            }
+            
+            // Search by invoice number in description (one condition per invoice)
+            invoiceNumbers.forEach(invNum => {
+              searchConditions.push({ description: { contains: invNum } });
+            });
+          }
+          
+          // Find all journal entries related to this shipment
+          if (searchConditions.length > 0) {
+            const relatedJournalEntries = await tx.journalEntry.findMany({
+              where: {
+                OR: searchConditions
+              }
+            });
+            
+            console.log(`Found ${relatedJournalEntries.length} journal entries to update dates for`);
+            
+            // Update dates for all related journal entries
+            if (relatedJournalEntries.length > 0) {
+              await tx.journalEntry.updateMany({
+                where: {
+                  id: { in: relatedJournalEntries.map(je => je.id) }
+                },
+                data: {
+                  date: newShipmentDate,
+                  postedAt: newShipmentDate
+                }
+              });
+              
+              console.log(`✅ Updated ${relatedJournalEntries.length} journal entry dates to ${newShipmentDate.toISOString()}`);
+            }
+          }
+        }
+      }
+
+      // 3. Update related invoices with shipment data
       // Only update invoices if we have pricing data or if tracking/destination changed
       const shouldUpdateInvoices = (price !== undefined || fuelSurcharge !== undefined || discount !== undefined) || 
                                     (trackingId !== undefined && trackingId !== existingShipment.trackingId) ||

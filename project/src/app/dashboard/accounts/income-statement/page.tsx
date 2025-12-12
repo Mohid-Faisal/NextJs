@@ -11,10 +11,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, Download, Calendar, TrendingUp, TrendingDown, DollarSign, ArrowUp, Table, Printer, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval, eachYearOfInterval, startOfYear, endOfYear, addMonths, subMonths, differenceInYears } from "date-fns";
 
 type ChartOfAccount = {
   id: number;
@@ -102,27 +109,54 @@ export default function IncomeStatementPage() {
   }, [incomeStatementData.period, periodType]);
 
   const shouldShowMultiColumn = () => {
-    return ['last3month', 'last6month', 'year', 'financialyear'].includes(periodType);
+    if (['last3month', 'last6month', 'year', 'financialyear'].includes(periodType)) {
+      return true;
+    }
+    
+    // For custom periods, check if it spans more than one year
+    if (periodType === 'custom') {
+      const startDate = new Date(incomeStatementData.period.startDate);
+      const endDate = new Date(incomeStatementData.period.endDate);
+      const yearsDiff = differenceInYears(endDate, startDate);
+      return yearsDiff >= 1; // Show multi-column if spans 1 or more years
+    }
+    
+    return false;
   };
 
   const generateSubPeriods = (): { label: string; startDate: Date; endDate: Date }[] => {
     const now = new Date();
-    const endDate = now;
+    let endDate = now;
     let startDate: Date;
-    let months: Date[] = [];
+    let periods: { label: string; startDate: Date; endDate: Date }[] = [];
 
     switch (periodType) {
       case 'last3month':
         startDate = startOfMonth(subMonths(now, 2)); // 3 months ago
-        months = eachMonthOfInterval({ start: startDate, end: endDate });
+        const months3 = eachMonthOfInterval({ start: startDate, end: endDate });
+        periods = months3.map(month => ({
+          label: format(month, 'MMM yyyy'),
+          startDate: startOfMonth(month),
+          endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+        }));
         break;
       case 'last6month':
         startDate = startOfMonth(subMonths(now, 5)); // 6 months ago
-        months = eachMonthOfInterval({ start: startDate, end: endDate });
+        const months6 = eachMonthOfInterval({ start: startDate, end: endDate });
+        periods = months6.map(month => ({
+          label: format(month, 'MMM yyyy'),
+          startDate: startOfMonth(month),
+          endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+        }));
         break;
       case 'year':
         startDate = new Date(now.getFullYear(), 0, 1); // January 1
-        months = eachMonthOfInterval({ start: startDate, end: endDate });
+        const monthsYear = eachMonthOfInterval({ start: startDate, end: endDate });
+        periods = monthsYear.map(month => ({
+          label: format(month, 'MMM yyyy'),
+          startDate: startOfMonth(month),
+          endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+        }));
         break;
       case 'financialyear':
         if (now.getMonth() >= 6) {
@@ -130,17 +164,71 @@ export default function IncomeStatementPage() {
         } else {
           startDate = new Date(now.getFullYear() - 1, 6, 1); // July 1 of previous year
         }
-        months = eachMonthOfInterval({ start: startDate, end: endDate });
+        const monthsFY = eachMonthOfInterval({ start: startDate, end: endDate });
+        periods = monthsFY.map(month => ({
+          label: format(month, 'MMM yyyy'),
+          startDate: startOfMonth(month),
+          endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+        }));
+        break;
+      case 'custom':
+        startDate = new Date(incomeStatementData.period.startDate);
+        endDate = new Date(incomeStatementData.period.endDate);
+        const yearsDiff = differenceInYears(endDate, startDate);
+        
+        // If custom period spans more than one year, show year-wise
+        if (yearsDiff >= 1) {
+          const years = eachYearOfInterval({ start: startDate, end: endDate });
+          periods = years.map(year => {
+            const yearStart = startOfYear(year);
+            const yearEnd = endOfYear(year);
+            
+            // For the first year, use the actual start date
+            const periodStart = year.getFullYear() === startDate.getFullYear() 
+              ? startDate 
+              : yearStart;
+            
+            // For the last year, use the actual end date
+            const periodEnd = year.getFullYear() === endDate.getFullYear() 
+              ? endDate 
+              : yearEnd;
+            
+            return {
+              label: format(year, 'yyyy'),
+              startDate: periodStart,
+              endDate: periodEnd
+            };
+          });
+        } else {
+          // If less than one year, show month-wise
+          const months = eachMonthOfInterval({ start: startDate, end: endDate });
+          periods = months.map(month => {
+            const monthStart = startOfMonth(month);
+            const monthEnd = endOfMonth(month);
+            
+            // For the first month, use the actual start date
+            const periodStart = month.getTime() === startOfMonth(startDate).getTime()
+              ? startDate
+              : monthStart;
+            
+            // For the last month, use the actual end date
+            const periodEnd = month.getTime() === endOfMonth(endDate).getTime()
+              ? endDate
+              : monthEnd;
+            
+            return {
+              label: format(month, 'MMM yyyy'),
+              startDate: periodStart,
+              endDate: periodEnd
+            };
+          });
+        }
         break;
       default:
         return [];
     }
 
-    return months.map(month => ({
-      label: format(month, 'MMM yyyy'),
-      startDate: startOfMonth(month),
-      endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
-    }));
+    return periods;
   };
 
   useEffect(() => {
@@ -623,19 +711,22 @@ export default function IncomeStatementPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 overflow-visible">
             <div className="flex items-center gap-2">
               <Label htmlFor="periodType" className="text-sm font-medium">Period:</Label>
-              <select
-                id="periodType"
+              <Select
                 value={periodType}
-                onChange={(e) => setPeriodType(e.target.value as any)}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                onValueChange={(value: string) => setPeriodType(value as any)}
               >
-                <option value="month">Current Month</option>
-                <option value="last3month">Last 3 Month</option>
-                <option value="last6month">Last 6 Month</option>
-                <option value="year">Current Year</option>
-                <option value="financialyear">Financial Year</option>
-                <option value="custom">Custom Period</option>
-              </select>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">Current Month</SelectItem>
+                  <SelectItem value="last3month">Last 3 Month</SelectItem>
+                  <SelectItem value="last6month">Last 6 Month</SelectItem>
+                  <SelectItem value="year">Current Year</SelectItem>
+                  <SelectItem value="financialyear">Financial Year</SelectItem>
+                  <SelectItem value="custom">Custom Period</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             {periodType === 'custom' && (
