@@ -998,13 +998,15 @@ export default function ExpenseBillsPage() {
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <span
                         className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium ${
-                          i.status === "Paid"
-                            ? "bg-green-100 text-green-800"
-                            : i.status === "Unpaid"
-                            ? "bg-yellow-100 text-yellow-800"
+                          i.status === "Unpaid"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                            : i.status === "Paid"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : i.status === "Partial"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
                             : i.status === "Overdue"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-gray-100 text-gray-800"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
                         }`}
                       >
                         <span className="hidden sm:inline">{i.status}</span>

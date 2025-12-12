@@ -519,6 +519,7 @@ const AddShipmentPage = () => {
     declaredValue: "0",
     reissue: "0",
     profitPercentage: "0",
+    cos: "0", // Cost of Service - only used in manual mode
     manualRate: true,
   });
 
@@ -690,6 +691,7 @@ const AddShipmentPage = () => {
           declaredValue: "0",
           reissue: "0",
           profitPercentage: "0",
+          cos: "0",
           manualRate: true,
         });
         // Reset calculated values
@@ -792,6 +794,7 @@ const AddShipmentPage = () => {
             declaredValue: s.declaredValue || 0,
             reissue: s.reissue || 0,
             profitPercentage: s.profitPercentage || "0",
+            cos: s.cos || "0",
             manualRate: s.manualRate || false,
           };
 
@@ -1930,6 +1933,20 @@ const AddShipmentPage = () => {
                   placeholder="0"
                 />
               </div>
+              {form.manualRate && (
+                <div>
+                  <Label className="mb-2 block">CoS (Cost of Service)</Label>
+                  <Input
+                    name="cos"
+                    type="number"
+                    step="0.01"
+                    value={form.cos}
+                    className="w-full"
+                    onChange={handleChange}
+                    placeholder="0"
+                  />
+                </div>
+              )}
               <div className="col-span-1 sm:col-span-2 flex flex-col justify-end">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-4">
                   <div className="flex items-center gap-2">

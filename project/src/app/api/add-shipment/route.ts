@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       declaredValue,
       reissue,
       profitPercentage,
+      cos, // Cost of Service - only used in manual mode
       manualRate,
       packages,
       packageTotals,
@@ -248,8 +249,10 @@ export async function POST(req: NextRequest) {
     // Calculate total costs for customer and vendor
     // Customer invoice uses the price with profit (from frontend)
     const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
-    // Vendor invoice uses vendorPrice + fixedCharge (as provided by frontend)
-    const vendorTotalCost = Math.round((parseFloat(vendorPrice) || 0));
+    // Vendor invoice: use CoS (Cost of Service) if in manual mode, otherwise use vendorPrice
+    const vendorTotalCost = manualRate 
+      ? Math.round((parseFloat(cos) || 0))
+      : Math.round((parseFloat(vendorPrice) || 0));
 
     // Get subtotal from calculated values or use original price
     const subtotal = calculatedValues?.subtotal ? Math.round((calculatedValues.subtotal)) : originalPrice;
@@ -260,11 +263,13 @@ export async function POST(req: NextRequest) {
     console.log('Fuel surcharge:', fuelSurcharge);
     console.log('Discount percentage:', discount);
     console.log('Profit percentage:', profitPercentage);
+    console.log('Manual rate:', manualRate);
+    console.log('CoS (Cost of Service):', cos);
     console.log('Vendor price:', vendorPrice);
     console.log('Fixed charge:', fixedCharge);
     console.log('Original price (no profit):', originalPrice);
     console.log('Customer total cost (with profit):', customerTotalCost);
-    console.log('Vendor total cost (vendorPrice + fixedCharge):', vendorTotalCost);
+    console.log(`Vendor total cost (${manualRate ? 'CoS' : 'vendorPrice'}):`, vendorTotalCost);
     console.log('=== END PRICING CALCULATIONS ===');
 
     // ============================================================================
