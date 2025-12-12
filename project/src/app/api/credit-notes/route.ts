@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
     const nextId = (lastCreditNote?.id || 0) + 1;
     const creditNoteNumber = `#CREDIT${nextId.toString().padStart(5, "0")}`;
 
-    if (type === "CREDIT") {
+    if (type === "DEBIT") {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {
@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result.creditNote, { status: 201 });
   }
-  else if (type === "DEBIT") {
+  else if (type === "CREDIT") {
     
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {

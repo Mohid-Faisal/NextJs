@@ -186,7 +186,7 @@ const EditInvoiceForm = ({
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Unpaid">Unpaid</SelectItem>
               <SelectItem value="Paid">Paid</SelectItem>
               <SelectItem value="Overdue">Overdue</SelectItem>
               <SelectItem value="Partial">Partial</SelectItem>
@@ -721,7 +721,7 @@ export default function IncomeInvoicesPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              {["All", "Pending", "Paid", "Overdue", "Partial"].map((s) => (
+              {["All", "Unpaid", "Paid", "Overdue", "Partial"].map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
                 </SelectItem>

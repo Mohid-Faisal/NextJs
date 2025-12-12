@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useLayoutEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,42 +42,140 @@ const RecipientsPage = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedState, setSelectedState] = useState<string>("");
+  const [selectedCity, setSelectedCity] = useState<string>("");
+
+  const [states, setStates] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
+  const [isLoadingRecipient, setIsLoadingRecipient] = useState(false);
+  const [recipientDataLoaded, setRecipientDataLoaded] = useState(false);
+
+  const countries = Country.getAllCountries();
+
+  // Load states when country is selected
+  useEffect(() => {
+    if (selectedCountry) {
+      const fetchedStates = State.getStatesOfCountry(selectedCountry);
+      setStates(fetchedStates);
+    } else if (!isEditMode) {
+      // Only clear states if not in edit mode
+      setStates([]);
+    }
+  }, [selectedCountry, isEditMode]);
+
+  // Load cities when state is selected
+  useEffect(() => {
+    if (selectedCountry && selectedState) {
+      const fetchedCities = City.getCitiesOfState(selectedCountry, selectedState);
+      setCities(fetchedCities);
+    } else if (!isEditMode && !selectedState) {
+      // Only clear cities if not in edit mode and state is not selected
+      setCities([]);
+    }
+  }, [selectedState, selectedCountry, isEditMode]);
+
   // Fetch recipient data when in edit mode
   useEffect(() => {
     const fetchRecipient = async () => {
       if (recipientId) {
+        setIsLoadingRecipient(true);
+        setRecipientDataLoaded(false);
         try {
           const res = await fetch(`/api/recipients/${recipientId}`);
           const data = await res.json();
           
           if (data.recipient) {
             const recipient = data.recipient;
+            const country = recipient.Country || "";
+            const state = recipient.State || "";
+            const city = recipient.City || "";
+            
+            // Set form data first
             setForm({
               companyname: recipient.CompanyName || "",
               personname: recipient.PersonName || "",
               email: recipient.Email || "",
               phone: recipient.Phone || "",
-              country: recipient.Country || "",
-              state: recipient.State || "",
-              city: recipient.City || "",
+              country: country,
+              state: state,
+              city: city,
               zip: recipient.Zip || "",
               address: recipient.Address || "",
             });
             
-            // Set the selected values for dropdowns
-            setSelectedCountry(recipient.Country || "");
-            setSelectedState(recipient.State || "");
-            setSelectedCity(recipient.City || "");
+            // In edit mode, load states and cities synchronously
+            if (country) {
+              // Set country first - this will trigger the useEffect to load states
+              setSelectedCountry(country);
+              
+              // Wait a bit for states to load, then set selectedState
+              setTimeout(() => {
+                const fetchedStates = State.getStatesOfCountry(country);
+                if (state && fetchedStates.length > 0) {
+                  // Verify state exists in loaded states
+                  const stateExists = fetchedStates.some(s => s.isoCode === state);
+                  if (stateExists) {
+                    setSelectedState(state);
+                    
+                    // Wait a bit for cities to load, then set selectedCity
+                    setTimeout(() => {
+                      const fetchedCities = City.getCitiesOfState(country, state);
+                      if (city && fetchedCities.length > 0) {
+                        // Verify city exists in loaded cities
+                        const cityExists = fetchedCities.some(c => c.name === city);
+                        if (cityExists) {
+                          setSelectedCity(city);
+                        }
+                      }
+                      setRecipientDataLoaded(true);
+                      setIsLoadingRecipient(false);
+                    }, 100);
+                  } else {
+                    setRecipientDataLoaded(true);
+                    setIsLoadingRecipient(false);
+                  }
+                } else {
+                  setRecipientDataLoaded(true);
+                  setIsLoadingRecipient(false);
+                }
+              }, 100);
+            } else {
+              setRecipientDataLoaded(true);
+              setIsLoadingRecipient(false);
+            }
           }
         } catch (error) {
           console.error("Error fetching recipient:", error);
           toast.error("Failed to load recipient data");
+          setRecipientDataLoaded(true);
+          setIsLoadingRecipient(false);
         }
       }
     };
 
     fetchRecipient();
   }, [recipientId]);
+
+  // Sync selectedState with form.state when states are loaded (fallback mechanism for edit mode)
+  useEffect(() => {
+    if (isEditMode && states.length > 0 && form.state) {
+      const stateExists = states.some(s => s.isoCode === form.state);
+      if (stateExists && selectedState !== form.state) {
+        setSelectedState(form.state);
+      }
+    }
+  }, [states, form.state, selectedState, isEditMode]);
+
+  // Sync selectedCity with form.city when cities are loaded (fallback mechanism for edit mode)
+  useEffect(() => {
+    if (isEditMode && cities.length > 0 && form.city) {
+      const cityExists = cities.some(c => c.name === form.city);
+      if (cityExists && selectedCity !== form.city) {
+        setSelectedCity(form.city);
+      }
+    }
+  }, [cities, form.city, selectedCity, isEditMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,36 +207,16 @@ const RecipientsPage = () => {
           zip: "",
           address: "",
         });
+        setSelectedCountry("");
+        setSelectedState("");
+        setSelectedCity("");
+        setStates([]);
+        setCities([]);
       }
     } else {
       toast.error(data.message);
     }
   };
-
-  const [selectedCountry, setSelectedCountry] = useState<string>("");
-  const [selectedState, setSelectedState] = useState<string>("");
-  const [selectedCity, setSelectedCity] = useState<string>("");
-
-  const [states, setStates] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
-
-  const countries = Country.getAllCountries();
-
-  // Load states when country is selected (including from edit mode)
-  useEffect(() => {
-    if (selectedCountry) {
-      const fetchedStates = State.getStatesOfCountry(selectedCountry);
-      setStates(fetchedStates);
-    }
-  }, [selectedCountry]);
-
-  // Load cities when state is selected (including from edit mode)
-  useEffect(() => {
-    if (selectedCountry && selectedState) {
-      const fetchedCities = City.getCitiesOfState(selectedCountry, selectedState);
-      setCities(fetchedCities);
-    }
-  }, [selectedState, selectedCountry]);
 
   return (
     <motion.div
@@ -229,12 +307,14 @@ const RecipientsPage = () => {
                   onValueChange={(value) => {
                     setForm({ ...form, state: value, city: "" });
                     setSelectedState(value);
+                    setSelectedCity(""); // Clear city when state changes
+                    setCities([]); // Clear cities when state changes
                   }}
-                  value={form.state}
-                  disabled={!form.country}
+                  value={states.length > 0 && selectedState ? selectedState : form.state}
+                  disabled={!form.country || isLoadingRecipient}
                 >
                   <SelectTrigger id="state" className="w-full">
-                    <SelectValue placeholder="Select a state/Provinces" />
+                    <SelectValue placeholder={isLoadingRecipient ? "Loading..." : "Select a state/Provinces"} />
                   </SelectTrigger>
                   <SelectContent>
                     {states.map((state) => (
@@ -249,14 +329,15 @@ const RecipientsPage = () => {
               <div className="space-y-1.5">
                 <Label htmlFor="city">City</Label>
                 <Select
-                  onValueChange={(value) =>
-                    setForm((prev) => ({ ...prev, city: value }))
-                  }
-                  value={form.city}
-                  disabled={!form.state}
+                  onValueChange={(value) => {
+                    setForm((prev) => ({ ...prev, city: value }));
+                    setSelectedCity(value);
+                  }}
+                  value={cities.length > 0 && selectedCity ? selectedCity : form.city}
+                  disabled={(!selectedState && !form.state) || isLoadingRecipient}
                 >
                   <SelectTrigger id="city" className="w-full">
-                    <SelectValue placeholder="Select a city" />
+                    <SelectValue placeholder={isLoadingRecipient ? "Loading..." : "Select a city"} />
                   </SelectTrigger>
                   <SelectContent>
                     {cities.map((city) => (

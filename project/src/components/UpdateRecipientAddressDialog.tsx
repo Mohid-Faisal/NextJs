@@ -54,18 +54,36 @@ const UpdateRecipientAddressDialog = ({
 
   const countries = Country.getAllCountries();
 
+  // Update form and selected values when dialog opens with current values
+  useEffect(() => {
+    if (open) {
+      setForm({
+        address: currentAddress,
+        city: currentCity,
+        state: currentState,
+        country: currentCountry,
+        zip: currentZip,
+      });
+      setSelectedCountry(currentCountry);
+      setSelectedState(currentState);
+      setSelectedCity(currentCity);
+    }
+  }, [open, currentAddress, currentCity, currentState, currentCountry, currentZip]);
+
+  // Load states when country is selected or when dialog opens with existing country
   useEffect(() => {
     if (selectedCountry) {
       const fetchedStates = State.getStatesOfCountry(selectedCountry);
       setStates(fetchedStates);
-      if (!selectedState) {
-        setSelectedState("");
-        setSelectedCity("");
-        setCities([]);
-      }
+    } else {
+      setStates([]);
+      setSelectedState("");
+      setSelectedCity("");
+      setCities([]);
     }
-  }, [selectedCountry, selectedState]);
+  }, [selectedCountry]);
 
+  // Load cities when state is selected or when dialog opens with existing state
   useEffect(() => {
     if (selectedCountry && selectedState) {
       const fetchedCities = City.getCitiesOfState(
@@ -73,11 +91,13 @@ const UpdateRecipientAddressDialog = ({
         selectedState
       );
       setCities(fetchedCities);
-      if (!selectedCity) {
+    } else {
+      setCities([]);
+      if (!selectedState) {
         setSelectedCity("");
       }
     }
-  }, [selectedState, selectedCountry, selectedCity]);
+  }, [selectedState, selectedCountry]);
 
   const handleSubmit = async () => {
     if (!recipientId) {

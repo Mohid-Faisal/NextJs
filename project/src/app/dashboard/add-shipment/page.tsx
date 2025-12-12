@@ -698,8 +698,26 @@ const AddShipmentPage = () => {
           total: 0,
           vendorPrice: 0,
         });
-        // Redirect to shipments page after successful addition
-        router.push("/dashboard/shipments");
+        // Reset packages to initial state
+        setPackages([
+          {
+            id: "1",
+            amount: 1,
+            packageDescription: "",
+            weight: 0,
+            length: 0,
+            width: 0,
+            height: 0,
+            weightVol: 0,
+            fixedCharge: 0,
+            decValue: 0,
+          },
+        ]);
+        // Reset selected sender and recipient
+        setSelectedSender(null);
+        setSelectedRecipient(null);
+        setSenderQuery("");
+        setRecipientQuery("");
       }
     } else {
       // Handle different error response structures
