@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { billId, vendorId, amount, date, description, currency = "USD", type } = body;
+    const { billId, vendorId, amount, date, description, currency = "USD", type, debitAccountId, creditAccountId } = body;
     console.log(body);
 
     // Validate required fields
@@ -151,8 +151,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get account IDs for journal entries
-    const { vendorExpenseId, cashId, otherIncomeId } = await getAccountIds();
+    // Get account IDs for journal entries - use provided IDs or fall back to defaults
+    let vendorExpenseId: number, cashId: number, otherIncomeId: number;
+    let useProvidedAccounts = false;
+    
+    if (debitAccountId && creditAccountId) {
+      // Validate accounts exist
+      const [debitAccount, creditAccount] = await Promise.all([
+        prisma.chartOfAccount.findUnique({ where: { id: parseInt(debitAccountId) } }),
+        prisma.chartOfAccount.findUnique({ where: { id: parseInt(creditAccountId) } })
+      ]);
+      
+      if (!debitAccount || !creditAccount) {
+        return NextResponse.json(
+          { error: "Invalid account IDs provided" },
+          { status: 400 }
+        );
+      }
+      useProvidedAccounts = true;
+    } else {
+      // Fall back to default account lookup
+      const ids = await getAccountIds();
+      vendorExpenseId = ids.vendorExpenseId;
+      cashId = ids.cashId;
+      otherIncomeId = ids.otherIncomeId;
+    }
 
     // Generate debit note number
     const lastDebitNote = await prisma.debitNote.findFirst({
@@ -228,11 +251,15 @@ export async function POST(request: NextRequest) {
         });
 
         // Create journal entry lines for positive amount
-        // Debit: Vendor Expense Account
+        // Use provided account IDs or defaults
+        const debitAccId = useProvidedAccounts ? parseInt(debitAccountId) : vendorExpenseId;
+        const creditAccId = useProvidedAccounts ? parseInt(creditAccountId) : cashId;
+        
+        // Debit Account
         await tx.journalEntryLine.create({
           data: {
             journalEntryId: journalEntry.id,
-            accountId: vendorExpenseId,
+            accountId: debitAccId,
             debitAmount: parseFloat(amount),
             creditAmount: 0,
             description: description || `Credit Note: ${debitNoteNumber}`,
@@ -240,11 +267,11 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Credit: Cash Account
+        // Credit Account
         await tx.journalEntryLine.create({
           data: {
             journalEntryId: journalEntry.id,
-            accountId: cashId,
+            accountId: creditAccId,
             debitAmount: 0,
             creditAmount: parseFloat(amount),
             description: description || `Credit Note: ${debitNoteNumber}`,
@@ -332,11 +359,15 @@ export async function POST(request: NextRequest) {
         });
 
         // Create journal entry lines for negative amount
-        // Debit: Cash Account
+        // Use provided account IDs or defaults
+        const debitAccId = useProvidedAccounts ? parseInt(debitAccountId) : cashId;
+        const creditAccId = useProvidedAccounts ? parseInt(creditAccountId) : otherIncomeId;
+        
+        // Debit Account
         await tx.journalEntryLine.create({
           data: {
             journalEntryId: journalEntry.id,
-            accountId: cashId,
+            accountId: debitAccId,
             debitAmount: Math.abs(parseFloat(amount)),
             creditAmount: 0,
             description: description || `Debit Note: ${debitNoteNumber}`,
@@ -344,11 +375,11 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Credit: Other Income Account
+        // Credit Account
         await tx.journalEntryLine.create({
           data: {
             journalEntryId: journalEntry.id,
-            accountId: otherIncomeId,
+            accountId: creditAccId,
             debitAmount: 0,
             creditAmount: Math.abs(parseFloat(amount)),
             description: description || `Debit Note: ${debitNoteNumber}`,

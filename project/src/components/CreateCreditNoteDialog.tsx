@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "lucide-react";
+import { Calendar, Info } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 type Invoice = {
   id: number;
@@ -33,6 +34,13 @@ type Customer = {
   CompanyName: string;
 };
 
+type Account = {
+  id: number;
+  code: string;
+  accountName: string;
+  category: string;
+};
+
 interface CreateCreditNoteDialogProps {
   onClose: () => void;
   onSuccess: () => void;
@@ -44,6 +52,7 @@ export default function CreateCreditNoteDialog({
 }: CreateCreditNoteDialogProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<string>("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
@@ -51,8 +60,10 @@ export default function CreateCreditNoteDialog({
   const [description, setDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [entryType, setEntryType] = useState<"DEBIT" | "CREDIT">("CREDIT");
+  const [debitAccountId, setDebitAccountId] = useState<string>("");
+  const [creditAccountId, setCreditAccountId] = useState<string>("");
 
-  // Fetch available invoices and customers
+  // Fetch available invoices, customers, and accounts
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
@@ -74,8 +85,21 @@ export default function CreateCreditNoteDialog({
       }
     };
 
+    const fetchAccounts = async () => {
+      try {
+        const res = await fetch("/api/chart-of-accounts?limit=1000");
+        const data = await res.json();
+        if (data.success && data.data) {
+          setAccounts(data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching accounts:", error);
+      }
+    };
+
     fetchInvoices();
     fetchCustomers();
+    fetchAccounts();
   }, []);
 
   // Auto-fill customer when invoice is selected
@@ -89,11 +113,43 @@ export default function CreateCreditNoteDialog({
     }
   }, [selectedInvoice, invoices]);
 
+  // Automatically set accounts based on entry type
+  useEffect(() => {
+    if (accounts.length > 0) {
+      if (entryType === "CREDIT") {
+        // CREDIT type: Debit Cash, Credit Logistics Revenue
+        const cashAccount = accounts.find(acc => 
+          acc.category === "Asset" && acc.accountName.toLowerCase().includes("cash")
+        );
+        const revenueAccount = accounts.find(acc => 
+          acc.category === "Revenue" && acc.accountName.toLowerCase().includes("logistic")
+        ) || accounts.find(acc => acc.category === "Revenue");
+        
+        if (cashAccount) setDebitAccountId(cashAccount.id.toString());
+        if (revenueAccount) setCreditAccountId(revenueAccount.id.toString());
+      } else {
+        // DEBIT type: Debit Misc Expense, Credit Cash
+        const expenseAccount = accounts.find(acc => 
+          acc.category === "Expense" && (
+            acc.accountName.toLowerCase().includes("misc") ||
+            acc.accountName.toLowerCase().includes("other expense")
+          )
+        ) || accounts.find(acc => acc.category === "Expense");
+        const cashAccount = accounts.find(acc => 
+          acc.category === "Asset" && acc.accountName.toLowerCase().includes("cash")
+        );
+        
+        if (expenseAccount) setDebitAccountId(expenseAccount.id.toString());
+        if (cashAccount) setCreditAccountId(cashAccount.id.toString());
+      }
+    }
+  }, [entryType, accounts]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedCustomer || !amount || !date) {
-      alert("Please fill in all required fields");
+    if (!selectedCustomer || !amount || !date || !debitAccountId || !creditAccountId) {
+      alert("Please fill in all required fields including account selections");
       return;
     }
 
@@ -116,6 +172,8 @@ export default function CreateCreditNoteDialog({
           date,
           description: prefixedDescription,
           type: entryType,
+          debitAccountId: parseInt(debitAccountId),
+          creditAccountId: parseInt(creditAccountId),
         }),
       });
 
@@ -233,6 +291,52 @@ export default function CreateCreditNoteDialog({
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
           />
+        </div>
+
+        {/* Account Selection */}
+        <div className="space-y-4">
+          <div className="flex items-start gap-2">
+            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Select Accounts:
+            </h4>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="debitAccount" className="text-sm font-medium">
+                Debit Account <span className="text-red-500">*</span>
+              </Label>
+              <Select value={debitAccountId} onValueChange={setDebitAccountId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Debit Account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id.toString()}>
+                      {account.code} - {account.accountName} ({account.category})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="creditAccount" className="text-sm font-medium">
+                Credit Account <span className="text-red-500">*</span>
+              </Label>
+              <Select value={creditAccountId} onValueChange={setCreditAccountId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Credit Account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id.toString()}>
+                      {account.code} - {account.accountName} ({account.category})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}

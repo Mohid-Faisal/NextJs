@@ -28,6 +28,7 @@ import {
   FileText,
   Table,
   CheckCircle,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Country } from "country-state-city";
@@ -334,6 +335,48 @@ export default function ShipmentsPage() {
       }
     } catch (error) {
       console.error("Error marking shipment as delivered:", error);
+      toast.error("Error updating shipment status");
+    }
+  };
+
+  const handleMarkAsInTransit = async (
+    shipment: Shipment & { invoices: { status: string }[] }
+  ) => {
+    try {
+      const res = await fetch("/api/update-shipment", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: shipment.id,
+          deliveryStatus: "In Transit",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success("Shipment marked as in transit!");
+        
+        // Refresh the shipments list
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(LIMIT),
+          ...(searchTerm && { search: searchTerm }),
+          ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
+          ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+          ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+          sortField,
+          sortOrder,
+        });
+        const refreshRes = await fetch(`/api/shipments?${params}`);
+        const { shipments, total } = await refreshRes.json();
+        setShipments(shipments);
+        setTotal(total);
+      } else {
+        toast.error(data.message || "Failed to update shipment status");
+      }
+    } catch (error) {
+      console.error("Error marking shipment as in transit:", error);
       toast.error("Error updating shipment status");
     }
   };
@@ -938,6 +981,13 @@ export default function ShipmentsPage() {
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleMarkAsInTransit(shipment)}
+                              className="text-blue-600"
+                            >
+                              <Truck className="mr-2 h-4 w-4" />
+                              Mark as In Transit
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleMarkAsDelivered(shipment)}

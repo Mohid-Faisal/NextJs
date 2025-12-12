@@ -59,8 +59,63 @@ export async function DELETE(
     const { id } = await params;
     const idNum = parseInt(id);
 
-    await prisma.debitNote.delete({
+    // Find the debit note to get its reference number
+    const debitNote = await prisma.debitNote.findUnique({
       where: { id: idNum },
+    });
+
+    if (!debitNote) {
+      return NextResponse.json(
+        { error: "Debit note not found" },
+        { status: 404 }
+      );
+    }
+
+    // Use transaction to delete debit note and related records
+    await prisma.$transaction(async (tx) => {
+      // Find and delete related journal entries
+      const journalEntries = await tx.journalEntry.findMany({
+        where: {
+          OR: [
+            { reference: debitNote.debitNoteNumber },
+            { description: { contains: debitNote.debitNoteNumber } }
+          ]
+        },
+        include: { lines: true }
+      });
+
+      // Delete journal entry lines first (due to foreign key constraints)
+      for (const entry of journalEntries) {
+        if (entry.lines.length > 0) {
+          await tx.journalEntryLine.deleteMany({
+            where: { journalEntryId: entry.id }
+          });
+        }
+      }
+
+      // Delete journal entries
+      if (journalEntries.length > 0) {
+        await tx.journalEntry.deleteMany({
+          where: {
+            id: { in: journalEntries.map(e => e.id) }
+          }
+        });
+      }
+
+      // Delete related payments
+      await tx.payment.deleteMany({
+        where: { reference: debitNote.debitNoteNumber }
+      });
+
+      // Delete vendor transactions
+      await tx.vendorTransaction.deleteMany({
+        where: { reference: debitNote.debitNoteNumber }
+      });
+
+      // Finally, delete the debit note
+      await tx.debitNote.delete({
+        where: { id: idNum },
+      });
     });
 
     return NextResponse.json({ message: "Debit note deleted successfully" });

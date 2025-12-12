@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { invoiceNumber, customerId, amount, date, description, currency = "PKR", type } = body;
+    const { invoiceNumber, customerId, amount, date, description, currency = "PKR", type, debitAccountId, creditAccountId } = body;
 
     // Resolve invoiceNumber to invoiceId (nullable)
     let resolvedInvoiceId: number | null = null;
@@ -176,16 +176,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get account IDs for journal entries
+    // Get account IDs for journal entries - use provided IDs or fall back to defaults
     let cashId: number, revenueId: number, expenseId: number;
-    try {
-      const ids = await getAccountIds();
-      cashId = ids.cashId; revenueId = ids.revenueId; expenseId = ids.expenseId;
-    } catch (e: any) {
-      return NextResponse.json(
-        { error: e?.message || "Required accounts missing. Please configure Chart of Accounts." },
-        { status: 400 }
-      );
+    let useProvidedAccounts = false;
+    
+    if (debitAccountId && creditAccountId) {
+      // Validate accounts exist
+      const [debitAccount, creditAccount] = await Promise.all([
+        prisma.chartOfAccount.findUnique({ where: { id: parseInt(debitAccountId) } }),
+        prisma.chartOfAccount.findUnique({ where: { id: parseInt(creditAccountId) } })
+      ]);
+      
+      if (!debitAccount || !creditAccount) {
+        return NextResponse.json(
+          { error: "Invalid account IDs provided" },
+          { status: 400 }
+        );
+      }
+      useProvidedAccounts = true;
+    } else {
+      // Fall back to default account lookup
+      try {
+        const ids = await getAccountIds();
+        cashId = ids.cashId; revenueId = ids.revenueId; expenseId = ids.expenseId;
+      } catch (e: any) {
+        return NextResponse.json(
+          { error: e?.message || "Required accounts missing. Please configure Chart of Accounts." },
+          { status: 400 }
+        );
+      }
     }
 
     // Generate credit note number
@@ -262,11 +281,15 @@ export async function POST(request: NextRequest) {
       });
 
       // Create journal entry lines
-      // Debit: Cash Account
+      // Use provided account IDs or defaults
+      const debitAccId = useProvidedAccounts ? parseInt(debitAccountId) : cashId;
+      const creditAccId = useProvidedAccounts ? parseInt(creditAccountId) : revenueId;
+      
+      // Debit Account
       await tx.journalEntryLine.create({
         data: {
           journalEntryId: journalEntry.id,
-          accountId: cashId,
+          accountId: debitAccId,
           debitAmount: parseFloat(amount),
           creditAmount: 0,
           description: `Credit Note: ${description || creditNoteNumber}`,
@@ -274,11 +297,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Credit: Logistic Service Revenue Account
+      // Credit Account
       await tx.journalEntryLine.create({
         data: {
           journalEntryId: journalEntry.id,
-          accountId: revenueId,
+          accountId: creditAccId,
           debitAmount: 0,
           creditAmount: parseFloat(amount),
           description: `Credit Note: ${description || creditNoteNumber}`,
@@ -368,11 +391,15 @@ export async function POST(request: NextRequest) {
       });
 
       // Create journal entry lines for negative amount
-      // Debit: Other Expense Account
+      // Use provided account IDs or defaults
+      const debitAccId = useProvidedAccounts ? parseInt(debitAccountId) : expenseId;
+      const creditAccId = useProvidedAccounts ? parseInt(creditAccountId) : cashId;
+      
+      // Debit Account
       await tx.journalEntryLine.create({
         data: {
           journalEntryId: journalEntry.id,
-          accountId: expenseId,
+          accountId: debitAccId,
           debitAmount: Math.abs(parseFloat(amount)),
           creditAmount: 0,
           description: `Debit Note: ${description || creditNoteNumber}`,
@@ -380,11 +407,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Credit: Cash Account
+      // Credit Account
       await tx.journalEntryLine.create({
         data: {
           journalEntryId: journalEntry.id,
-          accountId: cashId,
+          accountId: creditAccId,
           debitAmount: 0,
           creditAmount: Math.abs(parseFloat(amount)),
           description: `Debit Note: ${description || creditNoteNumber}`,

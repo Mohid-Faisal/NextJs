@@ -25,7 +25,10 @@ import {
   ArrowUpDown,
   Printer,
   FileText,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import CreateDebitNoteDialog from "@/components/CreateDebitNoteDialog";
 
@@ -357,6 +360,10 @@ export default function DebitNotesPage() {
                     <span className="hidden sm:inline">DESCRIPTION</span>
                     <span className="sm:hidden">DESC</span>
                   </th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span className="hidden sm:inline">ACTIONS</span>
+                    <span className="sm:hidden">ACT</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
@@ -399,6 +406,53 @@ export default function DebitNotesPage() {
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <span className="hidden sm:inline">{dn.description || `${dn.debitNoteNumber} Debit Note`}</span>
                       <span className="sm:hidden">{dn.description?.substring(0, 15) || `${dn.debitNoteNumber} Debit Note`.substring(0, 15)}...</span>
+                    </td>
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              if (confirm("Are you sure you want to delete this debit note? This action cannot be undone.")) {
+                                try {
+                                  const res = await fetch(`/api/debit-notes/${dn.id}`, {
+                                    method: "DELETE",
+                                  });
+                                  if (res.ok) {
+                                    toast.success("Debit note deleted successfully");
+                                    // Refresh the data
+                                    const params = new URLSearchParams({
+                                      page: String(page),
+                                      limit: pageSize === "all" ? "all" : String(pageSize),
+                                      ...(searchTerm && { search: searchTerm }),
+                                      sortField: sortField,
+                                      sortOrder: sortOrder,
+                                    });
+                                    const fetchRes = await fetch(`/api/debit-notes?${params.toString()}`);
+                                    const json = await fetchRes.json();
+                                    setDebitNotes(json.debitNotes);
+                                    setTotal(json.total);
+                                  } else {
+                                    const error = await res.json();
+                                    toast.error(error.error || "Failed to delete debit note");
+                                  }
+                                } catch (error) {
+                                  console.error("Error deleting debit note:", error);
+                                  toast.error("Failed to delete debit note");
+                                }
+                              }
+                            }}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
