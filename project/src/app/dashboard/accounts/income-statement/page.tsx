@@ -640,7 +640,7 @@ export default function IncomeStatementPage() {
             
             {periodType === 'custom' && (
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 relative z-50 overflow-visible">
-                <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0 mt-1" />
+                <Calendar className="w-4 h-4 text-gray-500 shrink-0 mt-1" />
                 <div className="relative overflow-visible">
                   <Input
                     type="date"
@@ -652,7 +652,7 @@ export default function IncomeStatementPage() {
                     className="w-full sm:w-44 min-w-[160px] relative z-50"
                   />
                 </div>
-                <span className="text-gray-500 flex-shrink-0">to</span>
+                <span className="text-gray-500 shrink-0">to</span>
                 <div className="relative overflow-visible">
                   <Input
                     type="date"

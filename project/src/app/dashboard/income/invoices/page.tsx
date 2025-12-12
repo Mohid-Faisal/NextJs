@@ -178,7 +178,7 @@ const EditInvoiceForm = ({
           <label htmlFor="status" className="text-sm font-medium">Status</label>
           <Select
             value={form.status}
-            onValueChange={(value) =>
+            onValueChange={(value: string) =>
               setForm((prev) => ({ ...prev, status: value }))
             }
           >
@@ -253,7 +253,7 @@ const EditInvoiceForm = ({
           <label htmlFor="currency" className="text-sm font-medium">Currency</label>
           <Select
             value={form.currency}
-            onValueChange={(value) =>
+            onValueChange={(value: string) =>
               setForm((prev) => ({ ...prev, currency: value }))
             }
           >
@@ -674,7 +674,7 @@ export default function IncomeInvoicesPage() {
             <span className="text-sm text-gray-600">Show:</span>
             <Select
               value={pageSize.toString()}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setPageSize(value === "all" ? "all" : parseInt(value));
                 setPage(1);
               }}
@@ -712,7 +712,7 @@ export default function IncomeInvoicesPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
           <Select
             value={statusFilter}
-            onValueChange={(v) => {
+            onValueChange={(v: string) => {
               setStatusFilter(v);
               setPage(1);
             }}
@@ -751,7 +751,7 @@ export default function IncomeInvoicesPage() {
               )}
               {showDatePicker && (
                 <div
-                  className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 sm:p-4 w-[280px] sm:w-[400px] lg:w-[600px]"
+                  className="absolute right-0 z-9999 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 sm:p-4 w-[280px] sm:w-[400px] lg:w-[600px]"
                   style={{ minWidth: "280px" }}
                 >
                   <div className="flex flex-col lg:flex-row gap-2 sm:gap-4">

@@ -57,6 +57,7 @@ export default function BalanceSheetPage() {
   });
   const [loading, setLoading] = useState(false);
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().slice(0, 10));
+  const [revenueExpenseBalances, setRevenueExpenseBalances] = useState<AccountBalance[]>([]);
 
   useEffect(() => {
     fetchAccounts();
@@ -65,45 +66,39 @@ export default function BalanceSheetPage() {
   useEffect(() => {
     if (accounts.length > 0) {
       fetchAccountBalances();
-      // Automatically create closing entries for the period
-      createClosingEntries();
+      fetchRevenueExpenseBalances();
     }
   }, [accounts, asOfDate]);
 
-  const createClosingEntries = async () => {
+  const fetchRevenueExpenseBalances = async () => {
     try {
-      // Calculate period start (beginning of current year or financial year)
+      // Calculate period start date (beginning of financial year)
       const now = new Date(asOfDate);
-      let startDate: string;
+      let periodStartDate: string;
       
       // Use financial year: July 1 to June 30
       if (now.getMonth() >= 6) {
         // July-December: Financial year starts July 1 of current year
-        startDate = new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10);
+        periodStartDate = new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10);
       } else {
         // January-June: Financial year starts July 1 of previous year
-        startDate = new Date(now.getFullYear() - 1, 6, 1).toISOString().slice(0, 10);
+        periodStartDate = new Date(now.getFullYear() - 1, 6, 1).toISOString().slice(0, 10);
       }
-
-      // Create closing entry for the period up to asOfDate
-      const response = await fetch("/api/accounts/close-period", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          startDate: startDate,
-          endDate: asOfDate
-        })
-      });
-
+      
+      // Fetch revenue and expense balances for the period only
+      const response = await fetch(`/api/account-books?limit=all&dateFrom=${periodStartDate}&dateTo=${asOfDate}`);
       const data = await response.json();
-      if (data.success && data.data) {
-        console.log("Closing entry created/verified:", data.message);
-        // Refresh account balances after closing entry
-        fetchAccountBalances();
+      
+      if (data.success && data.payments) {
+        // Filter to only revenue and expense accounts
+        const allBalances = calculateAccountBalances(data.payments);
+        const revExpBalances = allBalances.filter(acc => 
+          acc.category === 'Revenue' || acc.category === 'Expense'
+        );
+        setRevenueExpenseBalances(revExpBalances);
       }
     } catch (error) {
-      console.error("Error creating closing entries:", error);
-      // Don't show error to user, just log it
+      console.error("Error fetching revenue/expense balances:", error);
     }
   };
 
@@ -111,7 +106,7 @@ export default function BalanceSheetPage() {
     if (accountBalances.length > 0) {
       calculateBalanceSheet();
     }
-  }, [accountBalances]);
+  }, [accountBalances, revenueExpenseBalances]);
 
   const fetchAccounts = async () => {
     try {
@@ -159,8 +154,16 @@ export default function BalanceSheetPage() {
   const calculateAccountBalances = (entries: any[]): AccountBalance[] => {
     const balanceMap = new Map<number, AccountBalance>();
     
-    // Initialize all accounts with zero balances
+    // Initialize all accounts with zero balances, EXCEPT Current Year Earnings
+    // CYE is calculated dynamically and should not be included in normal account balances
     accounts.forEach(account => {
+      // Skip Current Year Earnings - it's calculated dynamically
+      const accountNameLower = account.accountName.toLowerCase();
+      if (accountNameLower.includes('current year earnings') || 
+          accountNameLower.includes('current year earning')) {
+        return; // Skip CYE account
+      }
+      
       balanceMap.set(account.id, {
         accountId: account.id,
         accountCode: account.code,
@@ -223,6 +226,35 @@ export default function BalanceSheetPage() {
     const assets = accountBalances.filter(acc => acc.category === 'Asset');
     const liabilities = accountBalances.filter(acc => acc.category === 'Liability');
     const equity = accountBalances.filter(acc => acc.category === 'Equity');
+    
+    // Calculate Revenue and Expenses for Current Year Earnings (CYE)
+    // CYE = Total Revenue - Total Expenses for the financial year period
+    // Use the period-specific revenue/expense balances (not cumulative balances)
+    const revenues = revenueExpenseBalances.filter(acc => acc.category === 'Revenue');
+    const expenses = revenueExpenseBalances.filter(acc => acc.category === 'Expense');
+    
+    // Calculate total revenue and total expenses for the period
+    const totalRevenue = revenues.reduce((sum, acc) => sum + acc.balance, 0);
+    const totalExpenses = expenses.reduce((sum, acc) => sum + acc.balance, 0);
+    const currentYearEarnings = totalRevenue - totalExpenses;
+    
+    // Create a virtual CYE account entry (not from actual journal entries)
+    const cyeAccount: AccountBalance = {
+      accountId: -1, // Virtual account ID
+      accountCode: accounts.find(acc => 
+        acc.accountName.toLowerCase().includes('current year earnings') ||
+        acc.accountName.toLowerCase().includes('current year earning')
+      )?.code || 'CYE',
+      accountName: 'Current Year Earnings',
+      category: 'Equity',
+      type: 'Equity',
+      balance: currentYearEarnings,
+      debitAmount: 0,
+      creditAmount: 0
+    };
+    
+    // Add CYE to equity accounts (at the beginning)
+    const equityWithCYE = [cyeAccount, ...equity];
 
     // Categorize assets dynamically based on type field
     // First, identify fixed assets (they take priority)
@@ -232,13 +264,6 @@ export default function BalanceSheetPage() {
       if (type.includes('fixed')) {
         return true;
       }
-      // // Fallback: check account name keywords for fixed assets
-      // const name = acc.accountName.toLowerCase();
-      // return name.includes('vehicle') ||
-      //        name.includes('warehouse') ||
-      //        name.includes('equipment') ||
-      //        name.includes('building') ||
-      //        name.includes('fleet');
     });
 
     // Then, identify current assets (excluding those already in fixed assets)
@@ -252,13 +277,6 @@ export default function BalanceSheetPage() {
       if (type.includes('current')) {
         return true;
       }
-      // // Fallback: check account name keywords for current assets
-      // const name = acc.accountName.toLowerCase();
-      // return name.includes('cash') ||
-      //        name.includes('receivable') ||
-      //        name.includes('inventory') ||
-      //        name.includes('prepaid') ||
-      //        name.includes('bank');
     });
 
     // Include any remaining assets that weren't categorized
@@ -293,7 +311,7 @@ export default function BalanceSheetPage() {
     // Calculate totals
     const totalAssets = assets.reduce((sum, acc) => sum + acc.balance, 0);
     const totalLiabilities = liabilities.reduce((sum, acc) => sum + acc.balance, 0);
-    const totalEquity = equity.reduce((sum, acc) => sum + acc.balance, 0);
+    const totalEquity = equityWithCYE.reduce((sum, acc) => sum + acc.balance, 0);
 
     setBalanceSheetData({
       assets: {
@@ -306,7 +324,7 @@ export default function BalanceSheetPage() {
         nonCurrent: nonCurrentLiabilities,
         total: totalLiabilities
       },
-      equity: equity,
+      equity: equityWithCYE,
       totalEquity: totalEquity,
       totalLiabilitiesAndEquity: totalLiabilities + totalEquity
     });
