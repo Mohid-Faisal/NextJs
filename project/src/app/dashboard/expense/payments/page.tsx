@@ -50,8 +50,13 @@ export default function ExpensePaymentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const totalPages = Math.ceil(total / pageSize);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
@@ -68,9 +73,12 @@ export default function ExpensePaymentsPage() {
   });
 
   useEffect(() => {
-    fetchInvoices();
     fetchAccounts();
   }, []);
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [page, searchTerm, statusFilter]);
 
   // Update accounts when payment method changes
   useEffect(() => {
@@ -135,8 +143,16 @@ export default function ExpensePaymentsPage() {
 
   const fetchInvoices = async () => {
     try {
-      // Only fetch vendor invoices
-      const response = await fetch("/api/accounts/invoices?profile=Vendor");
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(pageSize),
+        profile: "Vendor",
+        ...(statusFilter !== "All" && { status: statusFilter }),
+        ...(searchTerm && { search: searchTerm }),
+      });
+
+      const response = await fetch(`/api/accounts/invoices?${params.toString()}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -145,9 +161,12 @@ export default function ExpensePaymentsPage() {
           (invoice: Invoice) => invoice.profile === "Vendor"
         );
         setInvoices(vendorInvoices);
+        setTotal(data.total || 0);
       }
     } catch (error) {
       console.error("Error fetching vendor invoices:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -271,19 +290,8 @@ export default function ExpensePaymentsPage() {
     }
   };
 
-  const filteredInvoices = invoices.filter(
-    (invoice) =>
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.trackingNumber
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      invoice.vendor?.CompanyName.toLowerCase().includes(
-        searchTerm.toLowerCase()
-      ) ||
-      invoice.vendor?.PersonName.toLowerCase().includes(
-        searchTerm.toLowerCase()
-      )
-  );
+  // No need for client-side filtering anymore - server handles it
+  const filteredInvoices = invoices;
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -338,6 +346,7 @@ export default function ExpensePaymentsPage() {
           paymentDate: new Date().toISOString().split('T')[0],
         });
         fetchInvoices(); // Refresh invoice list
+        setPage(1); // Reset to first page
       } else {
         toast.error("Payment failed", {
           description:
@@ -356,14 +365,16 @@ export default function ExpensePaymentsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "Unpaid":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
       case "Paid":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
       case "Partial":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "Pending":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+      case "Overdue":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
     }
   };
 
@@ -403,13 +414,39 @@ export default function ExpensePaymentsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <Input
-                placeholder="Search invoices by number, tracking, or vendor..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-4"
-              />
+            <div className="mb-4 flex items-end gap-3">
+              <div className="flex-1 min-w-0">
+                <Input
+                  placeholder="Search invoices by number, tracking, or vendor..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full"
+                />
+              </div>
+              <div className="shrink-0 w-24 sm:w-32">
+                <Label className="mb-2 block text-xs sm:text-sm">Status</Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value: string) => {
+                    setStatusFilter(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["All", "Unpaid", "Paid", "Overdue", "Partial"].map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -471,6 +508,29 @@ export default function ExpensePaymentsPage() {
                 ))
               )}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
+                <Button
+                  disabled={page <= 1}
+                  onClick={() => setPage((prev) => prev - 1)}
+                  className="hover:scale-105 transition-transform w-full sm:w-auto"
+                >
+                  ← Prev
+                </Button>
+                <span className="text-center">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((prev) => prev + 1)}
+                  className="hover:scale-105 transition-transform w-full sm:w-auto"
+                >
+                  Next →
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

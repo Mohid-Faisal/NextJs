@@ -552,7 +552,7 @@ export default function PaymentsPage() {
             <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           )}
           {showDatePicker && (
-            <div className="absolute left-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 sm:p-4 w-[280px] sm:w-[400px] lg:w-[600px]" style={{ minWidth: "280px" }}>
+            <div className="absolute left-0 z-9999 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 sm:p-4 w-[280px] sm:w-[400px] lg:w-[600px]" style={{ minWidth: "280px" }}>
               <div className="flex flex-col lg:flex-row gap-2 sm:gap-4">
                 {/* Left Calendar */}
                 <div className="flex-1">

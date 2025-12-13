@@ -468,7 +468,8 @@ export async function allocateExcessPayment(
   excessAmount: number,
   originalInvoiceNumber: string,
   paymentReference: string,
-  paymentType: 'CUSTOMER_PAYMENT' | 'VENDOR_PAYMENT'
+  paymentType: 'CUSTOMER_PAYMENT' | 'VENDOR_PAYMENT',
+  paymentDate?: string | Date
 ) {
   const allocations: Array<{
     invoiceNumber: string;
@@ -515,7 +516,7 @@ export async function allocateExcessPayment(
           data: {
             transactionType: 'INCOME',
             category: 'Customer Payment Allocation',
-            date: new Date(),
+            date: paymentDate ? (paymentDate instanceof Date ? paymentDate : new Date(paymentDate)) : new Date(),
             amount: allocationAmount,
             fromPartyType: 'CUSTOMER',
             fromCustomerId: customerId,
@@ -587,7 +588,7 @@ export async function allocateExcessPayment(
           data: {
             transactionType: 'EXPENSE',
             category: 'Vendor Payment Allocation',
-            date: new Date(),
+            date: paymentDate ? (paymentDate instanceof Date ? paymentDate : new Date(paymentDate)) : new Date(),
             amount: allocationAmount,
             fromPartyType: 'US',
             fromCustomer: '',
@@ -690,7 +691,8 @@ export async function processPaymentWithAllocation(
         overpaymentAmount,
         invoiceNumber,
         reference,
-        'CUSTOMER_PAYMENT'
+        'CUSTOMER_PAYMENT',
+        paymentDate
       );
     }
 
@@ -699,12 +701,12 @@ export async function processPaymentWithAllocation(
       let transactionDescription = description || `Payment for invoice ${invoiceNumber}`;
       
       // Add allocation details to the description if there were allocations
-      if (allocationResult && allocationResult.allocations.length > 0) {
-        const allocationDetails = allocationResult.allocations
-          .map(alloc => `invoice ${alloc.invoiceNumber} (${alloc.amount.toFixed(2)})`)
-          .join(', ');
-        transactionDescription += ` and excess allocation to ${allocationDetails}`;
-      }
+      // if (allocationResult && allocationResult.allocations.length > 0) {
+      //   const allocationDetails = allocationResult.allocations
+      //     .map(alloc => `invoice ${alloc.invoiceNumber} (${alloc.amount.toFixed(2)})`)
+      //     .join(', ');
+      //   transactionDescription += ` and excess allocation to ${allocationDetails}`;
+      // }
 
       await addCustomerTransaction(
         prisma,
@@ -747,7 +749,8 @@ export async function processPaymentWithAllocation(
         overpaymentAmount,
         invoiceNumber,
         reference,
-        'VENDOR_PAYMENT'
+        'VENDOR_PAYMENT',
+        paymentDate
       );
     }
 
@@ -756,12 +759,12 @@ export async function processPaymentWithAllocation(
       let transactionDescription = description || `Payment for invoice ${invoiceNumber}`;
       
       // Add allocation details to the description if there were allocations
-      if (allocationResult && allocationResult.allocations.length > 0) {
-        const allocationDetails = allocationResult.allocations
-          .map(alloc => `invoice ${alloc.invoiceNumber} (${alloc.amount.toFixed(2)})`)
-          .join(', ');
-        transactionDescription += ` and excess allocation to ${allocationDetails}`;
-      }
+      // if (allocationResult && allocationResult.allocations.length > 0) {
+      //   const allocationDetails = allocationResult.allocations
+      //     .map(alloc => `invoice ${alloc.invoiceNumber} (${alloc.amount.toFixed(2)})`)
+      //     .join(', ');
+      //   transactionDescription += ` and excess allocation to ${allocationDetails}`;
+      // }
 
       await addVendorTransaction(
         prisma,

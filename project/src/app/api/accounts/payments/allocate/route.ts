@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       originalInvoiceNumber,
       paymentReference,
       paymentType, // "CUSTOMER_PAYMENT" or "VENDOR_PAYMENT"
+      paymentDate, // Optional: payment date for allocation transactions
       specificInvoices = [] // Optional: specific invoices to allocate to
     } = body;
 
@@ -60,7 +61,8 @@ export async function POST(req: NextRequest) {
       excessAmountNum,
       originalInvoiceNumber,
       paymentReference,
-      paymentType
+      paymentType,
+      paymentDate
     );
 
     return NextResponse.json({
