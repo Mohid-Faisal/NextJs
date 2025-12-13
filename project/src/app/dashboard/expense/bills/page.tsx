@@ -345,7 +345,7 @@ export default function ExpenseBillsPage() {
       console.log('Filtered Vendor Invoices:', vendorInvoices.length, 'out of', json.invoices.length);
       
       setInvoices(vendorInvoices);
-      setTotal(vendorInvoices.length);
+      setTotal(json.total || 0);
     };
 
     fetchInvoices();
@@ -380,7 +380,7 @@ export default function ExpenseBillsPage() {
     // Validate that all invoices are vendor invoices
     const vendorInvoices = json.invoices.filter((invoice: any) => invoice.profile === "Vendor");
     setInvoices(vendorInvoices);
-    setTotal(vendorInvoices.length);
+    setTotal(json.total || 0);
   };
 
   const handleStatusChange = async (invoiceId: number, newStatus: string) => {
@@ -1111,6 +1111,7 @@ export default function ExpenseBillsPage() {
         </CardContent>
       </Card>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
           <Button
@@ -1120,7 +1121,7 @@ export default function ExpenseBillsPage() {
           >
             ← Prev
           </Button>
-          <span>
+          <span className="text-center">
             Page {page} of {totalPages}
           </span>
           <Button

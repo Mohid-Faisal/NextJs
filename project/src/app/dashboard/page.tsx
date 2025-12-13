@@ -109,6 +109,11 @@ const DashboardPage = () => {
       accountsPayable: 0,
       monthlyAccountsData: [] as { month: string; receivable: number; payable: number }[],
     },
+    currentMonthData: {
+      revenue: 0,
+      shipments: 0,
+      accountsReceivable: 0,
+    },
     customerDestinationMap: [] as { customer: string; destination: string; shipments: number }[],
     topCustomers: [] as { customer: string; shipments: number; totalSpent: number; avgOrderValue: number; currentBalance: number }[],
   });
@@ -191,7 +196,7 @@ const DashboardPage = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-3 sm:p-4 md:p-6">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-3 sm:p-4 md:p-6">
       <div className="max-w-[95%] xl:max-w-[98%] 2xl:max-w-[99%] mx-auto">
         {/* Header */}
         <motion.div
@@ -212,20 +217,22 @@ const DashboardPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
           <MetricCard
             title="Total Revenue"
-            value={`PKR ${data.totalRevenue.toLocaleString()}`}
+            value={data.totalRevenue.toLocaleString()}
             change={data.percentageChanges?.revenuePercentageChange || 0}
             icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-green-500 to-emerald-600"
             iconColor="text-white"
+            currentMonth={(data.currentMonthData?.revenue || 0).toLocaleString()}
           />
           <MetricCard
             title="Accounts Receivable"
-            value={`PKR ${data.accountsData.accountsReceivable.toLocaleString()}`}
+            value={data.accountsData.accountsReceivable.toLocaleString()}
             change={data.percentageChanges?.revenuePercentageChange || 0}
             icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-orange-500 to-red-600"
             iconColor="text-white"
             onClick={() => setShowReceivableModal(true)}
+            currentMonth={(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}
           />
           <MetricCard
             title="Total Shipments"
@@ -234,6 +241,7 @@ const DashboardPage = () => {
             icon={<Truck className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-blue-500 to-indigo-600"
             iconColor="text-white"
+            currentMonth={(data.currentMonthData?.shipments || 0).toLocaleString()}
           />
           <MetricCard
             title="Total Customers"
@@ -285,7 +293,7 @@ const DashboardPage = () => {
                     fontSize: '12px'
                   }}
                   formatter={(value, name) => [
-                    `PKR ${value.toLocaleString()}`,
+                    value.toLocaleString(),
                     name === 'receivable' ? 'Receivable' : 'Payable'
                   ]}
                 />
@@ -567,7 +575,7 @@ const DashboardPage = () => {
                     }}
                     formatter={(value: any, name: string, props: any) => {
                       if (name === 'revenue') {
-                        return [`PKR ${value.toLocaleString()}`, 'Revenue'];
+                        return [value.toLocaleString(), 'Revenue'];
                       }
                       return [value, 'Shipments'];
                     }}
@@ -698,7 +706,7 @@ const DashboardPage = () => {
                     fontSize: '12px'
                   }}
                   formatter={(value, name) => [
-                    name === 'shipments' ? value : `PKR ${value.toLocaleString()}`,
+                    name === 'shipments' ? value : value.toLocaleString(),
                     name === 'shipments' ? 'Shipments' : name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'
                   ]}
                 />
@@ -828,8 +836,8 @@ const DashboardPage = () => {
                           </span>
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">PKR {shipment.totalCost.toLocaleString()}</span>
-                          <span className="sm:hidden">PKR {shipment.totalCost.toLocaleString()}</span>
+                          <span className="hidden sm:inline">{shipment.totalCost.toLocaleString()}</span>
+                          <span className="sm:hidden">{shipment.totalCost.toLocaleString()}</span>
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                           <span
@@ -923,7 +931,7 @@ const DashboardPage = () => {
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold">
                           <span className={payment.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}>
-                            PKR {payment.amount.toLocaleString()}
+                            {payment.amount.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-gray-600 dark:text-gray-400">
@@ -985,7 +993,7 @@ const DashboardPage = () => {
                     <div>
                       <p className="text-sm text-green-600 dark:text-green-400">Total Receivable</p>
                       <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-                        PKR {data.accountsData.accountsReceivable.toLocaleString()}
+                        {data.accountsData.accountsReceivable.toLocaleString()}
                       </p>
                     </div>
                     <DollarSign className="w-8 h-8 text-green-600" />
@@ -1007,7 +1015,7 @@ const DashboardPage = () => {
                     <div>
                       <p className="text-sm text-orange-600 dark:text-orange-400">Largest Balance</p>
                       <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">
-                        PKR {data.topCustomers.filter(c => c.currentBalance < 0).length > 0 
+                        {data.topCustomers.filter(c => c.currentBalance < 0).length > 0 
                           ? Math.abs(Math.min(...data.topCustomers.filter(c => c.currentBalance < 0).map(c => c.currentBalance))).toLocaleString()
                           : '0'
                         }
@@ -1059,7 +1067,7 @@ const DashboardPage = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900 dark:text-white font-medium">
-                                PKR {customer.totalSpent.toLocaleString()}
+                                {customer.totalSpent.toLocaleString()}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -1069,12 +1077,12 @@ const DashboardPage = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-500 dark:text-gray-400">
-                                PKR {customer.avgOrderValue.toLocaleString()}
+                                {customer.avgOrderValue.toLocaleString()}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-red-600 dark:text-red-400">
-                                PKR {Math.abs(customer.currentBalance).toLocaleString()}
+                                {Math.abs(customer.currentBalance).toLocaleString()}
                               </div>
                             </td>
                           </tr>
@@ -1084,27 +1092,6 @@ const DashboardPage = () => {
                 </div>
               </div>
 
-              {/* Notes */}
-              <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                      Important Note
-                    </h3>
-                    <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
-                      <p>
-                        This shows customers with outstanding balances. The "Outstanding" amount is estimated based on typical payment patterns. 
-                        For exact amounts, please check individual customer invoices and payment records.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </motion.div>
         </motion.div>
@@ -1246,7 +1233,7 @@ const DashboardPage = () => {
               {/* Notes */}
               <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
                 <div className="flex items-start">
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
@@ -1272,7 +1259,7 @@ const DashboardPage = () => {
   );
 };
 
-const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick }: {
+const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick, currentMonth }: {
   title: string | React.ReactNode;
   value: string | number;
   change: number;
@@ -1280,6 +1267,7 @@ const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick }:
   bgColor: string;
   iconColor: string;
   onClick?: () => void;
+  currentMonth?: string | number;
 }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.95 }}
@@ -1290,16 +1278,30 @@ const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick }:
   >
     <div className="flex items-center justify-between mb-3 sm:mb-4">
       <div className={`${bgColor} ${iconColor} p-2 sm:p-3 rounded-lg sm:rounded-xl`}>{icon}</div>
-      <div className={`flex items-center text-xs sm:text-sm font-medium ${
-        change >= 0 ? 'text-green-600' : 'text-red-600'
-      }`}>
-        {change >= 0 ? <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> : <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />}
-        {Math.abs(change)}%
+      <div className="flex flex-col items-end gap-1">
+        <div className={`flex items-center text-xs sm:text-sm font-medium ${
+          change >= 0 ? 'text-green-600' : 'text-red-600'
+        }`}>
+          {change >= 0 ? <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> : <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />}
+          {Math.abs(change)}%
+        </div>
       </div>
     </div>
     <div>
       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
       <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
+      {currentMonth !== undefined && (
+        <div className="mt-3 flex items-center gap-3">
+          <div className={`px-3 py-1.5 rounded-full ${bgColor} ${iconColor}`}>
+            <span className="text-sm font-semibold">
+              {typeof currentMonth === 'number' ? currentMonth.toLocaleString() : currentMonth}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Since last month</span>
+          </div>
+        </div>
+      )}
     </div>
   </motion.div>
 );

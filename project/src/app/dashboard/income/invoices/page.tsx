@@ -356,7 +356,7 @@ export default function IncomeInvoicesPage() {
       );
 
       setInvoices(customerInvoices);
-      setTotal(customerInvoices.length);
+      setTotal(json.total || 0);
     };
 
     fetchInvoices();
@@ -401,6 +401,7 @@ export default function IncomeInvoicesPage() {
       (invoice: any) => invoice.profile === "Customer"
     );
     setInvoices(customerInvoices);
+    setTotal(json.total || 0);
     setTotal(customerInvoices.length);
   };
 
@@ -1186,6 +1187,7 @@ export default function IncomeInvoicesPage() {
         </CardContent>
       </Card>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
           <Button
@@ -1195,7 +1197,7 @@ export default function IncomeInvoicesPage() {
           >
             ← Prev
           </Button>
-          <span>
+          <span className="text-center">
             Page {page} of {totalPages}
           </span>
           <Button

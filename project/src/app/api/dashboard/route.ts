@@ -654,6 +654,23 @@ export async function GET() {
       }
     });
     
+    // Calculate current month accounts receivable (from invoices created this month)
+    const currentMonthReceivable = await prisma.invoice.aggregate({
+      where: {
+        customerId: { not: null },
+        status: { not: "Cancelled" },
+        createdAt: {
+          gte: new Date(currentYear, currentMonth, 1),
+          lt: new Date(currentYear, currentMonth + 1, 1)
+        }
+      },
+      _sum: {
+        totalAmount: true
+      }
+    });
+    
+    const currentMonthReceivableAmount = currentMonthReceivable._sum.totalAmount || 0;
+    
     // Get monthly accounts data for trends
     const monthlyAccountsData = [];
     for (let month = 0; month < 12; month++) {
@@ -738,6 +755,11 @@ export async function GET() {
         // For payable: positive vendor balances stay positive (we owe them money)
         accountsPayable: Math.max(accountsPayable._sum.currentBalance || 0, 0),
         monthlyAccountsData
+      },
+      currentMonthData: {
+        revenue: currentMonthTotal,
+        shipments: currentMonthShipments,
+        accountsReceivable: currentMonthReceivableAmount
       }
     };
     
@@ -856,6 +878,11 @@ export async function GET() {
           { month: "Nov", receivable: 0, payable: 0 },
           { month: "Dec", receivable: 0, payable: 0 }
         ]
+      },
+      currentMonthData: {
+        revenue: currentMonthTotal || 0,
+        shipments: currentMonthShipments || 0,
+        accountsReceivable: currentMonthReceivableAmount || 0
       }
     };
     
