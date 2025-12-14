@@ -100,6 +100,7 @@ export default function CustomerTransactionsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   
   // Sort transactions by voucherDate based on the logic
+  // The API now calculates balances based on voucher date, so we just need to sort for display
   const sortedTransactions = useMemo(() => {
     if (sortField === "voucherDate") {
       // Sort by voucher date (using the same logic as display)

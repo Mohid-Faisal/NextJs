@@ -87,18 +87,74 @@ export async function GET(
     // First, get ALL transactions for this vendor (without pagination) to recalculate balances
     const allTransactions = await prisma.vendorTransaction.findMany({
       where: { vendorId: vendorId },
-      orderBy: { createdAt: 'asc' }, // Sort chronologically
+      orderBy: { createdAt: 'asc' }, // Sort chronologically by createdAt first
       select: {
         id: true,
         type: true,
         amount: true,
-        createdAt: true
+        createdAt: true,
+        invoice: true
       }
     });
 
-    // Recalculate balances chronologically
+    // Fetch shipment and payment dates for all transactions to determine voucher dates
+    const transactionsWithVoucherDates = await Promise.all(
+      allTransactions.map(async (transaction) => {
+        let voucherDate = transaction.createdAt;
+        
+        if (transaction.invoice) {
+          // Find the invoice and get shipment info
+          const invoice = await prisma.invoice.findFirst({
+            where: { invoiceNumber: transaction.invoice },
+            include: {
+              shipment: {
+                select: {
+                  shipmentDate: true
+                }
+              }
+            }
+          });
+          
+          if (transaction.type === "DEBIT" && invoice?.shipment?.shipmentDate) {
+            // For DEBIT transactions (vendor invoices), use shipmentDate
+            voucherDate = invoice.shipment.shipmentDate;
+          } else if (transaction.type === "CREDIT") {
+            // For CREDIT transactions (vendor payments), use payment date
+            const payment = await prisma.payment.findFirst({
+              where: {
+                invoice: transaction.invoice,
+                toVendorId: vendorId,
+                transactionType: "EXPENSE"
+              },
+              orderBy: {
+                date: 'desc'
+              },
+              select: {
+                date: true
+              }
+            });
+            
+            if (payment?.date) {
+              voucherDate = payment.date;
+            }
+          }
+        }
+        
+        return {
+          ...transaction,
+          voucherDate
+        };
+      })
+    );
+
+    // Sort by voucher date (not createdAt) for balance calculation
+    transactionsWithVoucherDates.sort((a, b) => 
+      a.voucherDate.getTime() - b.voucherDate.getTime()
+    );
+
+    // Recalculate balances chronologically based on voucher date
     let runningBalance = 0;
-    const transactionsToUpdate = allTransactions.map((transaction) => {
+    const transactionsToUpdate = transactionsWithVoucherDates.map((transaction) => {
       const previousBalance = runningBalance;
       // For vendors: DEBIT increases balance (we owe them), CREDIT decreases (we pay them)
       const newBalance = transaction.type === 'DEBIT' 
