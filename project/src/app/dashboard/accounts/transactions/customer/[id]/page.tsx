@@ -657,7 +657,7 @@ export default function CustomerTransactionsPage() {
                 <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               )}
               {showDatePicker && (
-                <div className="absolute right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4" style={{ minWidth: "600px" }}>
+                <div className="absolute right-0 z-9999 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4" style={{ minWidth: "600px" }}>
                   <div className="flex gap-4">
                     {/* Left Calendar */}
                     <div className="flex-1">

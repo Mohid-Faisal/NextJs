@@ -26,6 +26,8 @@ import {
 import DeleteDialog from "@/components/DeleteDialog";
 import ViewVendorDialog from "@/components/ViewVendorDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 
 const STATUSES = ["All", "Active", "Inactive"];
@@ -43,8 +45,11 @@ export default function VendorsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [openStartingBalanceDialog, setOpenStartingBalanceDialog] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
   const [vendorToDelete, setVendorToDelete] = useState<any>(null);
+  const [vendorForBalance, setVendorForBalance] = useState<Vendors | null>(null);
+  const [startingBalance, setStartingBalance] = useState("");
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -567,6 +572,15 @@ export default function VendorsPage() {
                             >
                               💰 Transactions
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setVendorForBalance(vendor);
+                                setStartingBalance(vendor.currentBalance?.toString() || "0");
+                                setOpenStartingBalanceDialog(true);
+                              }}
+                            >
+                              💵 Set Starting Balance
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                         <Dialog
@@ -636,6 +650,96 @@ export default function VendorsPage() {
           </div>
         )}
       </div>
+
+      {/* Starting Balance Dialog */}
+      <Dialog open={openStartingBalanceDialog} onOpenChange={setOpenStartingBalanceDialog}>
+        <DialogContent className="max-w-md">
+          <h2 className="text-xl font-semibold mb-4">Set Starting Balance</h2>
+          {vendorForBalance && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>{vendorForBalance.CompanyName}</strong>
+                </p>
+                <p className="text-xs text-gray-500">
+                  Current Balance: ${(vendorForBalance.currentBalance || 0).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="startingBalance">Starting Balance</Label>
+                <Input
+                  id="startingBalance"
+                  type="number"
+                  step="0.01"
+                  value={startingBalance}
+                  onChange={(e) => setStartingBalance(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Negative = you owe them, Positive = they owe you
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setOpenStartingBalanceDialog(false);
+                    setVendorForBalance(null);
+                    setStartingBalance("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!vendorForBalance || !startingBalance) {
+                      toast.error("Please enter a starting balance");
+                      return;
+                    }
+
+                    try {
+                      const balanceValue = parseFloat(startingBalance);
+                      // Create an adjustment transaction via the vendor transaction API
+                      const response = await fetch(
+                        `/api/accounts/transactions/vendor/${vendorForBalance.id}`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            type: balanceValue < 0 ? "CREDIT" : "DEBIT",
+                            amount: Math.abs(balanceValue),
+                            description: "Starting Balance Adjustment",
+                            reference: `STARTING-BALANCE-${Date.now()}`,
+                          }),
+                        }
+                      );
+
+                      const data = await response.json();
+
+                      if (response.ok && data.success) {
+                        toast.success("Starting balance set successfully!");
+                        setOpenStartingBalanceDialog(false);
+                        setVendorForBalance(null);
+                        setStartingBalance("");
+                        // Refresh the vendors list
+                        fetchVendors();
+                      } else {
+                        toast.error(data.error || "Failed to set starting balance");
+                      }
+                    } catch (error) {
+                      console.error("Error setting starting balance:", error);
+                      toast.error("Failed to set starting balance");
+                    }
+                  }}
+                >
+                  Set Balance
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

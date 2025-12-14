@@ -93,7 +93,8 @@ export async function GET(
         type: true,
         amount: true,
         createdAt: true,
-        invoice: true
+        invoice: true,
+        reference: true
       }
     });
 
@@ -152,22 +153,53 @@ export async function GET(
       a.voucherDate.getTime() - b.voucherDate.getTime()
     );
 
-    // Recalculate balances chronologically based on voucher date
+    // Find starting balance transaction (reference starts with "STARTING-BALANCE")
+    const startingBalanceTransaction = transactionsWithVoucherDates.find(
+      (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
+    );
+
+    // Calculate initial balance from starting balance transaction
+    // For vendors: DEBIT increases balance (we owe them), CREDIT decreases (we pay them)
+    // Starting balance transaction sets the initial balance
     let runningBalance = 0;
-    const transactionsToUpdate = transactionsWithVoucherDates.map((transaction) => {
-      const previousBalance = runningBalance;
-      // For vendors: DEBIT increases balance (we owe them), CREDIT decreases (we pay them)
-      const newBalance = transaction.type === 'DEBIT' 
-        ? previousBalance + transaction.amount 
-        : previousBalance - transaction.amount;
-      runningBalance = newBalance;
+    if (startingBalanceTransaction) {
+      // The starting balance transaction itself represents the initial balance
+      // If it's DEBIT, we owe them (positive balance), if CREDIT, they owe us (negative balance)
+      runningBalance = startingBalanceTransaction.type === 'DEBIT' 
+        ? startingBalanceTransaction.amount 
+        : -startingBalanceTransaction.amount;
+    }
+
+    // Recalculate balances chronologically based on voucher date
+    // Exclude starting balance transaction from the loop since it already sets the initial balance
+    const transactionsToUpdate = transactionsWithVoucherDates
+      .filter((transaction) => !transaction.reference || !transaction.reference.startsWith("STARTING-BALANCE"))
+      .map((transaction) => {
+        const previousBalance = runningBalance;
+        // For vendors: DEBIT increases balance (we owe them), CREDIT decreases (we pay them)
+        const newBalance = transaction.type === 'DEBIT' 
+          ? previousBalance + transaction.amount 
+          : previousBalance - transaction.amount;
+        runningBalance = newBalance;
       
-      return {
-        id: transaction.id,
-        previousBalance,
-        newBalance
-      };
-    });
+        return {
+          id: transaction.id,
+          previousBalance,
+          newBalance
+        };
+      });
+
+    // Also update the starting balance transaction with its own balance values
+    if (startingBalanceTransaction) {
+      const startingBalance = startingBalanceTransaction.type === 'DEBIT' 
+        ? startingBalanceTransaction.amount 
+        : -startingBalanceTransaction.amount;
+      transactionsToUpdate.push({
+        id: startingBalanceTransaction.id,
+        previousBalance: 0,
+        newBalance: startingBalance
+      });
+    }
 
     // Update all transactions with recalculated balances
     await Promise.all(
@@ -179,16 +211,14 @@ export async function GET(
       )
     );
 
-    // Update vendor's currentBalance to match the latest transaction's newBalance
-    if (transactionsToUpdate.length > 0) {
-      const latestBalance = transactionsToUpdate[transactionsToUpdate.length - 1].newBalance;
-      await prisma.vendors.update({
-        where: { id: vendorId },
-        data: { currentBalance: latestBalance }
-      });
-      // Update vendor object for response
-      vendor.currentBalance = latestBalance;
-    }
+    // Update vendor's currentBalance to match the final runningBalance after all transactions
+    // Use runningBalance which already has the final calculated balance
+    await prisma.vendors.update({
+      where: { id: vendorId },
+      data: { currentBalance: runningBalance }
+    });
+    // Update vendor object for response
+    vendor.currentBalance = runningBalance;
 
     // Now get the paginated transactions with updated balances
     const transactions = await prisma.vendorTransaction.findMany({
@@ -334,6 +364,50 @@ export async function POST(
       );
     }
 
+    // Check if this is a starting balance transaction
+    const isStartingBalance = reference && reference.startsWith("STARTING-BALANCE");
+
+    if (isStartingBalance) {
+      // Find existing starting balance transaction
+      const existingStartingBalance = await prisma.vendorTransaction.findFirst({
+        where: {
+          vendorId: vendorId,
+          reference: { startsWith: "STARTING-BALANCE" }
+        }
+      });
+
+      if (existingStartingBalance) {
+        // Update existing starting balance transaction
+        await prisma.vendorTransaction.update({
+          where: { id: existingStartingBalance.id },
+          data: {
+            type: type,
+            amount: parseFloat(amount),
+            description: description,
+            reference: reference,
+            createdAt: new Date('1970-01-01'), // Set to earliest date so it's always first
+            previousBalance: 0,
+            newBalance: type === 'DEBIT' ? parseFloat(amount) : -parseFloat(amount)
+          }
+        });
+
+        // Trigger balance recalculation by calling GET endpoint logic
+        // We'll need to recalculate all balances
+        const allTransactions = await prisma.vendorTransaction.findMany({
+          where: { vendorId: vendorId }
+        });
+
+        // Recalculate balances (this will be done on next GET request)
+        // For now, just return success
+        return NextResponse.json({
+          success: true,
+          message: "Starting balance updated successfully",
+          previousBalance: 0,
+          newBalance: type === 'DEBIT' ? parseFloat(amount) : -parseFloat(amount)
+        });
+      }
+    }
+
     const result = await addVendorTransaction(
       prisma,
       vendorId,
@@ -342,6 +416,28 @@ export async function POST(
       description,
       reference
     );
+
+    // For starting balance, find the transaction we just created and update it
+    if (isStartingBalance) {
+      const createdTransaction = await prisma.vendorTransaction.findFirst({
+        where: {
+          vendorId: vendorId,
+          reference: reference
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (createdTransaction) {
+        await prisma.vendorTransaction.update({
+          where: { id: createdTransaction.id },
+          data: {
+            createdAt: new Date('1970-01-01'),
+            previousBalance: 0,
+            newBalance: type === 'DEBIT' ? parseFloat(amount) : -parseFloat(amount)
+          }
+        });
+      }
+    }
 
     // Create journal entry for vendor transaction
     const transactionType = type === 'CREDIT' ? 'VENDOR_CREDIT' : 'VENDOR_DEBIT';

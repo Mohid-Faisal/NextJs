@@ -627,12 +627,22 @@ export default function ExpenseBillsPage() {
           <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your vendor invoices and track expenses</p>
           <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Showing only Vendor invoices</p>
         </div>
-        <div className="text-right">
-          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
-            {total}
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
+              {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Total Amount
+            </div>
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Total Records
+          <div className="text-right">
+            <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
+              {total}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Total Records
+            </div>
           </div>
         </div>
       </div>

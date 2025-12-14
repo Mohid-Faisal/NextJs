@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { calculateInvoicePaymentStatus } from "@/lib/utils";
 
 // Helper function to decode JWT token
 function decodeToken(token: string) {
@@ -272,7 +273,114 @@ export async function DELETE(
       );
     }
 
-    // Find and delete the corresponding journal entry first
+    // Delete customer/vendor transactions associated with this payment
+    try {
+      // Delete customer transactions with this payment reference
+      if (payment.fromCustomerId) {
+        const customerTransactions = await prisma.customerTransaction.findMany({
+          where: {
+            customerId: payment.fromCustomerId,
+            reference: payment.reference || `Payment-${payment.id}`,
+            invoice: payment.invoice || undefined
+          }
+        });
+
+        for (const transaction of customerTransactions) {
+          await prisma.customerTransaction.delete({
+            where: { id: transaction.id }
+          });
+          console.log(`Deleted customer transaction ${transaction.id}`);
+        }
+
+        // Also delete allocation transactions (excess payments allocated to other invoices)
+        if (payment.invoice) {
+          const allocationTransactions = await prisma.customerTransaction.findMany({
+            where: {
+              customerId: payment.fromCustomerId,
+              reference: {
+                startsWith: `CREDIT-${payment.invoice}`
+              }
+            }
+          });
+
+          for (const transaction of allocationTransactions) {
+            await prisma.customerTransaction.delete({
+              where: { id: transaction.id }
+            });
+            console.log(`Deleted customer allocation transaction ${transaction.id}`);
+          }
+        }
+      }
+
+      // Delete vendor transactions with this payment reference
+      if (payment.toVendorId) {
+        const vendorTransactions = await prisma.vendorTransaction.findMany({
+          where: {
+            vendorId: payment.toVendorId,
+            reference: payment.reference || `Payment-${payment.id}`,
+            invoice: payment.invoice || undefined
+          }
+        });
+
+        for (const transaction of vendorTransactions) {
+          await prisma.vendorTransaction.delete({
+            where: { id: transaction.id }
+          });
+          console.log(`Deleted vendor transaction ${transaction.id}`);
+        }
+
+        // Also delete allocation transactions (excess payments allocated to other invoices)
+        if (payment.invoice) {
+          const allocationTransactions = await prisma.vendorTransaction.findMany({
+            where: {
+              vendorId: payment.toVendorId,
+              reference: {
+                startsWith: `CREDIT-${payment.invoice}`
+              }
+            }
+          });
+
+          for (const transaction of allocationTransactions) {
+            await prisma.vendorTransaction.delete({
+              where: { id: transaction.id }
+            });
+            console.log(`Deleted vendor allocation transaction ${transaction.id}`);
+          }
+        }
+      }
+    } catch (transactionError) {
+      console.error("Error deleting customer/vendor transactions:", transactionError);
+      // Continue with deletion even if transaction deletion fails
+    }
+
+    // Recalculate and update invoice status
+    if (payment.invoice) {
+      try {
+        const invoice = await prisma.invoice.findUnique({
+          where: { invoiceNumber: payment.invoice }
+        });
+
+        if (invoice) {
+          const paymentStatus = await calculateInvoicePaymentStatus(
+            prisma,
+            payment.invoice,
+            invoice.totalAmount
+          );
+
+          await prisma.invoice.update({
+            where: { invoiceNumber: payment.invoice },
+            data: { status: paymentStatus.status }
+          });
+
+          console.log(`Updated invoice ${payment.invoice} status to ${paymentStatus.status}`);
+        }
+      } catch (invoiceError) {
+        console.error("Error updating invoice status:", invoiceError);
+        // Continue with deletion even if invoice update fails
+      }
+    }
+
+    // Find and delete the corresponding journal entry
     try {
       const journalEntry = await prisma.journalEntry.findFirst({
         where: {

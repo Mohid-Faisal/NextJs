@@ -355,6 +355,9 @@ export default function CustomersPage() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openStartingBalanceDialog, setOpenStartingBalanceDialog] = useState(false);
+  const [customerForBalance, setCustomerForBalance] = useState<Customers | null>(null);
+  const [startingBalance, setStartingBalance] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
@@ -933,6 +936,15 @@ export default function CustomersPage() {
                             >
                               💰 Transactions
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setCustomerForBalance(customer);
+                                setStartingBalance(customer.currentBalance?.toString() || "0");
+                                setOpenStartingBalanceDialog(true);
+                              }}
+                            >
+                              💵 Set Starting Balance
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                         <Dialog
@@ -1023,6 +1035,96 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      {/* Starting Balance Dialog */}
+      <Dialog open={openStartingBalanceDialog} onOpenChange={setOpenStartingBalanceDialog}>
+        <DialogContent className="max-w-md">
+          <h2 className="text-xl font-semibold mb-4">Set Starting Balance</h2>
+          {customerForBalance && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>{customerForBalance.CompanyName}</strong>
+                </p>
+                <p className="text-xs text-gray-500">
+                  Current Balance: ${(customerForBalance.currentBalance || 0).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="startingBalance">Starting Balance</Label>
+                <Input
+                  id="startingBalance"
+                  type="number"
+                  step="0.01"
+                  value={startingBalance}
+                  onChange={(e) => setStartingBalance(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Negative = they owe you, Positive = you owe them
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setOpenStartingBalanceDialog(false);
+                    setCustomerForBalance(null);
+                    setStartingBalance("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!customerForBalance || !startingBalance) {
+                      toast.error("Please enter a starting balance");
+                      return;
+                    }
+
+                    try {
+                      const balanceValue = parseFloat(startingBalance);
+                      // Create an adjustment transaction via the customer transaction API
+                      const response = await fetch(
+                        `/api/accounts/transactions/customer/${customerForBalance.id}`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            type: balanceValue < 0 ? "DEBIT" : "CREDIT",
+                            amount: Math.abs(balanceValue),
+                            description: "Starting Balance Adjustment",
+                            reference: `STARTING-BALANCE-${Date.now()}`,
+                          }),
+                        }
+                      );
+
+                      const data = await response.json();
+
+                      if (response.ok && data.success) {
+                        toast.success("Starting balance set successfully!");
+                        setOpenStartingBalanceDialog(false);
+                        setCustomerForBalance(null);
+                        setStartingBalance("");
+                        // Refresh the customers list
+                        fetchCustomers();
+                      } else {
+                        toast.error(data.error || "Failed to set starting balance");
+                      }
+                    } catch (error) {
+                      console.error("Error setting starting balance:", error);
+                      toast.error("Failed to set starting balance");
+                    }
+                  }}
+                >
+                  Set Balance
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

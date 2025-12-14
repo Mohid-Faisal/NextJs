@@ -212,12 +212,17 @@ export async function updateInvoiceBalance(
   oldVendorId?: number | null,
   newVendorId?: number | null
 ) {
-  // Get the invoice with customer and vendor info
+  // Get the invoice with customer, vendor, and shipment info
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     include: {
       customer: true,
-      vendor: true
+      vendor: true,
+      shipment: {
+        select: {
+          shipmentDate: true
+        }
+      }
     }
   });
 
@@ -253,15 +258,18 @@ export async function updateInvoiceBalance(
         });
 
         // Create transaction record for removal
+        const transactionDate = invoice.shipment?.shipmentDate || new Date();
         await prisma.customerTransaction.create({
           data: {
             customerId: oldCustomerId,
             type: 'CREDIT',
             amount: oldAmount,
             description: `Invoice ${invoice.invoiceNumber} reassigned from customer`,
-            reference: `Invoice: ${invoice.invoiceNumber}`,
+            reference: invoice.invoiceNumber,
+            invoice: invoice.invoiceNumber,
             previousBalance,
-            newBalance
+            newBalance,
+            createdAt: transactionDate
           }
         });
       }
@@ -282,15 +290,18 @@ export async function updateInvoiceBalance(
         });
 
         // Create transaction record for addition
+        const transactionDate = invoice.shipment?.shipmentDate || new Date();
         await prisma.customerTransaction.create({
           data: {
             customerId: newCustomerId,
             type: 'DEBIT',
             amount: newAmount,
             description: `Invoice ${invoice.invoiceNumber} assigned to customer`,
-            reference: `Invoice: ${invoice.invoiceNumber}`,
+            reference: invoice.invoiceNumber,
+            invoice: invoice.invoiceNumber,
             previousBalance,
-            newBalance
+            newBalance,
+            createdAt: transactionDate
           }
         });
       }
@@ -307,12 +318,20 @@ export async function updateInvoiceBalance(
     });
 
     // Find and update existing transaction instead of creating new one
+    // Search by both reference and invoice fields to handle different formats
     const existingTransaction = await prisma.customerTransaction.findFirst({
       where: {
         customerId: invoice.customerId,
-        reference: invoice.invoiceNumber
+        OR: [
+          { reference: invoice.invoiceNumber },
+          { invoice: invoice.invoiceNumber },
+          { reference: { startsWith: `Invoice: ${invoice.invoiceNumber}` } }
+        ]
       }
     });
+
+    // Get shipment date for transaction date
+    const transactionDate = invoice.shipment?.shipmentDate || new Date();
 
     if (existingTransaction) {
       // Update existing transaction
@@ -324,7 +343,8 @@ export async function updateInvoiceBalance(
           type: 'DEBIT', // Always DEBIT for customer invoices
           amount: Math.abs(newAmount),
           previousBalance,
-          newBalance
+          newBalance,
+          createdAt: transactionDate // Use shipment date
         }
       });
     } else {
@@ -336,9 +356,11 @@ export async function updateInvoiceBalance(
           type: 'DEBIT', // Always DEBIT for customer invoices
           amount: Math.abs(newAmount),
           description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
-          reference: `Invoice: ${invoice.invoiceNumber}`,
+          reference: invoice.invoiceNumber, // Use invoice number directly to match shipment format
+          invoice: invoice.invoiceNumber,
           previousBalance,
-          newBalance
+          newBalance,
+          createdAt: transactionDate // Use shipment date
         }
       });
     }
@@ -418,12 +440,20 @@ export async function updateInvoiceBalance(
     });
 
     // Find and update existing transaction instead of creating new one
+    // Search by both reference and invoice fields to handle different formats
     const existingTransaction = await prisma.vendorTransaction.findFirst({
       where: {
         vendorId: invoice.vendorId,
-        reference: invoice.invoiceNumber
+        OR: [
+          { reference: invoice.invoiceNumber },
+          { invoice: invoice.invoiceNumber },
+          { reference: { startsWith: `Invoice: ${invoice.invoiceNumber}` } }
+        ]
       }
     });
+
+    // Get shipment date for transaction date
+    const transactionDate = invoice.shipment?.shipmentDate || new Date();
 
     if (existingTransaction) {
       // Update existing transaction
@@ -435,7 +465,8 @@ export async function updateInvoiceBalance(
           type: 'DEBIT', // Always DEBIT for vendor invoices
           amount: Math.abs(newAmount),
           previousBalance,
-          newBalance
+          newBalance,
+          createdAt: transactionDate // Use shipment date
         }
       });
     } else {
@@ -447,9 +478,11 @@ export async function updateInvoiceBalance(
           type: 'DEBIT', // Always DEBIT for vendor invoices
           amount: Math.abs(newAmount),
           description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
-          reference: `Invoice: ${invoice.invoiceNumber}`,
+          reference: invoice.invoiceNumber, // Use invoice number directly to match shipment format
+          invoice: invoice.invoiceNumber,
           previousBalance,
-          newBalance
+          newBalance,
+          createdAt: transactionDate // Use shipment date
         }
       });
     }
