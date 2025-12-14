@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectTrigger,
@@ -25,7 +24,6 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Country, State, City } from "country-state-city";
-import { Paperclip } from "lucide-react";
 
 const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { triggerLabel?: string, onSuccess?: () => void }) => {
   const [open, setOpen] = useState(false);
@@ -34,23 +32,16 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
     personname: "",
     email: "",
     phone: "",
-    username: "",
-    password: "",
-    documentType: "",
-    documentNumber: "",
     country: "",
     state: "",
     city: "",
     zip: "",
     address: "",
-    activestatus: ""
   });
 
-  const [registerAccount, setRegisterAccount] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedCity, setSelectedCity] = useState<string>("");
-  const [file, setFile] = useState<File | null>(null);
   const [states, setStates] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
 
@@ -87,15 +78,12 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
   const handleRecipient = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const formData = new FormData();
-    if (file) {
-      formData.append("file", file);
-    }
-    formData.append("form", JSON.stringify(form));
-
     const res = await fetch("/api/add-recipients", {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(form),
     });
 
     const data = await res.json();
@@ -107,19 +95,17 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
         personname: "",
         email: "",
         phone: "",
-        username: "",
-        password: "",
-        documentType: "",
-        documentNumber: "",
         country: "",
         state: "",
         city: "",
         zip: "",
         address: "",
-        activestatus: ""
       });
-      setRegisterAccount(false);
-      setFile(null);
+      setSelectedCountry("");
+      setSelectedState("");
+      setSelectedCity("");
+      setStates([]);
+      setCities([]);
       setOpen(false); // Close dialog after successful submission
       if (onSuccess) {
         onSuccess(); // Call the callback to refresh the list
@@ -189,100 +175,6 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
                 />
               </div>
             </div>
-
-            {/* Document Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="documentType">Document Type</Label>
-                <Select
-                  value={form.documentType}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({ ...prev, documentType: value }))
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Document Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CNIC">CNIC</SelectItem>
-                    <SelectItem value="Passport">Passport</SelectItem>
-                    <SelectItem value="NTN">NTN</SelectItem>
-                    <SelectItem value="DriverLicense">Driver License</SelectItem>
-                    <SelectItem value="others">others</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="documentNumber">Document Number</Label>
-                <Input
-                  id="documentNumber"
-                  name="documentNumber"
-                  value={form.documentNumber}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            {/* Account Registration and File Upload */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">
-                  Register a user account for this client
-                </span>
-                <Switch
-                  checked={registerAccount}
-                  onCheckedChange={setRegisterAccount}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-medium text-gray-700">
-                  Attach Files
-                </span>
-                <label
-                  htmlFor="fileUpload"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-blue-700 transition"
-                >
-                  <Paperclip className="w-4 h-4" />
-                  Upload files
-                </label>
-                <input
-                  id="fileUpload"
-                  type="file"
-                  onChange={(e) => {
-                    setFile(e.target.files?.[0] || null);
-                  }}
-                  className="hidden"
-                />
-              </div>
-            </div>
-
-            {/* User Account Fields */}
-            {registerAccount && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    name="username"
-                    value={form.username}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={form.password}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
-            )}
 
             {/* Country, State, City */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -354,8 +246,8 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
               </div>
             </div>
 
-            {/* Zip, Address & Active Status */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Zip, Address */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="zip">Zip Code</Label>
                 <Input
@@ -374,25 +266,6 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
                   value={form.address}
                   onChange={handleChange}
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="activestatus">Active Status</Label>
-                <Select
-                  value={form.activestatus}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({ ...prev, activestatus: value }))
-                  }
-                  required
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 

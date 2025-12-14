@@ -612,7 +612,7 @@ export async function POST(req: NextRequest) {
             customerId,
             'DEBIT',
             remainingAmount,
-            `Tracking ID: ${trackingId} | Destination: ${finalDestination}| Type: ${packaging} | Weight: ${totalWeight}`,
+            `Tracking: ${trackingId} | Country: ${finalDestination}| Type: ${packaging} | Weight: ${totalWeight}Kg`,
             invoiceNumber,
             invoiceNumber
           );
@@ -718,7 +718,7 @@ export async function POST(req: NextRequest) {
             vendorId,
             'DEBIT',
             vendorRemainingAmount,
-            `Tracking ID: ${trackingId} | Destination: ${finalDestination}| Type: ${packaging} | Weight: ${totalWeight}`,
+            `Tracking: ${trackingId} | Country: ${finalDestination}| Type: ${packaging} | Weight: ${totalWeight}Kg`,
             vendorInvoiceNumber,
             vendorInvoiceNumber
           );

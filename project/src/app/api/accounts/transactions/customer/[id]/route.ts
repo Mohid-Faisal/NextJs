@@ -84,7 +84,57 @@ export async function GET(
       where: whereClause
     });
 
-    // Get transactions with pagination and filtering, including shipment info
+    // First, get ALL transactions for this customer (without pagination) to recalculate balances
+    const allTransactions = await prisma.customerTransaction.findMany({
+      where: { customerId: customerId },
+      orderBy: { createdAt: 'asc' }, // Sort chronologically
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        createdAt: true
+      }
+    });
+
+    // Recalculate balances chronologically
+    let runningBalance = 0;
+    const transactionsToUpdate = allTransactions.map((transaction) => {
+      const previousBalance = runningBalance;
+      // For customers: CREDIT increases balance (they pay us), DEBIT decreases (they owe us)
+      const newBalance = transaction.type === 'CREDIT' 
+        ? previousBalance + transaction.amount 
+        : previousBalance - transaction.amount;
+      runningBalance = newBalance;
+      
+      return {
+        id: transaction.id,
+        previousBalance,
+        newBalance
+      };
+    });
+
+    // Update all transactions with recalculated balances
+    await Promise.all(
+      transactionsToUpdate.map(({ id, previousBalance, newBalance }) =>
+        prisma.customerTransaction.update({
+          where: { id },
+          data: { previousBalance, newBalance }
+        })
+      )
+    );
+
+    // Update customer's currentBalance to match the latest transaction's newBalance
+    if (transactionsToUpdate.length > 0) {
+      const latestBalance = transactionsToUpdate[transactionsToUpdate.length - 1].newBalance;
+      await prisma.customers.update({
+        where: { id: customerId },
+        data: { currentBalance: latestBalance }
+      });
+      // Update customer object for response
+      customer.currentBalance = latestBalance;
+    }
+
+    // Now get the paginated transactions with updated balances
     const transactions = await prisma.customerTransaction.findMany({
       where: whereClause,
       orderBy: { [validSortField]: validSortOrder },

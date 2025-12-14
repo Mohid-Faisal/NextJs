@@ -94,9 +94,13 @@ export default function AddPaymentPage() {
   // Static categories for non-expense types (defined outside component to avoid dependency issues)
   const getStaticCategories = () => ({
     INCOME: [
+      "Customer Payment",
       "Logistics Services Revenue",
       "Packaging Revenue",
       "Other Revenue",
+    ],
+    EXPENSE: [
+      "Vendor Payment",
     ],
     TRANSFER: [
       "Cash to Bank",
@@ -114,9 +118,13 @@ export default function AddPaymentPage() {
   });
   
   // Combined categories object
+  const staticCats = getStaticCategories();
   const categories = {
-    EXPENSE: dynamicCategories.EXPENSE,
-    ...getStaticCategories(),
+    EXPENSE: [...staticCats.EXPENSE, ...dynamicCategories.EXPENSE],
+    INCOME: staticCats.INCOME,
+    TRANSFER: staticCats.TRANSFER,
+    EQUITY: staticCats.EQUITY,
+    ADJUSTMENT: staticCats.ADJUSTMENT,
   };
 
   const paymentMethods = [
@@ -148,8 +156,8 @@ export default function AddPaymentPage() {
         .sort();
       
       setDynamicCategories({
-        EXPENSE: expenseAccounts,
-        INCOME: revenueAccounts.length > 0 ? revenueAccounts : staticCats.INCOME,
+        EXPENSE: [...staticCats.EXPENSE, ...expenseAccounts],
+        INCOME: revenueAccounts.length > 0 ? [...staticCats.INCOME, ...revenueAccounts] : staticCats.INCOME,
         TRANSFER: staticCats.TRANSFER,
         EQUITY: staticCats.EQUITY,
         ADJUSTMENT: staticCats.ADJUSTMENT,
@@ -158,21 +166,21 @@ export default function AddPaymentPage() {
   }, [accounts]);
 
   useEffect(() => {
-    if (accounts.length > 0) {
+    if (accounts.length > 0 && !isEditMode) {
       setDefaultAccounts();
     }
-  }, [formData.category, formData.paymentMethod, accounts]);
+  }, [formData.category, formData.paymentMethod, accounts, isEditMode]);
 
   // Separate useEffect to handle transaction type changes and reset accounts
   useEffect(() => {
-    if (accounts.length > 0 && formData.transactionType) {
-      // Reset accounts when transaction type changes
+    if (accounts.length > 0 && formData.transactionType && !isEditMode) {
+      // Reset accounts when transaction type changes (only in add mode)
       setDebitAccountId(0);
       setCreditAccountId(0);
-      // Clear category when transaction type changes
+      // Clear category when transaction type changes (only in add mode)
       setFormData(prev => ({ ...prev, category: "" }));
     }
-  }, [formData.transactionType, accounts]);
+  }, [formData.transactionType, accounts, isEditMode]);
 
   const loadData = async () => {
     try {
@@ -182,11 +190,12 @@ export default function AddPaymentPage() {
 
       if (accountsData.success && accountsData.data) {
         setAccounts(accountsData.data);
-      }
-
-      // Load edit data if in edit mode
-      if (isEditMode && paymentId) {
-        loadEditData();
+        
+        // Load edit data if in edit mode, after accounts are loaded
+        // Pass accounts directly to avoid state timing issues
+        if (isEditMode && paymentId) {
+          await loadEditData(accountsData.data);
+        }
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -196,16 +205,18 @@ export default function AddPaymentPage() {
     }
   };
 
-  const loadEditData = async () => {
+  const loadEditData = async (accountsList?: ChartOfAccount[]) => {
     try {
       const response = await fetch(`/api/accounts/payments/${paymentId}`);
       const data = await response.json();
 
       if (data.success && data.payment) {
         const payment = data.payment;
+        
+        // Set form data with category - this will trigger the accounts section to show
         setFormData({
           transactionType: payment.transactionType,
-          category: payment.category,
+          category: payment.category || "",
           date: new Date(payment.date).toISOString().slice(0, 10),
           amount: payment.amount.toString(),
           description: payment.description || "",
@@ -213,8 +224,22 @@ export default function AddPaymentPage() {
           paymentMethod: payment.mode || "CASH",
         });
         
+        // Wait a bit to ensure formData is updated before loading journal entry accounts
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Get chart of accounts data from the journal entry
-        await loadJournalEntryAccounts(payment.reference || `Payment-${payment.id}`);
+        // Use passed accounts or state accounts
+        const accountsToUse = accountsList || accounts;
+        if (accountsToUse.length > 0) {
+          await loadJournalEntryAccounts(payment.reference || `Payment-${payment.id}`, accountsToUse);
+        } else {
+          // If accounts aren't loaded yet, wait a bit and try again
+          setTimeout(async () => {
+            if (accounts.length > 0) {
+              await loadJournalEntryAccounts(payment.reference || `Payment-${payment.id}`, accounts);
+            }
+          }, 500);
+        }
       }
     } catch (error) {
       console.error("Error loading edit data:", error);
@@ -222,30 +247,74 @@ export default function AddPaymentPage() {
     }
   };
 
-  const loadJournalEntryAccounts = async (reference: string) => {
+  const loadJournalEntryAccounts = async (reference: string, accountsList?: ChartOfAccount[]) => {
     try {
-      // Find the journal entry for this payment
-      const journalResponse = await fetch(`/api/journal-entries?reference=${encodeURIComponent(reference)}`);
+      if (!reference) {
+        console.log("No reference provided for journal entry lookup");
+        return;
+      }
+
+      // Use passed accounts or state accounts
+      const accountsToUse = accountsList || accounts;
+      if (accountsToUse.length === 0) {
+        console.log("Accounts not loaded yet, waiting...");
+        setTimeout(() => loadJournalEntryAccounts(reference, accountsToUse), 500);
+        return;
+      }
+
+      // Find the journal entry for this payment by reference using search parameter
+      const journalResponse = await fetch(`/api/journal-entries?search=${encodeURIComponent(reference)}&limit=50`);
       const journalData = await journalResponse.json();
 
-      if (journalData.success && journalData.entries && journalData.entries.length > 0) {
-        const journalEntry = journalData.entries[0];
+      console.log("Journal entry response:", journalData);
+
+      if (journalData.success && journalData.data && journalData.data.length > 0) {
+        // Find the journal entry that matches the reference exactly
+        const journalEntry = journalData.data.find((entry: any) => 
+          entry.reference === reference || entry.reference?.includes(reference)
+        ) || journalData.data[0];
+        
+        console.log("Found journal entry:", journalEntry);
         
         // Get the journal entry lines to find the account IDs
         if (journalEntry.lines && journalEntry.lines.length >= 2) {
           const debitLine = journalEntry.lines.find((line: any) => line.debitAmount > 0);
           const creditLine = journalEntry.lines.find((line: any) => line.creditAmount > 0);
           
-          if (debitLine) {
+          console.log("Debit line:", debitLine);
+          console.log("Credit line:", creditLine);
+          
+          if (debitLine && debitLine.accountId) {
+            console.log("Setting debit account ID:", debitLine.accountId);
             setDebitAccountId(debitLine.accountId);
           }
-          if (creditLine) {
+          if (creditLine && creditLine.accountId) {
+            console.log("Setting credit account ID:", creditLine.accountId);
             setCreditAccountId(creditLine.accountId);
           }
+        } else {
+          console.log("Journal entry has less than 2 lines:", journalEntry.lines);
+          // Fallback: if journal entry doesn't have proper lines, try to set accounts based on category
+          if (isEditMode && formData.category) {
+            console.log("Falling back to category-based account selection");
+            setDefaultAccounts();
+          }
+        }
+      } else {
+        console.log("No journal entry found for reference:", reference);
+        // Fallback: if no journal entry found, try to set accounts based on category
+        if (isEditMode && formData.category) {
+          console.log("Falling back to category-based account selection");
+          setDefaultAccounts();
         }
       }
     } catch (error) {
       console.error("Error loading journal entry accounts:", error);
+      // Fallback: if error occurs, try to set accounts based on category
+      if (isEditMode && formData.category) {
+        console.log("Falling back to category-based account selection due to error");
+        setDefaultAccounts();
+      }
     }
   };
 
@@ -325,6 +394,28 @@ export default function AddPaymentPage() {
 
     switch (transactionType) {
       case "EXPENSE":
+        // Special handling for "Vendor Payment" category
+        if (category === "Vendor Payment") {
+          // Debit: Accounts Payable, Credit: Cash/Bank
+          const accountsPayable = accounts.find(a => 
+            a.accountName.toLowerCase().includes("accounts payable") ||
+            a.accountName.toLowerCase().includes("payable") ||
+            (a.category === "Liability" && a.accountName.toLowerCase().includes("payable"))
+          );
+          const cashAccount = findCashOrBankAccount();
+          
+          if (accountsPayable && accountsPayable.id) setDebitAccountId(accountsPayable.id);
+          if (cashAccount && cashAccount.id) setCreditAccountId(cashAccount.id);
+          
+          console.log('EXPENSE - Vendor Payment - Selected accounts:', {
+            debit: accountsPayable?.accountName,
+            credit: cashAccount?.accountName,
+            debitId: accountsPayable?.id,
+            creditId: cashAccount?.id,
+          });
+          break;
+        }
+        
         // Find the expense account by exact name match (category name = account name)
         let expenseAccount = accounts.find(a => 
           a.category === "Expense" && 
@@ -348,16 +439,16 @@ export default function AddPaymentPage() {
         }
 
         // Find cash/bank account for credit based on payment method
-        const cashAccount = findCashOrBankAccount();
+        const cashAccountExpense = findCashOrBankAccount();
 
         if (expenseAccount && expenseAccount.id) setDebitAccountId(expenseAccount.id);
-        if (cashAccount && cashAccount.id) setCreditAccountId(cashAccount.id);
+        if (cashAccountExpense && cashAccountExpense.id) setCreditAccountId(cashAccountExpense.id);
         
         console.log('EXPENSE - Selected accounts:', {
           debit: expenseAccount?.accountName,
-          credit: cashAccount?.accountName,
+          credit: cashAccountExpense?.accountName,
           debitId: expenseAccount?.id,
-          creditId: cashAccount?.id,
+          creditId: cashAccountExpense?.id,
           paymentMethod
         });
         
@@ -372,6 +463,28 @@ export default function AddPaymentPage() {
         break;
 
       case "INCOME":
+        // Special handling for "Customer Payment" category
+        if (category === "Customer Payment") {
+          // Debit: Cash/Bank, Credit: Accounts Receivable
+          const cashAccount = findCashOrBankAccount();
+          const accountsReceivable = accounts.find(a => 
+            a.accountName.toLowerCase().includes("accounts receivable") ||
+            a.accountName.toLowerCase().includes("receivable") ||
+            (a.category === "Asset" && a.accountName.toLowerCase().includes("receivable"))
+          );
+          
+          if (cashAccount && cashAccount.id) setDebitAccountId(cashAccount.id);
+          if (accountsReceivable && accountsReceivable.id) setCreditAccountId(accountsReceivable.id);
+          
+          console.log('INCOME - Customer Payment - Selected accounts:', {
+            debit: cashAccount?.accountName,
+            credit: accountsReceivable?.accountName,
+            debitId: cashAccount?.id,
+            creditId: accountsReceivable?.id,
+          });
+          break;
+        }
+        
         // Find the revenue account by exact name match (category name = account name)
         let revenueAccount = accounts.find(a => 
           a.category === "Revenue" && 
@@ -802,7 +915,8 @@ export default function AddPaymentPage() {
                       handleInputChange("reference", e.target.value)
                     }
                     placeholder="Transaction reference number"
-                    className="h-8 sm:h-8"
+                    className={`h-8 sm:h-8 ${isEditMode ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                    readOnly={isEditMode}
                   />
                 </div>
               </div>
@@ -859,7 +973,7 @@ export default function AddPaymentPage() {
                   </p>
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <div className="flex items-start gap-3">
-                      <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                       <div className="text-left">
                         <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
                           How it works:

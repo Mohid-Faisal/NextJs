@@ -84,7 +84,57 @@ export async function GET(
       where: whereClause
     });
 
-    // Get transactions with pagination and filtering, including shipment info
+    // First, get ALL transactions for this vendor (without pagination) to recalculate balances
+    const allTransactions = await prisma.vendorTransaction.findMany({
+      where: { vendorId: vendorId },
+      orderBy: { createdAt: 'asc' }, // Sort chronologically
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        createdAt: true
+      }
+    });
+
+    // Recalculate balances chronologically
+    let runningBalance = 0;
+    const transactionsToUpdate = allTransactions.map((transaction) => {
+      const previousBalance = runningBalance;
+      // For vendors: DEBIT increases balance (we owe them), CREDIT decreases (we pay them)
+      const newBalance = transaction.type === 'DEBIT' 
+        ? previousBalance + transaction.amount 
+        : previousBalance - transaction.amount;
+      runningBalance = newBalance;
+      
+      return {
+        id: transaction.id,
+        previousBalance,
+        newBalance
+      };
+    });
+
+    // Update all transactions with recalculated balances
+    await Promise.all(
+      transactionsToUpdate.map(({ id, previousBalance, newBalance }) =>
+        prisma.vendorTransaction.update({
+          where: { id },
+          data: { previousBalance, newBalance }
+        })
+      )
+    );
+
+    // Update vendor's currentBalance to match the latest transaction's newBalance
+    if (transactionsToUpdate.length > 0) {
+      const latestBalance = transactionsToUpdate[transactionsToUpdate.length - 1].newBalance;
+      await prisma.vendors.update({
+        where: { id: vendorId },
+        data: { currentBalance: latestBalance }
+      });
+      // Update vendor object for response
+      vendor.currentBalance = latestBalance;
+    }
+
+    // Now get the paginated transactions with updated balances
     const transactions = await prisma.vendorTransaction.findMany({
       where: whereClause,
       orderBy: { [validSortField]: validSortOrder },
