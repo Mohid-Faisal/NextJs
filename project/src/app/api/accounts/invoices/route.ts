@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
     console.log('Invoice API - Where clause:', JSON.stringify(where, null, 2));
 
     // Fetch invoices with relations
-    const [invoices, total] = await Promise.all([
+    const [invoices, total, totalAmountResult] = await Promise.all([
       prisma.invoice.findMany({
         where,
         include: {
@@ -95,7 +95,15 @@ export async function GET(req: NextRequest) {
         take: pageSize,
       }),
       prisma.invoice.count({ where }),
+      prisma.invoice.aggregate({
+        where,
+        _sum: {
+          totalAmount: true,
+        },
+      }),
     ]);
+
+    const totalAmount = totalAmountResult._sum.totalAmount || 0;
 
     console.log('Invoice API - Found invoices:', invoices.length);
     console.log('Invoice API - Invoice profiles:', invoices.map(i => i.profile));
@@ -149,6 +157,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       invoices: invoicesWithRemainingAmount,
       total,
+      totalAmount,
       page,
       totalPages: pageSize ? Math.ceil(total / pageSize) : 1,
     });

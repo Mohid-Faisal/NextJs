@@ -36,6 +36,9 @@ type Invoice = {
   trackingNumber?: string;
   destination: string;
   remainingAmount?: number;
+  shipment?: {
+    shipmentDate: string | Date;
+  };
 };
 
 type ChartOfAccount = {
@@ -478,6 +481,9 @@ export default function IncomeRevenuePage() {
                       PKR {invoice.totalAmount.toLocaleString()} •{" "}
                       {invoice.trackingNumber} • PKR{" "}
                       {invoice.remainingAmount?.toLocaleString()}
+                      {invoice.shipment?.shipmentDate && (
+                        <> • {new Date(invoice.shipment.shipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</>
+                      )}
                     </div>
                   </div>
                 ))

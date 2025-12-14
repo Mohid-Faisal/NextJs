@@ -285,6 +285,7 @@ type SortOrder = "asc" | "desc";
 export default function ExpenseBillsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(10);
@@ -346,6 +347,7 @@ export default function ExpenseBillsPage() {
       
       setInvoices(vendorInvoices);
       setTotal(json.total || 0);
+      setTotalAmount(json.totalAmount || 0);
     };
 
     fetchInvoices();
@@ -421,10 +423,7 @@ export default function ExpenseBillsPage() {
     );
   };
 
-  const totalAmount = useMemo(
-    () => invoices.reduce((acc, i) => acc + i.totalAmount, 0),
-    [invoices]
-  );
+  // totalAmount is now fetched from API, no need to calculate from current page
 
   // Custom calendar functions
   const getDaysInMonth = (date: Date) => {
@@ -627,21 +626,21 @@ export default function ExpenseBillsPage() {
           <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your vendor invoices and track expenses</p>
           <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Showing only Vendor invoices</p>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
-              {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <div className="flex items-center gap-4 sm:gap-6">
+          <div className="text-right bg-orange-50 dark:bg-orange-900/20 px-4 py-3 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="text-lg sm:text-xl font-semibold text-gray-600 dark:text-gray-400 mb-1">
+              Total Records
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Total Amount
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
+            <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-400">
               {total}
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Total Records
+          </div>
+          <div className="text-right bg-orange-50 dark:bg-orange-900/20 px-4 py-3 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="text-lg sm:text-xl font-semibold text-gray-600 dark:text-gray-400 mb-1">
+              Total Amount
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-400">
+              {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>

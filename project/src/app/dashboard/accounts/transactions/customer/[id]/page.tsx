@@ -475,11 +475,11 @@ export default function CustomerTransactionsPage() {
       return [
         formattedDate,
         transaction.type,
-        `PKR ${transaction.amount.toLocaleString()}`,
+        `${transaction.amount.toLocaleString()}`,
         transaction.description,
         transaction.reference || "N/A",
         transaction.invoice || "N/A",
-        `PKR ${transaction.newBalance.toLocaleString()}`
+        `${transaction.newBalance.toLocaleString()}`
       ];
     });
     return { headers, data };
@@ -531,7 +531,7 @@ export default function CustomerTransactionsPage() {
           </Button>
           
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
-            Customer Transactions
+            Customer Transactions <span className="text-lg sm:text-xl lg:text-2xl font-normal text-gray-500 dark:text-gray-400">(Rs.)</span>
           </h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
             {customer.CompanyName} - {customer.PersonName}
@@ -901,14 +901,14 @@ export default function CustomerTransactionsPage() {
                       <td className="px-4 py-3 font-medium">
                         {transaction.type === "DEBIT" ? (
                           <span className="text-red-600 dark:text-red-400">
-                            PKR {transaction.amount.toLocaleString()}
+                            {transaction.amount.toLocaleString()}
                           </span>
                         ) : "-"}
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {transaction.type === "CREDIT" ? (
                           <span className="text-green-600 dark:text-green-400">
-                            PKR {transaction.amount.toLocaleString()}
+                            {transaction.amount.toLocaleString()}
                           </span>
                         ) : "-"}
                       </td>
@@ -922,7 +922,7 @@ export default function CustomerTransactionsPage() {
                               : "text-gray-600 dark:text-gray-400"
                           }
                         >
-                          PKR {transaction.newBalance.toLocaleString()}
+                          {transaction.newBalance.toLocaleString()}
                         </span>
                       </td>
                     </tr>
