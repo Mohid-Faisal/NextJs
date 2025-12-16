@@ -75,7 +75,14 @@ export async function GET(req: NextRequest) {
 
     // Build order by clause
     const orderBy: any = {};
-    orderBy[sortField] = sortOrder;
+    if (sortField === "shipmentDate") {
+      // For shipment date, we need nested sorting
+      orderBy.shipment = {
+        shipmentDate: sortOrder
+      };
+    } else {
+      orderBy[sortField] = sortOrder;
+    }
 
     // Debug logging
     console.log('Invoice API - Profile filter:', profile);

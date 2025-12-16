@@ -95,7 +95,7 @@ export default function ShipmentsPage() {
     | "amount"
     | "totalWeight";
   type SortOrder = "asc" | "desc";
-  const [sortField, setSortField] = useState<SortField>("invoiceNumber");
+  const [sortField, setSortField] = useState<SortField>("shipmentDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   // Update date range based on period type
@@ -131,9 +131,9 @@ export default function ShipmentsPage() {
       case 'custom':
         if (customStartDate && customEndDate) {
           startDate = new Date(customStartDate);
+          startDate.setHours(0, 0, 0, 0); // Start of the day
           endDate = new Date(customEndDate);
-          // Add one day to end date to include the selected end date
-          endDate.setDate(endDate.getDate() + 1);
+          endDate.setHours(23, 59, 59, 999); // End of the selected day
         } else {
           // Default to last 3 months if custom dates not set
           const threeMonthsAgo = new Date(now);

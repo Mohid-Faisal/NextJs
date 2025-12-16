@@ -71,6 +71,7 @@ const AddShipmentPage = () => {
   // Refs for search inputs
   const senderSearchRef = useRef<HTMLInputElement>(null);
   const recipientSearchRef = useRef<HTMLInputElement>(null);
+  const shipmentDateRef = useRef<HTMLInputElement | null>(null);
 
   // State to track dropdown open status
   const [senderDropdownOpen, setSenderDropdownOpen] = useState(false);
@@ -91,6 +92,13 @@ const AddShipmentPage = () => {
       decValue: 0,
     },
   ]);
+
+  // Focus shipment date on initial load
+  useEffect(() => {
+    if (shipmentDateRef.current) {
+      shipmentDateRef.current.focus();
+    }
+  }, []);
 
   // Focus search input when sender dropdown opens
   useEffect(() => {
@@ -720,6 +728,10 @@ const AddShipmentPage = () => {
         setSelectedRecipient(null);
         setSenderQuery("");
         setRecipientQuery("");
+        // Bring cursor back to shipment date field
+        if (shipmentDateRef.current) {
+          shipmentDateRef.current.focus();
+        }
       }
     } else {
       // Handle different error response structures
@@ -1122,6 +1134,7 @@ const AddShipmentPage = () => {
                     id="shipmentDate"
                     name="shipmentDate"
                     type="date"
+                    ref={shipmentDateRef}
                     value={form.shipmentDate}
                     onChange={handleChange}
                     required

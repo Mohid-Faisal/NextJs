@@ -115,6 +115,17 @@ export default function ExpensePaymentsPage() {
             description: `Payment for ${billParam} - ${vendorParam || 'Vendor'}`,
           }));
         }
+        // Set payment date to shipment date if available
+        if (invoice.shipment?.shipmentDate) {
+          const shipmentDate = invoice.shipment.shipmentDate;
+          const dateStr = shipmentDate instanceof Date 
+            ? shipmentDate.toISOString().split('T')[0]
+            : new Date(shipmentDate).toISOString().split('T')[0];
+          setFormData((prev) => ({
+            ...prev,
+            paymentDate: dateStr,
+          }));
+        }
         // Set default accounts for the selected invoice
         if (accountsInitialized && accounts.length > 0) {
           setDefaultAccountsForInvoice(accounts, invoice);
@@ -136,6 +147,17 @@ export default function ExpensePaymentsPage() {
             paymentAmount: remainingAmount.toString(),
           }));
         }
+        // Set payment date to shipment date if available
+        if (invoice.shipment?.shipmentDate) {
+          const shipmentDate = invoice.shipment.shipmentDate;
+          const dateStr = shipmentDate instanceof Date 
+            ? shipmentDate.toISOString().split('T')[0]
+            : new Date(shipmentDate).toISOString().split('T')[0];
+          setFormData((prev) => ({
+            ...prev,
+            paymentDate: dateStr,
+          }));
+        }
         // Set default accounts for the selected invoice
         if (accountsInitialized && accounts.length > 0) {
           setDefaultAccountsForInvoice(accounts, invoice);
@@ -153,6 +175,8 @@ export default function ExpensePaymentsPage() {
         profile: "Vendor",
         ...(statusFilter !== "All" && { status: statusFilter }),
         ...(searchTerm && { search: searchTerm }),
+        sortField: "shipmentDate",
+        sortOrder: "desc",
       });
 
       const response = await fetch(`/api/accounts/invoices?${params.toString()}`);
@@ -476,6 +500,17 @@ export default function ExpensePaymentsPage() {
                         setFormData((prev) => ({
                           ...prev,
                           paymentAmount: remainingAmount.toString(),
+                        }));
+                      }
+                      // Set payment date to shipment date if available
+                      if (invoice.shipment?.shipmentDate) {
+                        const shipmentDate = invoice.shipment.shipmentDate;
+                        const dateStr = shipmentDate instanceof Date 
+                          ? shipmentDate.toISOString().split('T')[0]
+                          : new Date(shipmentDate).toISOString().split('T')[0];
+                        setFormData((prev) => ({
+                          ...prev,
+                          paymentDate: dateStr,
                         }));
                       }
                       if (accountsInitialized && accounts.length > 0) {

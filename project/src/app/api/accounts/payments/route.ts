@@ -13,7 +13,8 @@ export async function GET(request: Request) {
   const limit = limitParam === "all" ? undefined : Number(limitParam);
   const type = url.searchParams.get("type") || "All";
   const mode = url.searchParams.get("mode") || "All";
-  const search = (url.searchParams.get("search") || "").toLowerCase();
+  const searchRaw = url.searchParams.get("search") || "";
+  const search = searchRaw.toLowerCase();
   const fromDate = url.searchParams.get("fromDate");
   const toDate = url.searchParams.get("toDate");
   const sortField = (url.searchParams.get("sortField") || "date").toString();
@@ -25,23 +26,46 @@ export async function GET(request: Request) {
   if (type !== "All") where.transactionType = typeMap[type] ?? type;
   if (mode !== "All") where.mode = modeMap[mode] ?? mode;
   if (search) {
-    where.OR = [
-      { transactionType: { contains: search, mode: "insensitive" } },
+    const searchNumber = Number(searchRaw);
+    const isNumericSearch = !isNaN(searchNumber);
+
+    const orConditions: any[] = [
+      // Category
       { category: { contains: search, mode: "insensitive" } },
-      { amount: { equals: parseFloat(search) || undefined } },
+      // From / To account names shown in table (customer/vendor or "Us")
       { fromCustomer: { contains: search, mode: "insensitive" } },
       { toVendor: { contains: search, mode: "insensitive" } },
-      { mode: { contains: search, mode: "insensitive" } },
+      // Reference / Invoice / Description
       { reference: { contains: search, mode: "insensitive" } },
       { invoice: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
-    ].filter(condition => {
-      // Remove amount condition if search is not a valid number
-      if (condition.amount && isNaN(parseFloat(search))) {
-        return false;
-      }
-      return true;
-    });
+    ];
+
+    // Map textual search to transactionType enum (Income, Expense, etc.)
+    const typeSearchKey = Object.keys(typeMap).find((key) =>
+      key.toLowerCase().includes(search)
+    );
+    if (typeSearchKey) {
+      orConditions.push({ transactionType: typeMap[typeSearchKey] });
+    }
+
+    // Map textual search to mode enum (Cash, Bank Transfer, Card, Cheque)
+    const modeSearchKey = Object.keys(modeMap).find((key) =>
+      key.toLowerCase().includes(search)
+    );
+    if (modeSearchKey) {
+      orConditions.push({ mode: modeMap[modeSearchKey] });
+    }
+
+    // Numeric search should also match ID and Amount exactly
+    if (isNumericSearch) {
+      orConditions.push(
+        { id: searchNumber },
+        { amount: searchNumber },
+      );
+    }
+
+    where.OR = orConditions;
   }
 
   // Add date range filtering

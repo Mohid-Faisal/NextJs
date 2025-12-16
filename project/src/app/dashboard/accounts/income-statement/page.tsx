@@ -173,7 +173,9 @@ export default function IncomeStatementPage() {
         break;
       case 'custom':
         startDate = new Date(incomeStatementData.period.startDate);
+        startDate.setHours(0, 0, 0, 0); // Start of the day
         endDate = new Date(incomeStatementData.period.endDate);
+        endDate.setHours(23, 59, 59, 999); // End of the selected day
         const yearsDiff = differenceInYears(endDate, startDate);
         
         // If custom period spans more than one year, show year-wise
@@ -311,7 +313,10 @@ export default function IncomeStatementPage() {
     try {
       setLoading(true);
       const { startDate, endDate } = incomeStatementData.period;
-      const response = await fetch(`/api/account-books?limit=all&dateFrom=${startDate}&dateTo=${endDate}`);
+      // Ensure end date includes the full day by appending time
+      const startDateStr = startDate; // Already in YYYY-MM-DD format
+      const endDateStr = endDate; // Already in YYYY-MM-DD format
+      const response = await fetch(`/api/account-books?limit=all&dateFrom=${startDateStr}&dateTo=${endDateStr}`);
       const data = await response.json();
       
       if (data.success && data.payments) {
@@ -337,8 +342,15 @@ export default function IncomeStatementPage() {
       const periodsDataArray: PeriodData[] = [];
 
       for (const period of subPeriods) {
-        const startDateStr = period.startDate.toISOString().slice(0, 10);
-        const endDateStr = period.endDate.toISOString().slice(0, 10);
+        // Format dates as YYYY-MM-DD without timezone conversion
+        const formatDateStr = (date: Date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        const startDateStr = formatDateStr(period.startDate);
+        const endDateStr = formatDateStr(period.endDate);
         
         const response = await fetch(`/api/account-books?limit=all&dateFrom=${startDateStr}&dateTo=${endDateStr}`);
         const data = await response.json();
