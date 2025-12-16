@@ -286,17 +286,22 @@ async function createJournalEntryForPayment(payment: any, body: any) {
 
     // Create journal entry with lines
     const journalEntry = await prisma.$transaction(async (tx) => {
+      // Use payment date from body or payment record, fallback to current date
+      const journalEntryDate = body.date 
+        ? new Date(body.date) 
+        : (payment.date ? new Date(payment.date) : new Date());
+      
       // Create the journal entry
       const entry = await tx.journalEntry.create({
         data: {
           entryNumber,
-          date: new Date(body.date),
+          date: journalEntryDate,
           description: `Payment: ${body.category} - ${body.description || 'No description'}`,
           reference: body.reference || `Payment-${payment.id}`,
           totalDebit: Number(body.amount),
           totalCredit: Number(body.amount),
           isPosted: true, // Auto-post payment journal entries
-          postedAt: new Date()
+          postedAt: journalEntryDate
         }
       });
 

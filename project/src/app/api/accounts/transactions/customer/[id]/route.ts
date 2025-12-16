@@ -103,6 +103,27 @@ export async function GET(
       allTransactions.map(async (transaction) => {
         let voucherDate = transaction.createdAt;
         
+        // If this is a credit/debit note transaction, fetch the date from the credit/debit note record
+        if (transaction.reference?.startsWith("#CREDIT")) {
+          const creditNote = await prisma.creditNote.findUnique({
+            where: { creditNoteNumber: transaction.reference },
+            select: { date: true }
+          });
+          if (creditNote?.date) {
+            voucherDate = creditNote.date;
+          }
+        } else if (transaction.reference?.startsWith("#DEBIT")) {
+          // For customer transactions, debit notes are actually credit notes with type "CREDIT"
+          // But we should check both creditNote and debitNote tables
+          const creditNote = await prisma.creditNote.findFirst({
+            where: { creditNoteNumber: transaction.reference },
+            select: { date: true }
+          });
+          if (creditNote?.date) {
+            voucherDate = creditNote.date;
+          }
+        }
+
         if (transaction.invoice) {
           // Find the invoice and get shipment info
           const invoice = await prisma.invoice.findFirst({
@@ -242,6 +263,26 @@ export async function GET(
         let shipmentInfo = null;
         let shipmentDate: string | undefined = undefined;
         let paymentDate: string | undefined = undefined;
+        let creditNoteDate: string | undefined = undefined;
+        
+        // If this is a credit/debit note transaction, fetch the date from the credit/debit note record
+        if (transaction.reference?.startsWith("#CREDIT")) {
+          const creditNote = await prisma.creditNote.findUnique({
+            where: { creditNoteNumber: transaction.reference },
+            select: { date: true }
+          });
+          if (creditNote?.date) {
+            creditNoteDate = creditNote.date.toISOString();
+          }
+        } else if (transaction.reference?.startsWith("#DEBIT")) {
+          const creditNote = await prisma.creditNote.findFirst({
+            where: { creditNoteNumber: transaction.reference },
+            select: { date: true }
+          });
+          if (creditNote?.date) {
+            creditNoteDate = creditNote.date.toISOString();
+          }
+        }
         
         if (transaction.invoice) {
           // Find the invoice and get shipment info
@@ -303,7 +344,8 @@ export async function GET(
           ...transaction,
           shipmentInfo,
           shipmentDate,
-          paymentDate
+          paymentDate,
+          creditNoteDate
         };
       })
     );
@@ -348,7 +390,7 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { type, amount, description, reference } = body;
+    const { type, amount, description, reference, date } = body;
 
     if (!type || !amount || !description) {
       return NextResponse.json(
@@ -414,7 +456,9 @@ export async function POST(
       type,
       parseFloat(amount),
       description,
-      reference
+      reference,
+      undefined,
+      date ? new Date(date) : undefined
     );
 
     // For starting balance, find the transaction we just created and update it

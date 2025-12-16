@@ -267,16 +267,17 @@ export async function POST(request: NextRequest) {
       });
 
       // Create journal entry
+      const journalEntryDate = new Date(date);
       const journalEntry = await tx.journalEntry.create({
         data: {
           entryNumber: `JE-${Date.now()}`,
-          date: new Date(date),
+          date: journalEntryDate,
           description: `Credit Note: ${description || creditNoteNumber}`,
           reference: creditNoteNumber,
           totalDebit: parseFloat(amount),
           totalCredit: parseFloat(amount),
           isPosted: true,
-          postedAt: new Date(),
+          postedAt: journalEntryDate,
         },
       });
 
@@ -317,7 +318,8 @@ export async function POST(request: NextRequest) {
         parseFloat(amount),
         `Credit Note: ${description || creditNoteNumber}`,
         creditNoteNumber,
-        invoiceNumber ? invoiceNumber : undefined
+        invoiceNumber ? invoiceNumber : undefined,
+        new Date(date)
       );
 
       return { creditNote, payment, journalEntry };
@@ -377,16 +379,17 @@ export async function POST(request: NextRequest) {
       });
 
       // Create journal entry
+      const journalEntryDate = new Date(date);
       const journalEntry = await tx.journalEntry.create({
         data: {
           entryNumber: `JE-${Date.now()}`,
-          date: new Date(date),
+          date: journalEntryDate,
           description: `Debit Note: ${description || creditNoteNumber}`,
           reference: creditNoteNumber,
           totalDebit: Math.abs(parseFloat(amount)),
           totalCredit: Math.abs(parseFloat(amount)),
           isPosted: true,
-          postedAt: new Date(),
+          postedAt: journalEntryDate,
         },
       });
 
@@ -427,7 +430,8 @@ export async function POST(request: NextRequest) {
         parseFloat(amount),
         `Debit Note: ${description || creditNoteNumber}`,
         creditNoteNumber,
-        invoiceNumber ? invoiceNumber : undefined
+        invoiceNumber ? invoiceNumber : undefined,
+        new Date(date)
       );
 
       return { creditNote, payment, journalEntry };

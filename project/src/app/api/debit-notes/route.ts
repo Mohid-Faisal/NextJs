@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     const nextId = (lastDebitNote?.id || 0) + 1;
     const debitNoteNumber = `#DEBIT${nextId.toString().padStart(5, "0")}`;
 
-    if (type === "CREDIT") {
+    if (type === "DEBIT") {
       // Use transaction to ensure all operations succeed or fail together
       const result = await prisma.$transaction(async (tx) => {
         // Create the debit note
@@ -237,16 +237,17 @@ export async function POST(request: NextRequest) {
         });
 
         // Create journal entry
+        const journalEntryDate = new Date(date);
         const journalEntry = await tx.journalEntry.create({
           data: {
             entryNumber: `JE-${Date.now()}`,
-            date: new Date(date),
+            date: journalEntryDate,
             description: description || `Credit Note: ${debitNoteNumber}`,
             reference: debitNoteNumber,
             totalDebit: parseFloat(amount),
             totalCredit: parseFloat(amount),
             isPosted: true,
-            postedAt: new Date(),
+            postedAt: journalEntryDate,
           },
         });
 
@@ -287,14 +288,15 @@ export async function POST(request: NextRequest) {
           parseFloat(amount),
           description || `Credit Note: ${debitNoteNumber}`,
           debitNoteNumber,
-          billId ? `Bill ${billId}` : undefined
+          billId ? `Bill ${billId}` : undefined,
+          new Date(date)
         );
 
         return { debitNote, payment, journalEntry };
       });
 
       return NextResponse.json(result.debitNote, { status: 201 });
-    } else if (type === "DEBIT") {
+    } else if (type === "CREDIT") {
       // Use transaction to ensure all operations succeed or fail together
       const result = await prisma.$transaction(async (tx) => {
         // Create the debit note
@@ -345,16 +347,17 @@ export async function POST(request: NextRequest) {
         });
 
         // Create journal entry
+        const journalEntryDate = new Date(date);
         const journalEntry = await tx.journalEntry.create({
           data: {
             entryNumber: `JE-${Date.now()}`,
-            date: new Date(date),
+            date: journalEntryDate,
             description: description || `Debit Note: ${debitNoteNumber}`,
             reference: debitNoteNumber,
             totalDebit: Math.abs(parseFloat(amount)),
             totalCredit: Math.abs(parseFloat(amount)),
             isPosted: true,
-            postedAt: new Date(),
+            postedAt: journalEntryDate,
           },
         });
 
@@ -395,7 +398,8 @@ export async function POST(request: NextRequest) {
           parseFloat(amount),
           description || `Debit Note: ${debitNoteNumber}`,
           debitNoteNumber,
-          billId ? `Bill ${billId}` : undefined
+          billId ? `Bill ${billId}` : undefined,
+          new Date(date)
         );
 
         return { debitNote, payment, journalEntry };

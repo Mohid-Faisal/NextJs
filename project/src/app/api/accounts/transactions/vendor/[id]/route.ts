@@ -103,6 +103,26 @@ export async function GET(
       allTransactions.map(async (transaction) => {
         let voucherDate = transaction.createdAt;
         
+        // If this is a debit note transaction, fetch the date from the debit note record
+        if (transaction.reference?.startsWith("#DEBIT")) {
+          const debitNote = await prisma.debitNote.findUnique({
+            where: { debitNoteNumber: transaction.reference },
+            select: { date: true }
+          });
+          if (debitNote?.date) {
+            voucherDate = debitNote.date;
+          }
+        } else if (transaction.reference?.startsWith("#CREDIT")) {
+          // For vendor transactions, credit notes might also exist
+          const debitNote = await prisma.debitNote.findFirst({
+            where: { debitNoteNumber: transaction.reference },
+            select: { date: true }
+          });
+          if (debitNote?.date) {
+            voucherDate = debitNote.date;
+          }
+        }
+
         if (transaction.invoice) {
           // Find the invoice and get shipment info
           const invoice = await prisma.invoice.findFirst({
@@ -242,6 +262,26 @@ export async function GET(
         let shipmentInfo = null;
         let shipmentDate: string | undefined = undefined;
         let paymentDate: string | undefined = undefined;
+        let debitNoteDate: string | undefined = undefined;
+        
+        // If this is a debit note transaction, fetch the date from the debit note record
+        if (transaction.reference?.startsWith("#DEBIT")) {
+          const debitNote = await prisma.debitNote.findUnique({
+            where: { debitNoteNumber: transaction.reference },
+            select: { date: true }
+          });
+          if (debitNote?.date) {
+            debitNoteDate = debitNote.date.toISOString();
+          }
+        } else if (transaction.reference?.startsWith("#CREDIT")) {
+          const debitNote = await prisma.debitNote.findFirst({
+            where: { debitNoteNumber: transaction.reference },
+            select: { date: true }
+          });
+          if (debitNote?.date) {
+            debitNoteDate = debitNote.date.toISOString();
+          }
+        }
         
         if (transaction.invoice) {
           // Find the invoice and get shipment info
@@ -303,7 +343,8 @@ export async function GET(
           ...transaction,
           shipmentInfo,
           shipmentDate,
-          paymentDate
+          paymentDate,
+          debitNoteDate
         };
       })
     );
@@ -348,7 +389,7 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { type, amount, description, reference } = body;
+    const { type, amount, description, reference, date } = body;
 
     if (!type || !amount || !description) {
       return NextResponse.json(
@@ -414,7 +455,9 @@ export async function POST(
       type,
       parseFloat(amount),
       description,
-      reference
+      reference,
+      undefined,
+      date ? new Date(date) : undefined
     );
 
     // For starting balance, find the transaction we just created and update it

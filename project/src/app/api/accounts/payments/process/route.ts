@@ -123,7 +123,8 @@ export async function POST(req: NextRequest) {
         amountForInvoice,
         description || `Payment for invoice ${invoiceNumber}`,
         reference,
-        invoiceNumber
+        invoiceNumber,
+        paymentDate
       );
 
       // Journal entry will be created by createJournalEntryForPaymentProcess
@@ -137,7 +138,8 @@ export async function POST(req: NextRequest) {
           overpaymentAmount,
           `Overpayment credit for invoice ${invoiceNumber}`,
           `CREDIT-${invoiceNumber}`,
-          invoiceNumber
+          invoiceNumber,
+          paymentDate
         );
 
         // Journal entry will be created by createJournalEntryForPaymentProcess
@@ -160,7 +162,8 @@ export async function POST(req: NextRequest) {
         paymentAmountNum,
         description || `Payment for invoice ${invoiceNumber}`,
         reference,
-        invoiceNumber
+        invoiceNumber,
+        paymentDate
       );
 
       // Journal entry will be created by createJournalEntryForPaymentProcess
@@ -241,17 +244,22 @@ async function createJournalEntryForPaymentProcess(payment: any, body: any, invo
 
     // Create journal entry with lines
     const journalEntry = await prisma.$transaction(async (tx) => {
+      // Use payment date from body or payment record, fallback to current date
+      const journalEntryDate = body.paymentDate 
+        ? new Date(body.paymentDate) 
+        : (payment.date ? new Date(payment.date) : new Date());
+      
       // Create the journal entry
       const entry = await tx.journalEntry.create({
         data: {
           entryNumber,
-          date: new Date(),
+          date: journalEntryDate,
           description: `Invoice Payment: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment for ${invoice.invoiceNumber} - ${body.description || 'No description'}`,
           reference: body.reference || `Payment-${payment.id}`,
           totalDebit: Number(body.paymentAmount),
           totalCredit: Number(body.paymentAmount),
           isPosted: true, // Auto-post payment journal entries
-          postedAt: new Date()
+          postedAt: journalEntryDate
         }
       });
 

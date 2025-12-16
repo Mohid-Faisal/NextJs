@@ -66,7 +66,8 @@ export async function addCustomerTransaction(
   amount: number,
   description: string,
   reference?: string,
-  invoice?: string
+  invoice?: string,
+  date?: Date | string
 ) {
   const customer = await prisma.customers.findUnique({
     where: { id: customerId }
@@ -87,6 +88,9 @@ export async function addCustomerTransaction(
     data: { currentBalance: newBalance }
   });
 
+  // Use provided date or default to current date
+  const transactionDate = date ? new Date(date) : new Date();
+
   // Create transaction record
   await prisma.customerTransaction.create({
     data: {
@@ -97,7 +101,8 @@ export async function addCustomerTransaction(
       reference,
       invoice,
       previousBalance,
-      newBalance
+      newBalance,
+      createdAt: transactionDate
     }
   });
 
@@ -111,7 +116,8 @@ export async function addVendorTransaction(
   amount: number,
   description: string,
   reference?: string,
-  invoice?: string
+  invoice?: string,
+  date?: Date | string
 ) {
   const vendor = await prisma.vendors.findUnique({
     where: { id: vendorId }
@@ -136,6 +142,9 @@ export async function addVendorTransaction(
     data: { currentBalance: newBalance }
   });
 
+  // Use provided date or default to current date
+  const transactionDate = date ? new Date(date) : new Date();
+
   // Create transaction record
   await prisma.vendorTransaction.create({
     data: {
@@ -146,7 +155,8 @@ export async function addVendorTransaction(
       reference,
       invoice,
       previousBalance,
-      newBalance
+      newBalance,
+      createdAt: transactionDate
     }
   });
 
@@ -544,12 +554,15 @@ export async function allocateExcessPayment(
       if (remainingInvoiceAmount > 0) {
         const allocationAmount = Math.min(remainingAmount, remainingInvoiceAmount);
         
+        // Use payment date for allocation transactions
+        const allocationDate = paymentDate ? (paymentDate instanceof Date ? paymentDate : new Date(paymentDate)) : new Date();
+        
         // Create payment record for this allocation
         await prisma.payment.create({
           data: {
             transactionType: 'INCOME',
             category: 'Customer Payment Allocation',
-            date: paymentDate ? (paymentDate instanceof Date ? paymentDate : new Date(paymentDate)) : new Date(),
+            date: allocationDate,
             amount: allocationAmount,
             fromPartyType: 'CUSTOMER',
             fromCustomerId: customerId,
@@ -563,8 +576,17 @@ export async function allocateExcessPayment(
           }
         });
 
-        // Note: Customer transaction will be created in the main payment processing
-        // This allocation just updates the invoice status and creates payment record
+        // Create customer transaction for this allocation with payment date
+        await addCustomerTransaction(
+          prisma,
+          customerId,
+          'CREDIT',
+          allocationAmount,
+          `Excess payment allocation from invoice ${originalInvoiceNumber} to invoice ${invoice.invoiceNumber}`,
+          `${paymentReference}-ALLOC`,
+          invoice.invoiceNumber,
+          allocationDate
+        );
 
         // Update invoice status
         const newTotalPaid = alreadyPaid + allocationAmount;
@@ -616,12 +638,15 @@ export async function allocateExcessPayment(
       if (remainingInvoiceAmount > 0) {
         const allocationAmount = Math.min(remainingAmount, remainingInvoiceAmount);
         
+        // Use payment date for allocation transactions
+        const allocationDate = paymentDate ? (paymentDate instanceof Date ? paymentDate : new Date(paymentDate)) : new Date();
+        
         // Create payment record for this allocation
         await prisma.payment.create({
           data: {
             transactionType: 'EXPENSE',
             category: 'Vendor Payment Allocation',
-            date: paymentDate ? (paymentDate instanceof Date ? paymentDate : new Date(paymentDate)) : new Date(),
+            date: allocationDate,
             amount: allocationAmount,
             fromPartyType: 'US',
             fromCustomer: '',
@@ -748,7 +773,8 @@ export async function processPaymentWithAllocation(
         paymentAmountNum,
         transactionDescription,
         reference,
-        invoiceNumber
+        invoiceNumber,
+        paymentDate
       );
     }
 
@@ -806,7 +832,8 @@ export async function processPaymentWithAllocation(
         paymentAmountNum,
         transactionDescription,
         reference,
-        invoiceNumber
+        invoiceNumber,
+        paymentDate
       );
     }
   }

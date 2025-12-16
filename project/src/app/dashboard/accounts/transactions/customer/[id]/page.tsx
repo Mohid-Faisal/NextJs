@@ -57,6 +57,7 @@ type Transaction = {
   createdAt: string;
   shipmentDate?: string;
   paymentDate?: string;
+  creditNoteDate?: string;
 };
 
 export default function CustomerTransactionsPage() {
@@ -106,6 +107,12 @@ export default function CustomerTransactionsPage() {
       // Sort by voucher date (using the same logic as display)
       return [...transactions].sort((a, b) => {
         const getVoucherDate = (t: Transaction) => {
+          // Check if this is a credit/debit note transaction
+          const isCreditDebitNote = t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT");
+          if (isCreditDebitNote && t.creditNoteDate) {
+            return t.creditNoteDate;
+          }
+          
           const isShipmentTransaction = t.type === "DEBIT" && t.invoice;
           const isPaymentTransaction = t.type === "CREDIT" && t.invoice;
           if (isShipmentTransaction) {
@@ -447,22 +454,29 @@ export default function CustomerTransactionsPage() {
   const getTransactionExportData = (transactions: Transaction[]) => {
     const headers = ["Date", "Type", "Amount", "Description", "Reference", "Invoice", "Balance"];
     const data = transactions.map(transaction => {
-      // Determine voucher date based on transaction type
       let voucherDateToUse: string;
       
-      // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
-      const isShipmentTransaction = transaction.type === "DEBIT" && transaction.invoice;
-      const isPaymentTransaction = transaction.type === "CREDIT" && transaction.invoice;
+      // Check if this is a credit/debit note transaction
+      const isCreditDebitNote = transaction.reference?.startsWith("#CREDIT") || transaction.reference?.startsWith("#DEBIT");
       
-      if (isShipmentTransaction) {
-        // For shipment transactions: voucher date = shipment date (both use shipmentDate)
-        voucherDateToUse = transaction.shipmentDate || transaction.createdAt;
-      } else if (isPaymentTransaction) {
-        // For payment transactions: voucher date = payment date (from Payment table)
-        voucherDateToUse = transaction.paymentDate || transaction.createdAt;
+      if (isCreditDebitNote && transaction.creditNoteDate) {
+        // For credit/debit note transactions: use the date from the credit/debit note
+        voucherDateToUse = transaction.creditNoteDate;
       } else {
-        // For other transactions: use createdAt for voucher date
-        voucherDateToUse = transaction.createdAt;
+        // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
+        const isShipmentTransaction = transaction.type === "DEBIT" && transaction.invoice;
+        const isPaymentTransaction = transaction.type === "CREDIT" && transaction.invoice;
+        
+        if (isShipmentTransaction) {
+          // For shipment transactions: voucher date = shipment date (both use shipmentDate)
+          voucherDateToUse = transaction.shipmentDate || transaction.createdAt;
+        } else if (isPaymentTransaction) {
+          // For payment transactions: voucher date = payment date (from Payment table)
+          voucherDateToUse = transaction.paymentDate || transaction.createdAt;
+        } else {
+          // For other transactions: use createdAt for voucher date
+          voucherDateToUse = transaction.createdAt;
+        }
       }
       
       let formattedDate: string;
@@ -866,22 +880,31 @@ export default function CustomerTransactionsPage() {
                     let voucherDateToUse: string;
                     let shipmentDateToUse: string;
                     
-                    // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
-                    const isShipmentTransaction = transaction.type === "DEBIT" && transaction.invoice;
-                    const isPaymentTransaction = transaction.type === "CREDIT" && transaction.invoice;
+                    // Check if this is a credit/debit note transaction
+                    const isCreditDebitNote = transaction.reference?.startsWith("#CREDIT") || transaction.reference?.startsWith("#DEBIT");
                     
-                    if (isShipmentTransaction) {
-                      // For shipment transactions: voucher date = shipment date (both use shipmentDate)
-                      voucherDateToUse = transaction.shipmentDate || transaction.createdAt;
-                      shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
-                    } else if (isPaymentTransaction) {
-                      // For payment transactions: voucher date = payment date (from Payment table), shipment date = original shipment date
-                      voucherDateToUse = transaction.paymentDate || transaction.createdAt;
-                      shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+                    if (isCreditDebitNote && transaction.creditNoteDate) {
+                      // For credit/debit note transactions: use the date from the credit/debit note
+                      voucherDateToUse = transaction.creditNoteDate;
+                      shipmentDateToUse = transaction.creditNoteDate;
                     } else {
-                      // For other transactions: use createdAt for voucher date, shipmentDate for shipment date
-                      voucherDateToUse = transaction.createdAt;
-                      shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+                      // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
+                      const isShipmentTransaction = transaction.type === "DEBIT" && transaction.invoice;
+                      const isPaymentTransaction = transaction.type === "CREDIT" && transaction.invoice;
+                      
+                      if (isShipmentTransaction) {
+                        // For shipment transactions: voucher date = shipment date (both use shipmentDate)
+                        voucherDateToUse = transaction.shipmentDate || transaction.createdAt;
+                        shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+                      } else if (isPaymentTransaction) {
+                        // For payment transactions: voucher date = payment date (from Payment table), shipment date = original shipment date
+                        voucherDateToUse = transaction.paymentDate || transaction.createdAt;
+                        shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+                      } else {
+                        // For other transactions: use createdAt for voucher date, shipmentDate for shipment date
+                        voucherDateToUse = transaction.createdAt;
+                        shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
+                      }
                     }
                     
                     return (

@@ -614,7 +614,8 @@ export async function POST(req: NextRequest) {
             remainingAmount,
             `Tracking: ${trackingId} | Country: ${finalDestination}| Type: ${packaging} | Weight: ${totalWeight}Kg`,
             invoiceNumber,
-            invoiceNumber
+            invoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
           if (appliedBalance > 0) {
           // Create journal entry for customer debit transaction
@@ -673,7 +674,8 @@ export async function POST(req: NextRequest) {
             appliedBalance,
             `Credit applied for invoice ${invoiceNumber}`,
             `CREDIT-${invoiceNumber}`,
-            invoiceNumber
+            invoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
 
           // Create journal entry for customer credit transaction
@@ -720,7 +722,8 @@ export async function POST(req: NextRequest) {
             vendorRemainingAmount,
             `Tracking: ${trackingId} | Country: ${finalDestination}| Type: ${packaging} | Weight: ${totalWeight}Kg`,
             vendorInvoiceNumber,
-            vendorInvoiceNumber
+            vendorInvoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
           if (vendorAppliedBalance > 0) {
           // Create journal entry for vendor debit transaction
@@ -777,7 +780,8 @@ export async function POST(req: NextRequest) {
             vendorAppliedBalance,
             `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
             `CREDIT-${vendorInvoiceNumber}`,
-            vendorInvoiceNumber
+            vendorInvoiceNumber,
+            shipmentDate ? new Date(shipmentDate) : new Date()
           );
 
           // Create journal entry for vendor credit transaction
