@@ -316,6 +316,14 @@ export default function IncomeStatementPage() {
       // Ensure end date includes the full day by appending time
       const startDateStr = startDate; // Already in YYYY-MM-DD format
       const endDateStr = endDate; // Already in YYYY-MM-DD format
+      
+      console.log('Income Statement - Fetching account balances:', {
+        periodType,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        url: `/api/account-books?limit=all&dateFrom=${startDateStr}&dateTo=${endDateStr}`
+      });
+      
       const response = await fetch(`/api/account-books?limit=all&dateFrom=${startDateStr}&dateTo=${endDateStr}`);
       const data = await response.json();
       
@@ -496,6 +504,21 @@ export default function IncomeStatementPage() {
     const totalExpenses = expenses.reduce((sum, acc) => sum + acc.balance, 0);
     const grossProfit = totalRevenue - vendorExpenseAmount;
     const netIncome = totalRevenue - totalExpenses;
+
+    // Debug logging
+    console.log('Income Statement Calculation:', {
+      periodType,
+      startDate: incomeStatementData.period.startDate,
+      endDate: incomeStatementData.period.endDate,
+      revenueAccounts: revenues.length,
+      expenseAccounts: expenses.length,
+      totalRevenue,
+      totalExpenses,
+      grossProfit,
+      netIncome,
+      revenueDetails: revenues.map(r => ({ name: r.accountName, balance: r.balance })),
+      expenseDetails: expenses.map(e => ({ name: e.accountName, balance: e.balance }))
+    });
 
     setIncomeStatementData(prev => ({
       ...prev,
