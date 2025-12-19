@@ -238,6 +238,24 @@ export default function BalanceSheetPage() {
     const totalExpenses = expenses.reduce((sum, acc) => sum + acc.balance, 0);
     const currentYearEarnings = totalRevenue - totalExpenses;
     
+    // Debug logging
+    const now = new Date(asOfDate);
+    const calculatedPeriodStart = now.getMonth() >= 6 
+      ? new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10)
+      : new Date(now.getFullYear() - 1, 6, 1).toISOString().slice(0, 10);
+    
+    console.log('Balance Sheet CYE Calculation:', {
+      asOfDate,
+      periodStartDate: calculatedPeriodStart,
+      revenueAccounts: revenues.length,
+      expenseAccounts: expenses.length,
+      totalRevenue,
+      totalExpenses,
+      currentYearEarnings,
+      revenueDetails: revenues.map(r => ({ name: r.accountName, balance: r.balance })),
+      expenseDetails: expenses.map(e => ({ name: e.accountName, balance: e.balance }))
+    });
+    
     // Create a virtual CYE account entry (not from actual journal entries)
     const cyeAccount: AccountBalance = {
       accountId: -1, // Virtual account ID
