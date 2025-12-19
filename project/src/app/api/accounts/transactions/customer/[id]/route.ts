@@ -170,9 +170,17 @@ export async function GET(
     );
 
     // Sort by voucher date (not createdAt) for balance calculation
-    transactionsWithVoucherDates.sort((a, b) => 
-      a.voucherDate.getTime() - b.voucherDate.getTime()
-    );
+    // When dates are the same, DEBIT (shipment/invoice) transactions come before CREDIT (payment) transactions
+    transactionsWithVoucherDates.sort((a, b) => {
+      const dateDiff = a.voucherDate.getTime() - b.voucherDate.getTime();
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+      // Same date: DEBIT (shipment/invoice) before CREDIT (payment)
+      if (a.type === "DEBIT" && b.type === "CREDIT") return -1;
+      if (a.type === "CREDIT" && b.type === "DEBIT") return 1;
+      return 0;
+    });
 
     // Find starting balance transaction (reference starts with "STARTING-BALANCE")
     const startingBalanceTransaction = transactionsWithVoucherDates.find(

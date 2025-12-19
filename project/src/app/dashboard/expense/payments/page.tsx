@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,12 @@ import {
 import { ArrowLeft, Search, Info, ShoppingCart } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Invoice = {
   id: number;
@@ -55,13 +61,15 @@ export default function ExpensePaymentsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(total / pageSize);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const invoiceFetchAttempted = useRef<string | null>(null);
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [debitAccountId, setDebitAccountId] = useState<number>(0);
   const [creditAccountId, setCreditAccountId] = useState<number>(0);
@@ -81,7 +89,7 @@ export default function ExpensePaymentsPage() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [page, searchTerm, statusFilter]);
+  }, [page, searchTerm, statusFilter, pageSize]);
 
   // Update accounts when payment method changes
   useEffect(() => {
@@ -106,13 +114,17 @@ export default function ExpensePaymentsPage() {
       );
       if (invoice) {
         setSelectedInvoice(invoice);
-        // Set payment amount from URL parameter
-        if (amountParam) {
+        // Set payment amount from URL parameter or remaining amount
+        const remainingAmount = invoice.remainingAmount;
+        if (remainingAmount !== undefined && remainingAmount > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            paymentAmount: remainingAmount.toString(),
+          }));
+        } else if (amountParam) {
           setFormData((prev) => ({
             ...prev,
             paymentAmount: amountParam,
-            invoice: billParam,
-            description: `Payment for ${billParam} - ${vendorParam || 'Vendor'}`,
           }));
         }
         // Set payment date to shipment date if available
@@ -130,10 +142,70 @@ export default function ExpensePaymentsPage() {
         if (accountsInitialized && accounts.length > 0) {
           setDefaultAccountsForInvoice(accounts, invoice);
         }
+        // Open the payment dialog
+        setPaymentDialogOpen(true);
+        invoiceFetchAttempted.current = null; // Reset on success
+      } else if (billParam && invoiceFetchAttempted.current !== billParam) {
+        // Invoice not found in current page, fetch it directly by searching
+        invoiceFetchAttempted.current = billParam; // Mark as attempted
+        const fetchSpecificInvoice = async () => {
+          try {
+            const params = new URLSearchParams({
+              page: "1",
+              limit: "1000", // Large limit to find the invoice
+              profile: "Vendor",
+              search: billParam,
+            });
+            const response = await fetch(`/api/accounts/invoices?${params.toString()}`);
+            const data = await response.json();
+            if (response.ok) {
+              const foundInvoice = (data.invoices || []).find(
+                (inv: Invoice) => inv.invoiceNumber === billParam && inv.profile === "Vendor"
+              );
+              if (foundInvoice) {
+                setSelectedInvoice(foundInvoice);
+                // Set payment amount from remaining amount or URL parameter
+                const remainingAmount = foundInvoice.remainingAmount;
+                if (remainingAmount !== undefined && remainingAmount > 0) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    paymentAmount: remainingAmount.toString(),
+                  }));
+                } else if (amountParam) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    paymentAmount: amountParam,
+                  }));
+                }
+                // Set payment date to shipment date if available
+                if (foundInvoice.shipment?.shipmentDate) {
+                  const shipmentDate = foundInvoice.shipment.shipmentDate;
+                  const dateStr = shipmentDate instanceof Date 
+                    ? shipmentDate.toISOString().split('T')[0]
+                    : new Date(shipmentDate).toISOString().split('T')[0];
+                  setFormData((prev) => ({
+                    ...prev,
+                    paymentDate: dateStr,
+                  }));
+                }
+                // Set default accounts for the selected invoice
+                if (accountsInitialized && accounts.length > 0) {
+                  setDefaultAccountsForInvoice(accounts, foundInvoice);
+                }
+                // Open the payment dialog
+                setPaymentDialogOpen(true);
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching specific invoice:", error);
+            invoiceFetchAttempted.current = null; // Reset on error to allow retry
+          }
+        };
+        fetchSpecificInvoice();
       }
     }
     // Handle invoice parameters (from other sources)
-    else if (invoiceParam && invoices.length > 0) {
+    else if (invoiceParam) {
       const invoice = invoices.find(
         (inv) => inv.invoiceNumber === invoiceParam
       );
@@ -162,7 +234,64 @@ export default function ExpensePaymentsPage() {
         if (accountsInitialized && accounts.length > 0) {
           setDefaultAccountsForInvoice(accounts, invoice);
         }
+        // Open the payment dialog
+        setPaymentDialogOpen(true);
+        invoiceFetchAttempted.current = null; // Reset on success
+      } else if (invoiceParam && invoices.length > 0 && invoiceFetchAttempted.current !== invoiceParam) {
+        // Invoice not found in current page, fetch it directly by searching
+        invoiceFetchAttempted.current = invoiceParam; // Mark as attempted
+        const fetchSpecificInvoice = async () => {
+          try {
+            const params = new URLSearchParams({
+              page: "1",
+              limit: "1000", // Large limit to find the invoice
+              profile: "Vendor",
+              search: invoiceParam,
+            });
+            const response = await fetch(`/api/accounts/invoices?${params.toString()}`);
+            const data = await response.json();
+            if (response.ok) {
+              const foundInvoice = (data.invoices || []).find(
+                (inv: Invoice) => inv.invoiceNumber === invoiceParam && inv.profile === "Vendor"
+              );
+              if (foundInvoice) {
+                setSelectedInvoice(foundInvoice);
+                // Set payment amount to remaining amount if available
+                const remainingAmount = foundInvoice.remainingAmount;
+                if (remainingAmount !== undefined && remainingAmount > 0) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    paymentAmount: remainingAmount.toString(),
+                  }));
+                }
+                // Set payment date to shipment date if available
+                if (foundInvoice.shipment?.shipmentDate) {
+                  const shipmentDate = foundInvoice.shipment.shipmentDate;
+                  const dateStr = shipmentDate instanceof Date 
+                    ? shipmentDate.toISOString().split('T')[0]
+                    : new Date(shipmentDate).toISOString().split('T')[0];
+                  setFormData((prev) => ({
+                    ...prev,
+                    paymentDate: dateStr,
+                  }));
+                }
+                // Set default accounts for the selected invoice
+                if (accountsInitialized && accounts.length > 0) {
+                  setDefaultAccountsForInvoice(accounts, foundInvoice);
+                }
+                // Open the payment dialog
+                setPaymentDialogOpen(true);
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching specific invoice:", error);
+            invoiceFetchAttempted.current = null; // Reset on error to allow retry
+          }
+        };
+        fetchSpecificInvoice();
       }
+    } else {
+      invoiceFetchAttempted.current = null; // Reset when no invoice param
     }
   }, [searchParams, invoices, accountsInitialized, accounts]);
 
@@ -372,6 +501,7 @@ export default function ExpensePaymentsPage() {
           description: "",
           paymentDate: new Date().toISOString().split('T')[0],
         });
+        setPaymentDialogOpen(false);
         fetchInvoices(); // Refresh invoice list
         setPage(1); // Reset to first page
       } else {
@@ -431,9 +561,9 @@ export default function ExpensePaymentsPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+      <div className="w-full">
         {/* Invoice Selection */}
-        <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 mb-4 sm:mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="w-5 h-5" />
@@ -452,6 +582,27 @@ export default function ExpensePaymentsPage() {
                   }}
                   className="w-full"
                 />
+              </div>
+              <div className="shrink-0 w-20 sm:w-24">
+                <Label className="mb-2 block text-xs sm:text-sm">Show</Label>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value: string) => {
+                    setPageSize(parseInt(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Show" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="shrink-0 w-24 sm:w-32">
                 <Label className="mb-2 block text-xs sm:text-sm">Status</Label>
@@ -516,6 +667,7 @@ export default function ExpensePaymentsPage() {
                       if (accountsInitialized && accounts.length > 0) {
                         setDefaultAccountsForInvoice(accounts, invoice);
                       }
+                      setPaymentDialogOpen(true);
                     }}
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -575,39 +727,45 @@ export default function ExpensePaymentsPage() {
           </CardContent>
         </Card>
 
-        {/* Payment Form */}
-        <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Info className="w-5 h-5" />
-              Process Vendor Payment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* Payment Process Dialog */}
+        <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+          <DialogContent size="xl" className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="w-5 h-5" />
+                Process Vendor Payment
+              </DialogTitle>
+            </DialogHeader>
+            <div>
             {selectedInvoice ? (
               <div>
                 <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 dark:text-white mb-2">
+                  <h3 className="font-semibold text-gray-800 dark:text-white mb-2 text-center">
                     Selected Invoice
                   </h3>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <div>Invoice: {selectedInvoice.invoiceNumber}</div>
-                    <div>
-                      Original Amount: PKR{" "}
-                      {selectedInvoice.totalAmount.toLocaleString()}
-                    </div>
-                    {selectedInvoice.remainingAmount !== undefined && (
-                      <div className="font-semibold text-orange-600 dark:text-orange-400">
-                        Remaining Amount: PKR{" "}
-                        {selectedInvoice.remainingAmount.toLocaleString()}
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <div>Invoice: {selectedInvoice.invoiceNumber}</div>
+                      <div>
+                        Original Amount: PKR{" "}
+                        {selectedInvoice.totalAmount.toLocaleString()}
                       </div>
-                    )}
-                    <div>Status: {selectedInvoice.status}</div>
-                    <div>Profile: {selectedInvoice.profile}</div>
-                    {selectedInvoice.trackingNumber && (
-                      <div>Tracking: {selectedInvoice.trackingNumber}</div>
-                    )}
-                    <div>Vendor: {selectedInvoice.vendor?.CompanyName || selectedInvoice.vendor?.PersonName}</div>
+                      {selectedInvoice.remainingAmount !== undefined && (
+                        <div className="font-semibold text-orange-600 dark:text-orange-400">
+                          Remaining Amount: PKR{" "}
+                          {selectedInvoice.remainingAmount.toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1 ml-4 text-right">
+                      <div>
+                        Status: <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedInvoice.status)}`}>{selectedInvoice.status}</span>
+                      </div>
+                      {selectedInvoice.trackingNumber && (
+                        <div>Tracking: {selectedInvoice.trackingNumber}</div>
+                      )}
+                      <div>Vendor: {selectedInvoice.vendor?.CompanyName || selectedInvoice.vendor?.PersonName}</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -620,24 +778,44 @@ export default function ExpensePaymentsPage() {
             )}
 
             <form onSubmit={handlePayment} className="space-y-3 sm:space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="paymentAmount" className="text-sm font-medium">
-                  Payment Amount
-                </Label>
-                <Input
-                  id="paymentAmount"
-                  type="number"
-                  step="0.01"
-                  value={formData.paymentAmount}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      paymentAmount: e.target.value,
-                    }))
-                  }
-                  placeholder="Enter payment amount"
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="paymentAmount" className="text-sm font-medium">
+                    Payment Amount
+                  </Label>
+                  <Input
+                    id="paymentAmount"
+                    type="number"
+                    step="0.01"
+                    value={formData.paymentAmount}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        paymentAmount: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter payment amount"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="paymentDate" className="text-sm font-medium">
+                    Payment Date
+                  </Label>
+                  <Input
+                    id="paymentDate"
+                    type="date"
+                    value={formData.paymentDate}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        paymentDate: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -668,39 +846,21 @@ export default function ExpensePaymentsPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="paymentDate" className="text-sm font-medium">
-                    Payment Date
+                  <Label htmlFor="reference" className="text-sm font-medium">
+                    Reference
                   </Label>
                   <Input
-                    id="paymentDate"
-                    type="date"
-                    value={formData.paymentDate}
+                    id="reference"
+                    value={formData.reference}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        paymentDate: e.target.value,
+                        reference: e.target.value,
                       }))
                     }
-                    required
+                    placeholder="Payment reference"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="reference" className="text-sm font-medium">
-                  Reference
-                </Label>
-                <Input
-                  id="reference"
-                  value={formData.reference}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      reference: e.target.value,
-                    }))
-                  }
-                  placeholder="Payment reference"
-                />
               </div>
 
               <div className="space-y-1.5">
@@ -836,8 +996,9 @@ export default function ExpensePaymentsPage() {
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

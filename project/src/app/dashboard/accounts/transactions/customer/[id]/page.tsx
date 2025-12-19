@@ -125,7 +125,15 @@ export default function CustomerTransactionsPage() {
         };
         const dateA = new Date(getVoucherDate(a)).getTime();
         const dateB = new Date(getVoucherDate(b)).getTime();
-        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+        const dateDiff = sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+        
+        // When dates are the same, DEBIT (shipment/invoice) transactions come before CREDIT (payment) transactions
+        if (dateDiff === 0) {
+          if (a.type === "DEBIT" && b.type === "CREDIT") return -1;
+          if (a.type === "CREDIT" && b.type === "DEBIT") return 1;
+        }
+        
+        return dateDiff;
       });
     }
     // For other fields, use backend sorting (already sorted)
