@@ -126,10 +126,11 @@ export default function VendorTransactionsPage() {
         const dateB = new Date(getVoucherDate(b)).getTime();
         const dateDiff = sortOrder === "desc" ? dateB - dateA : dateA - dateB;
         
-        // When dates are the same, DEBIT (shipment/invoice) transactions come before CREDIT (payment) transactions
+        // When dates are the same, CREDIT (payment) transactions come after DEBIT (shipment/invoice) transactions
+        // Since balance is calculated from bottom to top, payments should appear above shipments in the list
         if (dateDiff === 0) {
-          if (a.type === "DEBIT" && b.type === "CREDIT") return -1;
-          if (a.type === "CREDIT" && b.type === "DEBIT") return 1;
+          if (a.type === "DEBIT" && b.type === "CREDIT") return 1;  // DEBIT comes after (below) CREDIT
+          if (a.type === "CREDIT" && b.type === "DEBIT") return -1; // CREDIT comes before (above) DEBIT
         }
         
         return dateDiff;

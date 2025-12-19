@@ -227,7 +227,7 @@ const DashboardPage = () => {
             currentMonth={(data.currentMonthData?.revenue || 0).toLocaleString()}
           />
           <MetricCard
-            title="Accounts Receivable"
+            title="Receivables"
             value={data.accountsData.accountsReceivable.toLocaleString()}
             change={data.percentageChanges?.revenuePercentageChange || 0}
             icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
@@ -603,9 +603,8 @@ const DashboardPage = () => {
           </motion.div>
         </div>
 
-        {/* Customer Analytics Charts */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">
-          {/* Customer-Destination Relationship */}
+        {/* Top Customers Chart */}
+        <div className="mb-6 md:mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -614,89 +613,22 @@ const DashboardPage = () => {
           >
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                Customer-Destination Map
-              </h3>
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
-            </div>
-            {data.customerDestinationMap && data.customerDestinationMap.length > 0 && data.customerDestinationMap[0].customer !== "No Data" && data.customerDestinationMap.some(d => d.shipments > 0) ? (
-              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
-                <BarChart 
-                  data={data.customerDestinationMap
-                    .filter(d => d.shipments > 0)
-                    .sort((a, b) => b.shipments - a.shipments)
-                    .slice(0, 10)
-                  } 
-                  margin={{ top: 5, right: 10, left: 0, bottom: 15 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                  <XAxis 
-                    dataKey="customer" 
-                    stroke="#6B7280" 
-                    fontSize={10}
-                    angle={-45}
-                    textAnchor="end"
-                    height={50}
-                    tick={{ fill: '#6B7280', fontSize: 10 }}
-                    interval={0}
-                  />
-                  <YAxis 
-                    stroke="#6B7280" 
-                    fontSize={12}
-                    tickFormatter={(value) => value.toString()}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1F2937', 
-                      border: 'none', 
-                      borderRadius: '8px',
-                      color: '#F9FAFB',
-                      fontSize: '12px'
-                    }}
-                    formatter={(value: any, name: string, props: any) => [
-                      `${value} shipments`,
-                      `Destination: ${props.payload.destination || 'N/A'}`
-                    ]}
-                    labelFormatter={(label) => `Customer: ${label}`}
-                  />
-                  <Bar 
-                    dataKey="shipments" 
-                    fill="#8B5CF6" 
-                    radius={[4, 4, 0, 0]}
-                    name="Shipments"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">
-                <div className="text-center">
-                  <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                  <p>No customer data available</p>
-                  <p className="text-sm">Check if you have customers and invoices in your database</p>
-                </div>
-              </div>
-            )}
-            <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
-              Shows shipment count by customer and their preferred destinations
-            </div>
-          </motion.div>
-
-          {/* Top Customers Performance */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
                 Top Customers
               </h3>
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
-            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <BarChart data={data.topCustomers.slice(0, 10)}>
+            <ResponsiveContainer width="100%" height={400} className="sm:h-[450px]">
+              <BarChart data={data.topCustomers.slice(0, 20)} margin={{ top: 5, right: 30, left: 0, bottom: 50 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis dataKey="customer" stroke="#6B7280" angle={-45} textAnchor="end" height={60} fontSize={12} />
+                <XAxis 
+                  dataKey="customer" 
+                  stroke="#6B7280" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={50} 
+                  fontSize={10}
+                  interval={0}
+                />
                 <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
                 <YAxis yAxisId="right" orientation="right" stroke="#6B7280" fontSize={12} />
                 <Tooltip 
@@ -1293,43 +1225,67 @@ const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick, c
   iconColor: string;
   onClick?: () => void;
   currentMonth?: string | number;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.3 }}
-    className={`bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 ${onClick ? 'cursor-pointer hover:scale-105' : ''}`}
-    onClick={onClick}
-  >
-    <div className="flex items-center justify-between mb-3 sm:mb-4">
-      <div className={`${bgColor} ${iconColor} p-2 sm:p-3 rounded-lg sm:rounded-xl`}>{icon}</div>
-      <div className="flex flex-col items-end gap-1">
-        <div className={`flex items-center text-xs sm:text-sm font-medium ${
-          change >= 0 ? 'text-green-600' : 'text-red-600'
-        }`}>
-          {change >= 0 ? <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> : <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />}
-          {Math.abs(change)}%
+}) => {
+  // Helper function to get light background color based on bgColor
+  const getLightBgColor = () => {
+    if (bgColor.includes('green')) return 'bg-green-100 dark:bg-green-900/20';
+    if (bgColor.includes('orange') || bgColor.includes('red')) return 'bg-red-100 dark:bg-red-900/20';
+    if (bgColor.includes('blue')) return 'bg-blue-100 dark:bg-blue-900/20';
+    if (bgColor.includes('purple')) return 'bg-purple-100 dark:bg-purple-900/20';
+    return 'bg-gray-100 dark:bg-gray-900/20';
+  };
+
+  // Helper function to get text color based on bgColor
+  const getTextColor = () => {
+    if (bgColor.includes('green')) return 'text-green-700 dark:text-green-300';
+    if (bgColor.includes('orange') || bgColor.includes('red')) return 'text-red-700 dark:text-red-300';
+    if (bgColor.includes('blue')) return 'text-blue-700 dark:text-blue-300';
+    if (bgColor.includes('purple')) return 'text-purple-700 dark:text-purple-300';
+    return 'text-gray-700 dark:text-gray-300';
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className={`relative bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 ${onClick ? 'cursor-pointer hover:scale-105' : ''}`}
+      onClick={onClick}
+    >
+      <div className="flex items-center mb-3 sm:mb-4 relative">
+        <div className="flex items-center gap-3 sm:gap-4 flex-1">
+          <div className={`${bgColor} ${iconColor} p-2 sm:p-3 rounded-lg sm:rounded-xl`}>{icon}</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 pr-16 sm:pr-20 truncate">{title}</p>
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
+          </div>
+        </div>
+        <div className="absolute top-0 right-0">
+          <div className={`flex items-center text-xs sm:text-sm font-medium ${
+            change >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {change >= 0 ? <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> : <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />}
+            {Math.abs(change)}%
+          </div>
         </div>
       </div>
-    </div>
-    <div>
-      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
-      <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
-      {currentMonth !== undefined && (
-        <div className="mt-3 flex items-center gap-3">
-          <div className={`px-3 py-1.5 rounded-full ${bgColor} ${iconColor}`}>
-            <span className="text-sm font-semibold">
-              {typeof currentMonth === 'number' ? currentMonth.toLocaleString() : currentMonth}
-            </span>
+      <div>
+        {currentMonth !== undefined && (
+          <div className="mt-3 flex items-center gap-3">
+            <div className={`px-3 py-1.5 rounded-full ${getLightBgColor()} ${getTextColor()}`}>
+              <span className="text-sm font-semibold">
+                {typeof currentMonth === 'number' ? currentMonth.toLocaleString() : currentMonth}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Since last month</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Since last month</span>
-          </div>
-        </div>
-      )}
-    </div>
-  </motion.div>
-);
+        )}
+      </div>
+    </motion.div>
+  );
+};
 
 const PerformanceCard = ({ title, value, icon, color, bgColor }: {
   title: string;

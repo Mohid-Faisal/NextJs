@@ -793,88 +793,90 @@ export default function IncomeRevenuePage() {
                   Chart of Accounts
                 </h3>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="debitAccount" className="text-sm font-medium">
-                    Debit Account (Cash Received)
-                  </Label>
-                  <Select
-                    value={debitAccountId.toString()}
-                    onValueChange={(value) =>
-                      setDebitAccountId(parseInt(value))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select debit account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts
-                        .filter((account) => {
-                          // Filter based on payment method
-                          if (formData.paymentMethod === "CASH") {
-                            return account.accountName === "Cash" || 
-                                   (account.category === "Asset" && account.accountName.toLowerCase().includes("cash"));
-                          } else if (formData.paymentMethod === "BANK_TRANSFER") {
-                            return account.accountName === "Bank Account" || 
-                                   account.accountName === "Bank" ||
-                                   (account.category === "Asset" && account.accountName.toLowerCase().includes("bank"));
-                          } else if (formData.paymentMethod === "CHECK" || formData.paymentMethod === "CREDIT_CARD") {
-                            // For check and credit card, show bank accounts first, then cash
-                            return account.accountName === "Bank Account" || 
-                                   account.accountName === "Bank" ||
-                                   account.accountName === "Cash" ||
-                                   (account.category === "Asset" && (
-                                     account.accountName.toLowerCase().includes("bank") ||
-                                     account.accountName.toLowerCase().includes("cash")
-                                   ));
-                          }
-                          // Default: show cash and assets
-                          return account.accountName === "Cash" || account.category === "Asset";
-                        })
-                        .map((account) => (
-                          <SelectItem
-                            key={account.id}
-                            value={account.id.toString()}
-                          >
-                            {account.code} - {account.accountName}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="debitAccount" className="text-sm font-medium">
+                      Debit Account (Cash Received)
+                    </Label>
+                    <Select
+                      value={debitAccountId.toString()}
+                      onValueChange={(value) =>
+                        setDebitAccountId(parseInt(value))
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select debit account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts
+                          .filter((account) => {
+                            // Filter based on payment method
+                            if (formData.paymentMethod === "CASH") {
+                              return account.accountName === "Cash" || 
+                                     (account.category === "Asset" && account.accountName.toLowerCase().includes("cash"));
+                            } else if (formData.paymentMethod === "BANK_TRANSFER") {
+                              return account.accountName === "Bank Account" || 
+                                     account.accountName === "Bank" ||
+                                     (account.category === "Asset" && account.accountName.toLowerCase().includes("bank"));
+                            } else if (formData.paymentMethod === "CHECK" || formData.paymentMethod === "CREDIT_CARD") {
+                              // For check and credit card, show bank accounts first, then cash
+                              return account.accountName === "Bank Account" || 
+                                     account.accountName === "Bank" ||
+                                     account.accountName === "Cash" ||
+                                     (account.category === "Asset" && (
+                                       account.accountName.toLowerCase().includes("bank") ||
+                                       account.accountName.toLowerCase().includes("cash")
+                                     ));
+                            }
+                            // Default: show cash and assets
+                            return account.accountName === "Cash" || account.category === "Asset";
+                          })
+                          .map((account) => (
+                            <SelectItem
+                              key={account.id}
+                              value={account.id.toString()}
+                            >
+                              {account.code} - {account.accountName}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="creditAccount"
-                    className="text-sm font-medium"
-                  >
-                    Credit Account (Accounts Receivable)
-                  </Label>
-                  <Select
-                    value={creditAccountId.toString()}
-                    onValueChange={(value) =>
-                      setCreditAccountId(parseInt(value))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select credit account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts
-                        .filter(
-                          (account) =>
-                            account.accountName === "Accounts Receivable" ||
-                            account.category === "Asset"
-                        )
-                        .map((account) => (
-                          <SelectItem
-                            key={account.id}
-                            value={account.id.toString()}
-                          >
-                            {account.code} - {account.accountName}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="creditAccount"
+                      className="text-sm font-medium"
+                    >
+                      Credit Account (Accounts Receivable)
+                    </Label>
+                    <Select
+                      value={creditAccountId.toString()}
+                      onValueChange={(value) =>
+                        setCreditAccountId(parseInt(value))
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select credit account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts
+                          .filter(
+                            (account) =>
+                              account.accountName === "Accounts Receivable" ||
+                              account.category === "Asset"
+                          )
+                          .map((account) => (
+                            <SelectItem
+                              key={account.id}
+                              value={account.id.toString()}
+                            >
+                              {account.code} - {account.accountName}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
