@@ -122,7 +122,7 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
           {triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent size="4xl" className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}

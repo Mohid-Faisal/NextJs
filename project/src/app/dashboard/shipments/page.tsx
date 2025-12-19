@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Shipment } from "@prisma/client";
@@ -48,6 +49,7 @@ import DeleteDialog from "@/components/DeleteDialog";
 const LIMIT = 10;
 
 export default function ShipmentsPage() {
+  const router = useRouter();
   const [shipments, setShipments] = useState<
     (Shipment & { invoices: { status: string }[] })[]
   >([]);
@@ -903,8 +905,13 @@ export default function ShipmentsPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         {formatDate(shipment.shipmentDate || shipment.createdAt)}
                       </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold text-blue-600">
-                        {shipment.invoiceNumber}
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <button
+                          onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                          className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        >
+                          {shipment.invoiceNumber}
+                        </button>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <span className="hidden sm:inline">{shipment.senderName}</span>
@@ -921,9 +928,14 @@ export default function ShipmentsPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.packaging || "N/A"}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || shipment.weight || 0}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold text-purple-600">
-                        <span className="hidden sm:inline">{shipment.trackingId}</span>
-                        <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <button
+                          onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                          className="font-bold text-purple-600 hover:text-purple-800 hover:underline cursor-pointer"
+                        >
+                          <span className="hidden sm:inline">{shipment.trackingId}</span>
+                          <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                        </button>
                       </td>
                       {deliveryStatusFilter === "All" && (
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
