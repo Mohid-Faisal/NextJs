@@ -908,7 +908,7 @@ export default function ShipmentsPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <button
                           onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                          className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                          className="font-bold text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
                         >
                           {shipment.invoiceNumber}
                         </button>
@@ -931,7 +931,7 @@ export default function ShipmentsPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <button
                           onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                          className="font-bold text-purple-600 hover:text-purple-800 hover:underline cursor-pointer"
+                          className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
                         >
                           <span className="hidden sm:inline">{shipment.trackingId}</span>
                           <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>

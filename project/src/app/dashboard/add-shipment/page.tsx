@@ -728,6 +728,21 @@ const AddShipmentPage = () => {
         setSelectedRecipient(null);
         setSenderQuery("");
         setRecipientQuery("");
+        
+        // Reset shipping mode to Courier if available, otherwise empty
+        setTimeout(() => {
+          if (shippingModes.length > 0) {
+            const courierOption = shippingModes.find(
+              (mode) => mode.name.toLowerCase() === "courier"
+            );
+            if (courierOption) {
+              setForm((prev) => ({ ...prev, shippingMode: courierOption.name }));
+            } else {
+              setForm((prev) => ({ ...prev, shippingMode: "" }));
+            }
+          }
+        }, 100);
+        
         // Bring cursor back to shipment date field
         if (shipmentDateRef.current) {
           shipmentDateRef.current.focus();
@@ -1042,7 +1057,11 @@ const AddShipmentPage = () => {
   ) => (
       <div>
         <Label className="mb-2 block">{label}</Label>
-        <Select value={value || undefined} onValueChange={onValueChange}>
+        <Select 
+          value={value && value.trim() !== "" ? value : undefined} 
+          onValueChange={onValueChange}
+          key={value || "empty"}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
@@ -1083,7 +1102,8 @@ const AddShipmentPage = () => {
                   </Label>
                   <Select
                     onValueChange={(value) => handleSelect("agency", value)}
-                    value={form.agency}
+                    value={form.agency || undefined}
+                    key={form.agency || "agency-empty"}
                   >
                     <SelectTrigger className="bg-muted w-full">
                       <SelectValue placeholder="Select agency" />
@@ -1106,9 +1126,10 @@ const AddShipmentPage = () => {
                   <Label className="text-sm font-medium mb-1">
                     Office of Origin
                   </Label>
-              <Select
+                  <Select
                     onValueChange={(value) => handleSelect("office", value)}
-                    value={form.office}
+                    value={form.office || undefined}
+                    key={form.office || "office-empty"}
               >
                     <SelectTrigger className="bg-muted w-full">
                       <SelectValue placeholder="Select office" />
