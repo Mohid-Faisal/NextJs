@@ -73,17 +73,28 @@ export default function BalanceSheetPage() {
   const fetchRevenueExpenseBalances = async () => {
     try {
       // Calculate period start date (beginning of financial year)
-      const now = new Date(asOfDate);
+      // Parse date string directly to avoid timezone issues
+      const [year, month] = asOfDate.split('-').map(Number);
+      const monthIndex = month - 1; // JavaScript months are 0-indexed
       let periodStartDate: string;
       
       // Use financial year: July 1 to June 30
-      if (now.getMonth() >= 6) {
+      if (monthIndex >= 6) {
         // July-December: Financial year starts July 1 of current year
-        periodStartDate = new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10);
+        periodStartDate = `${year}-07-01`;
       } else {
         // January-June: Financial year starts July 1 of previous year
-        periodStartDate = new Date(now.getFullYear() - 1, 6, 1).toISOString().slice(0, 10);
+        periodStartDate = `${year - 1}-07-01`;
       }
+      
+      console.log('Balance Sheet - Fetching revenue/expense balances:', {
+        asOfDate,
+        parsedYear: year,
+        parsedMonth: month,
+        parsedMonthIndex: monthIndex,
+        periodStartDate,
+        url: `/api/account-books?limit=all&dateFrom=${periodStartDate}&dateTo=${asOfDate}`
+      });
       
       // Fetch revenue and expense balances for the period only
       const response = await fetch(`/api/account-books?limit=all&dateFrom=${periodStartDate}&dateTo=${asOfDate}`);
@@ -238,14 +249,18 @@ export default function BalanceSheetPage() {
     const totalExpenses = expenses.reduce((sum, acc) => sum + acc.balance, 0);
     const currentYearEarnings = totalRevenue - totalExpenses;
     
-    // Debug logging
-    const now = new Date(asOfDate);
-    const calculatedPeriodStart = now.getMonth() >= 6 
-      ? new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10)
-      : new Date(now.getFullYear() - 1, 6, 1).toISOString().slice(0, 10);
+    // Debug logging - calculate period start using same logic as fetchRevenueExpenseBalances
+    const [year, month] = asOfDate.split('-').map(Number);
+    const monthIndex = month - 1;
+    const calculatedPeriodStart = monthIndex >= 6 
+      ? `${year}-07-01`
+      : `${year - 1}-07-01`;
     
     console.log('Balance Sheet CYE Calculation:', {
       asOfDate,
+      parsedYear: year,
+      parsedMonth: month,
+      parsedMonthIndex: monthIndex,
       periodStartDate: calculatedPeriodStart,
       revenueAccounts: revenues.length,
       expenseAccounts: expenses.length,
