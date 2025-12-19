@@ -503,10 +503,10 @@ export async function GET() {
       };
     });
     
-    // Sort by shipment count (descending) and take top 10
+    // Sort by shipment count (descending) and take top 25
     const transformedTopCustomers = customersWithMetrics
       .sort((a, b) => b.shipments - a.shipments)
-      .slice(0, 10);
+      .slice(0, 25);
     
     // Calculate performance metrics
     const totalDelivered = await prisma.shipment.count({

@@ -618,7 +618,7 @@ const DashboardPage = () => {
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
             <ResponsiveContainer width="100%" height={400} className="sm:h-[450px]">
-              <BarChart data={data.topCustomers.slice(0, 20)} margin={{ top: 5, right: 30, left: 0, bottom: 50 }}>
+              <BarChart data={data.topCustomers.slice(0, 25)} margin={{ top: 5, right: 30, left: 0, bottom: 50 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                 <XAxis 
                   dataKey="customer" 
