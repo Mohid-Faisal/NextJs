@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   BarChart3,
@@ -43,6 +44,7 @@ import {
 } from "recharts";
 
 const DashboardPage = () => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'shipments' | 'payments'>('shipments');
   const [showReceivableModal, setShowReceivableModal] = useState(false);
   const [showCustomersModal, setShowCustomersModal] = useState(false);
@@ -756,6 +758,19 @@ const DashboardPage = () => {
                 </button>
               </div>
             </div>
+            <button
+              onClick={() => {
+                if (activeTab === 'shipments') {
+                  router.push('/dashboard/shipments');
+                } else {
+                  router.push('/dashboard/accounts/payments');
+                }
+              }}
+              className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-all duration-200 flex items-center gap-2"
+            >
+              View All
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Tab Content */}

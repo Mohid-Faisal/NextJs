@@ -418,6 +418,29 @@ export async function POST(
       });
 
       if (existingStartingBalance) {
+        // Use provided date or default to earliest date for starting balance
+        const transactionDate = date ? new Date(date) : new Date('1970-01-01');
+        
+        // Find and delete existing journal entries for this starting balance
+        // Use the existing transaction's reference to find matching journal entries
+        const existingJournalEntries = await prisma.journalEntry.findMany({
+          where: {
+            reference: existingStartingBalance.reference 
+              ? existingStartingBalance.reference 
+              : { startsWith: "STARTING-BALANCE" }
+          }
+        });
+        
+        // Delete journal entry lines first, then the journal entries
+        for (const entry of existingJournalEntries) {
+          await prisma.journalEntryLine.deleteMany({
+            where: { journalEntryId: entry.id }
+          });
+          await prisma.journalEntry.delete({
+            where: { id: entry.id }
+          });
+        }
+        
         // Update existing starting balance transaction
         await prisma.vendorTransaction.update({
           where: { id: existingStartingBalance.id },
@@ -426,11 +449,25 @@ export async function POST(
             amount: parseFloat(amount),
             description: description,
             reference: reference,
-            createdAt: new Date('1970-01-01'), // Set to earliest date so it's always first
+            createdAt: transactionDate,
             previousBalance: 0,
             newBalance: type === 'DEBIT' ? parseFloat(amount) : -parseFloat(amount)
           }
         });
+        
+        // Create journal entry with the provided date (skip for CREDIT as it's not needed)
+        if (type === 'DEBIT') {
+          const transactionType = 'VENDOR_DEBIT';
+          await createJournalEntryForTransaction(
+            prisma,
+            transactionType,
+            parseFloat(amount),
+            description,
+            reference,
+            undefined,
+            transactionDate
+          );
+        }
 
         // Trigger balance recalculation by calling GET endpoint logic
         // We'll need to recalculate all balances
@@ -471,26 +508,48 @@ export async function POST(
       });
 
       if (createdTransaction) {
+        // Use provided date or default to earliest date for starting balance
+        const transactionDate = date ? new Date(date) : new Date('1970-01-01');
+        
         await prisma.vendorTransaction.update({
           where: { id: createdTransaction.id },
           data: {
-            createdAt: new Date('1970-01-01'),
+            createdAt: transactionDate,
             previousBalance: 0,
             newBalance: type === 'DEBIT' ? parseFloat(amount) : -parseFloat(amount)
           }
         });
+        
+        // Create journal entry for new starting balance (skip for CREDIT as it's not needed)
+        if (type === 'DEBIT') {
+          const transactionType = 'VENDOR_DEBIT';
+          await createJournalEntryForTransaction(
+            prisma,
+            transactionType,
+            parseFloat(amount),
+            description,
+            reference,
+            undefined,
+            transactionDate
+          );
+        }
       }
     }
 
-    // Create journal entry for vendor transaction
-    const transactionType = type === 'CREDIT' ? 'VENDOR_CREDIT' : 'VENDOR_DEBIT';
-    await createJournalEntryForTransaction(
-      prisma,
-      transactionType,
-      parseFloat(amount),
-      description,
-      reference
-    );
+    // Create journal entry for vendor transaction (skip for starting balance as it's handled above)
+    if (!isStartingBalance) {
+      const transactionType = type === 'CREDIT' ? 'VENDOR_CREDIT' : 'VENDOR_DEBIT';
+      const transactionDate = date ? new Date(date) : undefined;
+      await createJournalEntryForTransaction(
+        prisma,
+        transactionType,
+        parseFloat(amount),
+        description,
+        reference,
+        undefined,
+        transactionDate
+      );
+    }
 
     return NextResponse.json({
       success: true,

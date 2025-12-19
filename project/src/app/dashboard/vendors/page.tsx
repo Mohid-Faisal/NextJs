@@ -50,6 +50,7 @@ export default function VendorsPage() {
   const [vendorToDelete, setVendorToDelete] = useState<any>(null);
   const [vendorForBalance, setVendorForBalance] = useState<Vendors | null>(null);
   const [startingBalance, setStartingBalance] = useState("");
+  const [startingBalanceDate, setStartingBalanceDate] = useState("");
   const [sortField, setSortField] = useState<SortField>("id");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -576,6 +577,7 @@ export default function VendorsPage() {
                               onClick={() => {
                                 setVendorForBalance(vendor);
                                 setStartingBalance(vendor.currentBalance?.toString() || "0");
+                                setStartingBalanceDate(new Date().toISOString().split('T')[0]);
                                 setOpenStartingBalanceDialog(true);
                               }}
                             >
@@ -680,6 +682,17 @@ export default function VendorsPage() {
                   Negative = you owe them, Positive = they owe you
                 </p>
               </div>
+              <div>
+                <Label htmlFor="startingBalanceDate">Date</Label>
+                <Input
+                  id="startingBalanceDate"
+                  type="date"
+                  value={startingBalanceDate}
+                  onChange={(e) => setStartingBalanceDate(e.target.value)}
+                  className="mt-1"
+                  required
+                />
+              </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button
                   variant="outline"
@@ -687,6 +700,7 @@ export default function VendorsPage() {
                     setOpenStartingBalanceDialog(false);
                     setVendorForBalance(null);
                     setStartingBalance("");
+                    setStartingBalanceDate("");
                   }}
                 >
                   Cancel
@@ -695,6 +709,10 @@ export default function VendorsPage() {
                   onClick={async () => {
                     if (!vendorForBalance || !startingBalance) {
                       toast.error("Please enter a starting balance");
+                      return;
+                    }
+                    if (!startingBalanceDate) {
+                      toast.error("Please select a date");
                       return;
                     }
 
@@ -711,6 +729,7 @@ export default function VendorsPage() {
                             amount: Math.abs(balanceValue),
                             description: "Starting Balance Adjustment",
                             reference: `STARTING-BALANCE-${Date.now()}`,
+                            date: startingBalanceDate,
                           }),
                         }
                       );
@@ -722,6 +741,7 @@ export default function VendorsPage() {
                         setOpenStartingBalanceDialog(false);
                         setVendorForBalance(null);
                         setStartingBalance("");
+                        setStartingBalanceDate("");
                         // Refresh the vendors list
                         fetchVendors();
                       } else {

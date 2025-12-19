@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
     const invoicesWithRemainingAmount = await Promise.all(
       invoices.map(async (invoice) => {
         if (invoice.profile === "Customer") {
-          // Calculate total payments for this invoice
+          // Calculate total payments for this invoice (direct payments)
           const totalPayments = await prisma.payment.aggregate({
             where: {
               invoice: invoice.invoiceNumber,
@@ -130,7 +130,33 @@ export async function GET(req: NextRequest) {
             }
           });
 
-          const totalPaid = totalPayments._sum.amount || 0;
+          // Also check for allocations from other payments (stored in payment descriptions)
+          const allPayments = await prisma.payment.findMany({
+            where: {
+              transactionType: "INCOME",
+              description: { contains: "ALLOCATIONS:" }
+            },
+            select: {
+              description: true
+            }
+          });
+
+          let allocatedAmount = 0;
+          for (const payment of allPayments) {
+            const allocMatch = payment.description?.match(/ALLOCATIONS:([^|]+)/);
+            if (allocMatch) {
+              const allocations = allocMatch[1].split('|');
+              for (const alloc of allocations) {
+                const [allocInvoice, allocAmount] = alloc.split(':');
+                if (allocInvoice === invoice.invoiceNumber) {
+                  allocatedAmount += parseFloat(allocAmount) || 0;
+                }
+              }
+            }
+          }
+
+          const directPayments = totalPayments._sum.amount || 0;
+          const totalPaid = directPayments + allocatedAmount;
           const remainingAmount = Math.max(0, invoice.totalAmount - totalPaid);
 
           return {
@@ -138,7 +164,7 @@ export async function GET(req: NextRequest) {
             remainingAmount
           };
         } else if (invoice.profile === "Vendor") {
-          // Calculate total payments for vendor invoice
+          // Calculate total payments for vendor invoice (direct payments)
           const totalPayments = await prisma.payment.aggregate({
             where: {
               invoice: invoice.invoiceNumber,
@@ -149,7 +175,33 @@ export async function GET(req: NextRequest) {
             }
           });
 
-          const totalPaid = totalPayments._sum.amount || 0;
+          // Also check for allocations from other payments (stored in payment descriptions)
+          const allPayments = await prisma.payment.findMany({
+            where: {
+              transactionType: "EXPENSE",
+              description: { contains: "ALLOCATIONS:" }
+            },
+            select: {
+              description: true
+            }
+          });
+
+          let allocatedAmount = 0;
+          for (const payment of allPayments) {
+            const allocMatch = payment.description?.match(/ALLOCATIONS:([^|]+)/);
+            if (allocMatch) {
+              const allocations = allocMatch[1].split('|');
+              for (const alloc of allocations) {
+                const [allocInvoice, allocAmount] = alloc.split(':');
+                if (allocInvoice === invoice.invoiceNumber) {
+                  allocatedAmount += parseFloat(allocAmount) || 0;
+                }
+              }
+            }
+          }
+
+          const directPayments = totalPayments._sum.amount || 0;
+          const totalPaid = directPayments + allocatedAmount;
           const remainingAmount = Math.max(0, invoice.totalAmount - totalPaid);
 
           return {

@@ -554,41 +554,7 @@ export async function allocateExcessPayment(
       if (remainingInvoiceAmount > 0) {
         const allocationAmount = Math.min(remainingAmount, remainingInvoiceAmount);
         
-        // Use payment date for allocation transactions
-        const allocationDate = paymentDate ? (paymentDate instanceof Date ? paymentDate : new Date(paymentDate)) : new Date();
-        
-        // Create payment record for this allocation
-        await prisma.payment.create({
-          data: {
-            transactionType: 'INCOME',
-            category: 'Customer Payment Allocation',
-            date: allocationDate,
-            amount: allocationAmount,
-            fromPartyType: 'CUSTOMER',
-            fromCustomerId: customerId,
-            fromCustomer: invoice.customer?.CompanyName || '',
-            toPartyType: 'US',
-            toVendor: '',
-            mode: 'CASH', // Default mode for allocations
-            reference: `${paymentReference}-ALLOC`,
-            invoice: invoice.invoiceNumber,
-            description: `Excess payment allocation from invoice ${originalInvoiceNumber}`
-          }
-        });
-
-        // Create customer transaction for this allocation with payment date
-        await addCustomerTransaction(
-          prisma,
-          customerId,
-          'CREDIT',
-          allocationAmount,
-          `Excess payment allocation from invoice ${originalInvoiceNumber} to invoice ${invoice.invoiceNumber}`,
-          `${paymentReference}-ALLOC`,
-          invoice.invoiceNumber,
-          allocationDate
-        );
-
-        // Update invoice status
+        // Update invoice status (no payment record or transaction created for allocation)
         const newTotalPaid = alreadyPaid + allocationAmount;
         const newStatus = newTotalPaid >= invoice.totalAmount ? 'Paid' : 'Partial';
         
@@ -606,6 +572,9 @@ export async function allocateExcessPayment(
         remainingAmount -= allocationAmount;
       }
     }
+    
+    // Store allocation info in a format that can be retrieved later
+    // This will be stored in the main payment record description
   } else if (paymentType === 'VENDOR_PAYMENT' && vendorId) {
     // Find outstanding vendor invoices (oldest first)
     const outstandingInvoices = await prisma.invoice.findMany({
@@ -638,32 +607,7 @@ export async function allocateExcessPayment(
       if (remainingInvoiceAmount > 0) {
         const allocationAmount = Math.min(remainingAmount, remainingInvoiceAmount);
         
-        // Use payment date for allocation transactions
-        const allocationDate = paymentDate ? (paymentDate instanceof Date ? paymentDate : new Date(paymentDate)) : new Date();
-        
-        // Create payment record for this allocation
-        await prisma.payment.create({
-          data: {
-            transactionType: 'EXPENSE',
-            category: 'Vendor Payment Allocation',
-            date: allocationDate,
-            amount: allocationAmount,
-            fromPartyType: 'US',
-            fromCustomer: '',
-            toPartyType: 'VENDOR',
-            toVendorId: vendorId,
-            toVendor: invoice.vendor?.CompanyName || '',
-            mode: 'CASH', // Default mode for allocations
-            reference: `${paymentReference}-ALLOC`,
-            invoice: invoice.invoiceNumber,
-            description: `Excess payment allocation from invoice ${originalInvoiceNumber}`
-          }
-        });
-
-        // Note: Vendor transaction will be created in the main payment processing
-        // This allocation just updates the invoice status and creates payment record
-
-        // Update invoice status
+        // Update invoice status (no payment record or transaction created for allocation)
         const newTotalPaid = alreadyPaid + allocationAmount;
         const newStatus = newTotalPaid >= invoice.totalAmount ? 'Paid' : 'Partial';
         
@@ -838,6 +782,16 @@ export async function processPaymentWithAllocation(
     }
   }
 
+  // Build description with allocation info if there were allocations
+  let paymentDescription = description || `Payment for invoice ${invoiceNumber}`;
+  if (allocationResult && allocationResult.allocations.length > 0) {
+    const allocationDetails = allocationResult.allocations
+      .map(alloc => `${alloc.invoiceNumber}:${alloc.amount.toFixed(2)}`)
+      .join('|');
+    // Store allocation info in description in format: "ALLOCATIONS:invoice1:amount1|invoice2:amount2"
+    paymentDescription += ` | ALLOCATIONS:${allocationDetails}`;
+  }
+
   // Create main payment record
   const payment = await prisma.payment.create({
     data: {
@@ -854,7 +808,7 @@ export async function processPaymentWithAllocation(
       mode: paymentMethod || "CASH",
       reference: reference,
       invoice: invoiceNumber,
-      description: description || `Payment for invoice ${invoiceNumber}`
+      description: paymentDescription
     }
   });
 

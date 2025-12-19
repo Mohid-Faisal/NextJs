@@ -358,6 +358,7 @@ export default function CustomersPage() {
   const [openStartingBalanceDialog, setOpenStartingBalanceDialog] = useState(false);
   const [customerForBalance, setCustomerForBalance] = useState<Customers | null>(null);
   const [startingBalance, setStartingBalance] = useState("");
+  const [startingBalanceDate, setStartingBalanceDate] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
@@ -940,6 +941,7 @@ export default function CustomersPage() {
                               onClick={() => {
                                 setCustomerForBalance(customer);
                                 setStartingBalance(customer.currentBalance?.toString() || "0");
+                                setStartingBalanceDate(new Date().toISOString().split('T')[0]);
                                 setOpenStartingBalanceDialog(true);
                               }}
                             >
@@ -1065,6 +1067,17 @@ export default function CustomersPage() {
                   Negative = they owe you, Positive = you owe them
                 </p>
               </div>
+              <div>
+                <Label htmlFor="startingBalanceDate">Date</Label>
+                <Input
+                  id="startingBalanceDate"
+                  type="date"
+                  value={startingBalanceDate}
+                  onChange={(e) => setStartingBalanceDate(e.target.value)}
+                  className="mt-1"
+                  required
+                />
+              </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button
                   variant="outline"
@@ -1072,6 +1085,7 @@ export default function CustomersPage() {
                     setOpenStartingBalanceDialog(false);
                     setCustomerForBalance(null);
                     setStartingBalance("");
+                    setStartingBalanceDate("");
                   }}
                 >
                   Cancel
@@ -1080,6 +1094,10 @@ export default function CustomersPage() {
                   onClick={async () => {
                     if (!customerForBalance || !startingBalance) {
                       toast.error("Please enter a starting balance");
+                      return;
+                    }
+                    if (!startingBalanceDate) {
+                      toast.error("Please select a date");
                       return;
                     }
 
@@ -1096,6 +1114,7 @@ export default function CustomersPage() {
                             amount: Math.abs(balanceValue),
                             description: "Starting Balance Adjustment",
                             reference: `STARTING-BALANCE-${Date.now()}`,
+                            date: startingBalanceDate,
                           }),
                         }
                       );
@@ -1107,6 +1126,7 @@ export default function CustomersPage() {
                         setOpenStartingBalanceDialog(false);
                         setCustomerForBalance(null);
                         setStartingBalance("");
+                        setStartingBalanceDate("");
                         // Refresh the customers list
                         fetchCustomers();
                       } else {

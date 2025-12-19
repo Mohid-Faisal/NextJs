@@ -505,7 +505,7 @@ const AddShipmentPage = () => {
     recipientName: "",
     recipientAddress: "",
     deliveryStatus: "",
-    shippingMode: "",
+    shippingMode: "Courier", // Default to Courier
     packaging: "",
     vendor: "",
     serviceMode: "",
@@ -975,15 +975,15 @@ const AddShipmentPage = () => {
 
           // Set select values directly in the form state to ensure proper pre-filling
           setForm((prev) => ({
-            ...prev,
-            agency: s.agency || prev.agency,
-            office: s.office || prev.office,
-            deliveryStatus: s.deliveryStatus || prev.deliveryStatus,
-            shippingMode: s.shippingMode || prev.shippingMode,
-            packaging: s.packaging || prev.packaging,
-            vendor: s.vendor || prev.vendor,
-            serviceMode: s.serviceMode || prev.serviceMode,
-          }));
+              ...prev,
+              agency: s.agency || prev.agency,
+              office: s.office || prev.office,
+              deliveryStatus: s.deliveryStatus || prev.deliveryStatus,
+              shippingMode: s.shippingMode || prev.shippingMode,
+              packaging: s.packaging || prev.packaging,
+              vendor: s.vendor || prev.vendor,
+              serviceMode: s.serviceMode || prev.serviceMode,
+            }));
         }
       } catch (e) {
         console.error("Failed to load shipment for edit", e);
@@ -1040,22 +1040,22 @@ const AddShipmentPage = () => {
     value: string,
     onValueChange: (value: string) => void
   ) => (
-    <div>
-      <Label className="mb-2 block">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.id} value={option.name}>
-              {option.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
+      <div>
+        <Label className="mb-2 block">{label}</Label>
+        <Select value={value || undefined} onValueChange={onValueChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.id} value={option.name}>
+                {option.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
 
   return (
     <motion.div
