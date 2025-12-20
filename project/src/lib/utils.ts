@@ -523,17 +523,28 @@ export async function allocateExcessPayment(
   let remainingAmount = excessAmount;
 
   if (paymentType === 'CUSTOMER_PAYMENT' && customerId) {
-    // Find outstanding customer invoices (oldest first)
+    // Find outstanding customer invoices
     const outstandingInvoices = await prisma.invoice.findMany({
       where: {
         customerId: customerId,
         status: { in: ['Unpaid', 'Partial'] },
         invoiceNumber: { not: originalInvoiceNumber } // Exclude the original invoice
       },
-      orderBy: { invoiceDate: 'asc' }, // Oldest first
       include: {
-        customer: true
+        customer: true,
+        shipment: {
+          select: {
+            shipmentDate: true
+          }
+        }
       }
+    });
+
+    // Sort by shipment date (earliest first), fallback to invoiceDate if no shipment
+    outstandingInvoices.sort((a: any, b: any) => {
+      const dateA = a.shipment?.shipmentDate || a.invoiceDate;
+      const dateB = b.shipment?.shipmentDate || b.invoiceDate;
+      return dateA.getTime() - dateB.getTime();
     });
 
     // Calculate remaining amounts for each invoice
@@ -576,17 +587,28 @@ export async function allocateExcessPayment(
     // Store allocation info in a format that can be retrieved later
     // This will be stored in the main payment record description
   } else if (paymentType === 'VENDOR_PAYMENT' && vendorId) {
-    // Find outstanding vendor invoices (oldest first)
+    // Find outstanding vendor invoices
     const outstandingInvoices = await prisma.invoice.findMany({
       where: {
         vendorId: vendorId,
         status: { in: ['Unpaid', 'Partial'] },
         invoiceNumber: { not: originalInvoiceNumber } // Exclude the original invoice
       },
-      orderBy: { invoiceDate: 'asc' }, // Oldest first
       include: {
-        vendor: true
+        vendor: true,
+        shipment: {
+          select: {
+            shipmentDate: true
+          }
+        }
       }
+    });
+
+    // Sort by shipment date (earliest first), fallback to invoiceDate if no shipment
+    outstandingInvoices.sort((a: any, b: any) => {
+      const dateA = a.shipment?.shipmentDate || a.invoiceDate;
+      const dateB = b.shipment?.shipmentDate || b.invoiceDate;
+      return dateA.getTime() - dateB.getTime();
     });
 
     // Calculate remaining amounts for each invoice
