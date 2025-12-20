@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, X, Info } from "lucide-react";
+import { Calendar, X, Info, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 type Bill = {
@@ -62,6 +62,9 @@ export default function CreateDebitNoteDialog({
   const [entryType, setEntryType] = useState<"DEBIT" | "CREDIT">("DEBIT");
   const [debitAccountId, setDebitAccountId] = useState<string>("");
   const [creditAccountId, setCreditAccountId] = useState<string>("");
+  const [billSearchTerm, setBillSearchTerm] = useState<string>("");
+  const [isBillSelectOpen, setIsBillSelectOpen] = useState<boolean>(false);
+  const billSearchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch available bills, vendors, and accounts
   useEffect(() => {
@@ -112,6 +115,15 @@ export default function CreateDebitNoteDialog({
       }
     }
   }, [selectedBill, bills]);
+
+  // Focus search input when select opens
+  useEffect(() => {
+    if (isBillSelectOpen && billSearchInputRef.current) {
+      setTimeout(() => {
+        billSearchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isBillSelectOpen]);
 
   // Automatically set accounts based on entry type
   useEffect(() => {
@@ -217,17 +229,62 @@ export default function CreateDebitNoteDialog({
           <Label htmlFor="bill" className="text-sm font-medium">
             Bill <span className="text-red-500">*</span>
           </Label>
-          <Select value={selectedBill} onValueChange={setSelectedBill}>
+          <Select 
+            value={selectedBill} 
+            onValueChange={(value) => {
+              setSelectedBill(value);
+              setIsBillSelectOpen(false);
+              setBillSearchTerm("");
+            }}
+            open={isBillSelectOpen}
+            onOpenChange={setIsBillSelectOpen}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select Bill" />
             </SelectTrigger>
             <SelectContent>
-              {bills.map((bill) => (
-                <SelectItem key={bill.id} value={bill.id.toString()}>
-                  {bill.invoiceNumber} - {bill.vendor.PersonName || bill.vendor.CompanyName} 
-                  ({bill.currency} {bill.totalAmount.toLocaleString()})
-                </SelectItem>
-              ))}
+              <div className="p-2 border-b">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    ref={billSearchInputRef}
+                    type="text"
+                    placeholder="Search by invoice number or vendor name..."
+                    value={billSearchTerm}
+                    onChange={(e) => setBillSearchTerm(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="pl-8 h-9"
+                  />
+                </div>
+              </div>
+              <div className="max-h-[300px] overflow-y-auto">
+                {bills
+                  .filter((bill) => {
+                    if (!billSearchTerm) return true;
+                    const searchLower = billSearchTerm.toLowerCase();
+                    const invoiceNumber = bill.invoiceNumber.toLowerCase();
+                    const vendorName = (bill.vendor.PersonName || bill.vendor.CompanyName || "").toLowerCase();
+                    return invoiceNumber.includes(searchLower) || vendorName.includes(searchLower);
+                  })
+                  .map((bill) => (
+                    <SelectItem key={bill.id} value={bill.id.toString()}>
+                      {bill.invoiceNumber} - {bill.vendor.PersonName || bill.vendor.CompanyName} 
+                      ({bill.currency} {bill.totalAmount.toLocaleString()})
+                    </SelectItem>
+                  ))}
+                {bills.filter((bill) => {
+                  if (!billSearchTerm) return false;
+                  const searchLower = billSearchTerm.toLowerCase();
+                  const invoiceNumber = bill.invoiceNumber.toLowerCase();
+                  const vendorName = (bill.vendor.PersonName || bill.vendor.CompanyName || "").toLowerCase();
+                  return invoiceNumber.includes(searchLower) || vendorName.includes(searchLower);
+                }).length === 0 && (
+                  <div className="px-2 py-6 text-center text-sm text-gray-500">
+                    No bills found
+                  </div>
+                )}
+              </div>
             </SelectContent>
           </Select>
         </div>
