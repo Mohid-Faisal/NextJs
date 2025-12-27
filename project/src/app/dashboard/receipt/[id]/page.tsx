@@ -19,6 +19,8 @@ interface Package {
   weightVol?: number;
   fixedCharge?: number;
   decValue?: number;
+  vendorWeight?: number;
+  remarks?: string;
 }
 
 interface Shipment {

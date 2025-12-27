@@ -121,6 +121,7 @@ const DashboardPage = () => {
       revenue: 0,
       shipments: 0,
       accountsReceivable: 0,
+      customers: 0,
     },
     customerDestinationMap: [] as { customer: string; destination: string; shipments: number }[],
     topCustomers: [] as { customer: string; shipments: number; totalSpent: number; avgOrderValue: number; currentBalance: number; lastShipmentDate: string | null }[],
@@ -260,6 +261,7 @@ const DashboardPage = () => {
             bgColor="bg-gradient-to-r from-purple-500 to-pink-600"
             iconColor="text-white"
             onClick={() => setShowCustomersModal(true)}
+            currentMonth={(data.currentMonthData?.customers || 0).toLocaleString()}
           />
         </div>
 
@@ -381,13 +383,13 @@ const DashboardPage = () => {
               <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
             {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && (data.revenueByDestination.some(d => d.revenue > 0) || data.revenueByDestination.some(d => d.shipments > 0)) ? (
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+              <ResponsiveContainer width="100%" height={260} className="sm:h-[300px]">
                 <BarChart 
                   data={data.revenueByDestination
                     .filter(d => d.destination && d.destination !== "No Data")
                     .slice(0, 12)
                   } 
-                  margin={{ top: 10, right: 30, left: 5, bottom: 30 }}
+                  margin={{ top: 10, right: 0, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                   <XAxis 
@@ -405,7 +407,6 @@ const DashboardPage = () => {
                     stroke="#6B7280" 
                     fontSize={12}
                     tickFormatter={(value) => value.toString()}
-                    label={{ value: 'Shipments', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6B7280' } }}
                   />
                   <YAxis 
                     yAxisId="right"
@@ -417,7 +418,6 @@ const DashboardPage = () => {
                       if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
                       return value.toString();
                     }}
-                    label={{ value: 'Revenue', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6B7280' } }}
                   />
                   <Tooltip 
                     contentStyle={{ 
@@ -441,7 +441,7 @@ const DashboardPage = () => {
                   <Bar 
                     yAxisId="left"
                     dataKey="shipments" 
-                    fill="#3B82F6" 
+                    fill="#8B5CF6" 
                     radius={[4, 4, 0, 0]}
                     name="shipments"
                   />
@@ -449,7 +449,7 @@ const DashboardPage = () => {
                     yAxisId="right"
                     type="monotone" 
                     dataKey="revenue" 
-                    stroke="#10B981" 
+                    stroke="#EC4899" 
                     strokeWidth={3}
                     name="revenue"
                   />
@@ -464,9 +464,6 @@ const DashboardPage = () => {
                 </div>
               </div>
             )}
-            <div className="mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
-              Blue bars: Number of Shipments | Green line: Revenue
-            </div>
           </motion.div>
         </div>
 
@@ -510,18 +507,46 @@ const DashboardPage = () => {
                     name === 'shipments' ? value : value.toLocaleString(),
                     name === 'shipments' ? 'Shipments' : name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'
                   ]}
-                  labelFormatter={(label) => {
-                    const customer = data.topCustomers.find(c => c.customer === label);
-                    if (customer?.lastShipmentDate) {
-                      const date = new Date(customer.lastShipmentDate);
-                      const formattedDate = date.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                      });
-                      return `Last Shipment: ${formattedDate}`;
+                  labelFormatter={(label) => label}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const customer = data.topCustomers.find(c => c.customer === label);
+                      const formattedDate = customer?.lastShipmentDate 
+                        ? new Date(customer.lastShipmentDate).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })
+                        : null;
+                      
+                      return (
+                        <div style={{
+                          backgroundColor: '#1F2937',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          color: '#F9FAFB',
+                          fontSize: '12px'
+                        }}>
+                          <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>
+                            {label}
+                          </div>
+                          {payload.map((entry: any, index: number) => (
+                            <div key={index} style={{ marginBottom: '4px' }}>
+                              <span style={{ color: entry.color }}>●</span>{' '}
+                              {entry.name === 'shipments' ? 'Shipments' : entry.name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'}:{' '}
+                              {entry.name === 'shipments' ? entry.value : entry.value.toLocaleString()}
+                            </div>
+                          ))}
+                          {formattedDate && (
+                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #374151', fontSize: '11px', color: '#9CA3AF' }}>
+                              Last Shipment: {formattedDate}
+                            </div>
+                          )}
+                        </div>
+                      );
                     }
-                    return label;
+                    return null;
                   }}
                 />
                 <Bar yAxisId="left" dataKey="shipments" fill="#10B981" radius={[4, 4, 0, 0]} name="shipments" />
@@ -1151,14 +1176,12 @@ const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick, c
       </div>
       <div>
         {currentMonth !== undefined && (
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Since last month</span>
             <div className={`px-3 py-1.5 rounded-full ${getLightBgColor()} ${getTextColor()}`}>
               <span className="text-sm font-semibold">
                 {typeof currentMonth === 'number' ? currentMonth.toLocaleString() : currentMonth}
               </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Since last month</span>
             </div>
           </div>
         )}

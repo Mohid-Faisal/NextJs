@@ -52,6 +52,8 @@ interface Package {
   weightVol: number;
   fixedCharge: number;
   decValue: number;
+  vendorWeight: number;
+  remarks: string;
 }
 
 const AddShipmentPage = () => {
@@ -90,6 +92,8 @@ const AddShipmentPage = () => {
       weightVol: 0,
       fixedCharge: 0,
       decValue: 0,
+      vendorWeight: 0,
+      remarks: "",
     },
   ]);
 
@@ -194,6 +198,8 @@ const AddShipmentPage = () => {
       weightVol: 0,
       fixedCharge: 0,
       decValue: 0,
+      vendorWeight: 0,
+      remarks: "",
     };
     setPackages([...packages, newPackage]);
   };
@@ -721,6 +727,8 @@ const AddShipmentPage = () => {
             weightVol: 0,
             fixedCharge: 0,
             decValue: 0,
+            vendorWeight: 0,
+            remarks: "",
           },
         ]);
         // Reset selected sender and recipient
@@ -836,7 +844,15 @@ const AddShipmentPage = () => {
                 typeof s.packages === "string"
                   ? JSON.parse(s.packages)
                   : s.packages;
-              if (Array.isArray(parsed)) setPackages(parsed);
+              if (Array.isArray(parsed)) {
+                // Ensure all packages have the new fields with default values
+                const packagesWithDefaults = parsed.map((pkg: any) => ({
+                  ...pkg,
+                  vendorWeight: pkg.vendorWeight ?? 0,
+                  remarks: pkg.remarks ?? "",
+                }));
+                setPackages(packagesWithDefaults);
+              }
             }
             if (s.calculatedValues) {
               const parsedCalc =
@@ -1684,6 +1700,14 @@ const AddShipmentPage = () => {
                       <span className="hidden sm:inline">DecValue</span>
                       <span className="sm:hidden">Val</span>
                     </th>
+                    <th className="py-1 px-1 sm:px-2 border border-border text-center">
+                      <span className="hidden sm:inline">Vendor Weight</span>
+                      <span className="sm:hidden">VW</span>
+                    </th>
+                    <th className="border border-border px-1 sm:px-2">
+                      <span className="hidden sm:inline">Remarks</span>
+                      <span className="sm:hidden">Rem</span>
+                    </th>
                     <th className="px-1 sm:px-2 py-1 border border-border text-center">
                       <span className="hidden sm:inline">Action</span>
                       <span className="sm:hidden">A</span>
@@ -1810,6 +1834,40 @@ const AddShipmentPage = () => {
                               )
                             }
                             className="w-16 text-center"
+                          />
+                        </div>
+                      </td>
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            value={pkg.vendorWeight}
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "vendorWeight",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-16 text-center"
+                          />
+                        </div>
+                      </td>
+                      <td className="border border-border py-1 text-center">
+                        <div className="flex justify-center">
+                          <Input
+                            value={pkg.remarks}
+                            placeholder="Remarks"
+                            onChange={(e) =>
+                              updatePackage(
+                                pkg.id,
+                                "remarks",
+                                e.target.value
+                              )
+                            }
+                            className="w-50 text-center"
                           />
                         </div>
                       </td>

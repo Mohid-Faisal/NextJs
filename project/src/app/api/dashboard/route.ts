@@ -825,7 +825,8 @@ export async function GET() {
       currentMonthData: {
         revenue: currentMonthTotal,
         shipments: currentMonthShipments,
-        accountsReceivable: currentMonthReceivableAmount
+        accountsReceivable: currentMonthReceivableAmount,
+        customers: currentMonthCustomers
       },
       deliveriesByCountry: transformedDeliveriesByCountry
     };
@@ -949,7 +950,8 @@ export async function GET() {
       currentMonthData: {
         revenue: currentMonthTotal || 0,
         shipments: currentMonthShipments || 0,
-        accountsReceivable: currentMonthReceivableAmount || 0
+        accountsReceivable: currentMonthReceivableAmount || 0,
+        customers: currentMonthCustomers || 0
       }
     };
     
