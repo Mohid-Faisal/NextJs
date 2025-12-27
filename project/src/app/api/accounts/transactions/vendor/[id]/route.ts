@@ -68,7 +68,10 @@ export async function GET(
         CompanyName: true,
         PersonName: true,
         currentBalance: true,
-        creditLimit: true
+        creditLimit: true,
+        Address: true,
+        City: true,
+        Country: true
       }
     });
 
@@ -363,7 +366,10 @@ export async function GET(
         CompanyName: vendor.CompanyName,
         PersonName: vendor.PersonName,
         currentBalance: vendor.currentBalance,
-        creditLimit: vendor.creditLimit
+        creditLimit: vendor.creditLimit,
+        Address: vendor.Address,
+        City: vendor.City,
+        Country: vendor.Country
       },
       transactions: transactionsWithShipmentInfo,
       total,

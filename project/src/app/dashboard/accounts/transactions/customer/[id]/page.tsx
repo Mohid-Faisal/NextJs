@@ -23,16 +23,6 @@ import { useRouter, useParams } from "next/navigation";
 import {
   format,
   parseISO,
-  addMonths,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameMonth,
-  isSameDay,
-  isWithinInterval,
 } from "date-fns";
 
 
@@ -43,6 +33,9 @@ type Customer = {
   PersonName: string;
   currentBalance: number;
   creditLimit: number;
+  Address?: string;
+  City?: string;
+  Country?: string;
 };
 
 type Transaction = {
@@ -74,6 +67,7 @@ export default function CustomerTransactionsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState<number | 'all'>(10); // Page size state
+  const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('last3month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
     const twoMonthsAgo = new Date(
@@ -88,10 +82,8 @@ export default function CustomerTransactionsPage() {
     );
     return { from: twoMonthsAgo, to: tomorrow };
   });
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [inputValue, setInputValue] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Sorting states
@@ -195,99 +187,61 @@ export default function CustomerTransactionsPage() {
     );
   };
 
-  // Calendar functions
-  const getDaysInMonth = (date: Date) => {
-    const start = startOfWeek(startOfMonth(date));
-    const end = endOfWeek(endOfMonth(date));
-    return eachDayOfInterval({ start, end });
-  };
+  // Update date range based on period type
+  const updatePeriodDates = () => {
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); // Tomorrow to include today
 
-  const isInRange = (date: Date) => {
-    if (!dateRange?.from || !dateRange?.to) return false;
-    return isWithinInterval(date, { start: dateRange.from, end: dateRange.to });
-  };
-
-  const isRangeStart = (date: Date) => {
-    return dateRange?.from && isSameDay(date, dateRange.from);
-  };
-
-  const isRangeEnd = (date: Date) => {
-    return dateRange?.to && isSameDay(date, dateRange.to);
-  };
-
-  const handleDateClick = (date: Date) => {
-    if (!dateRange?.from || (dateRange.from && dateRange.to)) {
-      setDateRange({ from: date, to: undefined });
-    } else {
-      if (date < dateRange.from) {
-        setDateRange({ from: date, to: dateRange.from });
-      } else {
-        setDateRange({ from: dateRange.from, to: date });
-      }
+    switch (periodType) {
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'last3month':
+        const threeMonthsAgo = new Date(now);
+        threeMonthsAgo.setMonth(now.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1);
+        break;
+      case 'last6month':
+        const sixMonthsAgo = new Date(now);
+        sixMonthsAgo.setMonth(now.getMonth() - 6);
+        startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1);
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case 'financialyear':
+        if (now.getMonth() >= 6) {
+          startDate = new Date(now.getFullYear(), 6, 1); // July 1 of current year
+        } else {
+          startDate = new Date(now.getFullYear() - 1, 6, 1); // July 1 of previous year
+        }
+        break;
+      case 'custom':
+        if (customStartDate && customEndDate) {
+          startDate = new Date(customStartDate);
+          startDate.setHours(0, 0, 0, 0); // Start of the day
+          endDate = new Date(customEndDate);
+          endDate.setHours(23, 59, 59, 999); // End of the selected day
+        } else {
+          // Default to last 3 months if custom dates not set
+          const threeMonthsAgo = new Date(now);
+          threeMonthsAgo.setMonth(now.getMonth() - 3);
+          startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1);
+        }
+        break;
+      default:
+        const defaultThreeMonthsAgo = new Date(now);
+        defaultThreeMonthsAgo.setMonth(now.getMonth() - 3);
+        startDate = new Date(defaultThreeMonthsAgo.getFullYear(), defaultThreeMonthsAgo.getMonth(), 1);
     }
+
+    setDateRange({ from: startDate, to: endDate });
   };
 
-  const formatRangeLabelText = (range?: { from: Date; to?: Date }) => {
-    if (!range?.from) return "Select date range";
-    if (range.to) {
-      return `${format(range.from, "dd-MM-yyyy")} to ${format(range.to, "dd-MM-yyyy")}`;
-    }
-    return format(range.from, "dd-MM-yyyy");
-  };
-
-  const parseDateInput = (input: string) => {
-    const parts = input.split(" to ");
-    if (parts.length === 2) {
-      const fromDate = parseDate(parts[0].trim());
-      const toDate = parseDate(parts[1].trim());
-      if (fromDate && toDate) {
-        return { from: fromDate, to: toDate };
-      }
-    } else if (parts.length === 1) {
-      const fromDate = parseDate(parts[0].trim());
-      if (fromDate) {
-        return { from: fromDate, to: undefined };
-      }
-    }
-    return undefined;
-  };
-
-  const parseDate = (dateStr: string) => {
-    const match = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-    if (match) {
-      const [, day, month, year] = match;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-    return null;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-  };
-
-  const handleInputBlur = () => {
-    setIsEditing(false);
-    if (inputValue.trim()) {
-      const parsedRange = parseDateInput(inputValue);
-      if (parsedRange) {
-        setDateRange(parsedRange);
-        setPage(1);
-      }
-    }
-  };
-
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.currentTarget.blur();
-    } else if (e.key === "Escape") {
-      setIsEditing(false);
-      setInputValue(formatRangeLabelText(dateRange));
-    }
-  };
+  useEffect(() => {
+    updatePeriodDates();
+  }, [periodType, customStartDate, customEndDate]);
 
   // Export functions
   const exportToExcel = (data: any[], headers: string[], filename: string) => {
@@ -306,49 +260,356 @@ export default function CustomerTransactionsPage() {
     document.body.removeChild(link);
   };
 
-  const exportToPrint = (data: any[], headers: string[], title: string, total: number) => {
+  const exportToPrint = async (data: any[], headers: string[], title: string, total: number, startingBalance: number, totalDebit: number, totalCredit: number, finalBalance: number) => {
+    // Fetch logo and footer from API
+    let logoBase64 = '';
+    let footerBase64 = '';
+    try {
+      const assetsResponse = await fetch('/api/assets/logo-footer');
+      if (assetsResponse.ok) {
+        const assets = await assetsResponse.json();
+        logoBase64 = assets.logo || '';
+        footerBase64 = assets.footer || '';
+      }
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+    }
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
+      const formatDateRange = () => {
+        if (dateRange?.from && dateRange?.to) {
+          const from = new Date(dateRange.from);
+          const to = new Date(dateRange.to);
+          return `${from.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()} TO ${to.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
+        }
+        return 'N/A';
+      };
+
+      const customerInfo = customer ? `
+        <div class="invoice-info">
+          <div class="invoice-col">
+            <address>
+              <strong>${customer.CompanyName || 'Customer Name'}</strong><br>
+              Attn: ${customer.PersonName || 'Contact Person'}<br>
+              ${customer.Address || 'Customer Address'}<br>
+              ${customer.City || ''}${customer.City && customer.Country ? ', ' : ''}${customer.Country || ''}
+            </address>
+          </div>
+          <div class="invoice-col" style="text-align: right;">
+            <p style="margin-bottom: 0;"><b>Report: </b><span style="float: right;">${title}</span></p>
+            <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;">${customer.id || 'N/A'}</span></p>
+            <p style="margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${startingBalance.toLocaleString()}</span></p>
+            <p style="margin-bottom: 0;"><b>Date: </b><span style="float: right;">${new Date().toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            })}</span></p>
+          </div>
+        </div>
+      ` : '';
+      
+      // Wait for images to load before opening print dialog
+      const waitForImages = (html: string): Promise<void> => {
+        return new Promise((resolve) => {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = html;
+          const images = tempDiv.querySelectorAll('img');
+          if (images.length === 0) {
+            resolve();
+            return;
+          }
+          let loadedCount = 0;
+          const totalImages = images.length;
+          images.forEach((img) => {
+            const newImg = new Image();
+            newImg.onload = () => {
+              loadedCount++;
+              if (loadedCount === totalImages) {
+                resolve();
+              }
+            };
+            newImg.onerror = () => {
+              loadedCount++;
+              if (loadedCount === totalImages) {
+                resolve();
+              }
+            };
+            newImg.src = img.getAttribute('src') || '';
+          });
+        });
+      };
+
       const tableHTML = `
+        <!DOCTYPE html>
         <html>
           <head>
             <title>${title}</title>
+            <meta charset="utf-8">
             <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              table { border-collapse: collapse; width: 100%; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-              h1 { color: #333; }
+              * { box-sizing: border-box; }
+              html, body { 
+                font-family: Arial, sans-serif; 
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              body {
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+                padding: 20px;
+              }
+              .header-section {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 30px;
+                padding-bottom: 20px;
+                border-bottom: 2px solid #ddd;
+              }
+              .logo-section {
+                display: flex;
+                align-items: center;
+              }
+              .logo-section img {
+                width: 200px;
+                height: auto;
+                max-width: 100%;
+              }
+              .report-info {
+                text-align: right;
+              }
+              .report-title {
+                font-size: 20px;
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 10px;
+              }
+              .report-date {
+                color: #666;
+                font-size: 14px;
+              }
+              .invoice-info {
+                margin: 20px 0;
+                display: flex;
+                justify-content: space-between;
+              }
+              .invoice-col {
+                flex: 1;
+              }
+              .invoice-col address {
+                font-style: normal;
+                line-height: 1.6;
+                margin: 0;
+              }
+              .invoice-col address strong {
+                font-size: 16px;
+                color: #333;
+                display: block;
+                margin-bottom: 5px;
+              }
+              .invoice-col p {
+                margin: 5px 0;
+                font-size: 14px;
+                color: #666;
+              }
+              .invoice-col p b {
+                color: #333;
+              }
+              .table-responsive {
+                width: 100%;
+                margin-top: 25px;
+                overflow-x: auto;
+              }
+              table { 
+                border-collapse: collapse; 
+                width: 100%; 
+                margin: 0;
+                background-color: #fff;
+                border: 1px solid #ccc;
+              }
+              thead {
+                background-color: #4a5568 !important;
+              }
+              th { 
+                background-color: #4a5568 !important;
+                color: white;
+                font-weight: 600;
+                padding: 10px 8px;
+                text-align: left;
+                border: 1px solid #2d3748;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              td { 
+                padding: 8px;
+                text-align: left;
+                border: 1px solid #e2e8f0;
+                font-size: 11px;
+                color: #2d3748;
+                vertical-align: top;
+              }
+              tbody tr {
+                background-color: #fff;
+              }
+              tbody tr:nth-child(even) {
+                background-color: #f7fafc;
+              }
+              tbody tr:hover {
+                background-color: #edf2f7;
+              }
+              .amount-cell {
+                text-align: right;
+                font-family: 'Courier New', monospace;
+              }
+              .balance-cell {
+                text-align: right;
+                font-weight: 600;
+                font-family: 'Courier New', monospace;
+              }
+              .total-section {
+                margin-top: 25px;
+                padding: 12px 20px;
+                background-color: #e2e8f0;
+                text-align: right;
+                font-weight: 700;
+                font-size: 14px;
+                border: 1px solid #cbd5e0;
+                border-radius: 4px;
+              }
+              .content-wrapper {
+                flex: 1;
+              }
+              .footer-container {
+                width: 100%;
+                margin-top: auto;
+              }
+              @media print {
+                html, body { 
+                  margin: 0; 
+                  padding: 0;
+                  height: 100%;
+                }
+                body {
+                  display: flex;
+                  flex-direction: column;
+                  min-height: 100vh;
+                  padding: 15px;
+                }
+                .content-wrapper {
+                  flex: 1;
+                }
+                .header-section { page-break-after: avoid; }
+                table { page-break-inside: auto; }
+                tr { page-break-inside: avoid; page-break-after: auto; }
+                thead { display: table-header-group; }
+                tfoot { display: table-footer-group; }
+                .footer-container {
+                  margin-top: auto;
+                  page-break-inside: avoid;
+                }
+                @page {
+                  margin: 0.5in;
+                  size: A4;
+                }
+              }
             </style>
           </head>
           <body>
-            <h1>${title}</h1>
-            <p>Total: ${total}</p>
-            <p>Generated on: ${new Date().toLocaleDateString()}</p>
-            <table>
-              <thead>
-                <tr>
-                  ${headers.map(header => `<th>${header}</th>`).join('')}
-                </tr>
-              </thead>
-              <tbody>
-                ${data.map(row => `<tr>${row.map((cell: any) => `<td>${cell}</td>`).join('')}</tr>`).join('')}
-              </tbody>
-            </table>
+            <div class="content-wrapper">
+              <div class="header-section">
+                <div class="logo-section">
+                  ${logoBase64 ? `<img src="${logoBase64}" alt="PSS Logo" style="width: 200px; height: auto; max-width: 100%;">` : '<img src="/logo_final.png" alt="PSS Logo" onerror="this.style.display=\'none\'" style="width: 200px; height: auto; max-width: 100%;">'}
+                </div>
+                <div class="report-info">
+                  <div class="report-title">${title}</div>
+                  <div class="report-date">Generated on: ${new Date().toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  })}</div>
+                </div>
+              </div>
+              
+              ${customerInfo}
+              
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      ${headers.map((header, index) => {
+                        const isDebit = header.toLowerCase() === 'debit';
+                        const isCredit = header.toLowerCase() === 'credit';
+                        const isBalance = header.toLowerCase() === 'balance';
+                        return `<th style="${isDebit || isCredit || isBalance ? 'text-align: right;' : ''}">${header}</th>`;
+                      }).join('')}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${data.map(row => `<tr>${row.map((cell: any, cellIndex: number) => {
+                      const header = headers[cellIndex];
+                      const isDebit = header?.toLowerCase() === 'debit';
+                      const isCredit = header?.toLowerCase() === 'credit';
+                      const isBalance = header?.toLowerCase() === 'balance';
+                      const cellClass = isDebit || isCredit ? 'amount-cell' : isBalance ? 'balance-cell' : '';
+                      return `<td class="${cellClass}">${cell}</td>`;
+                    }).join('')}</tr>`).join('')}
+                  </tbody>
+                  <tfoot>
+                    <tr style="background-color: #e2e8f0; font-weight: 700;">
+                      <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0;">Total:</td>
+                      <td style="text-align: right; padding: 10px 8px; font-family: 'Courier New', monospace; border: 1px solid #cbd5e0;">${totalDebit.toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; font-family: 'Courier New', monospace; border: 1px solid #cbd5e0;">${totalCredit.toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; font-family: 'Courier New', monospace; border: 1px solid #cbd5e0;">${finalBalance.toLocaleString()}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              
+              <div class="total-section">
+                Final Balance: ${finalBalance.toLocaleString()}
+              </div>
+            </div>
+            ${footerBase64 ? `<div class="footer-container"><img src="${footerBase64}" width="100%" alt="Footer" style="display: block;"></div>` : ''}
           </body>
         </html>
       `;
       
       printWindow.document.write(tableHTML);
       printWindow.document.close();
-      printWindow.print();
+      
+      // Wait for images to load before printing
+      await waitForImages(tableHTML);
+      
+      // Small delay to ensure everything is rendered
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
     }
   };
 
   const exportToPDF = async (data: any[], headers: string[], title: string, total: number) => {
     setIsGeneratingPDF(true);
     try {
-      const { Document, Page, Text, View, StyleSheet, pdf } = await import('@react-pdf/renderer');
+      // Fetch logo and footer from API
+      let logoBase64 = '';
+      let footerBase64 = '';
+      try {
+        const assetsResponse = await fetch('/api/assets/logo-footer');
+        if (assetsResponse.ok) {
+          const assets = await assetsResponse.json();
+          logoBase64 = assets.logo || '';
+          footerBase64 = assets.footer || '';
+        }
+      } catch (error) {
+        console.error('Error fetching assets:', error);
+      }
+
+      const { Document, Page, Text, View, StyleSheet, pdf, Image } = await import('@react-pdf/renderer');
       
       const styles = StyleSheet.create({
         page: {
@@ -383,31 +644,37 @@ export default function CustomerTransactionsPage() {
           width: '14.28%',
           borderStyle: 'solid',
           borderWidth: 1,
-          borderLeftWidth: 0,
-          borderTopWidth: 0,
-          borderColor: '#bfbfbf',
-          backgroundColor: '#4285f4',
+          borderColor: '#2d3748',
+          backgroundColor: '#4a5568',
+          padding: 8,
         },
         tableCol: {
           width: '14.28%',
           borderStyle: 'solid',
           borderWidth: 1,
-          borderLeftWidth: 0,
-          borderTopWidth: 0,
-          borderColor: '#bfbfbf',
+          borderColor: '#e2e8f0',
+          padding: 6,
         },
         tableCellHeader: {
           margin: 'auto',
-          marginTop: 5,
-          fontSize: 8,
+          fontSize: 9,
           fontWeight: 'bold',
           color: '#ffffff',
+          textTransform: 'uppercase',
         },
         tableCell: {
           margin: 'auto',
-          marginTop: 5,
-          fontSize: 8,
-          color: '#333',
+          fontSize: 9,
+          color: '#2d3748',
+        },
+        amountCell: {
+          textAlign: 'right',
+          fontFamily: 'Courier',
+        },
+        balanceCell: {
+          textAlign: 'right',
+          fontWeight: 'bold',
+          fontFamily: 'Courier',
         },
       });
 
@@ -415,29 +682,106 @@ export default function CustomerTransactionsPage() {
         return (
           <Document>
             <Page size="A4" style={styles.page}>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.subtitle}>Total: {total}</Text>
-              <Text style={styles.subtitle}>Generated on: {new Date().toLocaleDateString()}</Text>
+              <View style={{ marginBottom: 20, borderBottom: '2 solid #1e40af', paddingBottom: 15 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {logoBase64 ? (
+                      <Image src={logoBase64} style={{ width: 200 }} />
+                    ) : (
+                      <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1e40af' }}>PSS</Text>
+                    )}
+                  </View>
+                  <View style={{ textAlign: 'right' }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 5 }}>{title}</Text>
+                    <Text style={{ fontSize: 10, color: '#666' }}>
+                      Generated on: {new Date().toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </Text>
+                  </View>
+                </View>
+                {customer && (
+                  <View style={{ border: '1 solid #ddd', padding: 15, backgroundColor: '#fafafa', marginBottom: 15 }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15 }}>
+                      <View style={{ width: '48%' }}>
+                        <Text style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', marginBottom: 3, fontWeight: 'bold' }}>Account Holder</Text>
+                        <Text style={{ fontSize: 11, color: '#333', fontWeight: 'bold' }}>{customer.CompanyName || 'Customer Name'}</Text>
+                      </View>
+                      <View style={{ width: '48%' }}>
+                        <Text style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', marginBottom: 3, fontWeight: 'bold' }}>Account Number</Text>
+                        <Text style={{ fontSize: 11, color: '#333' }}>{customer.id || 'N/A'}</Text>
+                      </View>
+                      <View style={{ width: '100%', marginTop: 5 }}>
+                        <Text style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', marginBottom: 3, fontWeight: 'bold' }}>Address</Text>
+                        <Text style={{ fontSize: 10, color: '#333', lineHeight: 1.4 }}>
+                          {customer.Address || ''}{customer.Address && (customer.City || customer.Country) ? ', ' : ''}
+                          {customer.City || ''}{customer.City && customer.Country ? ', ' : ''}{customer.Country || ''}
+                          {customer.PersonName ? ` | Attn: ${customer.PersonName}` : ''}
+                        </Text>
+                      </View>
+                      <View style={{ width: '48%' }}>
+                        <Text style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', marginBottom: 3, fontWeight: 'bold' }}>Account Status</Text>
+                        <Text style={{ fontSize: 11, color: '#333' }}>Active</Text>
+                      </View>
+                      <View style={{ width: '48%' }}>
+                        <Text style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', marginBottom: 3, fontWeight: 'bold' }}>Balance at Period End</Text>
+                        <Text style={{ fontSize: 11, color: '#1a202c', fontWeight: 'bold' }}>{total.toLocaleString()}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </View>
               
               <View style={styles.table}>
                 <View style={styles.tableRow}>
-                  {headers.map((header, index) => (
-                    <View key={index} style={styles.tableColHeader}>
-                      <Text style={styles.tableCellHeader}>{header}</Text>
-                    </View>
-                  ))}
+                  {headers.map((header, index) => {
+                    const isDebit = header?.toLowerCase() === 'debit';
+                    const isCredit = header?.toLowerCase() === 'credit';
+                    const isBalance = header?.toLowerCase() === 'balance';
+                    const headerStyle = isDebit || isCredit || isBalance 
+                      ? { ...styles.tableCellHeader, textAlign: 'right' as const }
+                      : styles.tableCellHeader;
+                    return (
+                      <View key={index} style={styles.tableColHeader}>
+                        <Text style={headerStyle}>{header}</Text>
+                      </View>
+                    );
+                  })}
                 </View>
                 
                 {data.map((row, rowIndex) => (
-                  <View key={rowIndex} style={styles.tableRow}>
-                    {row.map((cell: any, cellIndex: number) => (
-                      <View key={cellIndex} style={styles.tableCol}>
-                        <Text style={styles.tableCell}>{String(cell || '')}</Text>
-                      </View>
-                    ))}
+                  <View key={rowIndex} style={[styles.tableRow, { backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f7fafc' }]}>
+                    {row.map((cell: any, cellIndex: number) => {
+                      const header = headers[cellIndex];
+                      const isDebit = header?.toLowerCase() === 'debit';
+                      const isCredit = header?.toLowerCase() === 'credit';
+                      const isBalance = header?.toLowerCase() === 'balance';
+                      const cellStyle = isDebit || isCredit
+                        ? { ...styles.tableCell, ...styles.amountCell }
+                        : isBalance 
+                        ? { ...styles.tableCell, ...styles.balanceCell }
+                        : styles.tableCell;
+                      return (
+                        <View key={cellIndex} style={styles.tableCol}>
+                          <Text style={cellStyle}>{String(cell || '')}</Text>
+                        </View>
+                      );
+                    })}
                   </View>
                 ))}
               </View>
+              
+              <View style={{ marginTop: 20, padding: 12, backgroundColor: '#e2e8f0', border: '1 solid #cbd5e0', borderRadius: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'right' }}>Total Balance: {total.toLocaleString()}</Text>
+              </View>
+              
+              {footerBase64 && (
+                <View style={{ marginTop: 30, width: '100%' }}>
+                  <Image src={footerBase64} style={{ width: '100%' }} />
+                </View>
+              )}
             </Page>
           </Document>
         );
@@ -461,7 +805,7 @@ export default function CustomerTransactionsPage() {
   };
 
   const getTransactionExportData = (transactions: Transaction[]) => {
-    const headers = ["Date", "Type", "Amount", "Description", "Reference", "Invoice", "Balance"];
+    const headers = ["Date", "Invoice", "Description", "Reference", "Debit", "Credit", "Balance"];
     const data = transactions.map(transaction => {
       let voucherDateToUse: string;
       
@@ -495,13 +839,16 @@ export default function CustomerTransactionsPage() {
         formattedDate = new Date(voucherDateToUse).toLocaleDateString('en-GB');
       }
       
+      const debit = transaction.type === "DEBIT" ? transaction.amount.toLocaleString() : "-";
+      const credit = transaction.type === "CREDIT" ? transaction.amount.toLocaleString() : "-";
+      
       return [
         formattedDate,
-        transaction.type,
-        `${transaction.amount.toLocaleString()}`,
+        transaction.invoice || "-",
         transaction.description,
-        transaction.reference || "N/A",
-        transaction.invoice || "N/A",
+        transaction.reference || "-",
+        debit,
+        credit,
         `${transaction.newBalance.toLocaleString()}`
       ];
     });
@@ -513,13 +860,70 @@ export default function CustomerTransactionsPage() {
     exportToExcel(data, headers, 'customer_transactions');
   };
 
-  const handleExportPrint = () => {
-    const { headers, data } = getTransactionExportData(sortedTransactions);
-    exportToPrint(data, headers, 'Customer Transactions Report', total);
+  const handleExportPrint = async () => {
+    // Sort transactions oldest first for export
+    const sortedForExport = [...sortedTransactions].sort((a, b) => {
+      const getVoucherDate = (t: Transaction) => {
+        const isCreditDebitNote = t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT");
+        if (isCreditDebitNote && t.creditNoteDate) {
+          return t.creditNoteDate;
+        }
+        const isShipmentTransaction = t.type === "DEBIT" && t.invoice;
+        const isPaymentTransaction = t.type === "CREDIT" && t.invoice;
+        if (isShipmentTransaction) {
+          return t.shipmentDate || t.createdAt;
+        } else if (isPaymentTransaction) {
+          return t.paymentDate || t.createdAt;
+        }
+        return t.createdAt;
+      };
+      const dateA = new Date(getVoucherDate(a)).getTime();
+      const dateB = new Date(getVoucherDate(b)).getTime();
+      return dateA - dateB; // Oldest first
+    });
+    
+    // Calculate starting balance (balance before the first transaction in the period)
+    const startingBalance = sortedForExport.length > 0 
+      ? sortedForExport[0].previousBalance 
+      : (customer?.currentBalance || 0);
+    
+    // Calculate totals
+    const totalDebit = sortedForExport
+      .filter(t => t.type === "DEBIT")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalCredit = sortedForExport
+      .filter(t => t.type === "CREDIT")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const finalBalance = sortedForExport.length > 0 
+      ? sortedForExport[sortedForExport.length - 1].newBalance 
+      : startingBalance;
+    
+    const { headers, data } = getTransactionExportData(sortedForExport);
+    await exportToPrint(data, headers, 'Customer Transactions Report', total, startingBalance, totalDebit, totalCredit, finalBalance);
   };
 
   const handleExportPDF = () => {
-    const { headers, data } = getTransactionExportData(sortedTransactions);
+    // Sort transactions oldest first for export
+    const sortedForExport = [...sortedTransactions].sort((a, b) => {
+      const getVoucherDate = (t: Transaction) => {
+        const isCreditDebitNote = t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT");
+        if (isCreditDebitNote && t.creditNoteDate) {
+          return t.creditNoteDate;
+        }
+        const isShipmentTransaction = t.type === "DEBIT" && t.invoice;
+        const isPaymentTransaction = t.type === "CREDIT" && t.invoice;
+        if (isShipmentTransaction) {
+          return t.shipmentDate || t.createdAt;
+        } else if (isPaymentTransaction) {
+          return t.paymentDate || t.createdAt;
+        }
+        return t.createdAt;
+      };
+      const dateA = new Date(getVoucherDate(a)).getTime();
+      const dateB = new Date(getVoucherDate(b)).getTime();
+      return dateA - dateB; // Oldest first
+    });
+    const { headers, data } = getTransactionExportData(sortedForExport);
     exportToPDF(data, headers, 'Customer Transactions Report', total);
   };
 
@@ -661,164 +1065,51 @@ export default function CustomerTransactionsPage() {
           </div>
 
           {/* Date Range Filter */}
-          <div>
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="dd-MM-yyyy to dd-MM-yyyy"
-                value={isEditing ? inputValue : formatRangeLabelText(dateRange)}
-                onChange={handleInputChange}
-                onFocus={() => {
-                  setIsEditing(true);
-                  setInputValue(formatRangeLabelText(dateRange));
-                }}
-                onBlur={handleInputBlur}
-                onKeyDown={handleInputKeyDown}
-                onClick={() => !isEditing && setShowDatePicker(!showDatePicker)}
-                className="w-64 bg-muted cursor-text"
-              />
-              {!isEditing && (
-                <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              )}
-              {showDatePicker && (
-                <div className="absolute right-0 z-9999 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4" style={{ minWidth: "600px" }}>
-                  <div className="flex gap-4">
-                    {/* Left Calendar */}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <button
-                          onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        >
-                          ←
-                        </button>
-                        <h3 className="text-sm font-medium">
-                          {format(currentMonth, "MMM yyyy")}
-                        </h3>
-                        <div className="w-6"></div>
-                      </div>
-                      <div className="grid grid-cols-7 gap-1 text-xs">
-                        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
-                          <div key={day} className="p-2 text-center text-gray-500 font-medium">
-                            {day}
-                          </div>
-                        ))}
-                        {getDaysInMonth(currentMonth).map((day, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleDateClick(day)}
-                            className={`p-2 text-center text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900 ${
-                              !isSameMonth(day, currentMonth) 
-                                ? "text-gray-300 dark:text-gray-600" 
-                                : isRangeStart(day)
-                                ? "bg-blue-500 text-white"
-                                : isRangeEnd(day)
-                                ? "bg-blue-500 text-white"
-                                : isInRange(day)
-                                ? "bg-blue-100 dark:bg-blue-800"
-                                : "text-gray-700 dark:text-gray-200"
-                            }`}
-                          >
-                            {format(day, "d")}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Right Calendar */}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="w-6"></div>
-                        <h3 className="text-sm font-medium">
-                          {format(addMonths(currentMonth, 1), "MMM yyyy")}
-                        </h3>
-                        <button
-                          onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        >
-                          →
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-7 gap-1 text-xs">
-                        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
-                          <div key={day} className="p-2 text-center text-gray-500 font-medium">
-                            {day}
-                          </div>
-                        ))}
-                        {getDaysInMonth(addMonths(currentMonth, 1)).map((day, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleDateClick(day)}
-                            className={`p-2 text-center text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900 ${
-                              !isSameMonth(day, addMonths(currentMonth, 1)) 
-                                ? "text-gray-300 dark:text-gray-600" 
-                                : isRangeStart(day)
-                                ? "bg-blue-500 text-white"
-                                : isRangeEnd(day)
-                                ? "bg-blue-500 text-white"
-                                : isInRange(day)
-                                ? "bg-blue-100 dark:bg-blue-800"
-                                : "text-gray-700 dark:text-gray-200"
-                            }`}
-                          >
-                            {format(day, "d")}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {dateRange?.from && dateRange?.to
-                        ? `${format(dateRange.from, "dd-MM-yyyy")} to ${format(dateRange.to, "dd-MM-yyyy")}`
-                        : "Select date range"}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const now = new Date();
-                          const twoMonthsAgo = new Date(
-                            now.getFullYear(),
-                            now.getMonth() - 2,
-                            now.getDate()
-                          );
-                          const tomorrow = new Date(
-                            now.getFullYear(),
-                            now.getMonth(),
-                            now.getDate() + 1
-                          );
-                          setDateRange({ from: twoMonthsAgo, to: tomorrow });
-                          setCurrentMonth(twoMonthsAgo);
-                        }}
-                        className="text-gray-600 dark:text-gray-400"
-                      >
-                        Restore Default
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setDateRange(undefined);
-                          setShowDatePicker(false);
-                        }}
-                        className="text-gray-600 dark:text-gray-400"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => setShowDatePicker(false)}
-                      >
-                        Apply
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <Select
+              value={periodType}
+              onValueChange={(value: string) => {
+                setPeriodType(value as any);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Current Month</SelectItem>
+                <SelectItem value="last3month">Last 3 Month</SelectItem>
+                <SelectItem value="last6month">Last 6 Month</SelectItem>
+                <SelectItem value="year">Current Year</SelectItem>
+                <SelectItem value="financialyear">Financial Year</SelectItem>
+                <SelectItem value="custom">Custom Period</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {periodType === 'custom' && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-500 shrink-0 mt-1" />
+                <Input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => {
+                    setCustomStartDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full sm:w-44 min-w-[160px]"
+                />
+                <span className="text-gray-500 shrink-0">to</span>
+                <Input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => {
+                    setCustomEndDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full sm:w-44 min-w-[160px]"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
