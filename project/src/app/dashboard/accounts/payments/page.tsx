@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,8 @@ type SortField = keyof Payment;
 type SortOrder = "asc" | "desc";
 
 export default function PaymentsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [total, setTotal] = useState(0);
 
@@ -92,6 +95,16 @@ export default function PaymentsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+
+  // Check for query parameter when coming from dashboard
+  useEffect(() => {
+    const typeParam = searchParams.get('type');
+    if (typeParam === 'All') {
+      setTypeFilter("All");
+      // Clear the query parameter from URL
+      router.replace('/dashboard/accounts/payments', { scroll: false });
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     const fetchPayments = async () => {

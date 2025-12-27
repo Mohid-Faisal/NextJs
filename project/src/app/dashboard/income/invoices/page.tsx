@@ -1006,28 +1006,37 @@ export default function IncomeInvoicesPage() {
         </CardContent>
       </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform w-full sm:w-auto"
-          >
-            ← Prev
-          </Button>
-          <span className="text-center">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform w-full sm:w-auto"
-          >
-            Next →
-          </Button>
+      {/* Pagination and Total Count */}
+      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
+        <div className="text-center sm:text-left">
+          {pageSize === 'all' 
+            ? `Showing all ${total} invoices`
+            : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} invoices`
+          }
         </div>
-      )}
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button
+              disabled={page <= 1}
+              onClick={() => setPage((prev) => prev - 1)}
+              className="hover:scale-105 transition-transform w-full sm:w-auto"
+            >
+              ← Prev
+            </Button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              disabled={page >= totalPages}
+              onClick={() => setPage((prev) => prev + 1)}
+              className="hover:scale-105 transition-transform w-full sm:w-auto"
+            >
+              Next →
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Delete Dialog */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>

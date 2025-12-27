@@ -296,43 +296,66 @@ export async function GET() {
       color: getStatusColor(status.deliveryStatus || "Pending")
     }));
     
-    // Get revenue by destination - fix to use shipment destinations and calculate revenue properly
-    const revenueByDestination = await prisma.shipment.groupBy({
+    // Get revenue by destination with shipments - get top 12 countries with both shipments and revenue
+    const allDestinationsForRevenue = await prisma.shipment.groupBy({
       by: ['destination'],
       _count: {
         id: true
-      },
-      orderBy: {
-        _count: {
-          id: 'desc'
-        }
-      },
-      take: 5
+      }
     });
     
-    // Calculate revenue for each destination by looking up invoices
+    // Filter out null/empty destinations and get top 12 by shipment count
+    const topDestinationsForRevenue = allDestinationsForRevenue
+      .filter(dest => dest.destination && dest.destination.trim() !== "")
+      .sort((a, b) => b._count.id - a._count.id)
+      .slice(0, 12);
+    
+    // Calculate revenue for each destination using shipment-invoice relationship
     const revenueByDestinationWithRevenue = await Promise.all(
-      revenueByDestination.map(async (dest) => {
-        const destinationRevenue = await prisma.invoice.aggregate({
+      topDestinationsForRevenue.map(async (dest) => {
+        // Get shipments with this destination
+        const shipmentsWithDestination = await prisma.shipment.findMany({
           where: {
-            destination: dest.destination,
-            customerId: { not: null },
-            status: { not: "Cancelled" }
+            destination: dest.destination
           },
-          _sum: {
-            totalAmount: true
+          select: {
+            id: true,
+            invoiceNumber: true
           }
         });
         
+        // Get invoices for these shipments using shipmentId relationship
+        const shipmentIds = shipmentsWithDestination.map(s => s.id);
+        
+        let destinationRevenue = 0;
+        if (shipmentIds.length > 0) {
+          const revenueResult = await prisma.invoice.aggregate({
+            where: {
+              shipmentId: {
+                in: shipmentIds
+              },
+              customerId: { not: null },
+              status: { not: "Cancelled" }
+            },
+            _sum: {
+              totalAmount: true
+            }
+          });
+          destinationRevenue = revenueResult._sum.totalAmount || 0;
+        }
+        
         return {
           destination: dest.destination,
-          revenue: destinationRevenue._sum.totalAmount || 0,
+          revenue: destinationRevenue,
           shipments: dest._count.id
         };
       })
     );
     
-    const transformedRevenueByDestination = revenueByDestinationWithRevenue;
+    // Sort by revenue descending to show top revenue countries
+    const transformedRevenueByDestination = revenueByDestinationWithRevenue
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 12);
     
     // Get monthly shipments count (using shipmentDate)
     const monthlyShipments = [];
@@ -482,26 +505,53 @@ export async function GET() {
             status: { not: "Cancelled" }
           },
           select: {
-            totalAmount: true
+            totalAmount: true,
+            shipment: {
+              select: {
+                shipmentDate: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
           }
         }
       }
     });
     
     // Calculate metrics for each customer and sort by shipment count
-    const customersWithMetrics = allCustomers.map(customer => {
+    const customersWithMetrics = await Promise.all(allCustomers.map(async (customer) => {
       const totalSpent = customer.invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
       const shipments = customer.invoices.length;
       const avgOrderValue = shipments > 0 ? totalSpent / shipments : 0;
+      
+      // Get the last shipment date from all invoices with shipments
+      // Find the most recent shipment date by checking all invoices
+      let lastShipmentDate: Date | null = null;
+      const shipmentDates: Date[] = [];
+      
+      for (const invoice of customer.invoices) {
+        if (invoice.shipment?.shipmentDate) {
+          shipmentDates.push(invoice.shipment.shipmentDate);
+        }
+      }
+      
+      // Get the most recent shipment date
+      if (shipmentDates.length > 0) {
+        lastShipmentDate = shipmentDates.reduce((latest, current) => {
+          return current > latest ? current : latest;
+        });
+      }
       
       return {
         customer: customer.CompanyName,
         shipments,
         totalSpent,
         avgOrderValue,
-        currentBalance: customer.currentBalance || 0
+        currentBalance: customer.currentBalance || 0,
+        lastShipmentDate: lastShipmentDate ? lastShipmentDate.toISOString() : null
       };
-    });
+    }));
     
     // Sort by shipment count (descending) and take top 25
     const transformedTopCustomers = customersWithMetrics
@@ -720,6 +770,22 @@ export async function GET() {
     // Calculate revenue percentage change
     const revenuePercentageChange = calculatePercentageChange(currentMonthTotal, previousMonthTotal);
     
+    // Get deliveries by country (only delivered shipments)
+    const deliveriesByCountry = await prisma.shipment.groupBy({
+      by: ['destination'],
+      where: {
+        deliveryStatus: 'Delivered'
+      },
+      _count: {
+        id: true
+      }
+    });
+    
+    const transformedDeliveriesByCountry = deliveriesByCountry.map(item => ({
+      country: item.destination,
+      deliveries: item._count.id
+    }));
+    
     const data = {
       totalShipments,
       totalUsers: currentActiveUsers, // Show active users instead of total users
@@ -760,7 +826,8 @@ export async function GET() {
         revenue: currentMonthTotal,
         shipments: currentMonthShipments,
         accountsReceivable: currentMonthReceivableAmount
-      }
+      },
+      deliveriesByCountry: transformedDeliveriesByCountry
     };
     
     // Debug logging
@@ -776,7 +843,7 @@ export async function GET() {
     // Additional debugging for problematic charts
     console.log('=== DEBUGGING PROBLEMATIC CHARTS ===');
     console.log('1. Revenue by Destination:', {
-      raw: revenueByDestination,
+      raw: topDestinationsForRevenue,
       transformed: transformedRevenueByDestination,
       length: transformedRevenueByDestination.length
     });

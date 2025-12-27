@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Shipment } from "@prisma/client";
@@ -46,19 +46,21 @@ import {
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import DeleteDialog from "@/components/DeleteDialog";
 
-const LIMIT = 10;
-
 export default function ShipmentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [shipments, setShipments] = useState<
     (Shipment & { invoices: { status: string }[] })[]
   >([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
 
   const [searchTerm, setSearchTerm] = useState("");
+  // Check if coming from dashboard - if status=All in query params, set to "All"
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("All");
   const [deliveryStatuses, setDeliveryStatuses] = useState<{ id: number; name: string }[]>([]);
+  const isFromDashboardRef = useRef(false);
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('last3month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
@@ -83,7 +85,7 @@ export default function ShipmentsPage() {
   >(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  const totalPages = Math.ceil(total / LIMIT);
+  const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
   type SortField =
     | "trackingId"
     | "invoiceNumber"
@@ -157,6 +159,17 @@ export default function ShipmentsPage() {
   }, [periodType, customStartDate, customEndDate]);
 
   useEffect(() => {
+    // Check if coming from dashboard with status=All query parameter (only check once on mount)
+    if (!isFromDashboardRef.current) {
+      const statusParam = searchParams.get('status');
+      if (statusParam === 'All') {
+        isFromDashboardRef.current = true;
+        setDeliveryStatusFilter("All");
+        // Clear the query parameter from URL
+        router.replace('/dashboard/shipments', { scroll: false });
+      }
+    }
+    
     // Fetch delivery statuses from settings
     const fetchDeliveryStatuses = async () => {
       try {
@@ -165,31 +178,35 @@ export default function ShipmentsPage() {
         if (Array.isArray(data)) {
           setDeliveryStatuses(data);
           
-          // Set default filter: "In Transit" if found, otherwise "All"
-          const inTransitStatus = data.find((status: { id: number; name: string }) => 
-            status.name === "In Transit"
-          );
-          if (inTransitStatus) {
-            setDeliveryStatusFilter("In Transit");
-          } else {
-            setDeliveryStatusFilter("All");
+          // Only set default to "In Transit" if not coming from dashboard
+          if (!isFromDashboardRef.current) {
+            const inTransitStatus = data.find((status: { id: number; name: string }) => 
+              status.name === "In Transit"
+            );
+            if (inTransitStatus) {
+              setDeliveryStatusFilter("In Transit");
+            } else {
+              setDeliveryStatusFilter("All");
+            }
           }
         }
       } catch (error) {
         console.error("Error fetching delivery statuses:", error);
-        // On error, default to "All"
-        setDeliveryStatusFilter("All");
+        // On error, default to "All" only if not from dashboard
+        if (!isFromDashboardRef.current) {
+          setDeliveryStatusFilter("All");
+        }
       }
     };
 
     fetchDeliveryStatuses();
-  }, []);
+  }, [searchParams, router]);
 
   useEffect(() => {
     const fetchShipments = async () => {
       const params = new URLSearchParams({
         page: String(page),
-        limit: String(LIMIT),
+        limit: pageSize === 'all' ? 'all' : String(pageSize),
         ...(searchTerm && { search: searchTerm }),
         ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
         ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
@@ -205,7 +222,7 @@ export default function ShipmentsPage() {
     };
 
     fetchShipments();
-  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder]);
+  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -320,7 +337,7 @@ export default function ShipmentsPage() {
         // Refresh the shipments list
         const params = new URLSearchParams({
           page: String(page),
-          limit: String(LIMIT),
+          limit: pageSize === 'all' ? 'all' : String(pageSize),
           ...(searchTerm && { search: searchTerm }),
           ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
           ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
@@ -362,7 +379,7 @@ export default function ShipmentsPage() {
         // Refresh the shipments list
         const params = new URLSearchParams({
           page: String(page),
-          limit: String(LIMIT),
+          limit: pageSize === 'all' ? 'all' : String(pageSize),
           ...(searchTerm && { search: searchTerm }),
           ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
           ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
@@ -635,8 +652,32 @@ export default function ShipmentsPage() {
 
       {/* Filters */}
       <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
-        {/* Left side - Search field */}
-        <div className="w-full lg:max-w-2xl">
+        {/* Left side - Page size and Search field */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:max-w-2xl">
+          {/* Page size select */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Show:</span>
+            <Select
+              value={pageSize.toString()}
+              onValueChange={(value) => {
+                setPageSize(value === 'all' ? 'all' : parseInt(value));
+                setPage(1); // Reset to first page when changing page size
+              }}
+            >
+              <SelectTrigger className="w-20 h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Search field */}
           <div className="flex w-full max-w-sm">
             <Input
               placeholder="Search by invoice #, sender, receiver, destination, type, tracking..."
@@ -1040,11 +1081,11 @@ export default function ShipmentsPage() {
             onDelete={async () => {
               const params = new URLSearchParams({
                 page: String(page),
-                limit: String(LIMIT),
+                limit: pageSize === 'all' ? 'all' : String(pageSize),
                 ...(searchTerm && { search: searchTerm }),
                 ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
-                                                                  ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
-                                 ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+                ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+                ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
                 sortField,
                 sortOrder,
               });
@@ -1062,28 +1103,37 @@ export default function ShipmentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform w-full sm:w-auto"
-          >
-            ← Prev
-          </Button>
-          <span className="text-center">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform w-full sm:w-auto"
-          >
-            Next →
-          </Button>
+      {/* Pagination and Total Count */}
+      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
+        <div className="text-center sm:text-left">
+          {pageSize === 'all' 
+            ? `Showing all ${total} shipments`
+            : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} shipments`
+          }
         </div>
-      )}
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button
+              disabled={page <= 1}
+              onClick={() => setPage((prev) => prev - 1)}
+              className="hover:scale-105 transition-transform w-full sm:w-auto"
+            >
+              ← Prev
+            </Button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              disabled={page >= totalPages}
+              onClick={() => setPage((prev) => prev + 1)}
+              className="hover:scale-105 transition-transform w-full sm:w-auto"
+            >
+              Next →
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -73,7 +73,7 @@ export default function CustomerTransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [limit, setLimit] = useState(10); // Add limit state
+  const [pageSize, setPageSize] = useState<number | 'all'>(10); // Page size state
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
     const twoMonthsAgo = new Date(
@@ -141,17 +141,17 @@ export default function CustomerTransactionsPage() {
     return transactions;
   }, [transactions, sortField, sortOrder]);
 
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
   useEffect(() => {
     fetchCustomerData();
-  }, [customerId, page, searchTerm, dateRange, sortField, sortOrder, limit]); // Add limit to dependencies
+  }, [customerId, page, searchTerm, dateRange, sortField, sortOrder, pageSize]); // Add pageSize to dependencies
 
   const fetchCustomerData = async () => {
     try {
       const params = new URLSearchParams({
         page: String(page),
-        limit: String(limit),
+        limit: pageSize === 'all' ? 'all' : String(pageSize),
         ...(searchTerm && { search: searchTerm }),
         ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
         ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
@@ -608,23 +608,24 @@ export default function CustomerTransactionsPage() {
         {/* Right side - Show, Export and Date Range */}
         <div className="flex gap-4 items-end">
           {/* Show Entries Dropdown */}
-          <div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Show:</span>
             <Select
-              value={String(limit)}
+              value={pageSize.toString()}
               onValueChange={(value: string) => {
-                setLimit(parseInt(value));
-                setPage(1); // Reset to first page when changing limit
+                setPageSize(value === 'all' ? 'all' : parseInt(value));
+                setPage(1); // Reset to first page when changing page size
               }}
             >
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-20 h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5</SelectItem>
                 <SelectItem value="10">10</SelectItem>
                 <SelectItem value="25">25</SelectItem>
                 <SelectItem value="50">50</SelectItem>
                 <SelectItem value="100">100</SelectItem>
+                <SelectItem value="all">All</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -967,28 +968,37 @@ export default function CustomerTransactionsPage() {
         </CardContent>
       </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform"
-          >
-            ← Prev
-          </Button>
-          <span>
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform"
-          >
-            Next →
-          </Button>
+      {/* Pagination and Total Count */}
+      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
+        <div className="text-center sm:text-left">
+          {pageSize === 'all' 
+            ? `Showing all ${total} transactions`
+            : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} transactions`
+          }
         </div>
-      )}
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button
+              disabled={page <= 1}
+              onClick={() => setPage((prev) => prev - 1)}
+              className="hover:scale-105 transition-transform w-full sm:w-auto"
+            >
+              ← Prev
+            </Button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              disabled={page >= totalPages}
+              onClick={() => setPage((prev) => prev + 1)}
+              className="hover:scale-105 transition-transform w-full sm:w-auto"
+            >
+              Next →
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

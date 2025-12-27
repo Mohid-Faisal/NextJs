@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import {
   BarChart3,
   LineChart,
@@ -21,6 +20,13 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BarChart,
   Bar,
@@ -117,7 +123,8 @@ const DashboardPage = () => {
       accountsReceivable: 0,
     },
     customerDestinationMap: [] as { customer: string; destination: string; shipments: number }[],
-    topCustomers: [] as { customer: string; shipments: number; totalSpent: number; avgOrderValue: number; currentBalance: number }[],
+    topCustomers: [] as { customer: string; shipments: number; totalSpent: number; avgOrderValue: number; currentBalance: number; lastShipmentDate: string | null }[],
+    deliveriesByCountry: [] as { country: string; deliveries: number }[],
   });
 
   const currentYear = new Date().getFullYear();
@@ -323,99 +330,6 @@ const DashboardPage = () => {
           </motion.div>
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">
-          {/* Revenue Trend Chart */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                Revenue Trend
-              </h3>
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-            </div>
-            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <AreaChart data={data.monthlyEarnings}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
-                <YAxis stroke="#6B7280" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: 'none', 
-                    borderRadius: '8px',
-                    color: '#F9FAFB',
-                    fontSize: '12px'
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="earnings" 
-                  stroke="#10B981" 
-                  strokeWidth={3}
-                  fill="url(#colorRevenue)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </motion.div>
-
-          {/* Shipment Status Distribution */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                Shipment Status
-              </h3>
-              <PieChart className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
-            </div>
-            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <RechartsPieChart>
-                <Pie
-                  data={data.shipmentStatusDistribution}
-                  cx="50%"
-                  cy="50%"
-                  stroke="#374151"
-                  strokeWidth={2}
-                  labelLine={false}
-                  label={({ payload, percent }: { payload?: any; percent?: number }) =>
-                    `${payload?.status ?? ""} ${Math.round((percent ?? 0) * 100)}%`
-                  }
-                  outerRadius={60}
-                  className="sm:outerRadius={80}"
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {data.shipmentStatusDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: 'none', 
-                    borderRadius: '8px',
-                    color: '#F9FAFB',
-                    fontSize: '12px'
-                  }}
-                />
-              </RechartsPieChart>
-            </ResponsiveContainer>
-          </motion.div>
-        </div>
 
         {/* Additional Charts */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8">
@@ -453,7 +367,7 @@ const DashboardPage = () => {
             </ResponsiveContainer>
           </motion.div>
 
-          {/* Top Destinations Performance */}
+          {/* Shipments and Revenue by Country */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -462,19 +376,18 @@ const DashboardPage = () => {
           >
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                Top Destinations
+                Shipments and Revenue by Country
               </h3>
-              <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
-            {data.topDestinations && data.topDestinations.length > 0 && data.topDestinations[0].destination !== "No Data" && data.topDestinations.some(d => d.shipments > 0) ? (
-              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
+            {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && (data.revenueByDestination.some(d => d.revenue > 0) || data.revenueByDestination.some(d => d.shipments > 0)) ? (
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart 
-                  data={data.topDestinations
-                    .filter(d => d.shipments > 0)
-                    .sort((a, b) => b.shipments - a.shipments)
-                    .slice(0, 10)
+                  data={data.revenueByDestination
+                    .filter(d => d.destination && d.destination !== "No Data")
+                    .slice(0, 12)
                   } 
-                  margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+                  margin={{ top: 10, right: 30, left: 5, bottom: 30 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                   <XAxis 
@@ -488,77 +401,15 @@ const DashboardPage = () => {
                     interval={0}
                   />
                   <YAxis 
+                    yAxisId="left"
                     stroke="#6B7280" 
                     fontSize={12}
                     tickFormatter={(value) => value.toString()}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1F2937', 
-                      border: 'none', 
-                      borderRadius: '8px',
-                      color: '#F9FAFB',
-                      fontSize: '12px'
-                    }}
-                    formatter={(value: any) => [`${value} shipments`, 'Shipments']}
-                    labelFormatter={(label) => `Destination: ${label}`}
-                  />
-                  <Bar 
-                    dataKey="shipments" 
-                    fill="#8B5CF6" 
-                    radius={[4, 4, 0, 0]}
-                    name="Shipments"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">
-                <div className="text-center">
-                  <MapPin className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                  <p>No destination data available</p>
-                  <p className="text-sm">Check if you have shipments in your database</p>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Revenue by Destination Chart */}
-        <div className="mb-6 md:mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center justify-between sm:mb-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                Revenue by Destination
-              </h3>
-              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-            </div>
-            {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && data.revenueByDestination.some(d => d.revenue > 0) ? (
-              <ResponsiveContainer width="100%" height={350} className="sm:h-[400px]">
-                <BarChart 
-                  data={data.revenueByDestination
-                    .filter(d => d.revenue > 0)
-                    .sort((a, b) => b.revenue - a.revenue)
-                    .slice(0, 10)
-                  } 
-                  margin={{ top: 10, right: 30, left: 5, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                  <XAxis 
-                    dataKey="destination" 
-                    stroke="#6B7280" 
-                    fontSize={10}
-                    angle={-45}
-                    textAnchor="end"
-                    height={45}
-                    tick={{ fill: '#6B7280', fontSize: 10 }}
-                    interval={0}
+                    label={{ value: 'Shipments', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6B7280' } }}
                   />
                   <YAxis 
+                    yAxisId="right"
+                    orientation="right"
                     stroke="#6B7280" 
                     fontSize={12}
                     tickFormatter={(value) => {
@@ -566,6 +417,7 @@ const DashboardPage = () => {
                       if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
                       return value.toString();
                     }}
+                    label={{ value: 'Revenue', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6B7280' } }}
                   />
                   <Tooltip 
                     contentStyle={{ 
@@ -575,19 +427,31 @@ const DashboardPage = () => {
                       color: '#F9FAFB',
                       fontSize: '12px'
                     }}
-                    formatter={(value: any, name: string, props: any) => {
+                    formatter={(value: any, name: string) => {
                       if (name === 'revenue') {
-                        return [value.toLocaleString(), 'Revenue'];
+                        return [`$${value.toLocaleString()}`, 'Revenue'];
                       }
-                      return [value, 'Shipments'];
+                      if (name === 'shipments') {
+                        return [`${value}`, 'Shipments'];
+                      }
+                      return [value, name];
                     }}
-                    labelFormatter={(label) => `Destination: ${label}`}
+                    labelFormatter={(label) => `Country: ${label}`}
                   />
                   <Bar 
-                    dataKey="revenue" 
-                    fill="#10B981" 
+                    yAxisId="left"
+                    dataKey="shipments" 
+                    fill="#3B82F6" 
                     radius={[4, 4, 0, 0]}
-                    name="Revenue"
+                    name="shipments"
+                  />
+                  <Line 
+                    yAxisId="right"
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#10B981" 
+                    strokeWidth={3}
+                    name="revenue"
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -595,11 +459,14 @@ const DashboardPage = () => {
               <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">
                 <div className="text-center">
                   <DollarSign className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                  <p>No revenue data available</p>
+                  <p>No data available</p>
                   <p className="text-sm">Check if you have shipments and invoices in your database</p>
                 </div>
               </div>
             )}
+            <div className="mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
+              Blue bars: Number of Shipments | Green line: Revenue
+            </div>
           </motion.div>
         </div>
 
@@ -643,6 +510,19 @@ const DashboardPage = () => {
                     name === 'shipments' ? value : value.toLocaleString(),
                     name === 'shipments' ? 'Shipments' : name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'
                   ]}
+                  labelFormatter={(label) => {
+                    const customer = data.topCustomers.find(c => c.customer === label);
+                    if (customer?.lastShipmentDate) {
+                      const date = new Date(customer.lastShipmentDate);
+                      const formattedDate = date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      });
+                      return `Last Shipment: ${formattedDate}`;
+                    }
+                    return label;
+                  }}
                 />
                 <Bar yAxisId="left" dataKey="shipments" fill="#10B981" radius={[4, 4, 0, 0]} name="shipments" />
                 <Line yAxisId="right" type="monotone" dataKey="totalSpent" stroke="#F59E0B" strokeWidth={3} name="totalSpent" />
@@ -693,9 +573,9 @@ const DashboardPage = () => {
             <button
               onClick={() => {
                 if (activeTab === 'shipments') {
-                  router.push('/dashboard/shipments');
+                  router.push('/dashboard/shipments?status=All');
                 } else {
-                  router.push('/dashboard/accounts/payments');
+                  router.push('/dashboard/accounts/payments?type=All');
                 }
               }}
               className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-all duration-200 flex items-center gap-2"
