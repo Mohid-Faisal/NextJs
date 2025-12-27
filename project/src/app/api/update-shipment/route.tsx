@@ -268,6 +268,7 @@ async function handleShipmentUpdate(req: Request) {
       reissue,
       profitPercentage,
       manualRate,
+      cos, // Cost of Service - only used in manual mode
       packages,
       packageTotals,
       calculatedValues,
@@ -324,8 +325,11 @@ async function handleShipmentUpdate(req: Request) {
     // Calculate total costs for customer and vendor (same logic as add-shipment)
     // Customer invoice uses the price with profit (from frontend)
     const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
-    // Vendor invoice uses original price without profit
-    const vendorTotalCost = Math.round(originalPrice - effectiveFixedCharge);
+    // Vendor invoice: use CoS (Cost of Service) if in manual mode, otherwise use original price without fixed charge
+    const effectiveManualRate = manualRate !== undefined ? Boolean(manualRate) : (existingShipment.manualRate || false);
+    const vendorTotalCost = effectiveManualRate 
+      ? Math.round((parseFloat(cos) || 0))
+      : Math.round(originalPrice - effectiveFixedCharge);
     
     // For backward compatibility, also calculate the old format
     let calculatedTotalCost: number;
@@ -345,8 +349,10 @@ async function handleShipmentUpdate(req: Request) {
     console.log('Discount percentage:', discount);
     console.log('Profit percentage:', profitPercentage);
     console.log('Original price (no profit):', originalPrice);
+    console.log('CoS (Cost of Service):', cos);
+    console.log('Manual rate:', effectiveManualRate);
     console.log('Customer total cost (with profit):', customerTotalCost);
-    console.log('Vendor total cost (no profit):', vendorTotalCost);
+    console.log(`Vendor total cost (${effectiveManualRate ? 'CoS' : 'originalPrice - fixedCharge'}):`, vendorTotalCost);
     console.log('=== END PRICING CALCULATIONS ===');
 
     // Use a transaction to ensure all updates happen together
@@ -469,7 +475,9 @@ async function handleShipmentUpdate(req: Request) {
       // Only update invoices if we have pricing data or if tracking/destination changed
       const shouldUpdateInvoices = (price !== undefined || fuelSurcharge !== undefined || discount !== undefined) || 
                                     (trackingId !== undefined && trackingId !== existingShipment.trackingId) ||
-                                    (destination !== undefined && destination !== existingShipment.destination);
+                                    (destination !== undefined && destination !== existingShipment.destination) ||
+                                    (shipmentDate !== undefined) ||
+                                    (effectiveManualRate && cos !== undefined);
       
       if (updatedShipment.invoices && updatedShipment.invoices.length > 0 && shouldUpdateInvoices) {
         const invoiceUpdates = updatedShipment.invoices.map(async (invoice) => {
@@ -477,9 +485,9 @@ async function handleShipmentUpdate(req: Request) {
           // For vendor invoices, use vendor cost; for customer invoices, use customer total
           const isVendorInvoice = invoice.vendorId && !invoice.customerId;
           
-          // Use calculated amounts if pricing data was provided, otherwise keep existing invoice totalAmount
+          // Use calculated amounts if pricing data was provided, or if CoS changed in manual mode, otherwise keep existing invoice totalAmount
           let invoiceAmount: number;
-          if (price !== undefined || fuelSurcharge !== undefined || discount !== undefined) {
+          if (price !== undefined || fuelSurcharge !== undefined || discount !== undefined || (effectiveManualRate && cos !== undefined)) {
             invoiceAmount = isVendorInvoice ? vendorTotalCost : customerTotalCost;
           } else {
             // Keep existing invoice totalAmount if no pricing data provided
@@ -509,6 +517,8 @@ async function handleShipmentUpdate(req: Request) {
               trackingNumber: effectiveTrackingId !== undefined ? effectiveTrackingId : invoice.trackingNumber,
               destination: effectiveDestination !== undefined ? effectiveDestination : invoice.destination,
               weight: effectiveTotalWeight || invoice.weight || 0,
+              // Update invoice date if shipment date was provided
+              ...(shipmentDate ? { invoiceDate: new Date(shipmentDate) } : {}),
               // Update line items if they contain shipment-specific information
               lineItems: invoice.lineItems || [], // Keep existing line items but could be updated if needed
               totalAmount: finalInvoiceAmount,
@@ -522,9 +532,9 @@ async function handleShipmentUpdate(req: Request) {
           });
 
           // 3. Update customer/vendor balances and journal entries if amount changed
-          // Only update if pricing data was provided and amount actually changed
+          // Only update if pricing data was provided (or CoS in manual mode) and amount actually changed
           // Use the same logic as invoice update route
-          if ((price !== undefined || fuelSurcharge !== undefined || discount !== undefined) && oldInvoiceAmount !== finalInvoiceAmount) {
+          if ((price !== undefined || fuelSurcharge !== undefined || discount !== undefined || (effectiveManualRate && cos !== undefined)) && oldInvoiceAmount !== finalInvoiceAmount) {
             try {
               // Use the proper utility functions for balance and journal entry updates
               // These functions handle transactions, balances, and journal entries correctly

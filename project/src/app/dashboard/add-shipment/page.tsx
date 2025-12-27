@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import {
   Select,
   SelectContent,
@@ -78,6 +77,7 @@ const AddShipmentPage = () => {
   // State to track dropdown open status
   const [senderDropdownOpen, setSenderDropdownOpen] = useState(false);
   const [recipientDropdownOpen, setRecipientDropdownOpen] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
 
   // State for packages/boxes
   const [packages, setPackages] = useState<Package[]>([
@@ -435,6 +435,9 @@ const AddShipmentPage = () => {
 
   // Fetch senders
   useEffect(() => {
+    // Skip search if we're loading edit data to avoid race conditions
+    if (isLoadingEdit) return;
+    
     const delayDebounce = setTimeout(() => {
       if (senderQuery.length >= 2) {
         fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
@@ -457,10 +460,13 @@ const AddShipmentPage = () => {
     }, 300); // Debounce
 
     return () => clearTimeout(delayDebounce);
-  }, [senderQuery]);
+  }, [senderQuery, isLoadingEdit]);
 
   // Fetch recipients
   useEffect(() => {
+    // Skip search if we're loading edit data to avoid race conditions
+    if (isLoadingEdit) return;
+    
     const delayDebounce = setTimeout(() => {
       if (recipientQuery.length >= 2) {
         fetch(
@@ -485,7 +491,7 @@ const AddShipmentPage = () => {
     }, 300);
 
     return () => clearTimeout(delayDebounce);
-  }, [recipientQuery]);
+  }, [recipientQuery, isLoadingEdit]);
 
   // Types
   type Option = { id: string; name: string; code?: string };
@@ -786,6 +792,7 @@ const AddShipmentPage = () => {
   useEffect(() => {
     const loadForEdit = async () => {
       if (!editId) return;
+      setIsLoadingEdit(true);
       try {
         const res = await fetch(`/api/shipments/${editId}`);
         const data = await res.json();
@@ -882,38 +889,56 @@ const AddShipmentPage = () => {
             });
           }
 
-          // Fetch complete sender and recipient data from database
+          // Fetch complete sender and recipient data from database in parallel
+          const fetchPromises: Promise<any>[] = [];
+          
           if (s.senderName) {
-            setSenderQuery(s.senderName);
-            try {
-              const senderRes = await fetch(
-                `/api/search/customers?query=${encodeURIComponent(
-                  s.senderName
-                )}`
-              );
-              const senderData = await senderRes.json();
-              if (Array.isArray(senderData) && senderData.length > 0) {
-                // Find the exact match for the sender name
-                const exactSender = senderData.find(
-                  (sender: Party) => sender.Company === s.senderName
-                );
-                if (exactSender) {
-                  setSelectedSender(exactSender);
-                } else {
-                  // Fallback: create a mock sender object if exact match not found
-                  const mockSender: Party = {
-                    id: 0,
-                    Company: s.senderName,
-                    Address: s.senderAddress || "",
-                    Country: "",
-                    State: "",
-                    City: "",
-                    Zip: "",
-                  };
-                  setSelectedSender(mockSender);
-                }
+            fetchPromises.push(
+              fetch(`/api/search/customers?query=${encodeURIComponent(s.senderName)}`)
+                .then((res) => res.json())
+                .then((senderData) => ({ type: 'sender', data: senderData }))
+                .catch((error) => {
+                  console.error("Error fetching sender data:", error);
+                  return { type: 'sender', data: null, error };
+                })
+            );
+          } else {
+            fetchPromises.push(Promise.resolve({ type: 'sender', data: null }));
+          }
+
+          if (s.recipientName) {
+            fetchPromises.push(
+              fetch(`/api/search/recipients?query=${encodeURIComponent(s.recipientName)}`)
+                .then((res) => res.json())
+                .then((recipientData) => ({ type: 'recipient', data: recipientData }))
+                .catch((error) => {
+                  console.error("Error fetching recipient data:", error);
+                  return { type: 'recipient', data: null, error };
+                })
+            );
+          } else {
+            fetchPromises.push(Promise.resolve({ type: 'recipient', data: null }));
+          }
+
+          // Wait for all API calls to complete in parallel
+          const results = await Promise.all(fetchPromises);
+          
+          // Process sender results
+          const senderResult = results.find(r => r.type === 'sender');
+          if (senderResult && s.senderName) {
+            const senderData = senderResult.data;
+            if (Array.isArray(senderData) && senderData.length > 0) {
+              // Find the exact match (case-insensitive)
+              const exactSender = senderData.find(
+                (sender: Party) => sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim()
+              ) || senderData[0]; // Fallback to first result if no exact match
+              
+              if (exactSender) {
+                setSelectedSender(exactSender);
+                setSenderQuery(exactSender.Company);
+                setSenderResults(senderData); // Set results directly to avoid triggering search
               } else {
-                // Fallback: create a mock sender object if no data found
+                // Fallback: create a mock sender object
                 const mockSender: Party = {
                   id: 0,
                   Company: s.senderName,
@@ -924,10 +949,10 @@ const AddShipmentPage = () => {
                   Zip: "",
                 };
                 setSelectedSender(mockSender);
+                setSenderQuery(s.senderName);
               }
-            } catch (error) {
-              console.error("Error fetching sender data:", error);
-              // Fallback: create a mock sender object
+            } else {
+              // Fallback: create a mock sender object if no data found
               const mockSender: Party = {
                 id: 0,
                 Company: s.senderName,
@@ -938,40 +963,26 @@ const AddShipmentPage = () => {
                 Zip: "",
               };
               setSelectedSender(mockSender);
+              setSenderQuery(s.senderName);
             }
           }
 
-          if (s.recipientName) {
-            setRecipientQuery(s.recipientName);
-            try {
-              const recipientRes = await fetch(
-                `/api/search/recipients?query=${encodeURIComponent(
-                  s.recipientName
-                )}`
-              );
-              const recipientData = await recipientRes.json();
-              if (Array.isArray(recipientData) && recipientData.length > 0) {
-                // Find the exact match for the recipient name
-                const exactRecipient = recipientData.find(
-                  (recipient: Party) => recipient.Company === s.recipientName
-                );
-                if (exactRecipient) {
-                  setSelectedRecipient(exactRecipient);
-                } else {
-                  // Fallback: create a mock recipient object if exact match not found
-                  const mockRecipient: Party = {
-                    id: 0,
-                    Company: s.recipientName,
-                    Address: s.recipientAddress || "",
-                    Country: s.destination || "",
-                    State: "",
-                    City: "",
-                    Zip: "",
-                  };
-                  setSelectedRecipient(mockRecipient);
-                }
+          // Process recipient results
+          const recipientResult = results.find(r => r.type === 'recipient');
+          if (recipientResult && s.recipientName) {
+            const recipientData = recipientResult.data;
+            if (Array.isArray(recipientData) && recipientData.length > 0) {
+              // Find the exact match (case-insensitive)
+              const exactRecipient = recipientData.find(
+                (recipient: Party) => recipient.Company.toLowerCase().trim() === s.recipientName.toLowerCase().trim()
+              ) || recipientData[0]; // Fallback to first result if no exact match
+              
+              if (exactRecipient) {
+                setSelectedRecipient(exactRecipient);
+                setRecipientQuery(exactRecipient.Company);
+                setRecipientResults(recipientData); // Set results directly to avoid triggering search
               } else {
-                // Fallback: create a mock recipient object if no data found
+                // Fallback: create a mock recipient object
                 const mockRecipient: Party = {
                   id: 0,
                   Company: s.recipientName,
@@ -982,10 +993,10 @@ const AddShipmentPage = () => {
                   Zip: "",
                 };
                 setSelectedRecipient(mockRecipient);
+                setRecipientQuery(s.recipientName);
               }
-            } catch (error) {
-              console.error("Error fetching recipient data:", error);
-              // Fallback: create a mock recipient object
+            } else {
+              // Fallback: create a mock recipient object if no data found
               const mockRecipient: Party = {
                 id: 0,
                 Company: s.recipientName,
@@ -996,6 +1007,7 @@ const AddShipmentPage = () => {
                 Zip: "",
               };
               setSelectedRecipient(mockRecipient);
+              setRecipientQuery(s.recipientName);
             }
           }
 
@@ -1018,6 +1030,8 @@ const AddShipmentPage = () => {
         }
       } catch (e) {
         console.error("Failed to load shipment for edit", e);
+      } finally {
+        setIsLoadingEdit(false);
       }
     };
     loadForEdit();
@@ -1076,9 +1090,28 @@ const AddShipmentPage = () => {
         <Select 
           value={value && value.trim() !== "" ? value : undefined} 
           onValueChange={onValueChange}
-          key={value || "empty"}
+          onOpenChange={(open) => {
+            // When dropdown closes, refocus the trigger to maintain focus state for tab navigation
+            if (!open) {
+              // Use requestAnimationFrame to ensure DOM is updated after dropdown closes
+              requestAnimationFrame(() => {
+                // Find the trigger that was just closed
+                const triggers = document.querySelectorAll('[data-slot="select-trigger"]');
+                const lastTrigger = Array.from(triggers).find(trigger => {
+                  const select = trigger.closest('[role="combobox"]');
+                  return select && select.getAttribute('aria-expanded') === 'false';
+                }) as HTMLElement;
+                if (lastTrigger) {
+                  lastTrigger.focus();
+                }
+              });
+            }
+          }}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger 
+            className="w-full"
+            tabIndex={0}
+          >
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
@@ -1093,11 +1126,7 @@ const AddShipmentPage = () => {
     );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 text-foreground h-[calc(100vh-64px)] overflow-y-auto transition-all duration-300 ease-in-out"
-    >
+    <div className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 text-foreground h-[calc(100vh-64px)] overflow-y-auto">
       <form onSubmit={handleSubmit}>
         {/* Record shipment header */}
         <div className="flex items-center gap-2 mb-4 sm:mb-6">
@@ -2077,7 +2106,7 @@ const AddShipmentPage = () => {
           </CardContent>
         </Card>
       </form>
-    </motion.div>
+    </div>
   );
 };
 

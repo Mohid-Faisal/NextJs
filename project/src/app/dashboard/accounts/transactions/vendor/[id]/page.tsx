@@ -260,15 +260,13 @@ export default function VendorTransactionsPage() {
   };
 
   const exportToPrint = async (data: any[], headers: string[], title: string, total: number, startingBalance: number, totalDebit: number, totalCredit: number, finalBalance: number) => {
-    // Fetch logo and footer from API
+    // Fetch logo from API
     let logoBase64 = '';
-    let footerBase64 = '';
     try {
       const assetsResponse = await fetch('/api/assets/logo-footer');
       if (assetsResponse.ok) {
         const assets = await assetsResponse.json();
         logoBase64 = assets.logo || '';
-        footerBase64 = assets.footer || '';
       }
     } catch (error) {
       console.error('Error fetching assets:', error);
@@ -289,21 +287,13 @@ export default function VendorTransactionsPage() {
         <div class="invoice-info">
           <div class="invoice-col">
             <address>
-              <strong>${vendor.CompanyName || 'Vendor Name'}</strong><br>
-              Attn: ${vendor.PersonName || 'Contact Person'}<br>
-              ${(vendor as any).Address || 'Vendor Address'}<br>
-              ${(vendor as any).City || ''}${(vendor as any).City && (vendor as any).Country ? ', ' : ''}${(vendor as any).Country || ''}
+              <strong>${vendor.CompanyName || 'Vendor Name'}</strong>${vendor.PersonName ? `<br>Attn: ${vendor.PersonName}` : ''}${(vendor as any).Address ? `<br>${(vendor as any).Address}` : ''}${(vendor as any).City || (vendor as any).Country ? `<br>${(vendor as any).City || ''}${(vendor as any).City && (vendor as any).Country ? ', ' : ''}${(vendor as any).Country || ''}` : ''}
             </address>
           </div>
           <div class="invoice-col" style="text-align: right;">
-            <p style="margin-bottom: 0;"><b>Report: </b><span style="float: right;">${title}</span></p>
             <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;">${vendor.id || 'N/A'}</span></p>
-            <p style="margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${startingBalance.toLocaleString()}</span></p>
-            <p style="margin-bottom: 0;"><b>Date: </b><span style="float: right;">${new Date().toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric'
-            })}</span></p>
+            <p style="margin-bottom: 0;"><b>Statement Period: </b><span style="float: right;">${formatDateRange()}</span></p>
+            <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${startingBalance.toLocaleString()}</span></p>
           </div>
         </div>
       ` : '';
@@ -367,7 +357,6 @@ export default function VendorTransactionsPage() {
                 align-items: flex-start;
                 margin-bottom: 30px;
                 padding-bottom: 20px;
-                border-bottom: 2px solid #ddd;
               }
               .logo-section {
                 display: flex;
@@ -392,23 +381,31 @@ export default function VendorTransactionsPage() {
                 font-size: 14px;
               }
               .invoice-info {
-                margin: 20px 0;
+                margin: 20px 0 0 0;
                 display: flex;
                 justify-content: space-between;
+                border-bottom: none;
               }
               .invoice-col {
                 flex: 1;
               }
               .invoice-col address {
                 font-style: normal;
-                line-height: 1.6;
+                line-height: 1.2;
                 margin: 0;
+                padding: 0;
               }
               .invoice-col address strong {
                 font-size: 16px;
                 color: #333;
-                display: block;
-                margin-bottom: 5px;
+                display: inline;
+                margin: 0;
+                padding: 0;
+              }
+              .invoice-col address br {
+                line-height: 1;
+                margin: 0;
+                padding: 0;
               }
               .invoice-col p {
                 margin: 5px 0;
@@ -420,7 +417,7 @@ export default function VendorTransactionsPage() {
               }
               .table-responsive {
                 width: 100%;
-                margin-top: 25px;
+                margin-top: 20px;
                 overflow-x: auto;
               }
               table { 
@@ -429,6 +426,7 @@ export default function VendorTransactionsPage() {
                 margin: 0;
                 background-color: #fff;
                 border: 1px solid #ccc;
+                border-top: none;
               }
               thead {
                 background-color: #4a5568 !important;
@@ -441,8 +439,9 @@ export default function VendorTransactionsPage() {
                 text-align: left;
                 border: 1px solid #2d3748;
                 font-size: 11px;
-                text-transform: uppercase;
+                text-transform: none;
                 letter-spacing: 0.5px;
+                white-space: nowrap;
               }
               td { 
                 padding: 8px;
@@ -451,6 +450,9 @@ export default function VendorTransactionsPage() {
                 font-size: 11px;
                 color: #2d3748;
                 vertical-align: top;
+              }
+              td:first-child {
+                white-space: nowrap;
               }
               tbody tr {
                 background-color: #fff;
@@ -463,12 +465,10 @@ export default function VendorTransactionsPage() {
               }
               .amount-cell {
                 text-align: right;
-                font-family: 'Courier New', monospace;
               }
               .balance-cell {
                 text-align: right;
                 font-weight: 600;
-                font-family: 'Courier New', monospace;
               }
               .total-section {
                 margin-top: 25px;
@@ -482,10 +482,6 @@ export default function VendorTransactionsPage() {
               }
               .content-wrapper {
                 flex: 1;
-              }
-              .footer-container {
-                width: 100%;
-                margin-top: auto;
               }
               @media print {
                 html, body { 
@@ -507,10 +503,6 @@ export default function VendorTransactionsPage() {
                 tr { page-break-inside: avoid; page-break-after: auto; }
                 thead { display: table-header-group; }
                 tfoot { display: table-footer-group; }
-                .footer-container {
-                  margin-top: auto;
-                  page-break-inside: avoid;
-                }
                 @page {
                   margin: 0.5in;
                   size: A4;
@@ -541,8 +533,8 @@ export default function VendorTransactionsPage() {
                   <thead>
                     <tr>
                       ${headers.map((header, index) => {
-                        const isDebit = header.toLowerCase() === 'debit';
-                        const isCredit = header.toLowerCase() === 'credit';
+                        const isDebit = header.toLowerCase().includes('dr.');
+                        const isCredit = header.toLowerCase().includes('cr.');
                         const isBalance = header.toLowerCase() === 'balance';
                         return `<th style="${isDebit || isCredit || isBalance ? 'text-align: right;' : ''}">${header}</th>`;
                       }).join('')}
@@ -551,8 +543,8 @@ export default function VendorTransactionsPage() {
                   <tbody>
                     ${data.map(row => `<tr>${row.map((cell: any, cellIndex: number) => {
                       const header = headers[cellIndex];
-                      const isDebit = header?.toLowerCase() === 'debit';
-                      const isCredit = header?.toLowerCase() === 'credit';
+                      const isDebit = header?.toLowerCase().includes('dr.');
+                      const isCredit = header?.toLowerCase().includes('cr.');
                       const isBalance = header?.toLowerCase() === 'balance';
                       const cellClass = isDebit || isCredit ? 'amount-cell' : isBalance ? 'balance-cell' : '';
                       return `<td class="${cellClass}">${cell}</td>`;
@@ -561,19 +553,14 @@ export default function VendorTransactionsPage() {
                   <tfoot>
                     <tr style="background-color: #e2e8f0; font-weight: 700;">
                       <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0;">Total:</td>
-                      <td style="text-align: right; padding: 10px 8px; font-family: 'Courier New', monospace; border: 1px solid #cbd5e0;">${totalDebit.toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; font-family: 'Courier New', monospace; border: 1px solid #cbd5e0;">${totalCredit.toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; font-family: 'Courier New', monospace; border: 1px solid #cbd5e0;">${finalBalance.toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${totalDebit.toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${totalCredit.toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${finalBalance.toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
-              
-              <div class="total-section">
-                Final Balance: ${finalBalance.toLocaleString()}
-              </div>
             </div>
-            ${footerBase64 ? `<div class="footer-container"><img src="${footerBase64}" width="100%" alt="Footer" style="display: block;"></div>` : ''}
           </body>
         </html>
       `;
@@ -659,21 +646,22 @@ export default function VendorTransactionsPage() {
           fontSize: 9,
           fontWeight: 'bold',
           color: '#ffffff',
-          textTransform: 'uppercase',
+          whiteSpace: 'nowrap' as const,
         },
         tableCell: {
           margin: 'auto',
           fontSize: 9,
           color: '#2d3748',
         },
+        dateCell: {
+          whiteSpace: 'nowrap' as const,
+        },
         amountCell: {
           textAlign: 'right',
-          fontFamily: 'Courier',
         },
         balanceCell: {
           textAlign: 'right',
           fontWeight: 'bold',
-          fontFamily: 'Courier',
         },
       });
 
@@ -736,8 +724,8 @@ export default function VendorTransactionsPage() {
               <View style={styles.table}>
                 <View style={styles.tableRow}>
                   {headers.map((header, index) => {
-                    const isDebit = header?.toLowerCase() === 'debit';
-                    const isCredit = header?.toLowerCase() === 'credit';
+                    const isDebit = header?.toLowerCase().includes('dr.');
+                    const isCredit = header?.toLowerCase().includes('cr.');
                     const isBalance = header?.toLowerCase() === 'balance';
                     const headerStyle = isDebit || isCredit || isBalance 
                       ? { ...styles.tableCellHeader, textAlign: 'right' as const }
@@ -754,13 +742,16 @@ export default function VendorTransactionsPage() {
                   <View key={rowIndex} style={[styles.tableRow, { backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f7fafc' }]}>
                     {row.map((cell: any, cellIndex: number) => {
                       const header = headers[cellIndex];
-                      const isDebit = header?.toLowerCase() === 'debit';
-                      const isCredit = header?.toLowerCase() === 'credit';
+                      const isDebit = header?.toLowerCase().includes('dr.');
+                      const isCredit = header?.toLowerCase().includes('cr.');
                       const isBalance = header?.toLowerCase() === 'balance';
+                      const isDate = cellIndex === 0; // First column is date
                       const cellStyle = isDebit || isCredit
                         ? { ...styles.tableCell, ...styles.amountCell }
                         : isBalance 
                         ? { ...styles.tableCell, ...styles.balanceCell }
+                        : isDate
+                        ? { ...styles.tableCell, ...styles.dateCell }
                         : styles.tableCell;
                       return (
                         <View key={cellIndex} style={styles.tableCol}>
@@ -776,11 +767,6 @@ export default function VendorTransactionsPage() {
                 <Text style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'right' }}>Total Balance: {total.toLocaleString()}</Text>
               </View>
               
-              {footerBase64 && (
-                <View style={{ marginTop: 30, width: '100%' }}>
-                  <Image src={footerBase64} style={{ width: '100%' }} />
-                </View>
-              )}
             </Page>
           </Document>
         );
@@ -804,7 +790,7 @@ export default function VendorTransactionsPage() {
   };
 
   const getTransactionExportData = (transactions: Transaction[]) => {
-    const headers = ["Date", "Invoice", "Description", "Reference", "Debit", "Credit", "Balance"];
+    const headers = ["Date", "Invoice", "Description", "Ref.", "Dr. (Rs.)", "Cr. (Rs.)", "Balance"];
     const data = transactions.map(transaction => {
       // Determine voucher date based on transaction type
       let voucherDateToUse: string;
