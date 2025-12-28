@@ -525,6 +525,7 @@ export default function VendorTransactionsPage() {
                   })}</div>
                 </div>
               </div>
+              <hr style="border: none; border-top: 2px solid #ddd; margin: 20px 0;">
               
               ${vendorInfo}
               
@@ -669,7 +670,7 @@ export default function VendorTransactionsPage() {
         return (
           <Document>
             <Page size="A4" style={styles.page}>
-              <View style={{ marginBottom: 20, borderBottom: '2 solid #1e40af', paddingBottom: 15 }}>
+              <View style={{ marginBottom: 20 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {logoBase64 ? (
@@ -689,6 +690,7 @@ export default function VendorTransactionsPage() {
                     </Text>
                   </View>
                 </View>
+                <View style={{ borderBottom: '2 solid #ddd', marginBottom: 20 }} />
                 {vendor && (
                   <View style={{ border: '1 solid #ddd', padding: 15, backgroundColor: '#fafafa', marginBottom: 15 }}>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15 }}>
