@@ -78,6 +78,7 @@ const AddShipmentPage = () => {
   const [senderDropdownOpen, setSenderDropdownOpen] = useState(false);
   const [recipientDropdownOpen, setRecipientDropdownOpen] = useState(false);
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  const [formResetKey, setFormResetKey] = useState(0);
 
   // State for packages/boxes
   const [packages, setPackages] = useState<Package[]>([
@@ -743,6 +744,9 @@ const AddShipmentPage = () => {
         setSenderQuery("");
         setRecipientQuery("");
         
+        // Increment form reset key to force Select components to remount and reset
+        setFormResetKey(prev => prev + 1);
+        
         // Reset shipping mode to Courier if available, otherwise empty
         setTimeout(() => {
           if (shippingModes.length > 0) {
@@ -1083,26 +1087,35 @@ const AddShipmentPage = () => {
     placeholder: string,
     options: Option[],
     value: string,
-    onValueChange: (value: string) => void
-  ) => (
+    onValueChange: (value: string) => void,
+    selectKey?: string
+  ) => {
+    // Use formResetKey in the key to force remount only on form reset, not on value changes
+    // This preserves focus during normal use while ensuring proper reset
+    const selectValue = value && value.trim() !== "" ? value : undefined;
+    
+    return (
       <div>
         <Label className="mb-2 block">{label}</Label>
         <Select 
-          value={value && value.trim() !== "" ? value : undefined} 
+          key={selectKey ? `${selectKey}-${formResetKey}` : `select-${formResetKey}`}
+          value={selectValue} 
           onValueChange={onValueChange}
           onOpenChange={(open) => {
             // When dropdown closes, refocus the trigger to maintain focus state for tab navigation
             if (!open) {
               // Use requestAnimationFrame to ensure DOM is updated after dropdown closes
               requestAnimationFrame(() => {
-                // Find the trigger that was just closed
+                // Find the trigger that was just closed and refocus it
+                const activeElement = document.activeElement;
                 const triggers = document.querySelectorAll('[data-slot="select-trigger"]');
-                const lastTrigger = Array.from(triggers).find(trigger => {
+                // Find the trigger that matches the current select
+                const currentTrigger = Array.from(triggers).find(trigger => {
                   const select = trigger.closest('[role="combobox"]');
                   return select && select.getAttribute('aria-expanded') === 'false';
                 }) as HTMLElement;
-                if (lastTrigger) {
-                  lastTrigger.focus();
+                if (currentTrigger) {
+                  currentTrigger.focus();
                 }
               });
             }
@@ -1124,6 +1137,7 @@ const AddShipmentPage = () => {
         </Select>
       </div>
     );
+  };
 
   return (
     <div className="w-full px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 text-foreground h-[calc(100vh-64px)] overflow-y-auto">
@@ -1652,35 +1666,40 @@ const AddShipmentPage = () => {
                 "Select shipping mode",
                 shippingModes,
                 form.shippingMode,
-                (value) => handleSelect("shippingMode", value)
+                (value) => handleSelect("shippingMode", value),
+                "shippingMode"
               )}
               {renderSelect(
                 "Type of Packaging",
                 "Select packaging type",
                 packagingTypes,
                 form.packaging,
-                (value) => handleSelect("packaging", value)
+                (value) => handleSelect("packaging", value),
+                "packaging"
               )}
               {renderSelect(
                 "Vendor",
                 "Select vendor",
                 vendors,
                 form.vendor,
-                (value) => handleSelect("vendor", value)
+                (value) => handleSelect("vendor", value),
+                "vendor"
               )}
               {renderSelect(
                 "Service Mode",
                 "Select service mode",
                 serviceModes,
                 form.serviceMode,
-                (value) => handleSelect("serviceMode", value)
+                (value) => handleSelect("serviceMode", value),
+                "serviceMode"
               )}
               {renderSelect(
                 "Status",
                 "Select status",
                 deliveryStatuses,
                 form.deliveryStatus,
-                (value) => handleSelect("deliveryStatus", value)
+                (value) => handleSelect("deliveryStatus", value),
+                "deliveryStatus"
               )}
             </div>
           </CardContent>
