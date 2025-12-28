@@ -74,6 +74,7 @@ export default function ExpensePaymentsPage() {
   const [debitAccountId, setDebitAccountId] = useState<number>(0);
   const [creditAccountId, setCreditAccountId] = useState<number>(0);
   const [accountsInitialized, setAccountsInitialized] = useState(false);
+  const paymentJustCompleted = useRef(false);
   const [formData, setFormData] = useState({
     paymentAmount: "",
     paymentMethod: "CASH",
@@ -100,6 +101,12 @@ export default function ExpensePaymentsPage() {
 
   // Handle pre-selection of invoice from URL parameter
   useEffect(() => {
+    // Don't open dialog if payment was just completed
+    if (paymentJustCompleted.current) {
+      paymentJustCompleted.current = false;
+      return;
+    }
+    
     const invoiceParam = searchParams.get("invoice");
     const billParam = searchParams.get("bill");
     const billIdParam = searchParams.get("billId");
@@ -502,6 +509,20 @@ export default function ExpensePaymentsPage() {
           paymentDate: new Date().toISOString().split('T')[0],
         });
         setPaymentDialogOpen(false);
+        
+        // Mark that payment was just completed to prevent dialog from reopening
+        paymentJustCompleted.current = true;
+        
+        // Clear URL parameters to prevent dialog from reopening
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        newSearchParams.delete("invoice");
+        newSearchParams.delete("bill");
+        newSearchParams.delete("billId");
+        newSearchParams.delete("amount");
+        newSearchParams.delete("vendor");
+        newSearchParams.delete("status");
+        router.replace(`/dashboard/expense/payments?${newSearchParams.toString()}`);
+        
         fetchInvoices(); // Refresh invoice list
         setPage(1); // Reset to first page
       } else {

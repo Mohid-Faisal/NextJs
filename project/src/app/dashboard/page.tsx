@@ -533,9 +533,10 @@ const DashboardPage = () => {
                           </div>
                           {payload.map((entry: any, index: number) => (
                             <div key={index} style={{ marginBottom: '4px' }}>
-                              <span style={{ color: entry.color }}>●</span>{' '}
-                              {entry.name === 'shipments' ? 'Shipments' : entry.name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'}:{' '}
-                              {entry.name === 'shipments' ? entry.value : entry.value.toLocaleString()}
+                              <span style={{ color: entry.color }}>
+                                {entry.name === 'shipments' ? 'Shipments' : entry.name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'}:{' '}
+                                {entry.name === 'shipments' ? entry.value : entry.value.toLocaleString()}
+                              </span>
                             </div>
                           ))}
                           {formattedDate && (

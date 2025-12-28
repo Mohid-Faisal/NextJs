@@ -74,6 +74,7 @@ export default function IncomeRevenuePage() {
   const [creditAccountId, setCreditAccountId] = useState<number>(0);
   const [accountsInitialized, setAccountsInitialized] = useState(false);
   const invoiceFetchAttempted = useRef<string | null>(null);
+  const paymentJustCompleted = useRef(false);
   const [formData, setFormData] = useState({
     paymentAmount: "",
     paymentMethod: "CASH",
@@ -100,6 +101,12 @@ export default function IncomeRevenuePage() {
 
   // Handle pre-selection of invoice from URL parameter
   useEffect(() => {
+    // Don't open dialog if payment was just completed
+    if (paymentJustCompleted.current) {
+      paymentJustCompleted.current = false;
+      return;
+    }
+    
     const invoiceParam = searchParams.get("invoice");
     if (invoiceParam) {
       // First, try to find in current invoices list
@@ -400,6 +407,19 @@ export default function IncomeRevenuePage() {
           paymentDate: new Date().toISOString().split('T')[0],
         });
         setPaymentDialogOpen(false);
+        
+        // Mark that payment was just completed to prevent dialog from reopening
+        paymentJustCompleted.current = true;
+        
+        // Clear URL parameters to prevent dialog from reopening
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        newSearchParams.delete("invoice");
+        newSearchParams.delete("invoiceId");
+        newSearchParams.delete("amount");
+        newSearchParams.delete("customer");
+        newSearchParams.delete("status");
+        router.replace(`/dashboard/income/revenue?${newSearchParams.toString()}`);
+        
         fetchInvoices(); // Refresh invoice list
         setPage(1); // Reset to first page
       } else {
