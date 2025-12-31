@@ -61,20 +61,20 @@ export default function ShipmentsPage() {
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("All");
   const [deliveryStatuses, setDeliveryStatuses] = useState<{ id: number; name: string }[]>([]);
   const isFromDashboardRef = useRef(false);
-  const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('last3month');
+  const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
-    const twoMonthsAgo = new Date(
+    const firstDayOfMonth = new Date(
       now.getFullYear(),
-      now.getMonth() - 2,
-      now.getDate()
+      now.getMonth(),
+      1
     );
     const tomorrow = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate() + 1
     );
-    return { from: twoMonthsAgo, to: tomorrow };
+    return { from: firstDayOfMonth, to: tomorrow };
   });
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
