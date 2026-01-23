@@ -47,6 +47,7 @@ import {
   PolarRadiusAxis,
   Radar,
   Pie,
+  Legend,
 } from "recharts";
 
 const DashboardPage = () => {
@@ -384,76 +385,65 @@ const DashboardPage = () => {
             </div>
             {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && (data.revenueByDestination.some(d => d.revenue > 0) || data.revenueByDestination.some(d => d.shipments > 0)) ? (
               <ResponsiveContainer width="100%" height={260} className="sm:h-[300px]">
-                <BarChart 
-                  data={data.revenueByDestination
-                    .filter(d => d.destination && d.destination !== "No Data")
-                    .slice(0, 12)
-                  } 
-                  margin={{ top: 10, right: 0, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                  <XAxis 
-                    dataKey="destination" 
-                    stroke="#6B7280" 
-                    fontSize={10}
-                    angle={-45}
-                    textAnchor="end"
-                    height={40}
-                    tick={{ fill: '#6B7280', fontSize: 10 }}
-                    interval={0}
-                  />
-                  <YAxis 
-                    yAxisId="left"
-                    stroke="#6B7280" 
-                    fontSize={12}
-                    tickFormatter={(value) => value.toString()}
-                  />
-                  <YAxis 
-                    yAxisId="right"
-                    orientation="right"
-                    stroke="#6B7280" 
-                    fontSize={12}
-                    tickFormatter={(value) => {
-                      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-                      if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
-                      return value.toString();
+                <RechartsPieChart>
+                  <Pie
+                    data={data.revenueByDestination
+                      .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                      .slice(0, 12)
+                      .map(d => ({
+                        name: d.destination,
+                        value: d.revenue,
+                        shipments: d.shipments
+                      }))}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }: { name?: string; percent?: number }) => {
+                      if (!name) return '';
+                      return percent ? `${name}: ${(percent * 100).toFixed(0)}%` : name;
                     }}
-                  />
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {data.revenueByDestination
+                      .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                      .slice(0, 12)
+                      .map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                  </Pie>
                   <Tooltip 
                     contentStyle={{ 
-                      backgroundColor: '#1F2937', 
-                      border: 'none', 
+                      backgroundColor: '#ffffff', 
+                      border: '1px solid #e5e7eb', 
                       borderRadius: '8px',
-                      color: '#F9FAFB',
-                      fontSize: '12px'
+                      color: '#1f2937',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
                     }}
-                    formatter={(value: any, name: string) => {
-                      if (name === 'revenue') {
-                        return [`$${value.toLocaleString()}`, 'Revenue'];
+                    itemStyle={{ color: '#1f2937' }}
+                    labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
+                    formatter={(value: any, name: string, props: any) => {
+                      if (name === 'value') {
+                        return [`$${Number(value).toLocaleString()}`, 'Revenue'];
                       }
                       if (name === 'shipments') {
-                        return [`${value}`, 'Shipments'];
+                        return [`${props.payload.shipments}`, 'Shipments'];
                       }
                       return [value, name];
                     }}
                     labelFormatter={(label) => `Country: ${label}`}
                   />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="shipments" 
-                    fill="#8B5CF6" 
-                    radius={[4, 4, 0, 0]}
-                    name="shipments"
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    formatter={(value, entry: any) => {
+                      const data = entry.payload;
+                      return `${value}: $${data.value.toLocaleString()} (${data.shipments} shipments)`;
+                    }}
                   />
-                  <Line 
-                    yAxisId="right"
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#EC4899" 
-                    strokeWidth={3}
-                    name="revenue"
-                  />
-                </BarChart>
+                </RechartsPieChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">

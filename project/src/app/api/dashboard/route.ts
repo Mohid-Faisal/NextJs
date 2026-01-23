@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { getCountryNameFromCode } from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -204,13 +205,18 @@ export async function GET() {
         || shipment.invoiceStatus 
         || "Unpaid";
       
+      // Convert country code to full country name
+      const destinationCountry = shipment.destination 
+        ? getCountryNameFromCode(shipment.destination) 
+        : shipment.destination || "N/A";
+      
       return {
         id: shipment.id,
         trackingId: shipment.trackingId,
         invoiceNumber: shipment.invoiceNumber,
         senderName: shipment.senderName,
         recipientName: shipment.recipientName,
-        destination: shipment.destination,
+        destination: destinationCountry,
         totalCost: shipment.totalCost,
         status: shipment.deliveryStatus || "Pending",
         invoiceStatus: invoiceStatus,
@@ -357,11 +363,16 @@ export async function GET() {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 12);
     
-    // Get monthly shipments count (using shipmentDate)
+    // Get monthly shipments count for last 12 months (using shipmentDate)
     const monthlyShipments = [];
-    for (let month = 0; month < 12; month++) {
-      const startDate = new Date(currentYear, month, 1);
-      const endDate = new Date(currentYear, month + 1, 1);
+    const currentDate = new Date();
+    const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    for (let i = 11; i >= 0; i--) {
+      // Calculate the date for i months ago
+      const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+      const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 1);
       
       const monthShipments = await prisma.shipment.count({
         where: {
@@ -391,9 +402,8 @@ export async function GET() {
       
       const monthRevenue = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
       
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       monthlyShipments.push({
-        month: monthNames[month],
+        month: `${monthNamesShort[targetDate.getMonth()]} ${targetDate.getFullYear().toString().slice(-2)}`,
         shipments: monthShipments,
         revenue: monthRevenue
       });
@@ -721,11 +731,15 @@ export async function GET() {
     
     const currentMonthReceivableAmount = currentMonthReceivable._sum.totalAmount || 0;
     
-    // Get monthly accounts data for trends
+    // Get monthly accounts data for last 12 months
     const monthlyAccountsData = [];
-    for (let month = 0; month < 12; month++) {
-      const startDate = new Date(currentYear, month, 1);
-      const endDate = new Date(currentYear, month + 1, 1);
+    const currentDateForAccounts = new Date();
+    const monthNamesForAccounts = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    for (let i = 11; i >= 0; i--) {
+      // Calculate the date for i months ago
+      const targetDate = new Date(currentDateForAccounts.getFullYear(), currentDateForAccounts.getMonth() - i, 1);
+      const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 1);
       
       const monthReceivable = await prisma.customers.aggregate({
         where: {
@@ -745,9 +759,8 @@ export async function GET() {
         }
       });
       
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       monthlyAccountsData.push({
-        month: monthNames[month],
+        month: `${monthNamesForAccounts[targetDate.getMonth()]} ${targetDate.getFullYear().toString().slice(-2)}`,
         // For receivable: negative customer balances become positive (they owe us money)
         receivable: Math.abs(Math.min(monthReceivable._sum.currentBalance || 0, 0)),
         // For payable: positive vendor balances stay positive (we owe them money)
