@@ -523,17 +523,30 @@ const RateCalculator = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {results.allRates.map((rate, index) => (
+                          {results.allRates.map((rate, index) => {
+                            // Find if this rate is in top 3 and get its rank
+                            const topRate = results.top3Rates.find(topRate => 
+                              rate.zone === topRate.zone && 
+                              rate.weight === topRate.bestRate.weight && 
+                              rate.price === topRate.bestRate.price
+                            );
+                            
+                            // Determine background color based on rank
+                            let rowBgColor = '';
+                            if (topRate) {
+                              if (topRate.rank === 1) {
+                                rowBgColor = 'bg-green-50 dark:bg-green-950';
+                              } else if (topRate.rank === 2) {
+                                rowBgColor = 'bg-blue-50 dark:bg-blue-950';
+                              } else if (topRate.rank === 3) {
+                                rowBgColor = 'bg-orange-50 dark:bg-orange-950';
+                              }
+                            }
+                            
+                            return (
                             <tr 
                               key={index} 
-                              className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                results.top3Rates.some(topRate => 
-                                  rate.zone === topRate.zone && 
-                                  rate.weight === topRate.bestRate.weight && 
-                                  rate.price === topRate.bestRate.price
-                                ) ? 
-                                'bg-green-50 dark:bg-green-950' : ''
-                              }`}
+                              className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${rowBgColor}`}
                             >
                               <td className="py-2 px-2 sm:px-4 font-medium">
                                 <span className="hidden sm:inline">{rate.vendor}</span>
@@ -558,12 +571,6 @@ const RateCalculator = () => {
                               <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{((rate.price)/ rate.weight).toFixed(2)}</td>
                               <td className="py-2 px-2 sm:px-4">
                                 {(() => {
-                                  const topRate = results.top3Rates.find(topRate => 
-                                    rate.zone === topRate.zone && 
-                                    rate.weight === topRate.bestRate.weight && 
-                                    rate.price === topRate.bestRate.price
-                                  );
-                                  
                                   if (topRate) {
                                     const rankText = topRate.rank === 1 ? '🥇 Best' : topRate.rank === 2 ? '🥈 2nd' : '🥉 3rd';
                                     const rankColor = topRate.rank === 1 ? 'text-green-600 dark:text-green-400' : 
@@ -587,7 +594,8 @@ const RateCalculator = () => {
                                 })()}
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

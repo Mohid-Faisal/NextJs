@@ -310,6 +310,21 @@ export async function DELETE(req: NextRequest) {
       },
     });
 
+    // Also delete the filename record for this vendor-service combination
+    try {
+      await prisma.filename.deleteMany({
+        where: {
+          vendor: vendor,
+          service: service,
+          fileType: "rate",
+        },
+      });
+      console.log(`🗑️ Deleted filename record for vendor: ${vendor}, service: ${service}`);
+    } catch (filenameError) {
+      console.error("⚠️ Error deleting filename record:", filenameError);
+      // Don't fail the entire operation if filename deletion fails
+    }
+
     console.log(`🗑️ Deleted ${deleteResult.count} rates for vendor: ${vendor}, service: ${service}`);
 
     return NextResponse.json({

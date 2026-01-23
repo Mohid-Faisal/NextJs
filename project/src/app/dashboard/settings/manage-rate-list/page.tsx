@@ -589,58 +589,84 @@ const ManageRateListPage = () => {
               </p>
             )}
 
-            {/* Available Rate Lists Section */}
+            {/* Available Rate Lists Section - Grouped by Vendor */}
             <div className="mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 sm:mb-4">
                 Available Rate Lists
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3">
-                {Object.entries(uploadedFiles).map(([fileKey, fileInfo]) => (
-                  <div
-                    key={fileKey}
-                    className="p-2 sm:p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900 transition-colors cursor-pointer"
-                    onClick={() => {
-                      setSelectedVendorName(fileInfo.vendor);
-                      setSelectedServiceName(fileInfo.service);
-                      // Find vendor ID from name
-                      const vendor = vendors.find(v => v.name === fileInfo.vendor);
-                      if (vendor) {
-                        setSelectedVendor(vendor.id);
-                      }
-                      // Find service ID from name
-                      const service = services.find(s => s.name === fileInfo.service);
-                      if (service) {
-                        setSelectedService(service.id);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-xs sm:text-sm text-green-800 dark:text-green-200">
-                          {fileInfo.vendor}
-                        </p>
-                        <p className="text-xs text-green-600 dark:text-green-300">
-                          {fileInfo.service}
-                        </p>
-                        <p className="text-xs text-green-500 dark:text-green-400 mt-1">
-                          {fileInfo.fileName}
-                        </p>
-                      </div>
-                      <div className="text-green-600 dark:text-green-400">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
               
-              {Object.keys(uploadedFiles).length === 0 && (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4 text-xs sm:text-sm">
-                  No rate lists have been uploaded yet. Upload your first rate list above.
-                </p>
-              )}
+              {(() => {
+                // Group files by vendor
+                const filesByVendor: { [vendor: string]: Array<{ fileKey: string; fileInfo: { fileName: string; vendor: string; service: string } }> } = {};
+                
+                Object.entries(uploadedFiles).forEach(([fileKey, fileInfo]) => {
+                  if (!filesByVendor[fileInfo.vendor]) {
+                    filesByVendor[fileInfo.vendor] = [];
+                  }
+                  filesByVendor[fileInfo.vendor].push({ fileKey, fileInfo });
+                });
+
+                // Sort vendors alphabetically
+                const sortedVendors = Object.keys(filesByVendor).sort();
+
+                if (sortedVendors.length === 0) {
+                  return (
+                    <p className="text-center text-gray-500 dark:text-gray-400 py-4 text-xs sm:text-sm">
+                      No rate lists have been uploaded yet. Upload your first rate list above.
+                    </p>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4 sm:space-y-6">
+                    {sortedVendors.map((vendor) => (
+                      <div key={vendor} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-200 mb-3 sm:mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                          {vendor}
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3">
+                          {filesByVendor[vendor].map(({ fileKey, fileInfo }) => (
+                            <div
+                              key={fileKey}
+                              className="p-2 sm:p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900 transition-colors cursor-pointer"
+                              onClick={() => {
+                                setSelectedVendorName(fileInfo.vendor);
+                                setSelectedServiceName(fileInfo.service);
+                                // Find vendor ID from name
+                                const vendorObj = vendors.find(v => v.name === fileInfo.vendor);
+                                if (vendorObj) {
+                                  setSelectedVendor(vendorObj.id);
+                                }
+                                // Find service ID from name
+                                const service = services.find(s => s.name === fileInfo.service);
+                                if (service) {
+                                  setSelectedService(service.id);
+                                }
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <p className="font-medium text-xs sm:text-sm text-green-800 dark:text-green-200">
+                                    {fileInfo.service}
+                                  </p>
+                                  <p className="text-xs text-green-500 dark:text-green-400 mt-1">
+                                    {fileInfo.fileName}
+                                  </p>
+                                </div>
+                                <div className="text-green-600 dark:text-green-400">
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>

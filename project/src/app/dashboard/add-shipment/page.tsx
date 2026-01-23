@@ -572,10 +572,23 @@ const AddShipmentPage = () => {
       return;
     }
 
-    // Filter services for the selected vendor
+    // Normalize vendor name for comparison (trim and case-insensitive)
+    const normalizedVendorName = vendorName.trim().toLowerCase();
+    console.log("Filtering services for vendor:", vendorName, "Normalized:", normalizedVendorName);
+
+    // Filter services for the selected vendor (case-insensitive comparison)
     const vendorServices = allVendorServices.filter(
-      (item: any) => item.vendor === vendorName
+      (item: any) => {
+        const itemVendorNormalized = item.vendor ? item.vendor.trim().toLowerCase() : "";
+        const matches = itemVendorNormalized === normalizedVendorName;
+        if (matches) {
+          console.log("Matched vendor service:", item);
+        }
+        return matches;
+      }
     );
+    
+    console.log("Filtered vendor services:", vendorServices);
 
     const uniqueServices = new Map();
     vendorServices.forEach((item: any) => {
@@ -600,10 +613,14 @@ const AddShipmentPage = () => {
     // If vendor is selected, filter services
     if (name === "vendor") {
       const selectedVendor = vendors.find((v) => v.name === value);
+      console.log("Selected vendor:", selectedVendor);
+      console.log("All vendor services:", allVendorServices);
       if (selectedVendor) {
         filterServicesByVendor(value);
         // Clear service mode when vendor changes
         setForm((prev) => ({ ...prev, serviceMode: "" }));
+      } else {
+        console.warn("Vendor not found in vendors list:", value);
       }
     }
   };
