@@ -515,7 +515,7 @@ export default function IncomeInvoicesPage() {
     const rows = invoices.map((i) => [
       i.id,
       i.invoiceNumber,
-      new Date(i.invoiceDate).toLocaleDateString(),
+      new Date(i.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }),
       i.receiptNumber || "",
       i.trackingNumber || "",
       getCountryNameFromCode(i.destination),
@@ -544,7 +544,7 @@ export default function IncomeInvoicesPage() {
         <tr>
           <td>${i.id}</td>
           <td>${i.invoiceNumber}</td>
-          <td>${new Date(i.invoiceDate).toLocaleDateString()}</td>
+          <td>${new Date(i.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
           <td>${i.receiptNumber || ""}</td>
           <td>${i.trackingNumber || ""}</td>
           <td>${getCountryNameFromCode(i.destination)}</td>
@@ -863,7 +863,7 @@ export default function IncomeInvoicesPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{i.id}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{i.invoiceNumber}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        {new Date(i.invoiceDate).toLocaleDateString()}
+                        {new Date(i.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{i.trackingNumber || "-"}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">

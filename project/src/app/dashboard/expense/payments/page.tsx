@@ -715,7 +715,7 @@ export default function ExpensePaymentsPage() {
                       {invoice.trackingNumber} • PKR{" "}
                       {invoice.remainingAmount?.toLocaleString()}
                       {invoice.shipment?.shipmentDate && (
-                        <> • {new Date(invoice.shipment.shipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</>
+                        <> • {new Date(invoice.shipment.shipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</>
                       )}
                     </div>
                   </div>

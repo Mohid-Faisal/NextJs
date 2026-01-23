@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { Country } from "country-state-city";
+import { getCountryNameFromCode } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,8 +28,28 @@ export async function GET(req: NextRequest) {
     }
     
     if (search) {
+      // Try to parse as number for price search
+      const searchAsNumber = parseFloat(search);
+      const isNumericSearch = !isNaN(searchAsNumber);
+      
+      // Get all country codes that match the search term (by name or code)
+      const matchingCountryCodes: string[] = [];
+      if (search.trim()) {
+        const allCountries = Country.getAllCountries();
+        const searchLower = search.toLowerCase().trim();
+        allCountries.forEach(country => {
+          if (
+            country.name.toLowerCase().includes(searchLower) ||
+            country.isoCode.toLowerCase().includes(searchLower) ||
+            country.name.toLowerCase() === searchLower
+          ) {
+            matchingCountryCodes.push(country.isoCode);
+          }
+        });
+      }
+      
       // Create search conditions that don't override the profile filter
-      const searchConditions = [
+      const searchConditions: any[] = [
         { invoiceNumber: { contains: search, mode: "insensitive" } },
         { trackingNumber: { contains: search, mode: "insensitive" } },
         { destination: { contains: search, mode: "insensitive" } },
@@ -44,6 +66,24 @@ export async function GET(req: NextRequest) {
           ]
         } },
       ];
+      
+      // Add country code search if we found matching countries
+      if (matchingCountryCodes.length > 0) {
+        searchConditions.push({
+          destination: { in: matchingCountryCodes }
+        });
+      }
+      
+      // Add price search if search term is numeric
+      if (isNumericSearch) {
+        // Search for amounts that match (with small tolerance for rounding)
+        searchConditions.push({
+          totalAmount: {
+            gte: searchAsNumber * 0.99, // Allow small rounding differences
+            lte: searchAsNumber * 1.01
+          }
+        });
+      }
       
       // Only add search conditions if they don't conflict with profile filter
       if (profile) {

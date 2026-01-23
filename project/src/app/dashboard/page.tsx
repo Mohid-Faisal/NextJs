@@ -502,11 +502,11 @@ const DashboardPage = () => {
                     if (active && payload && payload.length) {
                       const customer = data.topCustomers.find(c => c.customer === label);
                       const formattedDate = customer?.lastShipmentDate 
-                        ? new Date(customer.lastShipmentDate).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })
+                        ? new Date(customer.lastShipmentDate).toLocaleDateString('en-GB', { 
+                            year: '2-digit', 
+                            month: '2-digit', 
+                            day: '2-digit' 
+                          }).split('/').join('/')
                         : null;
                       
                       return (
@@ -640,7 +640,7 @@ const DashboardPage = () => {
                         transition={{ duration: 0.3, delay: index * 0.1 }}
                       >
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          {new Date(shipment.shipmentDate).toLocaleDateString()}
+                          {new Date(shipment.shipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                           <button
@@ -745,7 +745,7 @@ const DashboardPage = () => {
                         transition={{ duration: 0.3, delay: index * 0.1 }}
                       >
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          {new Date(payment.createdAt).toLocaleDateString()}
+                          {new Date(payment.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                           <span

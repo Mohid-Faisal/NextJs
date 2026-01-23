@@ -300,7 +300,7 @@ export default function ShipmentsPage() {
     try {
       const date =
         typeof dateString === "string" ? parseISO(dateString) : dateString;
-      return format(date, "MMM dd, yyyy");
+      return format(date, "dd/MM/yy");
     } catch (error) {
       console.error("Error formatting date:", error);
       return "Invalid Date";
@@ -441,7 +441,7 @@ export default function ShipmentsPage() {
           <body>
             <h1>${title}</h1>
             <p>Total: ${total}</p>
-            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <p>Generated on: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</p>
             <table>
               <thead>
                 <tr>
@@ -539,7 +539,7 @@ export default function ShipmentsPage() {
             <Page size="A4" style={styles.page}>
               <Text style={styles.title}>{title}</Text>
               <Text style={styles.subtitle}>Total: {total}</Text>
-              <Text style={styles.subtitle}>Generated on: {new Date().toLocaleDateString()}</Text>
+              <Text style={styles.subtitle}>Generated on: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</Text>
               
               <View style={styles.table}>
                 {/* Header Row */}

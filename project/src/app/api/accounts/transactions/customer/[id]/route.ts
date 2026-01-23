@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addCustomerTransaction, createJournalEntryForTransaction } from "@/lib/utils";
+import { Country } from "country-state-city";
 
 export async function GET(
   req: NextRequest,
@@ -37,11 +38,71 @@ export async function GET(
 
     // Add search filter
     if (search) {
-      whereClause.OR = [
+      // Try to parse as number for price search
+      const searchAsNumber = parseFloat(search);
+      const isNumericSearch = !isNaN(searchAsNumber);
+      
+      // Get all country codes that match the search term (by name or code)
+      const matchingCountryCodes: string[] = [];
+      if (search.trim()) {
+        const allCountries = Country.getAllCountries();
+        const searchLower = search.toLowerCase().trim();
+        allCountries.forEach(country => {
+          if (
+            country.name.toLowerCase().includes(searchLower) ||
+            country.isoCode.toLowerCase().includes(searchLower) ||
+            country.name.toLowerCase() === searchLower
+          ) {
+            matchingCountryCodes.push(country.isoCode);
+          }
+        });
+      }
+      
+      // Find invoices/shipments matching destination search
+      let matchingInvoiceNumbers: string[] = [];
+      if (matchingCountryCodes.length > 0 || search.trim()) {
+        const invoiceSearchConditions: any = {
+          OR: [
+            { destination: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+        if (matchingCountryCodes.length > 0) {
+          invoiceSearchConditions.OR.push({
+            destination: { in: matchingCountryCodes }
+          });
+        }
+        
+        const matchingInvoices = await prisma.invoice.findMany({
+          where: invoiceSearchConditions,
+          select: { invoiceNumber: true }
+        });
+        matchingInvoiceNumbers = matchingInvoices.map(inv => inv.invoiceNumber);
+      }
+      
+      // Build search conditions
+      const searchConditions: any[] = [
         { description: { contains: search, mode: 'insensitive' } },
-        { reference: { contains: search, mode: 'insensitive' } },
-        { amount: { equals: parseFloat(search) || undefined } }
+        { reference: { contains: search, mode: 'insensitive' } }
       ];
+      
+      // Add amount search (exact match or range)
+      if (isNumericSearch) {
+        searchConditions.push({
+          amount: {
+            gte: searchAsNumber * 0.99,
+            lte: searchAsNumber * 1.01
+          }
+        });
+      }
+      
+      // Add invoice number search if we found matching invoices
+      if (matchingInvoiceNumbers.length > 0) {
+        searchConditions.push({
+          invoice: { in: matchingInvoiceNumbers }
+        });
+      }
+      
+      whereClause.OR = searchConditions;
     }
 
     // Add date range filter

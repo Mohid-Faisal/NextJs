@@ -1206,9 +1206,9 @@ export default function CustomerTransactionsPage() {
                       <td className="px-4 py-3">
                         {(() => {
                           try {
-                            return format(parseISO(voucherDateToUse), "dd-MM-yyyy");
+                            return format(parseISO(voucherDateToUse), "dd/MM/yy");
                           } catch (e) {
-                            return new Date(voucherDateToUse).toLocaleDateString('en-GB');
+                            return new Date(voucherDateToUse).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
                           }
                         })()}
                       </td>
