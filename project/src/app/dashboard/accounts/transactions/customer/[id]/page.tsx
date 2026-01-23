@@ -124,6 +124,18 @@ export default function CustomerTransactionsPage() {
         if (dateDiff === 0) {
           if (a.type === "DEBIT" && b.type === "CREDIT") return 1;  // DEBIT comes after (below) CREDIT
           if (a.type === "CREDIT" && b.type === "DEBIT") return -1; // CREDIT comes before (above) DEBIT
+          // If both are shipments (DEBIT with invoice), sort by invoice number (smaller first)
+          if (a.type === "DEBIT" && b.type === "DEBIT" && a.invoice && b.invoice) {
+            const invoiceA = a.invoice.toLowerCase();
+            const invoiceB = b.invoice.toLowerCase();
+            // Try numeric comparison first, then string comparison
+            const numA = parseInt(invoiceA);
+            const numB = parseInt(invoiceB);
+            if (!isNaN(numA) && !isNaN(numB)) {
+              return numA - numB;
+            }
+            return invoiceA.localeCompare(invoiceB);
+          }
         }
         
         return dateDiff;
@@ -300,7 +312,7 @@ export default function CustomerTransactionsPage() {
           <div class="invoice-col" style="text-align: right;">
             <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;">${customer.id || 'N/A'}</span></p>
             <p style="margin-bottom: 0;"><b>Statement Period: </b><span style="float: right;">${formatDateRange()}</span></p>
-            <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${startingBalance.toLocaleString()}</span></p>
+            <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${(-startingBalance).toLocaleString()}</span></p>
           </div>
         </div>
       ` : '';
@@ -562,7 +574,7 @@ export default function CustomerTransactionsPage() {
                       <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0;">Total:</td>
                       <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${totalDebit.toLocaleString()}</td>
                       <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${totalCredit.toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${finalBalance.toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(-finalBalance).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -846,7 +858,7 @@ export default function CustomerTransactionsPage() {
         transaction.reference || "-",
         debit,
         credit,
-        `${transaction.newBalance.toLocaleString()}`
+        `${(-transaction.newBalance).toLocaleString()}`
       ];
     });
     return { headers, data };
@@ -887,6 +899,18 @@ export default function CustomerTransactionsPage() {
         if (dateDiff === 0) {
           if (a.type === "DEBIT" && b.type === "CREDIT") return -1;  // DEBIT comes after (below) CREDIT
           if (a.type === "CREDIT" && b.type === "DEBIT") return 1; // CREDIT comes before (above) DEBIT
+          // If both are shipments (DEBIT with invoice), sort by invoice number (smaller first)
+          if (a.type === "DEBIT" && b.type === "DEBIT" && a.invoice && b.invoice) {
+            const invoiceA = a.invoice.toLowerCase();
+            const invoiceB = b.invoice.toLowerCase();
+            // Try numeric comparison first, then string comparison
+            const numA = parseInt(invoiceA);
+            const numB = parseInt(invoiceB);
+            if (!isNaN(numA) && !isNaN(numB)) {
+              return numA - numB;
+            }
+            return invoiceA.localeCompare(invoiceB);
+          }
           // If same type, preserve original order from sortedTransactions
           return (a as any).originalIndex - (b as any).originalIndex;
         }
