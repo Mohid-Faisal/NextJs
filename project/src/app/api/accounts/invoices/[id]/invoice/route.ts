@@ -364,7 +364,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
       <div class="col-sm-3 invoice-col">
         <p style="margin-bottom: 0;"><b>Invoice: </b> <span style="float: right;"> ${invoice.invoiceNumber}</span></p>
         <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;"> ${vendor ? (vendor.id || 'N/A') : (customer?.id || 'N/A')}</span></p>
-        <p style="margin-bottom: 0;"><b>Date :</b> <span style="float: right;"> ${formatDate(invoice.invoiceDate || invoice.createdAt)}</span></p>
+        <p style="margin-bottom: 0;"><b>Invoice Date :</b> <span style="float: right;"> ${formatDate(invoice.invoiceDate || invoice.createdAt)}</span></p>
       </div>
       <!-- /.col -->
     </div>
@@ -403,7 +403,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
           </thead>
           <tbody>
           <tr>
-            <td>${formatDate(shipment?.createdAt || invoice.createdAt)}</td>
+            <td>${formatDate(shipment?.shipmentDate || invoice.createdAt)}</td>
             <td>${shipment?.invoiceNumber || shipment?.id || 'N/A'}</td>
             <td>${shipment?.trackingId || 'N/A'}</td>
             <td>${shipment?.referenceNumber && shipment.referenceNumber.trim() !== '' ? shipment.referenceNumber : 'N/A'}</td>

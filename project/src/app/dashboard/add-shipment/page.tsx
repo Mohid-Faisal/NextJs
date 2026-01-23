@@ -848,7 +848,7 @@ const AddShipmentPage = () => {
             weightVol: s.weightVol || 0,
             fixedCharge: s.fixedCharge || 0,
             decValue: s.decValue || 0,
-            price: s.price || 0,
+            price: (s.price && s.price > 0) ? s.price : (s.totalCost || 0),
             discount: s.discount || 0,
             fuelSurcharge: s.fuelSurcharge || 0,
             insurance: s.insurance || 0,

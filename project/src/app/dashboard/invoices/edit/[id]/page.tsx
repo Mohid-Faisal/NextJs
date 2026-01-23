@@ -122,12 +122,17 @@ export default function EditInvoicePage() {
 
   // Update line items when calculatedValues change
   useEffect(() => {
-    if (calculatedValues.total && lineItems.length > 0 && lineItems[0].value === 0) {
-      const updatedLineItems = [...lineItems];
-      updatedLineItems[0] = { ...updatedLineItems[0], value: calculatedValues.total };
-      setLineItems(updatedLineItems);
+    if (calculatedValues.total && lineItems.length > 0) {
+      const currentValue = Number(lineItems[0].value) || 0;
+      const calculatedTotal = Number(calculatedValues.total) || 0;
+      // Update if current value is 0 or missing, and calculated total exists
+      if (currentValue === 0 && calculatedTotal > 0) {
+        const updatedLineItems = [...lineItems];
+        updatedLineItems[0] = { ...updatedLineItems[0], value: calculatedTotal };
+        setLineItems(updatedLineItems);
+      }
     }
-  }, [calculatedValues]);
+  }, [calculatedValues, lineItems.length]);
 
   const fetchInvoiceData = async () => {
     try {
@@ -179,11 +184,18 @@ export default function EditInvoicePage() {
               item.description !== "Fuel Surcharge" && 
               item.description !== "Discount"
             )
-            .map((item: any, index: number) => ({
-              id: item.id || (index + 1).toString(),
-              description: item.description || '',
-              value: item.value || 0
-            }));
+            .map((item: any, index: number) => {
+              // If value is 0 or missing, try to use calculatedValues.total or totalAmount
+              const itemValue = Number(item.value);
+              const finalValue = (itemValue && itemValue > 0) 
+                ? itemValue 
+                : (Number(parsedValues.total) || Number(data.totalAmount) || 0);
+              return {
+                id: item.id || (index + 1).toString(),
+                description: item.description || '',
+                value: finalValue
+              };
+            });
           setLineItems(invoiceLineItems);
         } else if (data.shipment?.packages) {
           try {
@@ -194,17 +206,17 @@ export default function EditInvoicePage() {
             const initialLineItems = parsedPackages.map((pkg: any, index: number) => ({
               id: pkg.id || (index + 1).toString(),
               description: pkg.packageDescription || '',
-              value: pkg.value || parsedValues.total || 0
+              value: Number(pkg.value) || Number(parsedValues.total) || Number(data.totalAmount) || 0
             }));
             setLineItems(initialLineItems);
           } catch (e) {
             console.error('Error parsing packages for line items:', e);
             // Initialize with line item using calculated values if parsing fails
-            setLineItems([{ id: '1', description: '', value: parsedValues.total || data.totalAmount || 0 }]);
+            setLineItems([{ id: '1', description: '', value: Number(parsedValues.total) || Number(data.totalAmount) || 0 }]);
           }
         } else {
           // Initialize with line item using calculated values or totalAmount
-          setLineItems([{ id: '1', description: '', value: parsedValues.total || data.totalAmount || 0 }]);
+          setLineItems([{ id: '1', description: '', value: Number(parsedValues.total) || Number(data.totalAmount) || 0 }]);
         }
 
         // Set disclaimer if available
@@ -716,7 +728,7 @@ export default function EditInvoicePage() {
                     <Input
                       id={`value-${index}`}
                       type="text"
-                      value={item.value ? Number(item.value).toLocaleString() : '0'}
+                      value={item.value !== undefined && item.value !== null ? Number(item.value).toLocaleString() : '0'}
                       onChange={(e) => {
                         const numValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
                         updateLineItem(index, 'value', numValue);
