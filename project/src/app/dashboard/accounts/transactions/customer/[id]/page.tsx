@@ -291,7 +291,7 @@ export default function CustomerTransactionsPage() {
           };
           const from = new Date(dateRange.from);
           const to = new Date(dateRange.to);
-          return `${formatDate(from)} TO ${formatDate(to)}`;
+          return `${formatDate(from)} to ${formatDate(to)}`;
         }
         return 'N/A';
       };
@@ -362,7 +362,7 @@ export default function CustomerTransactionsPage() {
                 display: flex;
                 flex-direction: column;
                 min-height: 100vh;
-                padding: 20px;
+                padding: 20px 10px;
               }
               .header-section {
                 display: flex;
@@ -505,7 +505,7 @@ export default function CustomerTransactionsPage() {
                   display: flex;
                   flex-direction: column;
                   min-height: 100vh;
-                  padding: 15px;
+                  padding: 15px 5px;
                 }
                 .content-wrapper {
                   flex: 1;
@@ -516,7 +516,7 @@ export default function CustomerTransactionsPage() {
                 thead { display: table-header-group; }
                 tfoot { display: table-footer-group; }
                 @page {
-                  margin: 0.5in;
+                  margin: 0.5in 0.25in;
                   size: A4;
                 }
               }
@@ -850,6 +850,10 @@ export default function CustomerTransactionsPage() {
       // Make pipe characters bold in description
       const descriptionWithBoldPipes = transaction.description.replace(/\|/g, '<b>|</b>');
       
+      // Format balance: show "-" if balance is 0, otherwise show inverted balance
+      const balance = transaction.newBalance;
+      const formattedBalance = balance === 0 ? "-" : -balance.toLocaleString();
+      
       return [
         formattedDate,
         transaction.invoice || "-",
@@ -857,7 +861,7 @@ export default function CustomerTransactionsPage() {
         transaction.reference || "-",
         debit,
         credit,
-        `${(-transaction.newBalance).toLocaleString()}`
+        formattedBalance
       ];
     });
     return { headers, data };
