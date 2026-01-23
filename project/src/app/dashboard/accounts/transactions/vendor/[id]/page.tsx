@@ -883,8 +883,8 @@ export default function VendorTransactionsPage() {
         // CREDIT (payment) transactions come before DEBIT (shipment/invoice) transactions
         // This matches the table's same-date ordering
         if (dateDiff === 0) {
-          if (a.type === "DEBIT" && b.type === "CREDIT") return 1;  // DEBIT comes after (below) CREDIT
-          if (a.type === "CREDIT" && b.type === "DEBIT") return -1; // CREDIT comes before (above) DEBIT
+          if (a.type === "DEBIT" && b.type === "CREDIT") return -1;  // DEBIT comes after (below) CREDIT
+          if (a.type === "CREDIT" && b.type === "DEBIT") return 1; // CREDIT comes before (above) DEBIT
           // If same type, preserve original order from sortedTransactions
           return (a as any).originalIndex - (b as any).originalIndex;
         }
