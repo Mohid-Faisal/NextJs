@@ -55,6 +55,7 @@ const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState<'shipments' | 'payments'>('shipments');
   const [showReceivableModal, setShowReceivableModal] = useState(false);
   const [showCustomersModal, setShowCustomersModal] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<{ name: string; percent: number } | null>(null);
   const [data, setData] = useState({
     totalShipments: 0,
     totalUsers: 0,
@@ -146,6 +147,20 @@ const DashboardPage = () => {
         
         // Use real data directly from the API
         setData(json);
+        
+        // Initialize selected country to first country
+        if (json.revenueByDestination && json.revenueByDestination.length > 0) {
+          const first = json.revenueByDestination
+            .filter((d: any) => d.destination && d.destination !== "No Data" && d.revenue > 0)
+            .slice(0, 1)[0];
+          if (first) {
+            const total = json.revenueByDestination
+              .filter((d: any) => d.destination && d.destination !== "No Data" && d.revenue > 0)
+              .reduce((sum: number, d: any) => sum + d.revenue, 0);
+            const percent = (first.revenue / total) * 100;
+            setSelectedCountry({ name: first.destination, percent });
+          }
+        }
       } catch (error) {
         console.error("Error fetching dashboard data", error);
       }
@@ -204,7 +219,7 @@ const DashboardPage = () => {
   }, []);
 
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6B9D', '#C77DFF', '#FFA500', '#00CED1', '#FF1493', '#32CD32', '#FF4500'];
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-3 sm:p-4 md:p-6">
@@ -349,8 +364,8 @@ const DashboardPage = () => {
               </h3>
               <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
             </div>
-            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <BarChart data={data.monthlyShipments}>
+            <ResponsiveContainer width="100%" height={280} className="sm:h-[300px]">
+              <BarChart data={data.monthlyShipments} margin={{ top: 5, right: 10, left: -20, bottom: -5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                 <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                 <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
@@ -384,67 +399,139 @@ const DashboardPage = () => {
               <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
             {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && (data.revenueByDestination.some(d => d.revenue > 0) || data.revenueByDestination.some(d => d.shipments > 0)) ? (
-              <ResponsiveContainer width="100%" height={260} className="sm:h-[300px]">
-                <RechartsPieChart>
-                  <Pie
-                    data={data.revenueByDestination
-                      .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
-                      .slice(0, 12)
-                      .map(d => ({
-                        name: d.destination,
-                        value: d.revenue,
-                        shipments: d.shipments
-                      }))}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }: { name?: string; percent?: number }) => {
-                      if (!name) return '';
-                      return percent ? `${name}: ${(percent * 100).toFixed(0)}%` : name;
-                    }}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {data.revenueByDestination
-                      .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
-                      .slice(0, 12)
-                      .map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#ffffff', 
-                      border: '1px solid #e5e7eb', 
-                      borderRadius: '8px',
-                      color: '#1f2937',
-                      fontSize: '12px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                    }}
-                    itemStyle={{ color: '#1f2937' }}
-                    labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                    formatter={(value: any, name: string, props: any) => {
-                      if (name === 'value') {
-                        return [`$${Number(value).toLocaleString()}`, 'Revenue'];
-                      }
-                      if (name === 'shipments') {
-                        return [`${props.payload.shipments}`, 'Shipments'];
-                      }
-                      return [value, name];
-                    }}
-                    labelFormatter={(label) => `Country: ${label}`}
-                  />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    height={36}
-                    formatter={(value, entry: any) => {
-                      const data = entry.payload;
-                      return `${value}: $${data.value.toLocaleString()} (${data.shipments} shipments)`;
-                    }}
-                  />
-                </RechartsPieChart>
-              </ResponsiveContainer>
+              <div className="flex items-center gap-4">
+                <div className="flex-1 relative" style={{ minHeight: '300px' }}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={(() => {
+                          const pieData = data.revenueByDestination
+                            .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                            .slice(0, 12)
+                            .map(d => ({
+                              name: d.destination,
+                              value: d.revenue,
+                              shipments: d.shipments
+                            }));
+                          const total = pieData.reduce((sum, d) => sum + d.value, 0);
+                          return pieData.map(d => ({
+                            ...d,
+                            percent: (d.value / total) * 100
+                          }));
+                        })()}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={false}
+                        outerRadius={100}
+                        innerRadius={60}
+                        fill="#8884d8"
+                        dataKey="value"
+                        onMouseEnter={(data: any) => {
+                          if (data && data.percent !== undefined) {
+                            setSelectedCountry({ name: data.name, percent: data.percent });
+                          }
+                        }}
+                      >
+                        {data.revenueByDestination
+                          .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                          .slice(0, 12)
+                          .map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e5e7eb', 
+                          borderRadius: '8px',
+                          color: '#1f2937',
+                          fontSize: '12px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                        }}
+                        itemStyle={{ color: '#1f2937' }}
+                        labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
+                        formatter={(value: any, name: string, props: any) => {
+                          if (name === 'value') {
+                            return [`$${Number(value).toLocaleString()}`, 'Revenue'];
+                          }
+                          if (name === 'shipments') {
+                            return [`${props.payload.shipments}`, 'Shipments'];
+                          }
+                          return [value, name];
+                        }}
+                        labelFormatter={(label) => `Country: ${label}`}
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                  {/* Center text */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <div className="text-center">
+                      <div className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
+                        {selectedCountry ? selectedCountry.name : (() => {
+                          const first = data.revenueByDestination
+                            .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                            .slice(0, 1)[0];
+                          if (first) {
+                            const total = data.revenueByDestination
+                              .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                              .reduce((sum, d) => sum + d.revenue, 0);
+                            const percent = (first.revenue / total) * 100;
+                            return first.destination;
+                          }
+                          return '';
+                        })()}
+                      </div>
+                      <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+                        {selectedCountry ? `${selectedCountry.percent.toFixed(2)}%` : (() => {
+                          const first = data.revenueByDestination
+                            .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                            .slice(0, 1)[0];
+                          if (first) {
+                            const total = data.revenueByDestination
+                              .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                              .reduce((sum, d) => sum + d.revenue, 0);
+                            const percent = (first.revenue / total) * 100;
+                            return `${percent.toFixed(2)}%`;
+                          }
+                          return '';
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Legend on the right */}
+                <div className="shrink-0 w-48 space-y-2">
+                  {data.revenueByDestination
+                    .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                    .slice(0, 12)
+                    .map((entry, index) => {
+                      const total = data.revenueByDestination
+                        .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
+                        .reduce((sum, d) => sum + d.revenue, 0);
+                      const percent = (entry.revenue / total) * 100;
+                      return (
+                        <div 
+                          key={index} 
+                          className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                          onMouseEnter={() => setSelectedCountry({ name: entry.destination, percent })}
+                          onMouseLeave={() => setSelectedCountry(null)}
+                        >
+                          <div 
+                            className="w-3 h-3 rounded-sm shrink-0" 
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="text-gray-700 dark:text-gray-300 font-medium">
+                            {entry.destination}
+                          </span>
+                          <span className="text-gray-500 dark:text-gray-400 ml-auto">
+                            ({percent.toFixed(2)} %)
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
             ) : (
               <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">
                 <div className="text-center">
