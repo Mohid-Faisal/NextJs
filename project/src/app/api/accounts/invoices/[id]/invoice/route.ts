@@ -165,15 +165,14 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
   const customer = invoice.customer;
   const vendor = invoice.vendor;
   
-  // Format dates like PHP
+  // Format dates as dd/mm/yy
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: '2-digit'
-    });
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
   };
 
   // Helper function to get full country name from code

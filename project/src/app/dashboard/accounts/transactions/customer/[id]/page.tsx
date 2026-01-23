@@ -827,9 +827,13 @@ export default function CustomerTransactionsPage() {
       
       let formattedDate: string;
       try {
-        formattedDate = format(parseISO(voucherDateToUse), "dd-MM-yyyy");
+        formattedDate = format(parseISO(voucherDateToUse), "dd/MM/yy");
       } catch (e) {
-        formattedDate = new Date(voucherDateToUse).toLocaleDateString('en-GB');
+        const date = new Date(voucherDateToUse);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = String(date.getFullYear()).slice(-2);
+        formattedDate = `${day}/${month}/${year}`;
       }
       
       const debit = transaction.type === "DEBIT" ? transaction.amount.toLocaleString() : "-";
@@ -854,26 +858,42 @@ export default function CustomerTransactionsPage() {
   };
 
   const handleExportPrint = async () => {
-    // Sort transactions oldest first for export
-    const sortedForExport = [...sortedTransactions].sort((a, b) => {
-      const getVoucherDate = (t: Transaction) => {
-        const isCreditDebitNote = t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT");
-        if (isCreditDebitNote && t.creditNoteDate) {
-          return t.creditNoteDate;
+    // Use the same sorting logic as the table, but reverse to oldest first
+    // This preserves the exact same-date ordering from the table
+    const getVoucherDate = (t: Transaction) => {
+      const isCreditDebitNote = t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT");
+      if (isCreditDebitNote && t.creditNoteDate) {
+        return t.creditNoteDate;
+      }
+      const isShipmentTransaction = t.type === "DEBIT" && t.invoice;
+      const isPaymentTransaction = t.type === "CREDIT" && t.invoice;
+      if (isShipmentTransaction) {
+        return t.shipmentDate || t.createdAt;
+      } else if (isPaymentTransaction) {
+        return t.paymentDate || t.createdAt;
+      }
+      return t.createdAt;
+    };
+    
+    const sortedForExport = [...sortedTransactions].map((t, index) => ({ ...t, originalIndex: index }))
+      .sort((a, b) => {
+        const dateA = new Date(getVoucherDate(a)).getTime();
+        const dateB = new Date(getVoucherDate(b)).getTime();
+        const dateDiff = dateA - dateB; // Oldest first (reversed from table's desc order)
+        
+        // When dates are the same, use the exact same logic as the table
+        // CREDIT (payment) transactions come before DEBIT (shipment/invoice) transactions
+        // This matches the table's same-date ordering
+        if (dateDiff === 0) {
+          if (a.type === "DEBIT" && b.type === "CREDIT") return 1;  // DEBIT comes after (below) CREDIT
+          if (a.type === "CREDIT" && b.type === "DEBIT") return -1; // CREDIT comes before (above) DEBIT
+          // If same type, preserve original order from sortedTransactions
+          return (a as any).originalIndex - (b as any).originalIndex;
         }
-        const isShipmentTransaction = t.type === "DEBIT" && t.invoice;
-        const isPaymentTransaction = t.type === "CREDIT" && t.invoice;
-        if (isShipmentTransaction) {
-          return t.shipmentDate || t.createdAt;
-        } else if (isPaymentTransaction) {
-          return t.paymentDate || t.createdAt;
-        }
-        return t.createdAt;
-      };
-      const dateA = new Date(getVoucherDate(a)).getTime();
-      const dateB = new Date(getVoucherDate(b)).getTime();
-      return dateA - dateB; // Oldest first
-    });
+        
+        return dateDiff;
+      })
+      .map(({ originalIndex, ...t }) => t) as Transaction[];
     
     // Calculate starting balance (balance before the first transaction in the period)
     const startingBalance = sortedForExport.length > 0 
