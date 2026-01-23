@@ -613,7 +613,7 @@ export async function POST(req: NextRequest) {
             customerId,
             'DEBIT',
             remainingAmount,
-            `Tracking: ${trackingId} | Country: ${finalDestination}| Type: ${packaging} | Weight: ${totalWeight}Kg`,
+            `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
             invoiceNumber,
             invoiceNumber,
             shipmentDate ? new Date(shipmentDate) : new Date()
@@ -721,7 +721,7 @@ export async function POST(req: NextRequest) {
             vendorId,
             'DEBIT',
             vendorRemainingAmount,
-            `Tracking: ${trackingId} | Country: ${finalDestination}| Type: ${packaging} | Weight: ${totalWeight}Kg`,
+            `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
             vendorInvoiceNumber,
             vendorInvoiceNumber,
             shipmentDate ? new Date(shipmentDate) : new Date()

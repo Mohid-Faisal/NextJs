@@ -282,9 +282,15 @@ export default function VendorTransactionsPage() {
     if (printWindow) {
       const formatDateRange = () => {
         if (dateRange?.from && dateRange?.to) {
+          const formatDate = (date: Date) => {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+            return `${day}/${month}/${year}`;
+          };
           const from = new Date(dateRange.from);
           const to = new Date(dateRange.to);
-          return `${from.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()} TO ${to.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
+          return `${formatDate(from)} TO ${formatDate(to)}`;
         }
         return 'N/A';
       };
@@ -298,7 +304,7 @@ export default function VendorTransactionsPage() {
           </div>
           <div class="invoice-col" style="text-align: right;">
             <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;">${vendor.id || 'N/A'}</span></p>
-            <p style="margin-bottom: 0;"><b>Statement Period: </b><span style="float: right;">${formatDateRange()}</span></p>
+            <p style="margin-bottom: 0;"><b>Period: </b><span style="float: right;">${formatDateRange()}</span></p>
             <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${(-startingBalance).toLocaleString()}</span></p>
           </div>
         </div>
@@ -524,11 +530,13 @@ export default function VendorTransactionsPage() {
                 </div>
                 <div class="report-info">
                   <div class="report-title">${title}</div>
-                  <div class="report-date">Generated on: ${new Date().toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                  })}</div>
+                  <div class="report-date">Generated on: ${(() => {
+                    const date = new Date();
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = String(date.getFullYear()).slice(-2);
+                    return `${day}/${month}/${year}`;
+                  })()}</div>
                 </div>
               </div>
               <hr style="border: none; border-top: 2px solid #ddd; margin: 20px 0;">
@@ -837,11 +845,14 @@ export default function VendorTransactionsPage() {
         formattedDate = `${day}/${month}/${year}`;
       }
       
+      // Make pipe characters bold in description
+      const descriptionWithBoldPipes = transaction.description.replace(/\|/g, '<b>|</b>');
+      
       return [
         formattedDate,
         transaction.type,
         `${transaction.amount.toLocaleString()}`,
-        transaction.description,
+        descriptionWithBoldPipes,
         transaction.reference || "N/A",
         transaction.invoice || "N/A",
         `${(-transaction.newBalance).toLocaleString()}`
