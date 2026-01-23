@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Bell, Maximize2, Minimize2, Search } from "lucide-react";
+import { Menu, Bell, Maximize2, Minimize2, Search, Upload } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import BulkUploadModal from "./BulkUploadModal";
 
 const Navbar = ({
   onToggleSidebar,
@@ -15,6 +16,7 @@ const Navbar = ({
 }) => {
   const pathname = usePathname();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   // Check if fullscreen is supported
   const isFullscreenSupported = typeof document !== 'undefined' && 
@@ -109,10 +111,20 @@ const Navbar = ({
 
       {/* Right section */}
       <div className="flex items-center gap-6">
+        {/* Bulk Upload Shipments */}
+        <button
+          onClick={() => setShowBulkUpload(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors duration-200 bg-linear-to-r from-blue-500 to-cyan-600 text-white hover:from-blue-600 hover:to-cyan-700"
+          title="Bulk Upload Shipments"
+        >
+          <Upload className="w-5 h-5" />
+          <span className="text-sm font-medium">Bulk Upload</span>
+        </button>
+
         {/* Remote Area Lookup */}
         <Link
           href="/dashboard/remote-area-lookup"
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors duration-200 bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors duration-200 bg-linear-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 ${
             pathname.startsWith("/dashboard/remote-area-lookup")
               ? "ring-2 ring-purple-300 dark:ring-purple-700"
               : ""
@@ -149,6 +161,12 @@ const Navbar = ({
         {/* Theme toggle */}
         <ThemeToggle />
       </div>
+
+      {/* Bulk Upload Modal */}
+      <BulkUploadModal 
+        isOpen={showBulkUpload} 
+        onClose={() => setShowBulkUpload(false)} 
+      />
     </header>
   );
 };
