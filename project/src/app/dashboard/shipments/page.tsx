@@ -138,11 +138,13 @@ export default function ShipmentsPage() {
           startDate.setHours(0, 0, 0, 0); // Start of the day
           endDate = new Date(customEndDate);
           endDate.setHours(23, 59, 59, 999); // End of the selected day
+          setDateRange({ from: startDate, to: endDate });
         } else {
-          // Default to last 3 months if custom dates not set
-          const threeMonthsAgo = new Date(now);
-          threeMonthsAgo.setMonth(now.getMonth() - 3);
-          startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1);
+          // Don't set date range if custom dates not provided - prevents fetching
+          setDateRange(undefined);
+          setShipments([]);
+          setTotal(0);
+          return;
         }
         break;
       default:
@@ -203,6 +205,10 @@ export default function ShipmentsPage() {
   }, [searchParams, router]);
 
   useEffect(() => {
+    // Don't fetch if custom period is selected but dates are not provided
+    if (periodType === 'custom' && (!customStartDate || !customEndDate)) {
+      return;
+    }
     const fetchShipments = async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -222,7 +228,7 @@ export default function ShipmentsPage() {
     };
 
     fetchShipments();
-  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize]);
+  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -609,13 +615,13 @@ export default function ShipmentsPage() {
         return [
           ...baseData,
           shipment.deliveryStatus || "N/A",
-          `Rs. ${shipment.totalCost}`,
+          Number(shipment.totalCost || 0).toLocaleString(),
           shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
         ];
       } else {
         return [
           ...baseData,
-          `Rs. ${shipment.totalCost}`,
+          Number(shipment.totalCost || 0).toLocaleString(),
           shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
         ];
       }
@@ -990,8 +996,8 @@ export default function ShipmentsPage() {
                         </td>
                       )}
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">Rs. {shipment.totalCost}</span>
-                        <span className="sm:hidden">Rs.{shipment.totalCost}</span>
+                        <span className="hidden sm:inline">{Number(shipment.totalCost || 0).toLocaleString()}</span>
+                        <span className="sm:hidden">{Number(shipment.totalCost || 0).toLocaleString()}</span>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <span

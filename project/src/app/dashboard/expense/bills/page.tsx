@@ -345,11 +345,14 @@ export default function ExpenseBillsPage() {
           startDate.setHours(0, 0, 0, 0); // Start of the day
           endDate = new Date(customEndDate);
           endDate.setHours(23, 59, 59, 999); // End of the selected day
+          setDateRange({ from: startDate, to: endDate });
         } else {
-          // Default to last 3 months if custom dates not set
-          const threeMonthsAgo = new Date(now);
-          threeMonthsAgo.setMonth(now.getMonth() - 3);
-          startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1);
+          // Don't set date range if custom dates not provided - prevents fetching
+          setDateRange(undefined);
+          setInvoices([]);
+          setTotal(0);
+          setTotalAmount(0);
+          return;
         }
         break;
       default:
@@ -366,6 +369,10 @@ export default function ExpenseBillsPage() {
   }, [periodType, customStartDate, customEndDate]);
 
   useEffect(() => {
+    // Don't fetch if custom period is selected but dates are not provided
+    if (periodType === 'custom' && (!customStartDate || !customEndDate)) {
+      return;
+    }
     const fetchInvoices = async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -487,7 +494,7 @@ export default function ExpenseBillsPage() {
       i.trackingNumber || "",
       getCountryNameFromCode(i.destination),
       i.status,
-      `${i.currency} ${i.totalAmount.toLocaleString()}`,
+      `${i.totalAmount.toLocaleString()}`,
       i.vendor?.PersonName || i.vendor?.CompanyName || "",
     ]);
     const csv = [headers, ...rows]
@@ -514,7 +521,7 @@ export default function ExpenseBillsPage() {
           <td>${i.trackingNumber || ""}</td>
           <td>${getCountryNameFromCode(i.destination)}</td>
           <td>${i.status}</td>
-          <td>${i.currency} ${i.totalAmount.toLocaleString()}</td>
+          <td>${i.totalAmount.toLocaleString()}</td>
           <td>${i.vendor?.PersonName || i.vendor?.CompanyName || ""}</td>
         </tr>`
       )
@@ -854,7 +861,7 @@ export default function ExpenseBillsPage() {
                       </span>
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      {i.currency} {i.totalAmount.toLocaleString()}
+                      {i.totalAmount.toLocaleString()}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <DropdownMenu>

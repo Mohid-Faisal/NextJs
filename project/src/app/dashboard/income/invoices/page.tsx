@@ -353,11 +353,14 @@ export default function IncomeInvoicesPage() {
           startDate.setHours(0, 0, 0, 0); // Start of the day
           endDate = new Date(customEndDate);
           endDate.setHours(23, 59, 59, 999); // End of the selected day
+          setDateRange({ from: startDate, to: endDate });
         } else {
-          // Default to last 3 months if custom dates not set
-          const threeMonthsAgo = new Date(now);
-          threeMonthsAgo.setMonth(now.getMonth() - 3);
-          startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1);
+          // Don't set date range if custom dates not provided - prevents fetching
+          setDateRange(undefined);
+          setInvoices([]);
+          setTotal(0);
+          setTotalAmount(0);
+          return;
         }
         break;
       default:
@@ -374,6 +377,10 @@ export default function IncomeInvoicesPage() {
   }, [periodType, customStartDate, customEndDate]);
 
   useEffect(() => {
+    // Don't fetch if custom period is selected but dates are not provided
+    if (periodType === 'custom' && (!customStartDate || !customEndDate)) {
+      return;
+    }
     const fetchInvoices = async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -513,7 +520,7 @@ export default function IncomeInvoicesPage() {
       i.trackingNumber || "",
       getCountryNameFromCode(i.destination),
       i.status,
-      `${i.currency} ${Number(i.totalAmount ?? 0).toLocaleString()}`,
+      `${Number(i.totalAmount ?? 0).toLocaleString()}`,
       i.customer?.PersonName || i.customer?.CompanyName || "",
     ]);
     const csv = [headers, ...rows]
@@ -542,7 +549,7 @@ export default function IncomeInvoicesPage() {
           <td>${i.trackingNumber || ""}</td>
           <td>${getCountryNameFromCode(i.destination)}</td>
           <td>${i.status}</td>
-          <td>${i.currency} ${Number(i.totalAmount ?? 0).toLocaleString()}</td>
+          <td>${Number(i.totalAmount ?? 0).toLocaleString()}</td>
           <td>${i.customer?.PersonName || i.customer?.CompanyName || ""}</td>
         </tr>`
       )
@@ -886,8 +893,8 @@ export default function IncomeInvoicesPage() {
                         </span>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{i.currency} {i.totalAmount.toLocaleString()}</span>
-                        <span className="sm:hidden">{i.currency} {i.totalAmount.toLocaleString()}</span>
+                        <span className="hidden sm:inline">{Number(i.totalAmount ?? 0).toLocaleString()}</span>
+                        <span className="sm:hidden">{Number(i.totalAmount ?? 0).toLocaleString()}</span>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <DropdownMenu>

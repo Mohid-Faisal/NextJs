@@ -893,8 +893,8 @@ export default function CustomersPage() {
                               : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
                           }`}
                         >
-                          <span className="hidden sm:inline">${customer.currentBalance?.toLocaleString() || '0.00'}</span>
-                          <span className="sm:hidden">${customer.currentBalance?.toLocaleString() || '0.00'}</span>
+                          <span className="hidden sm:inline">{customer.currentBalance?.toLocaleString() || '0.00'}</span>
+                          <span className="sm:hidden">{customer.currentBalance?.toLocaleString() || '0.00'}</span>
                         </span>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">

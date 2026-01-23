@@ -136,8 +136,12 @@ export default function CustomerTransactionsPage() {
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
   useEffect(() => {
+    // Don't fetch if custom period is selected but dates are not provided
+    if (periodType === 'custom' && (!customStartDate || !customEndDate)) {
+      return;
+    }
     fetchCustomerData();
-  }, [customerId, page, searchTerm, dateRange, sortField, sortOrder, pageSize]); // Add pageSize to dependencies
+  }, [customerId, page, searchTerm, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate]); // Add pageSize to dependencies
 
   const fetchCustomerData = async () => {
     try {
@@ -223,11 +227,13 @@ export default function CustomerTransactionsPage() {
           startDate.setHours(0, 0, 0, 0); // Start of the day
           endDate = new Date(customEndDate);
           endDate.setHours(23, 59, 59, 999); // End of the selected day
+          setDateRange({ from: startDate, to: endDate });
         } else {
-          // Default to last 3 months if custom dates not set
-          const threeMonthsAgo = new Date(now);
-          threeMonthsAgo.setMonth(now.getMonth() - 3);
-          startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1);
+          // Don't set date range if custom dates not provided - prevents fetching
+          setDateRange(undefined);
+          setTransactions([]);
+          setTotal(0);
+          return;
         }
         break;
       default:
@@ -945,7 +951,7 @@ export default function CustomerTransactionsPage() {
           </Button>
           
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
-            Customer Transactions <span className="text-lg sm:text-xl lg:text-2xl font-normal text-gray-500 dark:text-gray-400">(Rs.)</span>
+            Customer Transactions
           </h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
             {customer.CompanyName} - {customer.PersonName}
@@ -967,11 +973,11 @@ export default function CustomerTransactionsPage() {
                   : "text-gray-600 dark:text-gray-400"
               }
             >
-              ${customer.currentBalance.toLocaleString()}
+              {customer.currentBalance.toLocaleString()}
             </span>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Credit Limit: ${customer.creditLimit.toLocaleString()}
+            Credit Limit: {customer.creditLimit.toLocaleString()}
           </div>
         </div>
       </div>
