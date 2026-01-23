@@ -28,6 +28,7 @@ interface InvoiceData {
     packages?: string;
     calculatedValues?: string;
     shipmentDate?: string;
+    referenceNumber?: string;
   };
   customer?: {
     id: number;
@@ -249,6 +250,7 @@ export default function EditInvoicePage() {
       // Prepare update data
       const updateData = {
         invoiceNumber: invoiceData.invoiceNumber,
+        invoiceDate: invoiceData.invoiceDate || invoiceData.createdAt,
         totalAmount: totalAmount,
         fscCharges: fscCharges,
         discount: discount,
@@ -313,12 +315,14 @@ export default function EditInvoicePage() {
       // Create the updated invoice data
       const updatedInvoiceData = {
         ...invoiceData,
+        invoiceDate: invoiceData.invoiceDate || invoiceData.createdAt,
         lineItems: finalLineItems,
         totalAmount: totalAmount,
         disclaimer: disclaimer,
         note: note,
         shipment: {
           ...invoiceData.shipment,
+          referenceNumber: invoiceData.shipment?.referenceNumber || '',
           packages: packages,
           calculatedValues: calculatedValues,
         }
@@ -467,7 +471,7 @@ export default function EditInvoicePage() {
               <div className="col-span-6">
                 <div className="form-group">
                   <Label htmlFor="receiptNumber" className="font-bold text-sm">
-                    Consignment No.
+                    Booking ID
                   </Label>
                   <Input
                     id="receiptNumber"
@@ -505,8 +509,21 @@ export default function EditInvoicePage() {
                   </Label>
                   <Input
                     id="referenceNumber"
-                    value={invoiceData.referenceNumber || ''}
-                    onChange={(e) => setInvoiceData({...invoiceData, referenceNumber: e.target.value})}
+                    value={invoiceData.shipment?.referenceNumber || invoiceData.referenceNumber || ''}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setInvoiceData({
+                        ...invoiceData,
+                        referenceNumber: newValue,
+                        shipment: invoiceData.shipment ? {
+                          ...invoiceData.shipment,
+                          referenceNumber: newValue
+                        } : {
+                          id: parseInt(params.id as string),
+                          referenceNumber: newValue
+                        } as InvoiceData['shipment']
+                      });
+                    }}
                     className="mt-1 text-sm w-full"
                   />
                 </div>

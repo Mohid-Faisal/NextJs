@@ -104,6 +104,7 @@ export async function PUT(
       where: { id: invoiceId },
       data: {
         invoiceNumber: body.invoiceNumber || currentInvoice.invoiceNumber,
+        invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : currentInvoice.invoiceDate,
         totalAmount: newAmount,
         fscCharges: parseFloat(body.fscCharges) || 0,
         discount: parseFloat(body.discount) || 0,

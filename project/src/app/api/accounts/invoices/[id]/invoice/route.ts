@@ -364,7 +364,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
       <div class="col-sm-3 invoice-col">
         <p style="margin-bottom: 0;"><b>Invoice: </b> <span style="float: right;"> ${invoice.invoiceNumber}</span></p>
         <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;"> ${vendor ? (vendor.id || 'N/A') : (customer?.id || 'N/A')}</span></p>
-        <p style="margin-bottom: 0;"><b>Date :</b> <span style="float: right;"> ${formatDate(invoice.createdAt)}</span></p>
+        <p style="margin-bottom: 0;"><b>Date :</b> <span style="float: right;"> ${formatDate(invoice.invoiceDate || invoice.createdAt)}</span></p>
       </div>
       <!-- /.col -->
     </div>
@@ -392,7 +392,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
           <thead style="background-color: #999 !important;">
             <tr style="background-color: #999 !important;">
               <th>Date</th>
-              <th>Consignment No.</th>
+              <th>Booking ID</th>
               <th>Tracking</th>
               <th>Reference</th>
               <th>Country</th>
@@ -406,9 +406,9 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
             <td>${formatDate(shipment?.createdAt || invoice.createdAt)}</td>
             <td>${shipment?.invoiceNumber || shipment?.id || 'N/A'}</td>
             <td>${shipment?.trackingId || 'N/A'}</td>
-            <td>${shipment?.referenceNumber || invoice.referenceNumber || 'N/A'}</td>
+            <td>${shipment?.referenceNumber && shipment.referenceNumber.trim() !== '' ? shipment.referenceNumber : 'N/A'}</td>
             <td>${getCountryName(shipment?.destination)}</td>
-            <td>Wpx</td>
+            <td>${invoice.dayWeek || shipment?.dayWeek || 'N/A'}</td>
             <td>${totalPieces > 0 ? totalPieces : (shipment?.totalPackages || shipment?.amount || 'N/A')}</td>
             <td>${packages.length > 0 ? packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0).toFixed(2) : (shipment?.totalWeight || shipment?.weight || 'N/A')}</td>
           </tr>

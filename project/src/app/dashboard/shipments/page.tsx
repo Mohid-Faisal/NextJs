@@ -861,7 +861,7 @@ export default function ShipmentsPage() {
                       onClick={() => handleSort("destination")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Destination</span>
+                      <span className="hidden sm:inline">Country</span>
                       <span className="sm:hidden">D</span>
                       {getSortIcon("destination")}
                     </button>
