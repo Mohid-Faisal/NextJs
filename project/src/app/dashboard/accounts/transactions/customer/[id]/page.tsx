@@ -124,18 +124,6 @@ export default function CustomerTransactionsPage() {
         if (dateDiff === 0) {
           if (a.type === "DEBIT" && b.type === "CREDIT") return 1;  // DEBIT comes after (below) CREDIT
           if (a.type === "CREDIT" && b.type === "DEBIT") return -1; // CREDIT comes before (above) DEBIT
-          // If both are shipments (DEBIT with invoice), sort by invoice number (smaller first)
-          if (a.type === "DEBIT" && b.type === "DEBIT" && a.invoice && b.invoice) {
-            const invoiceA = a.invoice.toLowerCase();
-            const invoiceB = b.invoice.toLowerCase();
-            // Try numeric comparison first, then string comparison
-            const numA = parseInt(invoiceA);
-            const numB = parseInt(invoiceB);
-            if (!isNaN(numA) && !isNaN(numB)) {
-              return numA - numB;
-            }
-            return invoiceA.localeCompare(invoiceB);
-          }
         }
         
         return dateDiff;
