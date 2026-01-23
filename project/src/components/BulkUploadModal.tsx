@@ -102,7 +102,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Bulk Upload Shipments</DialogTitle>
           <DialogDescription>
-            Upload an Excel file with shipment data. The file should contain columns: Date, Tracking, Sender, Receiver, Country, Shipping Mode, Type, Vendor, Service Mode, Status, Pcs, Description, Weigl, Vendor Weigl, Price, CoS
+            Upload an Excel file with shipment data. The file should contain columns: Date, Reference, Tracking, Sender, Receiver, Country, Shipping Mode, Type, Vendor, Service Mode, Status, Pcs, Description, Weight, Vendor Weight, Price, CoS
           </DialogDescription>
         </DialogHeader>
 

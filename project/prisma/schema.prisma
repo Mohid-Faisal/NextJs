@@ -68,6 +68,7 @@ model Shipment {
   declaredValue     Float    @default(0)
   reissue           Float    @default(0)
   profitPercentage  Float    @default(0)
+  cos               Float    @default(0) // Cost of Service
   
   // Calculated values
   totalCost         Float

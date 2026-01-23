@@ -317,6 +317,7 @@ export async function POST(req: NextRequest) {
         declaredValue: parseFloat(declaredValue) || 0,
         reissue: parseFloat(reissue) || 0,
         profitPercentage: profitPercentageValue, // Store the profit percentage
+        cos: parseFloat(cos) || 0, // Store Cost of Service
         totalCost: customerTotalCost, // Use customer total cost for shipment record
         subtotal,
         manualRate: Boolean(manualRate),

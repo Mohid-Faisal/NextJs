@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
 
     const columnIndices = {
       date: getColumnIndex("date", ["shipment date", "date"]),
+      reference: getColumnIndex("reference", ["ref", "reference number", "referencenumber", "reference_number"]),
       tracking: getColumnIndex("tracking", ["tracking id", "trackingid", "tracking_id"]),
       sender: getColumnIndex("sender", ["sender name", "sendername", "sender_name"]),
       receiver: getColumnIndex("receiver", ["recipient", "receiver name", "receivername", "receiver_name"]),
@@ -110,6 +111,9 @@ export async function POST(req: NextRequest) {
       try {
         // Extract data from row
         const dateValue = row[columnIndices.date];
+        const referenceNumber = columnIndices.reference !== -1 
+          ? String(row[columnIndices.reference] || "").trim() 
+          : "";
         const trackingId = String(row[columnIndices.tracking] || "").trim();
         const senderName = String(row[columnIndices.sender] || "").trim();
         const receiverName = String(row[columnIndices.receiver] || "").trim();
@@ -162,6 +166,7 @@ export async function POST(req: NextRequest) {
 
         shipmentsData.push({
           trackingId,
+          referenceNumber,
           senderName,
           receiverName,
           countryCode,
@@ -195,6 +200,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Fetch all existing customers, recipients, and vendors once for efficient lookup
+    const allCustomers = await prisma.customers.findMany({
+      select: { id: true, CompanyName: true, currentBalance: true }
+    });
+    const allRecipients = await prisma.recipients.findMany({
+      select: { id: true, CompanyName: true }
+    });
+    const allVendors = await prisma.vendors.findMany({
+      select: { id: true, CompanyName: true, currentBalance: true }
+    });
+
+    // Create lookup maps for O(1) access
+    const customerMap = new Map<string, typeof allCustomers[0]>();
+    const recipientMap = new Map<string, typeof allRecipients[0]>();
+    const vendorMap = new Map<string, typeof allVendors[0]>();
+
+    // Build case-insensitive lookup maps
+    allCustomers.forEach(c => {
+      const key = c.CompanyName.trim().toLowerCase();
+      if (!customerMap.has(key)) {
+        customerMap.set(key, c);
+      }
+    });
+    allRecipients.forEach(r => {
+      const key = r.CompanyName.trim().toLowerCase();
+      if (!recipientMap.has(key)) {
+        recipientMap.set(key, r);
+      }
+    });
+    allVendors.forEach(v => {
+      const key = v.CompanyName.trim().toLowerCase();
+      if (!vendorMap.has(key)) {
+        vendorMap.set(key, v);
+      }
+    });
+
     // Process shipments
     const results = {
       success: 0,
@@ -216,10 +257,10 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Find or create customer
-        let customer = await prisma.customers.findFirst({
-          where: { CompanyName: shipmentData.senderName }
-        });
+        // Find or create customer (case-insensitive, trimmed comparison)
+        const normalizedSenderName = shipmentData.senderName.trim();
+        const customerKey = normalizedSenderName.toLowerCase();
+        let customer = customerMap.get(customerKey);
 
         if (!customer) {
           // Get next customer ID
@@ -232,8 +273,8 @@ export async function POST(req: NextRequest) {
             customer = await prisma.customers.create({
               data: {
                 id: nextCustomerId,
-                CompanyName: shipmentData.senderName,
-                PersonName: shipmentData.senderName,
+                CompanyName: normalizedSenderName,
+                PersonName: normalizedSenderName,
                 Email: "",
                 Phone: "",
                 DocumentType: "",
@@ -253,8 +294,8 @@ export async function POST(req: NextRequest) {
             if (error.code === 'P2002') {
               customer = await prisma.customers.create({
                 data: {
-                  CompanyName: shipmentData.senderName,
-                  PersonName: shipmentData.senderName,
+                  CompanyName: normalizedSenderName,
+                  PersonName: normalizedSenderName,
                   Email: "",
                   Phone: "",
                   DocumentType: "",
@@ -273,18 +314,20 @@ export async function POST(req: NextRequest) {
               throw error;
             }
           }
+          // Add to map for future lookups
+          customerMap.set(customerKey, customer);
         }
 
-        // Find or create recipient
-        let recipient = await prisma.recipients.findFirst({
-          where: { CompanyName: shipmentData.receiverName }
-        });
+        // Find or create recipient (case-insensitive, trimmed comparison)
+        const normalizedReceiverName = shipmentData.receiverName.trim();
+        const recipientKey = normalizedReceiverName.toLowerCase();
+        let recipient = recipientMap.get(recipientKey);
 
         if (!recipient) {
           recipient = await prisma.recipients.create({
             data: {
-              CompanyName: shipmentData.receiverName,
-              PersonName: shipmentData.receiverName,
+              CompanyName: normalizedReceiverName,
+              PersonName: normalizedReceiverName,
               Email: "",
               Phone: "",
               Country: shipmentData.countryCode,
@@ -294,18 +337,20 @@ export async function POST(req: NextRequest) {
               Address: "",
             }
           });
+          // Add to map for future lookups
+          recipientMap.set(recipientKey, recipient);
         }
 
-        // Find or create vendor
-        let vendor = await prisma.vendors.findFirst({
-          where: { CompanyName: shipmentData.vendorName }
-        });
+        // Find or create vendor (case-insensitive, trimmed comparison)
+        const normalizedVendorName = shipmentData.vendorName.trim();
+        const vendorKey = normalizedVendorName.toLowerCase();
+        let vendor = vendorMap.get(vendorKey);
 
         if (!vendor) {
           vendor = await prisma.vendors.create({
             data: {
-              CompanyName: shipmentData.vendorName,
-              PersonName: shipmentData.vendorName,
+              CompanyName: normalizedVendorName,
+              PersonName: normalizedVendorName,
               Email: "",
               Phone: "",
               Country: "Pakistan",
@@ -316,6 +361,8 @@ export async function POST(req: NextRequest) {
               currentBalance: 0,
             }
           });
+          // Add to map for future lookups
+          vendorMap.set(vendorKey, vendor);
         }
 
         // Generate invoice number
@@ -327,30 +374,56 @@ export async function POST(req: NextRequest) {
         const customerTotalCost = Math.round(originalPrice);
         const vendorTotalCost = shipmentData.cos > 0 ? Math.round(shipmentData.cos) : Math.round(originalPrice * 0.8); // Default 80% if no CoS
 
+        // Create packages array structure
+        const packagesArray = [{
+          id: "1",
+          amount: shipmentData.pcs,
+          packageDescription: shipmentData.description || "Shipping Service",
+          weight: shipmentData.weight,
+          length: 0,
+          width: 0,
+          height: 0,
+          weightVol: shipmentData.weight,
+          fixedCharge: 0,
+          decValue: 0,
+          vendorWeight: shipmentData.vendorWeight || shipmentData.weight,
+          remarks: ""
+        }];
+
+        // Create packageTotals object
+        const packageTotalsObj = {
+          amount: shipmentData.pcs,
+          weight: shipmentData.weight,
+          weightVol: shipmentData.weight,
+          fixedCharge: 0,
+          decValue: 0
+        };
+
         // Create shipment
         const shipment = await prisma.shipment.create({
           data: {
             trackingId: shipmentData.trackingId,
             invoiceNumber,
-            referenceNumber: "", // Required field
+            referenceNumber: shipmentData.referenceNumber || "", // Use reference from Excel or empty string
             shipmentDate: shipmentData.shipmentDate,
             agency: "PSS", // Default
             office: "LHE", // Default
-            senderName: shipmentData.senderName,
-            senderAddress: shipmentData.senderName,
-            recipientName: shipmentData.receiverName,
-            recipientAddress: shipmentData.receiverName,
+            senderName: normalizedSenderName,
+            senderAddress: normalizedSenderName,
+            recipientName: normalizedReceiverName,
+            recipientAddress: normalizedReceiverName,
             destination: shipmentData.countryCode,
             deliveryStatus: shipmentData.status,
             shippingMode: shipmentData.shippingMode,
             packaging: shipmentData.type,
-            vendor: shipmentData.vendorName,
+            vendor: normalizedVendorName,
             serviceMode: shipmentData.serviceMode,
             amount: shipmentData.pcs,
             packageDescription: shipmentData.description,
             weight: shipmentData.weight,
             weightVol: shipmentData.weight,
             price: originalPrice,
+            cos: shipmentData.cos || 0, // Store Cost of Service
             totalCost: customerTotalCost,
             subtotal: originalPrice,
             invoiceStatus: "Unpaid",
@@ -358,6 +431,8 @@ export async function POST(req: NextRequest) {
             totalWeight: shipmentData.weight,
             totalWeightVol: shipmentData.weight,
             manualRate: shipmentData.cos > 0,
+            packages: JSON.stringify(packagesArray),
+            packageTotals: JSON.stringify(packageTotalsObj),
           }
         });
 
@@ -492,7 +567,7 @@ export async function POST(req: NextRequest) {
               amount: customerAppliedBalance,
               fromPartyType: "CUSTOMER",
               fromCustomerId: customer.id,
-              fromCustomer: shipmentData.senderName,
+              fromCustomer: normalizedSenderName,
               toPartyType: "US",
               toVendorId: null,
               toVendor: "",
@@ -538,7 +613,7 @@ export async function POST(req: NextRequest) {
               fromCustomer: "",
               toPartyType: "VENDOR",
               toVendorId: vendor.id,
-              toVendor: shipmentData.vendorName,
+              toVendor: normalizedVendorName,
               mode: "CASH",
               reference: vendorInvoiceNumber,
               invoice: vendorInvoiceNumber,
