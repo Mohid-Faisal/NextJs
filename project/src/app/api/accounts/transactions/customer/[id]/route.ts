@@ -21,7 +21,8 @@ export async function GET(
     // Get query parameters
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limitParam = searchParams.get('limit') || '10';
+    const limit = limitParam === 'all' ? 'all' : parseInt(limitParam);
     const search = searchParams.get('search') || '';
     const fromDate = searchParams.get('fromDate');
     const toDate = searchParams.get('toDate');
@@ -29,7 +30,7 @@ export async function GET(
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     // Calculate skip for pagination
-    const skip = (page - 1) * limit;
+    const skip = limit === 'all' ? 0 : (page - 1) * limit;
 
     // Build where clause for filtering
     const whereClause: any = {
@@ -105,16 +106,8 @@ export async function GET(
       whereClause.OR = searchConditions;
     }
 
-    // Add date range filter
-    if (fromDate || toDate) {
-      whereClause.createdAt = {};
-      if (fromDate) {
-        whereClause.createdAt.gte = new Date(fromDate);
-      }
-      if (toDate) {
-        whereClause.createdAt.lte = new Date(toDate);
-      }
-    }
+    // Note: Date range filtering will be done after calculating voucher dates
+    // We don't filter by createdAt here because transactions are displayed by voucher date
 
     // Validate sort field
     const allowedSortFields = ['createdAt', 'amount', 'type', 'description', 'reference'];
@@ -142,11 +135,6 @@ export async function GET(
         { status: 404 }
       );
     }
-
-    // Get total count for pagination
-    const total = await prisma.customerTransaction.count({
-      where: whereClause
-    });
 
     // First, get ALL transactions for this customer (without pagination) to recalculate balances
     const allTransactions = await prisma.customerTransaction.findMany({
@@ -313,12 +301,157 @@ export async function GET(
     // Update customer object for response
     customer.currentBalance = runningBalance;
 
+    // Filter by voucher date if date range is provided
+    let filteredTransactions = transactionsWithVoucherDates;
+    if (fromDate || toDate) {
+      const fromDateObj = fromDate ? new Date(fromDate) : null;
+      const toDateObj = toDate ? new Date(toDate) : null;
+      
+      filteredTransactions = transactionsWithVoucherDates.filter((transaction) => {
+        const voucherDate = transaction.voucherDate;
+        if (fromDateObj && voucherDate < fromDateObj) {
+          return false;
+        }
+        if (toDateObj && voucherDate > toDateObj) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    // Apply search filter if provided (already handled in whereClause, but we need to apply it to filtered transactions)
+    // Get all transaction IDs that match the search criteria
+    let matchingTransactionIds: number[] = [];
+    if (search) {
+      const searchWhereClause: any = {
+        customerId: customerId
+      };
+      
+      // Try to parse as number for price search
+      const searchAsNumber = parseFloat(search);
+      const isNumericSearch = !isNaN(searchAsNumber);
+      
+      // Get all country codes that match the search term (by name or code)
+      const matchingCountryCodes: string[] = [];
+      if (search.trim()) {
+        const allCountries = Country.getAllCountries();
+        const searchLower = search.toLowerCase().trim();
+        allCountries.forEach(country => {
+          if (
+            country.name.toLowerCase().includes(searchLower) ||
+            country.isoCode.toLowerCase().includes(searchLower) ||
+            country.name.toLowerCase() === searchLower
+          ) {
+            matchingCountryCodes.push(country.isoCode);
+          }
+        });
+      }
+      
+      // Find invoices/shipments matching destination search
+      let matchingInvoiceNumbers: string[] = [];
+      if (matchingCountryCodes.length > 0 || search.trim()) {
+        const invoiceSearchConditions: any = {
+          OR: [
+            { destination: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+        if (matchingCountryCodes.length > 0) {
+          invoiceSearchConditions.OR.push({
+            destination: { in: matchingCountryCodes }
+          });
+        }
+        
+        const matchingInvoices = await prisma.invoice.findMany({
+          where: invoiceSearchConditions,
+          select: { invoiceNumber: true }
+        });
+        matchingInvoiceNumbers = matchingInvoices.map(inv => inv.invoiceNumber);
+      }
+      
+      // Build search conditions
+      const searchConditions: any[] = [
+        { description: { contains: search, mode: 'insensitive' } },
+        { reference: { contains: search, mode: 'insensitive' } }
+      ];
+      
+      // Add amount search (exact match or range)
+      if (isNumericSearch) {
+        searchConditions.push({
+          amount: {
+            gte: searchAsNumber * 0.99,
+            lte: searchAsNumber * 1.01
+          }
+        });
+      }
+      
+      // Add invoice number search if we found matching invoices
+      if (matchingInvoiceNumbers.length > 0) {
+        searchConditions.push({
+          invoice: { in: matchingInvoiceNumbers }
+        });
+      }
+      
+      searchWhereClause.OR = searchConditions;
+      
+      const matchingTransactions = await prisma.customerTransaction.findMany({
+        where: searchWhereClause,
+        select: { id: true }
+      });
+      matchingTransactionIds = matchingTransactions.map(t => t.id);
+      
+      // Apply search filter to filtered transactions
+      filteredTransactions = filteredTransactions.filter(t => matchingTransactionIds.includes(t.id));
+    }
+
+    // Get total count after date and search filtering
+    const total = filteredTransactions.length;
+
+    // Fetch full transaction data for sorting
+    const transactionIds = filteredTransactions.map(t => t.id);
+    const fullTransactionsForSorting = await prisma.customerTransaction.findMany({
+      where: { id: { in: transactionIds } },
+      orderBy: { [validSortField]: validSortOrder }
+    });
+    
+    // Create a map for quick lookup
+    const transactionDataMap = new Map(fullTransactionsForSorting.map(t => [t.id, t]));
+    
+    // Sort filteredTransactions based on the sort field
+    filteredTransactions.sort((a, b) => {
+      const transactionA = transactionDataMap.get(a.id);
+      const transactionB = transactionDataMap.get(b.id);
+      
+      if (!transactionA || !transactionB) return 0;
+      
+      if (validSortField === 'createdAt') {
+        // For createdAt, sort by voucher date instead
+        const dateDiff = a.voucherDate.getTime() - b.voucherDate.getTime();
+        if (dateDiff !== 0) {
+          return validSortOrder === 'desc' ? -dateDiff : dateDiff;
+        }
+        // Same date: DEBIT (shipment/invoice) before CREDIT (payment)
+        if (a.type === "DEBIT" && b.type === "CREDIT") return validSortOrder === 'desc' ? 1 : -1;
+        if (a.type === "CREDIT" && b.type === "DEBIT") return validSortOrder === 'desc' ? -1 : 1;
+        return 0;
+      } else {
+        // For other fields, use the database sort order
+        const aIndex = fullTransactionsForSorting.findIndex(t => t.id === a.id);
+        const bIndex = fullTransactionsForSorting.findIndex(t => t.id === b.id);
+        return aIndex - bIndex;
+      }
+    });
+
+    // Apply pagination
+    const paginatedTransactionIds = limit === 'all' 
+      ? filteredTransactions.map(t => t.id)
+      : filteredTransactions
+          .slice(skip, skip + limit)
+          .map(t => t.id);
+
     // Now get the paginated transactions with updated balances
+    // Maintain the order from filteredTransactions
     const transactions = await prisma.customerTransaction.findMany({
-      where: whereClause,
-      orderBy: { [validSortField]: validSortOrder },
-      skip,
-      take: limit,
+      where: { id: { in: paginatedTransactionIds } },
       include: {
         customer: {
           select: {
@@ -328,10 +461,16 @@ export async function GET(
         }
       }
     });
+    
+    // Sort transactions to match the order from filteredTransactions
+    const transactionMap = new Map(transactions.map(t => [t.id, t]));
+    const orderedTransactions = paginatedTransactionIds
+      .map(id => transactionMap.get(id))
+      .filter((t): t is NonNullable<typeof t> => t !== undefined);
 
     // Fetch shipment information and payment date for transactions that have invoice references
     const transactionsWithShipmentInfo = await Promise.all(
-      transactions.map(async (transaction) => {
+      orderedTransactions.map(async (transaction) => {
         let shipmentInfo = null;
         let shipmentDate: string | undefined = undefined;
         let paymentDate: string | undefined = undefined;
@@ -436,8 +575,8 @@ export async function GET(
       transactions: transactionsWithShipmentInfo,
       total,
       page,
-      limit,
-      totalPages: Math.ceil(total / limit)
+      limit: limit === 'all' ? total : limit,
+      totalPages: limit === 'all' ? 1 : Math.ceil(total / limit)
     });
 
   } catch (error) {

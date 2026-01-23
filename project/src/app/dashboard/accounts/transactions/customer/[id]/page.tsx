@@ -306,7 +306,7 @@ export default function CustomerTransactionsPage() {
           <div class="invoice-col" style="text-align: right;">
             <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;">${customer.id || 'N/A'}</span></p>
             <p style="margin-bottom: 0;"><b>Period: </b><span style="float: right;">${formatDateRange()}</span></p>
-            <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${(-startingBalance).toLocaleString()}</span></p>
+            <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${(-(startingBalance ?? 0)).toLocaleString()}</span></p>
           </div>
         </div>
       ` : '';
@@ -568,9 +568,9 @@ export default function CustomerTransactionsPage() {
                   <tfoot>
                     <tr style="background-color: #e2e8f0; font-weight: 700;">
                       <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0;">Total:</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${totalDebit.toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${totalCredit.toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(-finalBalance).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(totalDebit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(totalCredit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(-(finalBalance ?? 0)).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -844,15 +844,15 @@ export default function CustomerTransactionsPage() {
         formattedDate = `${day}/${month}/${year}`;
       }
       
-      const debit = transaction.type === "DEBIT" ? transaction.amount.toLocaleString() : "-";
-      const credit = transaction.type === "CREDIT" ? transaction.amount.toLocaleString() : "-";
+      const debit = transaction.type === "DEBIT" ? (transaction.amount ?? 0).toLocaleString() : "-";
+      const credit = transaction.type === "CREDIT" ? (transaction.amount ?? 0).toLocaleString() : "-";
       
       // Make pipe characters bold in description
       const descriptionWithBoldPipes = transaction.description.replace(/\|/g, '<b>|</b>');
       
       // Format balance: show "-" if balance is 0, otherwise show inverted balance
-      const balance = transaction.newBalance;
-      const formattedBalance = balance === 0 ? "-" : -balance.toLocaleString();
+      const balance = transaction.newBalance ?? 0;
+      const formattedBalance = balance === 0 ? "-" : (-balance).toLocaleString();
       
       return [
         formattedDate,
@@ -924,18 +924,18 @@ export default function CustomerTransactionsPage() {
     
     // Calculate starting balance (balance before the first transaction in the period)
     const startingBalance = sortedForExport.length > 0 
-      ? sortedForExport[0].previousBalance 
-      : (customer?.currentBalance || 0);
+      ? (sortedForExport[0].previousBalance ?? 0)
+      : (customer?.currentBalance ?? 0);
     
     // Calculate totals
     const totalDebit = sortedForExport
       .filter(t => t.type === "DEBIT")
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
     const totalCredit = sortedForExport
       .filter(t => t.type === "CREDIT")
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
     const finalBalance = sortedForExport.length > 0 
-      ? sortedForExport[sortedForExport.length - 1].newBalance 
+      ? (sortedForExport[sortedForExport.length - 1].newBalance ?? 0)
       : startingBalance;
     
     const { headers, data } = getTransactionExportData(sortedForExport);

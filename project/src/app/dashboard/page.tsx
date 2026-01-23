@@ -49,6 +49,8 @@ import {
   Pie,
   Legend,
 } from "recharts";
+import { Country } from "country-state-city";
+import { getCountryNameFromCode } from "@/lib/utils";
 
 const DashboardPage = () => {
   const router = useRouter();
@@ -56,6 +58,7 @@ const DashboardPage = () => {
   const [showReceivableModal, setShowReceivableModal] = useState(false);
   const [showCustomersModal, setShowCustomersModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<{ name: string; percent: number } | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [data, setData] = useState({
     totalShipments: 0,
     totalUsers: 0,
@@ -408,10 +411,11 @@ const DashboardPage = () => {
                           const pieData = data.revenueByDestination
                             .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
                             .slice(0, 12)
-                            .map(d => ({
+                            .map((d, idx) => ({
                               name: d.destination,
                               value: d.revenue,
-                              shipments: d.shipments
+                              shipments: d.shipments,
+                              index: idx
                             }));
                           const total = pieData.reduce((sum, d) => sum + d.value, 0);
                           return pieData.map(d => ({
@@ -428,40 +432,28 @@ const DashboardPage = () => {
                         fill="#8884d8"
                         dataKey="value"
                         onMouseEnter={(data: any) => {
-                          if (data && data.percent !== undefined) {
+                          if (data && data.percent !== undefined && data.index !== undefined) {
                             setSelectedCountry({ name: data.name, percent: data.percent });
+                            setHoveredIndex(data.index);
                           }
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredIndex(null);
                         }}
                       >
                         {data.revenueByDestination
                           .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
                           .slice(0, 12)
                           .map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={COLORS[index % COLORS.length]}
+                              opacity={hoveredIndex === null || hoveredIndex === index ? 1 : 0.3}
+                              stroke={hoveredIndex === index ? '#000' : 'none'}
+                              strokeWidth={hoveredIndex === index ? 2 : 0}
+                            />
                           ))}
                       </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#ffffff', 
-                          border: '1px solid #e5e7eb', 
-                          borderRadius: '8px',
-                          color: '#1f2937',
-                          fontSize: '12px',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                        }}
-                        itemStyle={{ color: '#1f2937' }}
-                        labelStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                        formatter={(value: any, name: string, props: any) => {
-                          if (name === 'value') {
-                            return [`$${Number(value).toLocaleString()}`, 'Revenue'];
-                          }
-                          if (name === 'shipments') {
-                            return [`${props.payload.shipments}`, 'Shipments'];
-                          }
-                          return [value, name];
-                        }}
-                        labelFormatter={(label) => `Country: ${label}`}
-                      />
                     </RechartsPieChart>
                   </ResponsiveContainer>
                   {/* Center text */}
@@ -510,19 +502,26 @@ const DashboardPage = () => {
                         .filter(d => d.destination && d.destination !== "No Data" && d.revenue > 0)
                         .reduce((sum, d) => sum + d.revenue, 0);
                       const percent = (entry.revenue / total) * 100;
+                      const countryName = getCountryNameFromCode(entry.destination);
                       return (
                         <div 
                           key={index} 
                           className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer hover:opacity-80 transition-opacity"
-                          onMouseEnter={() => setSelectedCountry({ name: entry.destination, percent })}
-                          onMouseLeave={() => setSelectedCountry(null)}
+                          onMouseEnter={() => {
+                            setSelectedCountry({ name: entry.destination, percent });
+                            setHoveredIndex(index);
+                          }}
+                          onMouseLeave={() => {
+                            setSelectedCountry(null);
+                            setHoveredIndex(null);
+                          }}
                         >
                           <div 
                             className="w-3 h-3 rounded-sm shrink-0" 
                             style={{ backgroundColor: COLORS[index % COLORS.length] }}
                           />
                           <span className="text-gray-700 dark:text-gray-300 font-medium">
-                            {entry.destination}
+                            {countryName || entry.destination}
                           </span>
                           <span className="text-gray-500 dark:text-gray-400 ml-auto">
                             ({percent.toFixed(2)} %)
