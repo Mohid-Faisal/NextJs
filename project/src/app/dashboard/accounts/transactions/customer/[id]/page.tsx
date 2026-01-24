@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,6 +85,8 @@ export default function CustomerTransactionsPage() {
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [loadTime, setLoadTime] = useState<number | null>(null);
+  const isInitialMount = useRef(true);
 
   // Sorting states
   type SortField = "voucherDate" | "amount" | "type" | "description" | "reference";
@@ -135,25 +137,18 @@ export default function CustomerTransactionsPage() {
 
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
-  // Use ref to track if fetch is in progress and prevent duplicate calls
-  const fetchingRef = useRef(false);
-  const dateRangeRef = useRef<{ from: Date; to?: Date } | undefined>(dateRange);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const fetchCustomerData = useCallback(async () => {
-    // Don't fetch if custom period is selected but dateRange is not set
-    if (periodType === 'custom' && !dateRange) {
+  const fetchCustomerData = async () => {
+    // Don't fetch if custom period is selected but dates are not provided
+    if (periodType === 'custom' && (!customStartDate || !customEndDate || 
+        customStartDate.length !== 10 || customEndDate.length !== 10)) {
       setLoading(false);
       return;
     }
 
-    // Prevent duplicate simultaneous fetches
-    if (fetchingRef.current) {
-      return;
-    }
+    const startTime = performance.now();
+    console.log('[Customer Transactions] Fetch started at:', new Date().toISOString());
 
     try {
-      fetchingRef.current = true;
       setLoading(true);
 
       const params = new URLSearchParams({
@@ -169,24 +164,40 @@ export default function CustomerTransactionsPage() {
       const response = await fetch(`/api/accounts/transactions/customer/${customerId}?${params}`);
       const data = await response.json();
       
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      
       if (response.ok) {
         setCustomer(data.customer);
         setTransactions(data.transactions);
         setTotal(data.total || data.transactions.length);
+        setLoadTime(duration);
+        console.log(`[Customer Transactions] Data loaded in ${duration.toFixed(2)}ms (${(duration / 1000).toFixed(2)}s)`);
       } else {
         console.error("Error fetching customer data:", data.error);
+        setLoadTime(null);
       }
     } catch (error) {
       console.error("Error fetching customer data:", error);
+      setLoadTime(null);
     } finally {
       setLoading(false);
-      fetchingRef.current = false;
     }
-  }, [customerId, page, searchTerm, dateRange, sortField, sortOrder, pageSize, periodType]);
+  };
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchCustomerData();
-  }, [fetchCustomerData]);
+    isInitialMount.current = false;
+  }, [customerId]);
+
+  // Fetch when pagination or filters change (but not on initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      return;
+    }
+    fetchCustomerData();
+  }, [page, pageSize, dateRange, sortField, sortOrder]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -207,8 +218,8 @@ export default function CustomerTransactionsPage() {
     );
   };
 
-  // Update date range based on period type
-  const updatePeriodDates = useCallback(() => {
+  // Update date range based on period type (doesn't trigger fetch)
+  const updatePeriodDates = () => {
     const now = new Date();
     let startDate: Date;
     let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); // Tomorrow to include today
@@ -255,17 +266,11 @@ export default function CustomerTransactionsPage() {
           } else {
             // Invalid dates - don't update
             setDateRange(undefined);
-            setTransactions([]);
-            setTotal(0);
-            dateRangeRef.current = undefined;
             return;
           }
         } else {
-          // Don't set date range if custom dates not provided or incomplete - prevents fetching
+          // Don't set date range if custom dates not provided or incomplete
           setDateRange(undefined);
-          setTransactions([]);
-          setTotal(0);
-          dateRangeRef.current = undefined;
           return;
         }
         break;
@@ -275,55 +280,13 @@ export default function CustomerTransactionsPage() {
         startDate = new Date(defaultThreeMonthsAgo.getFullYear(), defaultThreeMonthsAgo.getMonth(), 1);
     }
 
-    // Only update dateRange if dates actually changed
-    const newDateRange = { from: startDate, to: endDate };
-    const currentRange = dateRangeRef.current;
-    
-    if (!currentRange || 
-        currentRange.from.getTime() !== newDateRange.from.getTime() || 
-        currentRange.to?.getTime() !== newDateRange.to?.getTime()) {
-      dateRangeRef.current = newDateRange;
-      setDateRange(newDateRange);
-    }
-  }, [periodType, customStartDate, customEndDate]);
+    setDateRange({ from: startDate, to: endDate });
+  };
 
-  // Debounced update for custom dates
+  // Update date range when period type or custom dates change
   useEffect(() => {
-    if (periodType === 'custom') {
-      // Immediately clear transactions if dates are incomplete
-      if (!customStartDate || !customEndDate || 
-          customStartDate.length !== 10 || customEndDate.length !== 10) {
-        setDateRange(undefined);
-        setTransactions([]);
-        setTotal(0);
-        dateRangeRef.current = undefined;
-        setLoading(false);
-      }
-      
-      // Clear existing timer
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      
-      // Only set timer if both dates are complete
-      if (customStartDate && customEndDate && 
-          customStartDate.length === 10 && customEndDate.length === 10) {
-        // Set new timer - wait 500ms after user stops typing
-        debounceTimerRef.current = setTimeout(() => {
-          updatePeriodDates();
-        }, 500);
-      }
-      
-      return () => {
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-        }
-      };
-    } else {
-      // For non-custom periods, update immediately
-      updatePeriodDates();
-    }
-  }, [periodType, customStartDate, customEndDate, updatePeriodDates]);
+    updatePeriodDates();
+  }, [periodType, customStartDate, customEndDate]);
 
   // Export functions
   const exportToExcel = (data: any[], headers: string[], filename: string) => {
@@ -1099,23 +1062,38 @@ export default function CustomerTransactionsPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex justify-between items-end gap-4">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         {/* Left side - Search field */}
-        <div>
-          <div className="flex w-full max-w-sm">
-            <Input
-              placeholder="Search by reference, amount, description..."
-              value={searchTerm}
-              onChange={(e) => {
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Input
+            placeholder="Search by reference, amount, description..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+            }}
+            className="flex-1 sm:max-w-sm"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
                 setPage(1);
-                setSearchTerm(e.target.value);
-              }}
-              className="rounded-r-none"
-            />
-            <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-              <Search className="text-white w-5 h-5" />
+                fetchCustomerData();
+              }
+            }}
+          />
+          <Button
+            onClick={() => {
+              setPage(1);
+              fetchCustomerData();
+            }}
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Search
+          </Button>
+          {loadTime !== null && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Load time: {loadTime.toFixed(0)}ms ({(loadTime / 1000).toFixed(2)}s)
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right side - Show, Export and Date Range */}
@@ -1127,7 +1105,6 @@ export default function CustomerTransactionsPage() {
               value={pageSize.toString()}
               onValueChange={(value: string) => {
                 setPageSize(value === 'all' ? 'all' : parseInt(value));
-                setPage(1); // Reset to first page when changing page size
               }}
             >
               <SelectTrigger className="w-20 h-9">
@@ -1179,7 +1156,6 @@ export default function CustomerTransactionsPage() {
               value={periodType}
               onValueChange={(value: string) => {
                 setPeriodType(value as any);
-                setPage(1);
               }}
             >
               <SelectTrigger className="w-[160px]">
@@ -1203,7 +1179,6 @@ export default function CustomerTransactionsPage() {
                   value={customStartDate}
                   onChange={(e) => {
                     setCustomStartDate(e.target.value);
-                    setPage(1);
                   }}
                   className="w-full sm:w-44 min-w-[160px]"
                 />
@@ -1213,7 +1188,6 @@ export default function CustomerTransactionsPage() {
                   value={customEndDate}
                   onChange={(e) => {
                     setCustomEndDate(e.target.value);
-                    setPage(1);
                   }}
                   className="w-full sm:w-44 min-w-[160px]"
                 />
@@ -1226,9 +1200,16 @@ export default function CustomerTransactionsPage() {
       {/* Transactions Table */}
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-gray-800 dark:text-white">
-            Transaction History
-          </CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl font-bold text-gray-800 dark:text-white">
+              Transaction History
+            </CardTitle>
+            {loadTime !== null && !loading && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                ⏱️ Loaded in {loadTime.toFixed(0)}ms ({(loadTime / 1000).toFixed(2)}s)
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
@@ -1381,7 +1362,9 @@ export default function CustomerTransactionsPage() {
           <div className="flex items-center gap-2">
             <Button
               disabled={page <= 1}
-              onClick={() => setPage((prev) => prev - 1)}
+              onClick={() => {
+                setPage((prev) => prev - 1);
+              }}
               className="hover:scale-105 transition-transform w-full sm:w-auto"
             >
               ← Prev
@@ -1391,7 +1374,9 @@ export default function CustomerTransactionsPage() {
             </span>
             <Button
               disabled={page >= totalPages}
-              onClick={() => setPage((prev) => prev + 1)}
+              onClick={() => {
+                setPage((prev) => prev + 1);
+              }}
               className="hover:scale-105 transition-transform w-full sm:w-auto"
             >
               Next →
