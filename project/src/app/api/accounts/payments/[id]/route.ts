@@ -91,6 +91,13 @@ export async function PUT(
       );
     }
 
+    // Store old values for comparison
+    const oldAmount = existingPayment.amount;
+    const oldDate = existingPayment.date;
+    const oldDescription = existingPayment.description;
+    const oldReference = existingPayment.reference;
+    const oldInvoice = existingPayment.invoice;
+
     // Update the payment
     const updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
@@ -108,6 +115,63 @@ export async function PUT(
         description: body.description,
       },
     });
+
+    // Update customer/vendor transactions if payment is linked to an invoice
+    if (existingPayment.invoice) {
+      try {
+        const paymentReference = existingPayment.reference || `Payment-${paymentId}`;
+        const newDate = new Date(body.date);
+        
+        // Update customer transaction if exists
+        if (existingPayment.fromCustomerId) {
+          const customerTransaction = await prisma.customerTransaction.findFirst({
+            where: {
+              customerId: existingPayment.fromCustomerId,
+              invoice: existingPayment.invoice,
+              reference: paymentReference,
+            },
+          });
+
+          if (customerTransaction) {
+            await prisma.customerTransaction.update({
+              where: { id: customerTransaction.id },
+              data: {
+                amount: Number(body.amount),
+                description: body.description || `Payment for invoice ${existingPayment.invoice}`,
+                createdAt: newDate, // Update createdAt to match payment date
+              },
+            });
+            console.log(`Updated customer transaction ${customerTransaction.id} for payment ${paymentId}`);
+          }
+        }
+
+        // Update vendor transaction if exists
+        if (existingPayment.toVendorId) {
+          const vendorTransaction = await prisma.vendorTransaction.findFirst({
+            where: {
+              vendorId: existingPayment.toVendorId,
+              invoice: existingPayment.invoice,
+              reference: paymentReference,
+            },
+          });
+
+          if (vendorTransaction) {
+            await prisma.vendorTransaction.update({
+              where: { id: vendorTransaction.id },
+              data: {
+                amount: Number(body.amount),
+                description: body.description || `Payment for invoice ${existingPayment.invoice}`,
+                createdAt: newDate, // Update createdAt to match payment date
+              },
+            });
+            console.log(`Updated vendor transaction ${vendorTransaction.id} for payment ${paymentId}`);
+          }
+        }
+      } catch (transactionError) {
+        console.error("Error updating customer/vendor transactions:", transactionError);
+        // Don't fail the payment update if transaction update fails
+      }
+    }
 
     // If updateJournalEntry flag is true, update the corresponding journal entry
     if (body.updateJournalEntry && body.debitAccountId && body.creditAccountId) {

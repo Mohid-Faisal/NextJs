@@ -123,7 +123,10 @@ export default function ShipmentsPage() {
         startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1);
         break;
       case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1);
+        // Last 12 months from today
+        const twelveMonthsAgo = new Date(now);
+        twelveMonthsAgo.setMonth(now.getMonth() - 12);
+        startDate = new Date(twelveMonthsAgo.getFullYear(), twelveMonthsAgo.getMonth(), twelveMonthsAgo.getDate());
         break;
       case 'financialyear':
         if (now.getMonth() >= 6) {
@@ -771,7 +774,7 @@ export default function ShipmentsPage() {
                 <SelectItem value="month">Current Month</SelectItem>
                 <SelectItem value="last3month">Last 3 Month</SelectItem>
                 <SelectItem value="last6month">Last 6 Month</SelectItem>
-                <SelectItem value="year">Current Year</SelectItem>
+                <SelectItem value="year">Last 12 Months</SelectItem>
                 <SelectItem value="financialyear">Financial Year</SelectItem>
                 <SelectItem value="custom">Custom Period</SelectItem>
               </SelectContent>

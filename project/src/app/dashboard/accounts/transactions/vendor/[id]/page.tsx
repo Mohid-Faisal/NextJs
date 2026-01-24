@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,16 +134,27 @@ export default function VendorTransactionsPage() {
 
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
-  useEffect(() => {
-    // Don't fetch if custom period is selected but dates are not provided
-    if (periodType === 'custom' && (!customStartDate || !customEndDate)) {
+  // Use ref to track if fetch is in progress and prevent duplicate calls
+  const fetchingRef = useRef(false);
+  const dateRangeRef = useRef<{ from: Date; to?: Date } | undefined>(dateRange);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchVendorData = useCallback(async () => {
+    // Don't fetch if custom period is selected but dateRange is not set
+    if (periodType === 'custom' && !dateRange) {
+      setLoading(false);
       return;
     }
-    fetchVendorData();
-  }, [vendorId, page, searchTerm, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate]); // Add pageSize to dependencies
 
-  const fetchVendorData = async () => {
+    // Prevent duplicate simultaneous fetches
+    if (fetchingRef.current) {
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
+      setLoading(true);
+
       const params = new URLSearchParams({
         page: String(page),
         limit: pageSize === 'all' ? 'all' : String(pageSize),
@@ -168,8 +179,13 @@ export default function VendorTransactionsPage() {
       console.error("Error fetching vendor data:", error);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
-  };
+  }, [vendorId, page, searchTerm, dateRange, sortField, sortOrder, pageSize, periodType]);
+
+  useEffect(() => {
+    fetchVendorData();
+  }, [fetchVendorData]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -191,7 +207,7 @@ export default function VendorTransactionsPage() {
   };
 
   // Update date range based on period type
-  const updatePeriodDates = () => {
+  const updatePeriodDates = useCallback(() => {
     const now = new Date();
     let startDate: Date;
     let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); // Tomorrow to include today
@@ -211,7 +227,10 @@ export default function VendorTransactionsPage() {
         startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1);
         break;
       case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1);
+        // Last 12 months from today
+        const twelveMonthsAgo = new Date(now);
+        twelveMonthsAgo.setMonth(now.getMonth() - 12);
+        startDate = new Date(twelveMonthsAgo.getFullYear(), twelveMonthsAgo.getMonth(), twelveMonthsAgo.getDate());
         break;
       case 'financialyear':
         if (now.getMonth() >= 6) {
@@ -221,17 +240,31 @@ export default function VendorTransactionsPage() {
         }
         break;
       case 'custom':
-        if (customStartDate && customEndDate) {
-          startDate = new Date(customStartDate);
-          startDate.setHours(0, 0, 0, 0); // Start of the day
-          endDate = new Date(customEndDate);
-          endDate.setHours(23, 59, 59, 999); // End of the selected day
-          setDateRange({ from: startDate, to: endDate });
+        // Validate that dates are complete (YYYY-MM-DD format, 10 characters)
+        if (customStartDate && customEndDate && 
+            customStartDate.length === 10 && customEndDate.length === 10) {
+          const startDateObj = new Date(customStartDate);
+          const endDateObj = new Date(customEndDate);
+          // Check if dates are valid
+          if (!isNaN(startDateObj.getTime()) && !isNaN(endDateObj.getTime())) {
+            startDate = new Date(customStartDate);
+            startDate.setHours(0, 0, 0, 0); // Start of the day
+            endDate = new Date(customEndDate);
+            endDate.setHours(23, 59, 59, 999); // End of the selected day
+          } else {
+            // Invalid dates - don't update
+            setDateRange(undefined);
+            setTransactions([]);
+            setTotal(0);
+            dateRangeRef.current = undefined;
+            return;
+          }
         } else {
-          // Don't set date range if custom dates not provided - prevents fetching
+          // Don't set date range if custom dates not provided or incomplete - prevents fetching
           setDateRange(undefined);
           setTransactions([]);
           setTotal(0);
+          dateRangeRef.current = undefined;
           return;
         }
         break;
@@ -241,12 +274,55 @@ export default function VendorTransactionsPage() {
         startDate = new Date(defaultThreeMonthsAgo.getFullYear(), defaultThreeMonthsAgo.getMonth(), 1);
     }
 
-    setDateRange({ from: startDate, to: endDate });
-  };
-
-  useEffect(() => {
-    updatePeriodDates();
+    // Only update dateRange if dates actually changed
+    const newDateRange = { from: startDate, to: endDate };
+    const currentRange = dateRangeRef.current;
+    
+    if (!currentRange || 
+        currentRange.from.getTime() !== newDateRange.from.getTime() || 
+        currentRange.to?.getTime() !== newDateRange.to?.getTime()) {
+      dateRangeRef.current = newDateRange;
+      setDateRange(newDateRange);
+    }
   }, [periodType, customStartDate, customEndDate]);
+
+  // Debounced update for custom dates
+  useEffect(() => {
+    if (periodType === 'custom') {
+      // Immediately clear transactions if dates are incomplete
+      if (!customStartDate || !customEndDate || 
+          customStartDate.length !== 10 || customEndDate.length !== 10) {
+        setDateRange(undefined);
+        setTransactions([]);
+        setTotal(0);
+        dateRangeRef.current = undefined;
+        setLoading(false);
+      }
+      
+      // Clear existing timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      
+      // Only set timer if both dates are complete
+      if (customStartDate && customEndDate && 
+          customStartDate.length === 10 && customEndDate.length === 10) {
+        // Set new timer - wait 500ms after user stops typing
+        debounceTimerRef.current = setTimeout(() => {
+          updatePeriodDates();
+        }, 500);
+      }
+      
+      return () => {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+      };
+    } else {
+      // For non-custom periods, update immediately
+      updatePeriodDates();
+    }
+  }, [periodType, customStartDate, customEndDate, updatePeriodDates]);
 
   // Export functions
   const exportToExcel = (data: any[], headers: string[], filename: string) => {
@@ -570,7 +646,7 @@ export default function VendorTransactionsPage() {
                       <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0;">Total:</td>
                       <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(totalDebit ?? 0).toLocaleString()}</td>
                       <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(totalCredit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(-(finalBalance ?? 0)).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(finalBalance ?? 0).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -966,13 +1042,6 @@ export default function VendorTransactionsPage() {
   };
 
 
-  if (loading) {
-    return (
-      <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
-        <div className="text-center">Loading...</div>
-      </div>
-    );
-  }
 
   if (!vendor) {
     return (
@@ -1118,7 +1187,7 @@ export default function VendorTransactionsPage() {
                 <SelectItem value="month">Current Month</SelectItem>
                 <SelectItem value="last3month">Last 3 Month</SelectItem>
                 <SelectItem value="last6month">Last 6 Month</SelectItem>
-                <SelectItem value="year">Current Year</SelectItem>
+                <SelectItem value="year">Last 12 Months</SelectItem>
                 <SelectItem value="financialyear">Financial Year</SelectItem>
                 <SelectItem value="custom">Custom Period</SelectItem>
               </SelectContent>

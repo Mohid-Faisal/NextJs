@@ -26,16 +26,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   format,
   parseISO,
-  addMonths,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameMonth,
-  isSameDay,
-  isWithinInterval,
 } from "date-fns";
 
 type Payment = {
@@ -71,6 +61,7 @@ export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   
   // Date range states
+  const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
     const firstDayOfMonth = new Date(
@@ -85,10 +76,8 @@ export default function PaymentsPage() {
     );
     return { from: firstDayOfMonth, to: tomorrow };
   });
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [inputValue, setInputValue] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const [sortField, setSortField] = useState<SortField>("date");
@@ -106,7 +95,72 @@ export default function PaymentsPage() {
     }
   }, [searchParams, router]);
 
+  // Update date range based on period type
+  const updatePeriodDates = () => {
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); // Tomorrow to include today
+
+    switch (periodType) {
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'last3month':
+        const threeMonthsAgo = new Date(now);
+        threeMonthsAgo.setMonth(now.getMonth() - 3);
+        startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1);
+        break;
+      case 'last6month':
+        const sixMonthsAgo = new Date(now);
+        sixMonthsAgo.setMonth(now.getMonth() - 6);
+        startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1);
+        break;
+      case 'year':
+        // Last 12 months from today
+        const twelveMonthsAgo = new Date(now);
+        twelveMonthsAgo.setMonth(now.getMonth() - 12);
+        startDate = new Date(twelveMonthsAgo.getFullYear(), twelveMonthsAgo.getMonth(), twelveMonthsAgo.getDate());
+        break;
+      case 'financialyear':
+        if (now.getMonth() >= 6) {
+          startDate = new Date(now.getFullYear(), 6, 1); // July 1 of current year
+        } else {
+          startDate = new Date(now.getFullYear() - 1, 6, 1); // July 1 of previous year
+        }
+        break;
+      case 'custom':
+        if (customStartDate && customEndDate) {
+          startDate = new Date(customStartDate);
+          startDate.setHours(0, 0, 0, 0); // Start of the day
+          endDate = new Date(customEndDate);
+          endDate.setHours(23, 59, 59, 999); // End of the selected day
+          setDateRange({ from: startDate, to: endDate });
+        } else {
+          // Don't set date range if custom dates not provided - prevents fetching
+          setDateRange(undefined);
+          setPayments([]);
+          setTotal(0);
+          return;
+        }
+        break;
+      default:
+        const defaultThreeMonthsAgo = new Date(now);
+        defaultThreeMonthsAgo.setMonth(now.getMonth() - 3);
+        startDate = new Date(defaultThreeMonthsAgo.getFullYear(), defaultThreeMonthsAgo.getMonth(), 1);
+    }
+
+    setDateRange({ from: startDate, to: endDate });
+  };
+
   useEffect(() => {
+    updatePeriodDates();
+  }, [periodType, customStartDate, customEndDate]);
+
+  useEffect(() => {
+    // Don't fetch if custom period is selected but dates are not provided
+    if (periodType === 'custom' && (!customStartDate || !customEndDate)) {
+      return;
+    }
     const fetchPayments = async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -127,7 +181,7 @@ export default function PaymentsPage() {
     };
 
     fetchPayments();
-  }, [page, pageSize, typeFilter, modeFilter, searchTerm, dateRange, sortField, sortOrder]);
+  }, [page, pageSize, typeFilter, modeFilter, searchTerm, dateRange, sortField, sortOrder, periodType, customStartDate, customEndDate]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -146,100 +200,6 @@ export default function PaymentsPage() {
     ) : (
       <ArrowDown className="ml-2 h-4 w-4" />
     );
-  };
-
-  // Calendar functions
-  const getDaysInMonth = (date: Date) => {
-    const start = startOfWeek(startOfMonth(date));
-    const end = endOfWeek(endOfMonth(date));
-    return eachDayOfInterval({ start, end });
-  };
-
-  const isInRange = (date: Date) => {
-    if (!dateRange?.from || !dateRange?.to) return false;
-    return isWithinInterval(date, { start: dateRange.from, end: dateRange.to });
-  };
-
-  const isRangeStart = (date: Date) => {
-    return dateRange?.from && isSameDay(date, dateRange.from);
-  };
-
-  const isRangeEnd = (date: Date) => {
-    return dateRange?.to && isSameDay(date, dateRange.to);
-  };
-
-  const handleDateClick = (date: Date) => {
-    if (!dateRange?.from || (dateRange.from && dateRange.to)) {
-      setDateRange({ from: date, to: undefined });
-    } else {
-      if (date < dateRange.from) {
-        setDateRange({ from: date, to: dateRange.from });
-      } else {
-        setDateRange({ from: dateRange.from, to: date });
-      }
-    }
-  };
-
-  const formatRangeLabelText = (range?: { from: Date; to?: Date }) => {
-    if (!range?.from) return "Select date range";
-    if (range.to) {
-      return `${format(range.from, "dd-MM-yyyy")} to ${format(range.to, "dd-MM-yyyy")}`;
-    }
-    return format(range.from, "dd-MM-yyyy");
-  };
-
-  const parseDateInput = (input: string) => {
-    const parts = input.split(" to ");
-    if (parts.length === 2) {
-      const fromDate = parseDate(parts[0].trim());
-      const toDate = parseDate(parts[1].trim());
-      if (fromDate && toDate) {
-        return { from: fromDate, to: toDate };
-      }
-    } else if (parts.length === 1) {
-      const fromDate = parseDate(parts[0].trim());
-      if (fromDate) {
-        return { from: fromDate, to: undefined };
-      }
-    }
-    return undefined;
-  };
-
-  const parseDate = (dateStr: string) => {
-    const match = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-    if (match) {
-      const [, day, month, year] = match;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-    return null;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-  };
-
-  const handleInputBlur = () => {
-    setIsEditing(false);
-    if (inputValue.trim()) {
-      const parsedRange = parseDateInput(inputValue);
-      if (parsedRange) {
-        setDateRange(parsedRange);
-        setPage(1);
-      }
-    }
-  };
-
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.currentTarget.blur();
-    } else if (e.key === "Escape") {
-      setIsEditing(false);
-      setInputValue(formatRangeLabelText(dateRange));
-    }
   };
 
   const totalAmount = useMemo(
@@ -501,270 +461,153 @@ export default function PaymentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
-        {/* Left side - Show Entries and Search field */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
-          {/* Show Entries Dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Show:</span>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(value) => {
-                setPageSize(value === "all" ? "all" : parseInt(value));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[80px] h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Search field */}
-          <div className="flex w-full max-w-sm">
-            <Input
-              placeholder="Search by type, category, amount, from, to, mode, reference, invoice..."
-              value={searchTerm}
-              onChange={(e) => {
-                setPage(1);
-                setSearchTerm(e.target.value);
-              }}
-              className="rounded-r-none"
-            />
-            <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-              <Search className="text-white w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        {/* Center - Date Range Filter */}
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="dd-MM-yyyy to dd-MM-yyyy"
-            value={isEditing ? inputValue : formatRangeLabelText(dateRange)}
-            onChange={handleInputChange}
-            onFocus={() => {
-              setIsEditing(true);
-              setInputValue(formatRangeLabelText(dateRange));
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 flex-wrap">
+        {/* Show Entries Dropdown */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Show:</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => {
+              setPageSize(value === "all" ? "all" : parseInt(value));
+              setPage(1);
             }}
-            onBlur={handleInputBlur}
-            onKeyDown={handleInputKeyDown}
-            onClick={() => !isEditing && setShowDatePicker(!showDatePicker)}
-            className="w-full sm:w-64 bg-muted cursor-text"
+          >
+            <SelectTrigger className="w-[80px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Search field */}
+        <div className="flex flex-1 min-w-[200px] max-w-sm">
+          <Input
+            placeholder="Search by type, category, amount, from, to, mode, reference, invoice..."
+            value={searchTerm}
+            onChange={(e) => {
+              setPage(1);
+              setSearchTerm(e.target.value);
+            }}
+            className="rounded-r-none"
           />
-          {!isEditing && (
-            <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          )}
-          {showDatePicker && (
-            <div className="absolute left-0 z-9999 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 sm:p-4 w-[280px] sm:w-[400px] lg:w-[600px]" style={{ minWidth: "280px" }}>
-              <div className="flex flex-col lg:flex-row gap-2 sm:gap-4">
-                {/* Left Calendar */}
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <button
-                      onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                    >
-                      ←
-                    </button>
-                    <h3 className="text-sm font-medium">
-                      {format(currentMonth, "MMM yyyy")}
-                    </h3>
-                    <div className="w-6"></div>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 text-xs">
-                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
-                      <div key={day} className="p-2 text-center text-gray-500 font-medium">
-                        {day}
-                      </div>
-                    ))}
-                    {getDaysInMonth(currentMonth).map((day, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleDateClick(day)}
-                        className={`p-2 text-center text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900 ${
-                          !isSameMonth(day, currentMonth) 
-                            ? "text-gray-300 dark:text-gray-600" 
-                            : isRangeStart(day)
-                            ? "bg-blue-500 text-white"
-                            : isRangeEnd(day)
-                            ? "bg-blue-500 text-white"
-                            : isInRange(day)
-                            ? "bg-blue-100 dark:bg-blue-800"
-                            : "text-gray-700 dark:text-gray-200"
-                        }`}
-                      >
-                        {format(day, "d")}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Right Calendar */}
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-6"></div>
-                    <h3 className="text-sm font-medium">
-                      {format(addMonths(currentMonth, 1), "MMM yyyy")}
-                    </h3>
-                    <button
-                      onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                    >
-                      →
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 text-xs">
-                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
-                      <div key={day} className="p-2 text-center text-gray-500 font-medium">
-                        {day}
-                      </div>
-                    ))}
-                    {getDaysInMonth(addMonths(currentMonth, 1)).map((day, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleDateClick(day)}
-                        className={`p-2 text-center text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900 ${
-                          !isSameMonth(day, addMonths(currentMonth, 1)) 
-                            ? "text-gray-300 dark:text-gray-600" 
-                            : isRangeStart(day)
-                            ? "bg-blue-500 text-white"
-                            : isRangeEnd(day)
-                            ? "bg-blue-500 text-white"
-                            : isInRange(day)
-                            ? "bg-blue-100 dark:bg-blue-800"
-                            : "text-gray-700 dark:text-gray-200"
-                        }`}
-                      >
-                        {format(day, "d")}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {dateRange?.from && dateRange?.to
-                    ? `${format(dateRange.from, "dd-MM-yyyy")} to ${format(dateRange.to, "dd-MM-yyyy")}`
-                    : "Select date range"}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const now = new Date();
-                      const twoMonthsAgo = new Date(
-                        now.getFullYear(),
-                        now.getMonth() - 2,
-                        now.getDate()
-                      );
-                      const tomorrow = new Date(
-                        now.getFullYear(),
-                        now.getMonth(),
-                        now.getDate() + 1
-                      );
-                      setDateRange({ from: twoMonthsAgo, to: tomorrow });
-                      setCurrentMonth(twoMonthsAgo);
-                    }}
-                    className="text-gray-600 dark:text-gray-400"
-                  >
-                    Restore Default
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setDateRange(undefined);
-                      setShowDatePicker(false);
-                    }}
-                    className="text-gray-600 dark:text-gray-400"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowDatePicker(false)}
-                  >
-                    Apply
-                  </Button>
-                </div>
-              </div>
+          <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
+            <Search className="text-white w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Date Range Filter */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 shrink-0">
+          <Select
+            value={periodType}
+            onValueChange={(value: string) => {
+              setPeriodType(value as any);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Current Month</SelectItem>
+              <SelectItem value="last3month">Last 3 Month</SelectItem>
+              <SelectItem value="last6month">Last 6 Month</SelectItem>
+                <SelectItem value="year">Last 12 Months</SelectItem>
+              <SelectItem value="financialyear">Financial Year</SelectItem>
+              <SelectItem value="custom">Custom Period</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {periodType === 'custom' && (
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-gray-500 shrink-0 hidden sm:block" />
+              <Input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => {
+                  setCustomStartDate(e.target.value);
+                  setPage(1);
+                }}
+                className="w-[130px] sm:w-[140px]"
+              />
+              <span className="text-gray-500 shrink-0 text-xs sm:text-sm">to</span>
+              <Input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => {
+                  setCustomEndDate(e.target.value);
+                  setPage(1);
+                }}
+                className="w-[130px] sm:w-[140px]"
+              />
             </div>
           )}
         </div>
 
-        {/* Right side - All other controls */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
-          {/* Type Filter */}
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[120px] h-9">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {['All','Income','Expense','Transfer','Return'].map(s => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Type Filter */}
+        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[120px] h-9 shrink-0">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            {['All','Income','Expense','Transfer','Return'].map(s => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          {/* Mode Filter */}
-          <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[140px] h-9">
-              <SelectValue placeholder="Mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {['All','Cash','Bank Transfer','Card','Cheque'].map(m => (
-                <SelectItem key={m} value={m}>{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Mode Filter */}
+        <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[140px] h-9 shrink-0">
+            <SelectValue placeholder="Mode" />
+          </SelectTrigger>
+          <SelectContent>
+            {['All','Cash','Bank Transfer','Card','Cheque'].map(m => (
+              <SelectItem key={m} value={m}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          {/* Export Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-[100px] h-9 justify-between">
-                Export
-                <ArrowUp className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[120px]">
-              <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
-                <Table className="w-4 h-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
-                <Printer className="w-4 h-4" />
-                Print
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={handleExportPDF} 
-                disabled={isGeneratingPDF}
-                className="flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                {isGeneratingPDF ? 'Generating...' : 'PDF'}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Export Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-[100px] h-9 justify-between shrink-0">
+              Export
+              <ArrowUp className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[120px]">
+            <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
+              <Table className="w-4 h-4" />
+              Excel
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
+              <Printer className="w-4 h-4" />
+              Print
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={handleExportPDF} 
+              disabled={isGeneratingPDF}
+              className="flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              {isGeneratingPDF ? 'Generating...' : 'PDF'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-          {/* Add Payment Button */}
-          <Button asChild className="h-9">
-            <Link href="/dashboard/accounts/payments/add" className="flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Add Transaction
-            </Link>
-          </Button>
-        </div>
+        {/* Add Payment Button */}
+        <Button asChild className="h-9 shrink-0">
+          <Link href="/dashboard/accounts/payments/add" className="flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Transaction
+          </Link>
+        </Button>
       </div>
 
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">

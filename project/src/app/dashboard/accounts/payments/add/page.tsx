@@ -39,6 +39,7 @@ export default function AddPaymentPage() {
     description: "",
     reference: "",
     paymentMethod: "CASH",
+    invoice: "",
   });
 
   // Chart of accounts
@@ -222,10 +223,11 @@ export default function AddPaymentPage() {
           description: payment.description || "",
           reference: payment.reference || "",
           paymentMethod: payment.mode || "CASH",
+          invoice: payment.invoice || "",
         });
         
-        // Wait a bit to ensure formData is updated before loading journal entry accounts
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait a bit to ensure formData is updated and categories are populated
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         // Get chart of accounts data from the journal entry
         // Use passed accounts or state accounts
@@ -828,6 +830,7 @@ export default function AddPaymentPage() {
                     Category *
                   </Label>
                   <Select
+                    key={`${formData.transactionType}-${formData.category}`}
                     value={formData.category}
                     onValueChange={(value) =>
                       handleInputChange("category", value)
@@ -921,18 +924,33 @@ export default function AddPaymentPage() {
                 </div>
               </div>
 
-              <div>
-                <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
-                  Description
-                </Label>
-                <Input
-                  value={formData.description}
-                  onChange={(e) =>
-                    handleInputChange("description", e.target.value)
-                  }
-                  placeholder="Transaction description"
-                  className="h-8 sm:h-10"
-                />
+              <div className={`grid grid-cols-1 ${isEditMode && formData.invoice ? 'sm:grid-cols-2' : ''} gap-4 sm:gap-6`}>
+                {isEditMode && formData.invoice && (
+                  <div>
+                    <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
+                      Invoice Number
+                    </Label>
+                    <Input
+                      value={formData.invoice}
+                      readOnly
+                      className="h-8 sm:h-8 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
+                    Description
+                  </Label>
+                  <Input
+                    value={formData.description}
+                    onChange={(e) =>
+                      handleInputChange("description", e.target.value)
+                    }
+                    placeholder="Transaction description"
+                    className="h-8 sm:h-10"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
