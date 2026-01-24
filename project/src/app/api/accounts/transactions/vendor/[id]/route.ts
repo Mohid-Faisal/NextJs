@@ -150,75 +150,112 @@ export async function GET(
       }
     });
 
-    // Fetch shipment and payment dates for all transactions to determine voucher dates
-    const transactionsWithVoucherDates = await Promise.all(
-      allTransactions.map(async (transaction) => {
-        let voucherDate = transaction.createdAt;
-        
-        // If this is a debit note transaction, fetch the date from the debit note record
-        if (transaction.reference?.startsWith("#DEBIT")) {
-          const debitNote = await prisma.debitNote.findUnique({
-            where: { debitNoteNumber: transaction.reference },
-            select: { date: true }
-          });
-          if (debitNote?.date) {
-            voucherDate = debitNote.date;
-          }
-        } else if (transaction.reference?.startsWith("#CREDIT")) {
-          // For vendor transactions, credit notes might also exist
-          const debitNote = await prisma.debitNote.findFirst({
-            where: { debitNoteNumber: transaction.reference },
-            select: { date: true }
-          });
-          if (debitNote?.date) {
-            voucherDate = debitNote.date;
-          }
-        }
+    // Batch fetch all related data to avoid N+1 queries
+    const debitNoteRefs = allTransactions
+      .filter(t => t.reference?.startsWith("#DEBIT") || t.reference?.startsWith("#CREDIT"))
+      .map(t => t.reference!)
+      .filter((ref, index, self) => self.indexOf(ref) === index); // unique refs
+    
+    const debitNotesMap = new Map<string, Date>();
+    if (debitNoteRefs.length > 0) {
+      const debitNotes = await prisma.debitNote.findMany({
+        where: { debitNoteNumber: { in: debitNoteRefs } },
+        select: { debitNoteNumber: true, date: true }
+      });
+      debitNotes.forEach(dn => {
+        if (dn.date) debitNotesMap.set(dn.debitNoteNumber, dn.date);
+      });
+    }
 
-        if (transaction.invoice) {
-          // Find the invoice and get shipment info
-          const invoice = await prisma.invoice.findFirst({
-            where: { invoiceNumber: transaction.invoice },
-            include: {
-              shipment: {
-                select: {
-                  shipmentDate: true
-                }
-              }
-            }
-          });
-          
-          if (transaction.type === "DEBIT" && invoice?.shipment?.shipmentDate) {
-            // For DEBIT transactions (vendor invoices), use shipmentDate
-            voucherDate = invoice.shipment.shipmentDate;
-          } else if (transaction.type === "CREDIT") {
-            // For CREDIT transactions (vendor payments), use payment date
-            const payment = await prisma.payment.findFirst({
-              where: {
-                invoice: transaction.invoice,
-                toVendorId: vendorId,
-                transactionType: "EXPENSE"
-              },
-              orderBy: {
-                date: 'desc'
-              },
-              select: {
-                date: true
-              }
-            });
-            
-            if (payment?.date) {
-              voucherDate = payment.date;
-            }
+    // Batch fetch invoices with shipments
+    const invoiceNumbers = allTransactions
+      .filter(t => t.invoice)
+      .map(t => t.invoice!)
+      .filter((inv, index, self) => self.indexOf(inv) === index); // unique invoices
+    
+    const invoicesMap = new Map<string, { shipmentDate?: Date }>();
+    if (invoiceNumbers.length > 0) {
+      const invoices = await prisma.invoice.findMany({
+        where: { invoiceNumber: { in: invoiceNumbers } },
+        include: {
+          shipment: {
+            select: { shipmentDate: true }
           }
         }
+      });
+      invoices.forEach(inv => {
+        invoicesMap.set(inv.invoiceNumber, {
+          shipmentDate: inv.shipment?.shipmentDate || undefined
+        });
+      });
+    }
+
+    // Batch fetch payments for CREDIT transactions
+    const creditTransactionsWithInvoices = allTransactions
+      .filter(t => t.type === "CREDIT" && t.invoice)
+      .map(t => t.invoice!);
+    
+    const paymentsMap = new Map<string, Date>();
+    if (creditTransactionsWithInvoices.length > 0) {
+      const uniqueInvoices = [...new Set(creditTransactionsWithInvoices)];
+      const payments = await prisma.payment.findMany({
+        where: {
+          invoice: { in: uniqueInvoices },
+          toVendorId: vendorId,
+          transactionType: "EXPENSE"
+        },
+        select: {
+          invoice: true,
+          date: true
+        },
+        orderBy: { date: 'desc' }
+      });
+      
+      // Group by invoice and take the most recent payment for each
+      const paymentsByInvoice = new Map<string, Date>();
+      payments.forEach(p => {
+        if (p.date && p.invoice && (!paymentsByInvoice.has(p.invoice) || 
+            paymentsByInvoice.get(p.invoice)! < p.date)) {
+          paymentsByInvoice.set(p.invoice, p.date);
+        }
+      });
+      paymentsByInvoice.forEach((date, invoice) => {
+        paymentsMap.set(invoice, date);
+      });
+    }
+
+    // Map transactions with voucher dates using batched data
+    const transactionsWithVoucherDates = allTransactions.map((transaction) => {
+      let voucherDate = transaction.createdAt;
+      
+      // Check debit note dates
+      if (transaction.reference) {
+        const debitNoteDate = debitNotesMap.get(transaction.reference);
+        if (debitNoteDate) {
+          voucherDate = debitNoteDate;
+        }
+      }
+
+      if (transaction.invoice) {
+        const invoiceData = invoicesMap.get(transaction.invoice);
         
-        return {
-          ...transaction,
-          voucherDate
-        };
-      })
-    );
+        if (transaction.type === "DEBIT" && invoiceData?.shipmentDate) {
+          // For DEBIT transactions (vendor invoices), use shipmentDate
+          voucherDate = invoiceData.shipmentDate;
+        } else if (transaction.type === "CREDIT") {
+          // For CREDIT transactions (vendor payments), use payment date
+          const paymentDate = paymentsMap.get(transaction.invoice);
+          if (paymentDate) {
+            voucherDate = paymentDate;
+          }
+        }
+      }
+      
+      return {
+        ...transaction,
+        voucherDate
+      };
+    });
 
     // Sort by voucher date (not createdAt) for balance calculation
     // When dates are the same, DEBIT (shipment/invoice) transactions come before CREDIT (payment) transactions
@@ -466,98 +503,136 @@ export async function GET(
       .map(id => transactionMap.get(id))
       .filter((t): t is NonNullable<typeof t> => t !== undefined);
 
-    // Fetch shipment information and payment date for transactions that have invoice references
-    const transactionsWithShipmentInfo = await Promise.all(
-      orderedTransactions.map(async (transaction) => {
-        let shipmentInfo = null;
-        let shipmentDate: string | undefined = undefined;
-        let paymentDate: string | undefined = undefined;
-        let debitNoteDate: string | undefined = undefined;
-        
-        // If this is a debit note transaction, fetch the date from the debit note record
-        if (transaction.reference?.startsWith("#DEBIT")) {
-          const debitNote = await prisma.debitNote.findUnique({
-            where: { debitNoteNumber: transaction.reference },
-            select: { date: true }
-          });
-          if (debitNote?.date) {
-            debitNoteDate = debitNote.date.toISOString();
-          }
-        } else if (transaction.reference?.startsWith("#CREDIT")) {
-          const debitNote = await prisma.debitNote.findFirst({
-            where: { debitNoteNumber: transaction.reference },
-            select: { date: true }
-          });
-          if (debitNote?.date) {
-            debitNoteDate = debitNote.date.toISOString();
-          }
-        }
-        
-        if (transaction.invoice) {
-          // Find the invoice and get shipment info
-          const invoice = await prisma.invoice.findFirst({
-            where: { invoiceNumber: transaction.invoice },
-            include: {
-              shipment: {
-                select: {
-                  trackingId: true,
-                  weight: true,
-                  destination: true,
-                  referenceNumber: true,
-                  deliveryStatus: true,
-                  shipmentDate: true
-                }
-              }
-            }
-          });
-          
-          if (invoice?.shipment) {
-            shipmentInfo = {
-              awbNo: invoice.shipment.trackingId,
-              weight: invoice.shipment.weight,
-              destination: invoice.shipment.destination,
-              referenceNo: invoice.shipment.referenceNumber,
-              status: invoice.shipment.deliveryStatus || 'Sale',
-              shipmentDate: invoice.shipment.shipmentDate
-            };
-            
-            // Extract shipmentDate for direct access
-            if (invoice.shipment.shipmentDate) {
-              shipmentDate = invoice.shipment.shipmentDate.toISOString();
-            }
-          }
-          
-          // For payment transactions (CREDIT), fetch payment date from Payment table
-          if (transaction.type === "CREDIT") {
-            const payment = await prisma.payment.findFirst({
-              where: {
-                invoice: transaction.invoice,
-                toVendorId: vendorId,
-                transactionType: "EXPENSE"
-              },
-              orderBy: {
-                date: 'desc' // Get the most recent payment for this invoice
-              },
-              select: {
-                date: true
-              }
-            });
-            
-            if (payment?.date) {
-              paymentDate = payment.date.toISOString();
+    // Batch fetch shipment information and payment dates for paginated transactions
+    const paginatedInvoiceNumbers = orderedTransactions
+      .filter(t => t.invoice)
+      .map(t => t.invoice!)
+      .filter((inv, index, self) => self.indexOf(inv) === index);
+    
+    const paginatedDebitNoteRefs = orderedTransactions
+      .filter(t => t.reference?.startsWith("#DEBIT") || t.reference?.startsWith("#CREDIT"))
+      .map(t => t.reference!)
+      .filter((ref, index, self) => self.indexOf(ref) === index);
+    
+    // Batch fetch invoices with full shipment info
+    const paginatedInvoicesMap = new Map<string, any>();
+    if (paginatedInvoiceNumbers.length > 0) {
+      const paginatedInvoices = await prisma.invoice.findMany({
+        where: { invoiceNumber: { in: paginatedInvoiceNumbers } },
+        include: {
+          shipment: {
+            select: {
+              trackingId: true,
+              weight: true,
+              destination: true,
+              referenceNumber: true,
+              deliveryStatus: true,
+              shipmentDate: true
             }
           }
         }
+      });
+      paginatedInvoices.forEach(inv => {
+        paginatedInvoicesMap.set(inv.invoiceNumber, inv);
+      });
+    }
+    
+    // Batch fetch debit notes for paginated transactions
+    const paginatedDebitNotesMap = new Map<string, Date>();
+    if (paginatedDebitNoteRefs.length > 0) {
+      const paginatedDebitNotes = await prisma.debitNote.findMany({
+        where: { debitNoteNumber: { in: paginatedDebitNoteRefs } },
+        select: { debitNoteNumber: true, date: true }
+      });
+      paginatedDebitNotes.forEach(dn => {
+        if (dn.date) paginatedDebitNotesMap.set(dn.debitNoteNumber, dn.date);
+      });
+    }
+    
+    // Batch fetch payments for CREDIT transactions in paginated results
+    const paginatedCreditInvoices = orderedTransactions
+      .filter(t => t.type === "CREDIT" && t.invoice)
+      .map(t => t.invoice!);
+    
+    const paginatedPaymentsMap = new Map<string, Date>();
+    if (paginatedCreditInvoices.length > 0) {
+      const uniquePaginatedInvoices = [...new Set(paginatedCreditInvoices)];
+      const paginatedPayments = await prisma.payment.findMany({
+        where: {
+          invoice: { in: uniquePaginatedInvoices },
+          toVendorId: vendorId,
+          transactionType: "EXPENSE"
+        },
+        select: {
+          invoice: true,
+          date: true
+        },
+        orderBy: { date: 'desc' }
+      });
+      
+      // Group by invoice and take the most recent payment for each
+      const paymentsByInvoice = new Map<string, Date>();
+      paginatedPayments.forEach(p => {
+        if (p.date && p.invoice && (!paymentsByInvoice.has(p.invoice) || 
+            paymentsByInvoice.get(p.invoice)! < p.date)) {
+          paymentsByInvoice.set(p.invoice, p.date);
+        }
+      });
+      paymentsByInvoice.forEach((date, invoice) => {
+        paginatedPaymentsMap.set(invoice, date);
+      });
+    }
+    
+    // Map transactions with shipment info using batched data
+    const transactionsWithShipmentInfo = orderedTransactions.map((transaction) => {
+      let shipmentInfo = null;
+      let shipmentDate: string | undefined = undefined;
+      let paymentDate: string | undefined = undefined;
+      let debitNoteDate: string | undefined = undefined;
+      
+      // Get debit note date from batched data
+      if (transaction.reference) {
+        const dnDate = paginatedDebitNotesMap.get(transaction.reference);
+        if (dnDate) {
+          debitNoteDate = dnDate.toISOString();
+        }
+      }
+      
+      if (transaction.invoice) {
+        const invoice = paginatedInvoicesMap.get(transaction.invoice);
         
-        return {
-          ...transaction,
-          shipmentInfo,
-          shipmentDate,
-          paymentDate,
-          debitNoteDate
-        };
-      })
-    );
+        if (invoice?.shipment) {
+          shipmentInfo = {
+            awbNo: invoice.shipment.trackingId,
+            weight: invoice.shipment.weight,
+            destination: invoice.shipment.destination,
+            referenceNo: invoice.shipment.referenceNumber,
+            status: invoice.shipment.deliveryStatus || 'Sale',
+            shipmentDate: invoice.shipment.shipmentDate
+          };
+          
+          if (invoice.shipment.shipmentDate) {
+            shipmentDate = invoice.shipment.shipmentDate.toISOString();
+          }
+        }
+        
+        // Get payment date from batched data
+        if (transaction.type === "CREDIT") {
+          const paymentDateObj = paginatedPaymentsMap.get(transaction.invoice);
+          if (paymentDateObj) {
+            paymentDate = paymentDateObj.toISOString();
+          }
+        }
+      }
+      
+      return {
+        ...transaction,
+        shipmentInfo,
+        shipmentDate,
+        paymentDate,
+        debitNoteDate
+      };
+    });
 
     return NextResponse.json({
       vendor: {

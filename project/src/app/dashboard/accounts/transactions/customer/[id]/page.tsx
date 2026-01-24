@@ -187,8 +187,10 @@ export default function CustomerTransactionsPage() {
 
   // Initial fetch on mount
   useEffect(() => {
-    fetchCustomerData();
-    isInitialMount.current = false;
+    if (customerId) {
+      fetchCustomerData();
+      isInitialMount.current = false;
+    }
   }, [customerId]);
 
   // Fetch when pagination or filters change (but not on initial mount)
@@ -1008,6 +1010,14 @@ export default function CustomerTransactionsPage() {
 
 
 
+  if (loading) {
+    return (
+      <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
   if (!customer) {
     return (
       <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
@@ -1065,30 +1075,27 @@ export default function CustomerTransactionsPage() {
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         {/* Left side - Search field */}
         <div className="flex gap-2 w-full sm:w-auto">
-          <Input
-            placeholder="Search by reference, amount, description..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-            }}
-            className="flex-1 sm:max-w-sm"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                setPage(1);
-                fetchCustomerData();
-              }
-            }}
-          />
-          <Button
-            onClick={() => {
-              setPage(1);
-              fetchCustomerData();
-            }}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            <Search className="w-4 h-4 mr-2" />
-            Search
-          </Button>
+          <div className="relative flex-1 sm:max-w-sm">
+            <Input
+              placeholder="Search by reference, amount, description..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+              }}
+              className="pr-12"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setPage(1);
+                  fetchCustomerData();
+                }
+              }}
+            />
+            <div className="absolute right-0 top-0 h-full flex items-center pointer-events-none">
+              <div className="bg-blue-500 rounded-r-md px-3 h-full flex items-center">
+                <Search className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          </div>
           {loadTime !== null && (
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Load time: {loadTime.toFixed(0)}ms ({(loadTime / 1000).toFixed(2)}s)
