@@ -87,6 +87,7 @@ export default function VendorTransactionsPage() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [loadTime, setLoadTime] = useState<number | null>(null);
   const isInitialMount = useRef(true);
+  const isTypingDate = useRef(false);
 
   // Sorting states
   type SortField = "voucherDate" | "amount" | "type" | "description" | "reference";
@@ -197,8 +198,25 @@ export default function VendorTransactionsPage() {
     if (isInitialMount.current) {
       return;
     }
+    // Don't fetch if user is currently typing in date fields
+    if (isTypingDate.current) {
+      return;
+    }
+    // Don't fetch if custom period is selected but dates are incomplete
+    if (periodType === 'custom') {
+      // Check if dates are incomplete - if so, don't fetch
+      if (!customStartDate || !customEndDate || 
+          customStartDate.length !== 10 || customEndDate.length !== 10) {
+        // Don't set loading state if dates are incomplete
+        return;
+      }
+      // Also check if dateRange is undefined (shouldn't happen if dates are complete, but safety check)
+      if (!dateRange) {
+        return;
+      }
+    }
     fetchVendorData();
-  }, [page, pageSize, dateRange, sortField, sortOrder]);
+  }, [page, pageSize, dateRange, sortField, sortOrder, periodType]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -285,8 +303,26 @@ export default function VendorTransactionsPage() {
   };
 
   // Update date range when period type or custom dates change
+  // Only update if dates are complete (10 chars each) or period type is not custom
   useEffect(() => {
-    updatePeriodDates();
+    if (periodType === 'custom') {
+      // Only update if both dates are complete (10 characters = YYYY-MM-DD format)
+      if (customStartDate && customEndDate && 
+          customStartDate.length === 10 && customEndDate.length === 10) {
+        // Delay to ensure typing flag is cleared and user has finished typing
+        const timer = setTimeout(() => {
+          if (!isTypingDate.current) {
+            updatePeriodDates();
+          }
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+      // Don't update dateRange if dates are incomplete - keep previous value
+      // This prevents triggering fetch while user is typing
+    } else {
+      updatePeriodDates();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodType, customStartDate, customEndDate]);
 
   // Export functions
@@ -1183,7 +1219,15 @@ export default function VendorTransactionsPage() {
                   type="date"
                   value={customStartDate}
                   onChange={(e) => {
+                    isTypingDate.current = true;
                     setCustomStartDate(e.target.value);
+                    // Clear typing flag after a delay to allow user to finish typing
+                    setTimeout(() => {
+                      isTypingDate.current = false;
+                    }, 800);
+                  }}
+                  onBlur={() => {
+                    isTypingDate.current = false;
                   }}
                   className="w-full sm:w-44 min-w-[160px]"
                 />
@@ -1192,7 +1236,15 @@ export default function VendorTransactionsPage() {
                   type="date"
                   value={customEndDate}
                   onChange={(e) => {
+                    isTypingDate.current = true;
                     setCustomEndDate(e.target.value);
+                    // Clear typing flag after a delay to allow user to finish typing
+                    setTimeout(() => {
+                      isTypingDate.current = false;
+                    }, 800);
+                  }}
+                  onBlur={() => {
+                    isTypingDate.current = false;
                   }}
                   className="w-full sm:w-44 min-w-[160px]"
                 />

@@ -29,6 +29,11 @@ import {
   Zap,
   TrendingUp,
   Mail,
+  Receipt,
+  Wallet,
+  TrendingDown,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -211,6 +216,10 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
 
   const subLinksReports = [
     { href: "/dashboard/accounts/ledger", label: "Ledger", icon: BookOpen },
+    { href: "/dashboard/accounts/customer-balances", label: "Customer Balances", icon: Wallet },
+    { href: "/dashboard/accounts/vendor-balances", label: "Vendor Balances", icon: Wallet },
+    { href: "/dashboard/accounts/payments-received", label: "Payments Received", icon: ArrowDownCircle },
+    { href: "/dashboard/accounts/vendor-payments", label: "Vendor Payments", icon: ArrowUpCircle },
   ];
 
   return (
@@ -248,7 +257,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
-            <LayoutGrid className="w-5 h-5 flex-shrink-0" />
+            <LayoutGrid className="w-5 h-5 shrink-0" />
             <span
               className={`whitespace-nowrap transition-all duration-200 ${
                 shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
@@ -267,7 +276,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
-            <Mail className="w-5 h-5 flex-shrink-0" />
+            <Mail className="w-5 h-5 shrink-0" />
             <span
               className={`whitespace-nowrap transition-all duration-200 ${
                 shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
@@ -290,7 +299,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               }`}
             >
               <div className="flex items-center gap-4">
-                <Package className="w-5 h-5 flex-shrink-0" />
+                <Package className="w-5 h-5 shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
                     shouldExpand
@@ -327,7 +336,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <Icon className="w-4 h-4 shrink-0" />
                       {label}
                     </Link>
                   ))}
@@ -349,7 +358,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                <Icon className="w-5 h-5 shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
                     shouldExpand
@@ -375,7 +384,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               }`}
             >
               <div className="flex items-center gap-4">
-                <TrendingUp className="w-5 h-5 flex-shrink-0" />
+                <TrendingUp className="w-5 h-5 shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
                     shouldExpand
@@ -412,7 +421,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <Icon className="w-4 h-4 shrink-0" />
                       {label}
                     </Link>
                   ))}
@@ -433,7 +442,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               }`}
             >
               <div className="flex items-center gap-4">
-                <ShoppingCart className="w-5 h-5 flex-shrink-0" />
+                <ShoppingCart className="w-5 h-5 shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
                     shouldExpand
@@ -470,7 +479,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <Icon className="w-4 h-4 shrink-0" />
                       {label}
                     </Link>
                   ))}
@@ -488,7 +497,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
           >
-            <CreditCard className="w-5 h-5 flex-shrink-0" />
+            <CreditCard className="w-5 h-5 shrink-0" />
             <span
               className={`whitespace-nowrap transition-all duration-200 ${
                 shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
@@ -511,7 +520,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               }`}
             >
               <div className="flex items-center gap-4">
-                <DollarSign className="w-5 h-5 flex-shrink-0" />
+                <DollarSign className="w-5 h-5 shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
                     shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
@@ -546,7 +555,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <Icon className="w-4 h-4 shrink-0" />
                       {label}
                     </Link>
                   ))}
@@ -566,7 +575,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               }`}
             >
               <div className="flex items-center gap-4">
-                <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                <ClipboardList className="w-5 h-5 shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
                     shouldExpand
@@ -603,7 +612,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <Icon className="w-4 h-4 shrink-0" />
                       {label}
                     </Link>
                   ))}
@@ -623,7 +632,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               }`}
             >
               <div className="flex items-center gap-4">
-                <Settings className="w-5 h-5 flex-shrink-0" />
+                <Settings className="w-5 h-5 shrink-0" />
                 <span
                   className={`whitespace-nowrap transition-all duration-200 ${
                     shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
@@ -658,7 +667,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <Icon className="w-4 h-4 shrink-0" />
                       {label}
                     </Link>
                   ))}
@@ -674,7 +683,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             type="button"
             className="flex items-center gap-3 w-full text-sm font-medium text-sidebar-foreground rounded-lg px-3 py-2 hover:bg-sidebar-accent transition-all duration-200"
           >
-            <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-white flex-shrink-0">
+            <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-white shrink-0">
               {shouldExpand ? userName[0]?.toUpperCase() : ""}
             </div>
             <span
@@ -690,7 +699,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             onClick={handleLogout}
             className="flex items-center gap-3 w-full text-sm font-medium text-red-600 rounded-lg px-3 py-2 hover:bg-red-100 dark:hover:bg-red-900 transition-all duration-200"
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <LogOut className="w-5 h-5 shrink-0" />
             <span
               className={`transition-all duration-200 ${
                 shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"

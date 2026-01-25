@@ -134,7 +134,7 @@ export default function ReceiptPage() {
           <title>Waybill ${invoice.invoiceNumber}</title>
           <style>
             :root {
-              --skynet-red: #e30613;
+              --primary-blue: #2563eb;
               --border-color: #000;
               --bg-grey: #d1d5db;
               --text-black: #000;
@@ -174,7 +174,7 @@ export default function ReceiptPage() {
               font-style: italic;
               font-weight: 900;
               font-size: 28px;
-              color: var(--skynet-red);
+              color: var(--primary-blue);
               line-height: 0.8;
             }
             .logo span {
@@ -189,22 +189,6 @@ export default function ReceiptPage() {
               width: auto;
             }
 
-            .warning-text {
-              color: var(--skynet-red);
-              text-align: center;
-              font-weight: bold;
-              font-size: 12px;
-              text-transform: uppercase;
-              line-height: 1.2;
-            }
-
-            .exp-box {
-              background: black;
-              color: white;
-              font-size: 32px;
-              font-weight: bold;
-              padding: 5px 15px;
-            }
 
             .main-grid {
               display: grid;
@@ -215,7 +199,7 @@ export default function ReceiptPage() {
             .border-right { border-right: 1px solid black; }
             .border-bottom { border-bottom: 1px solid black; }
             .bg-grey { background-color: var(--bg-grey); }
-            .bg-red { background-color: var(--skynet-red); color: white; }
+            .bg-red { background-color: var(--primary-blue); color: black; }
             .bold { font-weight: 700; }
             .text-center { text-align: center; }
             .full-height { height: 100%; }
@@ -224,8 +208,8 @@ export default function ReceiptPage() {
 
             .sec-num {
               display: inline-block;
-              background: var(--skynet-red);
-              color: white;
+              background: var(--primary-blue);
+              color: black;
               width: 16px;
               height: 16px;
               text-align: center;
@@ -237,11 +221,15 @@ export default function ReceiptPage() {
 
             .section-header {
               background: #e5e7eb;
+              color: black;
               padding: 2px 5px;
               font-weight: bold;
               font-size: 10px;
               text-transform: uppercase;
               border-bottom: 1px solid black;
+              margin: 0;
+              width: 100%;
+              box-sizing: border-box;
             }
 
             .cell-content {
@@ -278,26 +266,34 @@ export default function ReceiptPage() {
 
             .auth-section {
               height: 120px;
-              padding: 5px;
+              padding: 0;
               position: relative;
               font-size: 9px;
             }
+            .auth-section .section-header {
+              margin: 0;
+              padding: 2px 5px;
+              width: 100%;
+              box-sizing: border-box;
+            }
+            .auth-section > *:not(.section-header) {
+              padding: 5px;
+            }
             .terms-text {
-              font-size: 7px;
-              margin-bottom: 15px;
+              font-size: 9px;
+              margin-bottom: 5px;
               text-align: justify;
             }
             .signature-line {
               border-top: 1px solid black;
-              width: 80%;
-              margin-top: 20px;
+              width: 100%;
+              margin-top: 5px;
+              padding-top: 5px;
             }
             .timestamp {
-              position: absolute;
-              bottom: 5px;
-              right: 5px;
+              margin-top: 10px;
               text-align: right;
-              font-family: 'Courier New', Courier, monospace;
+              font-size: 9px;
             }
 
             .pod-section {
@@ -330,7 +326,8 @@ export default function ReceiptPage() {
             .dap-section {
               display: flex;
               border-bottom: 1px solid black;
-              height: 40px;
+              min-height: 45px;
+              height: auto;
             }
             .dap-box {
               width: 50%;
@@ -343,8 +340,14 @@ export default function ReceiptPage() {
             }
             .currency-box {
               width: 50%;
-              padding: 2px 5px;
-              font-size: 10px;
+              padding: 3px 5px;
+              font-size: 9px;
+              line-height: 1.3;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              overflow: hidden;
+              box-sizing: border-box;
             }
             .barcode-section {
               height: 140px;
@@ -383,12 +386,24 @@ export default function ReceiptPage() {
             }
             .service-section {
               flex: 1;
-              padding: 5px;
+              padding: 5px 5px 0 5px;
               border-bottom: 1px solid black;
+              margin-bottom: 0;
+              max-height: 210px;
+              overflow: hidden;
+            }
+            .service-section .section-header {
+              margin: -5px -5px 0 -5px;
+              padding: 2px 5px 0 5px;
+              width: calc(100% + 10px);
+            }
+            .service-section > *:not(.section-header) {
+              padding: 0 5px 0 5px;
             }
             .size-section {
               height: 100px;
               padding: 0;
+              margin-top: 0px;
             }
             .dims-table {
               width: 100%;
@@ -465,6 +480,13 @@ export default function ReceiptPage() {
 
   const shipment = invoice.shipment;
   const trackingNumber = shipment?.trackingId || invoice.invoiceNumber;
+  const shipmentId = invoice.invoiceNumber;
+  
+  console.log('=== D/W FIELD DEBUG ===');
+  console.log('Invoice object:', invoice);
+  console.log('D/W field (dayWeek):', (invoice as any).dayWeek);
+  console.log('Invoice keys:', invoice ? Object.keys(invoice) : 'No invoice');
+  console.log('=== END D/W FIELD DEBUG ===');
   
   // Format sender address
   const senderName = shipment?.senderName || invoice.customer?.CompanyName || invoice.customer?.PersonName || 'N/A';
@@ -526,37 +548,61 @@ export default function ReceiptPage() {
       // Sum declared values
       totalDecValue += pkg.decValue || 0;
       
-      // Track max dimensions
-      if (pkg.length && pkg.length > maxLength) maxLength = pkg.length;
-      if (pkg.width && pkg.width > maxWidth) maxWidth = pkg.width;
-      if (pkg.height && pkg.height > maxHeight) maxHeight = pkg.height;
+      // Track max dimensions - use package dimensions if available
+      // Handle both number and string types
+      const pkgLength = typeof pkg.length === 'number' ? pkg.length : (typeof pkg.length === 'string' ? parseFloat(pkg.length) : 0);
+      const pkgWidth = typeof pkg.width === 'number' ? pkg.width : (typeof pkg.width === 'string' ? parseFloat(pkg.width) : 0);
+      const pkgHeight = typeof pkg.height === 'number' ? pkg.height : (typeof pkg.height === 'string' ? parseFloat(pkg.height) : 0);
+      
+      if (pkgLength > 0 && pkgLength > maxLength) maxLength = pkgLength;
+      if (pkgWidth > 0 && pkgWidth > maxWidth) maxWidth = pkgWidth;
+      if (pkgHeight > 0 && pkgHeight > maxHeight) maxHeight = pkgHeight;
       
       // Collect package descriptions
       if (pkg.packageDescription) {
         packageDescriptions.push(pkg.packageDescription);
       }
     });
+    
+    // If no dimensions found in packages, try shipment-level data
+    if (maxLength === 0 && maxWidth === 0 && maxHeight === 0) {
+      const shipLength = shipment?.length ? (typeof shipment.length === 'number' ? shipment.length : parseFloat(String(shipment.length))) : 0;
+      const shipWidth = shipment?.width ? (typeof shipment.width === 'number' ? shipment.width : parseFloat(String(shipment.width))) : 0;
+      const shipHeight = shipment?.height ? (typeof shipment.height === 'number' ? shipment.height : parseFloat(String(shipment.height))) : 0;
+      
+      if (shipLength > 0) maxLength = shipLength;
+      if (shipWidth > 0) maxWidth = shipWidth;
+      if (shipHeight > 0) maxHeight = shipHeight;
+    }
   } else {
     // Fallback to shipment-level data
     totalPieces = shipment?.totalPackages || shipment?.amount || 1;
     totalWeight = shipment?.totalWeight || shipment?.weight || invoice.weight || 0;
     totalWeightVol = shipment?.totalWeightVol || shipment?.weightVol || 0;
     totalDecValue = shipment?.decValue || 0;
-    maxLength = shipment?.length || 0;
-    maxWidth = shipment?.width || 0;
-    maxHeight = shipment?.height || 0;
+    const shipLength = shipment?.length ? (typeof shipment.length === 'number' ? shipment.length : parseFloat(String(shipment.length))) : 0;
+    const shipWidth = shipment?.width ? (typeof shipment.width === 'number' ? shipment.width : parseFloat(String(shipment.width))) : 0;
+    const shipHeight = shipment?.height ? (typeof shipment.height === 'number' ? shipment.height : parseFloat(String(shipment.height))) : 0;
+    
+    maxLength = shipLength;
+    maxWidth = shipWidth;
+    maxHeight = shipHeight;
   }
 
   // Calculate charged weight (max of total weight and total volumetric weight)
   // This is the weight used for billing purposes
   const chargedWeight = Math.max(totalWeight, totalWeightVol);
 
-  // Format dimensions
-  const dimensions = (maxLength > 0 && maxWidth > 0 && maxHeight > 0)
-    ? `${maxLength.toFixed(2)} x ${maxWidth.toFixed(2)} x ${maxHeight.toFixed(2)}`
-    : (shipment?.length && shipment?.width && shipment?.height
-        ? `${shipment.length.toFixed(2)} x ${shipment.width.toFixed(2)} x ${shipment.height.toFixed(2)}`
-        : '0.00 x 0.00 x 0.00');
+  // Format dimensions - use calculated max dimensions
+  // Ensure we have valid numbers
+  const finalLength = maxLength > 0 ? maxLength : 0;
+  const finalWidth = maxWidth > 0 ? maxWidth : 0;
+  const finalHeight = maxHeight > 0 ? maxHeight : 0;
+  
+  // Format dimensions - show actual values if available, otherwise show 0.00
+  const dimensions = (finalLength > 0 || finalWidth > 0 || finalHeight > 0)
+    ? `${finalLength.toFixed(2)} x ${finalWidth.toFixed(2)} x ${finalHeight.toFixed(2)}`
+    : '0.00 x 0.00 x 0.00';
 
   // Get line items
   const lineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0
@@ -570,6 +616,11 @@ export default function ReceiptPage() {
   
   // Get service type
   const serviceType = shipment?.serviceMode || shipment?.packaging || 'Standard';
+  
+  // Get packaging type for DOC/WPX label
+  const packagingType = shipment?.packaging?.toLowerCase() || '';
+  const packagingLabel = packagingType.includes('document') || packagingType === 'doc' ? 'DOC' : 
+                         packagingType.includes('wpx') || packagingType === 'wpx' ? 'WPX' : '';
   
   // Get office (default to LHE)
   const office = shipment?.office || 'LHE';
@@ -603,7 +654,7 @@ export default function ReceiptPage() {
     <div className="w-full p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-full">
       <style jsx>{`
         .waybill-wrapper {
-          --skynet-red: #e30613;
+          --primary-blue: #2563eb;
           --border-color: #000;
           --bg-grey: #d1d5db;
           --text-black: #000;
@@ -637,7 +688,7 @@ export default function ReceiptPage() {
           font-style: italic;
           font-weight: 900;
           font-size: 28px;
-          color: var(--skynet-red);
+          color: var(--primary-blue);
           line-height: 0.8;
         }
 
@@ -653,22 +704,6 @@ export default function ReceiptPage() {
           width: auto;
         }
 
-        .waybill-wrapper .warning-text {
-          color: var(--skynet-red);
-          text-align: center;
-              font-weight: bold;
-          font-size: 12px;
-              text-transform: uppercase;
-          line-height: 1.2;
-        }
-
-        .waybill-wrapper .exp-box {
-          background: black;
-          color: white;
-          font-size: 32px;
-              font-weight: bold;
-          padding: 5px 15px;
-        }
 
         .waybill-wrapper .main-grid {
           display: grid;
@@ -679,7 +714,7 @@ export default function ReceiptPage() {
         .waybill-wrapper .border-right { border-right: 1px solid black; }
         .waybill-wrapper .border-bottom { border-bottom: 1px solid black; }
         .waybill-wrapper .bg-grey { background-color: var(--bg-grey); }
-        .waybill-wrapper .bg-red { background-color: var(--skynet-red); color: white; }
+        .waybill-wrapper .bg-red { background-color: var(--primary-blue); color: black; }
         .waybill-wrapper .bold { font-weight: 700; }
         .waybill-wrapper .text-center { text-align: center; }
         .waybill-wrapper .flex { display: flex; }
@@ -687,8 +722,8 @@ export default function ReceiptPage() {
 
         .waybill-wrapper .sec-num {
           display: inline-block;
-          background: var(--skynet-red);
-          color: white;
+          background: var(--primary-blue);
+          color: black;
           width: 16px;
           height: 16px;
               text-align: center;
@@ -700,6 +735,7 @@ export default function ReceiptPage() {
 
         .waybill-wrapper .section-header {
           background: #e5e7eb;
+          color: black;
           padding: 2px 5px;
               font-weight: bold;
           font-size: 10px;
@@ -743,29 +779,36 @@ export default function ReceiptPage() {
 
         .waybill-wrapper .auth-section {
           height: 120px;
-          padding: 5px;
+          padding: 0;
           position: relative;
           font-size: 9px;
         }
+        .waybill-wrapper .auth-section .section-header {
+          margin: 0;
+          padding: 2px 5px;
+          width: 100%;
+        }
+        .waybill-wrapper .auth-section > *:not(.section-header) {
+          padding: 5px;
+        }
 
         .waybill-wrapper .terms-text {
-          font-size: 7px;
-          margin-bottom: 15px;
+          font-size: 9px;
+          margin-bottom: 5px;
           text-align: justify;
         }
 
         .waybill-wrapper .signature-line {
           border-top: 1px solid black;
-          width: 80%;
-          margin-top: 20px;
+          width: 100%;
+          margin-top: 5px;
+          padding-top: 5px;
         }
 
         .waybill-wrapper .timestamp {
-          position: absolute;
-          bottom: 5px;
-          right: 5px;
+          margin-top: 10px;
           text-align: right;
-          font-family: 'Courier New', Courier, monospace;
+          font-size: 9px;
         }
 
         .waybill-wrapper .pod-section {
@@ -802,7 +845,8 @@ export default function ReceiptPage() {
         .waybill-wrapper .dap-section {
               display: flex;
           border-bottom: 1px solid black;
-          height: 40px;
+          min-height: 45px;
+          height: auto;
             }
 
         .waybill-wrapper .dap-box {
@@ -815,10 +859,16 @@ export default function ReceiptPage() {
           border-right: 1px solid black;
         }
 
-        .waybill-wrapper .currency-box {
+            .waybill-wrapper .currency-box {
           width: 50%;
-          padding: 2px 5px;
-          font-size: 10px;
+          padding: 3px 5px;
+          font-size: 9px;
+          line-height: 1.3;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          overflow: hidden;
+          box-sizing: border-box;
         }
 
         .waybill-wrapper .barcode-section {
@@ -861,13 +911,25 @@ export default function ReceiptPage() {
 
         .waybill-wrapper .service-section {
           flex: 1;
-          padding: 5px;
+          padding: 5px 5px 0 5px;
           border-bottom: 1px solid black;
+          margin-bottom: 0;
+          max-height: 210px;
+          overflow: hidden;
+        }
+        .waybill-wrapper .service-section .section-header {
+          margin: -5px -5px 0 -5px;
+          padding: 2px 5px 0 5px;
+          width: calc(100% + 10px);
+        }
+        .waybill-wrapper .service-section > *:not(.section-header) {
+          padding: 0 5px 0 5px;
         }
 
         .waybill-wrapper .size-section {
           height: 100px;
           padding: 0;
+          margin-top: 0px;
         }
 
         .waybill-wrapper .dims-table {
@@ -930,31 +992,48 @@ export default function ReceiptPage() {
       <div className="waybill-wrapper">
         <div className="waybill-container">
           {/* Header */}
-          <div className="header-area">
+          <div className="header-area" style={{position: 'relative'}}>
             <div className="logo">
               <img src="/logo_final.png" alt="PSS Logo" />
-              <span>PROMPT SURVEY & SERVICES</span>
           </div>
-            <div className="warning-text">
-              Self-Collection is not<br />
-              Available for this shipment
-        </div>
-            <div className="exp-box">EXP</div>
+            
+            {/* Contact Information - Centered between logo and WPX */}
+            <div style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              textAlign: 'center',
+              fontSize: '10px',
+              lineHeight: '1.4',
+              color: '#333'
+            }}>
+              <div>+92 300 8482 321</div>
+              <div>info@psswwe.com</div>
+              <div>LGF-44, Land Mark Plaza, Jail Road</div>
+              <div>Lahore, 54660, Pakistan</div>
+            </div>
+
+            {packagingLabel && (
+              <div style={{
+                background: 'black',
+                color: 'white',
+                fontSize: '32px',
+                fontWeight: 'bold',
+                padding: '5px 15px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: 'auto'
+              }}>
+                {packagingLabel}
+              </div>
+            )}
       </div>
 
           {/* Main Grid */}
           <div className="main-grid">
             {/* COLUMN 1 (LEFT) */}
             <div className="col-1">
-              {/* Account Name */}
-              <div className="border-bottom" style={{padding: '2px'}}>
-                <div className="section-header bg-red">
-                  <span style={{color: 'white', fontWeight: 'bold'}}>1</span> ACCOUNT NAME
-          </div>
-                <div className="cell-content bold" style={{fontSize: '12px'}}>
-                  {accountName} {accountId ? `(${office} - ${accountId})` : `(${office})`}
-        </div>
-      </div>
 
               {/* Shipper Info */}
               <div className="shipper-container border-bottom">
@@ -979,49 +1058,33 @@ export default function ReceiptPage() {
               </div>
 
               {/* Sender Authorization */}
-              <div className="auth-section border-bottom">
+              <div className="auth-section">
                 <div className="section-header bg-red">
-                  <span style={{color: 'white'}}>3</span> SENDER'S AUTHORIZATION & SIGNATURE
+                  SENDER'S AUTHORIZATION & SIGNATURE
             </div>
-                <p className="terms-text">
-                  I / WE AGREE THAT THE CARRIERS STANDARD TERMS AND CONDITIONS APPLY TO THIS SHIPMENT AND LIMIT CARRIERS LIABILITY. THE WARSAW CONVENTION MAY ALSO APPLY. TERMS AND CONDITIONS AVAILABLE AT WWW.PSS.COM
-                </p>
-                <div className="signature-line">SENDER'S SIGNATURE</div>
+                <div className="terms-text">
+                  The shipper declares that this shipment contains no money, explosives, weapons, jewelry, narcotics, or other prohibited items. Any customs duties, taxes, penalties, or charges arising from detention or seizure shall be borne by the shipper/consignee.
+                  <br />
+                  <br />
+                  PSS Worldwide's liability is limited to USD 0.00–100.00 as per company appraisal and criteria. PSS Worldwide is not responsible for loss, breakage, or damage to the shipment. The shipper authorizes visual inspection of the shipment by PSS Worldwide or its agents.
+                </div>
+                <div className="signature-line">
+                  <span>SENDER'S SIGNATURE</span>
+                </div>
                 <div className="timestamp">
                   DATE: {timestampDate}<br />
                   Received by:
-          </div>
+                </div>
               </div>
               
               {/* POD */}
               <div className="pod-section">
-                <div className="section-header bg-red">
-                  <span style={{color: 'white'}}>4</span> PROOF OF DELIVERY (POD)
-                  </div>
-                <div style={{padding: '5px'}}>
-                  <div className="flex" style={{justifyContent: 'space-between', marginBottom: '10px'}}>
-                    <span>RECEIVER'S SIGNATURE</span>
-                    <span>DATE &nbsp;&nbsp; / &nbsp;&nbsp; / &nbsp;&nbsp;</span>
-                </div>
-                  <div className="flex" style={{justifyContent: 'flex-end', marginBottom: '10px'}}>
-                    <span>TIME &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; AM/PM</span>
-              </div>
-                  <div style={{borderTop: '1px solid #ccc', paddingTop: '2px', fontSize: '8px'}}>
-                    PRINT NAME<br />
-                    (CAPITAL LETTERS VERY IMPORTANT)
-                  </div>
-                  </div>
+
                   </div>
                 </div>
 
             {/* COLUMN 2 (MIDDLE) */}
             <div className="col-2">
-              {/* LHE & Tracking */}
-              <div className="lhe-header">
-                <div className="lhe-box">{office}</div>
-                <div className="tracking-box">{trackingNumber}</div>
-              </div>
-              
               {/* Consignee Info */}
               <div className="shipper-container border-bottom">
                 <div className="section-header bg-red" style={{position: 'absolute', width: '15px', height: '15px', padding: 0, textAlign: 'center', lineHeight: '15px'}}>2</div>
@@ -1047,32 +1110,47 @@ export default function ReceiptPage() {
               <div className="dap-section">
                 <div className="dap-box">** DAP **</div>
                 <div className="currency-box">
-                  DECLARED VALUE FOR<br />
-                  CUSTOMS AND CURRENCY<br />
-                  <strong>{declaredValue.toFixed(2)} PKR.</strong>
+                  <div style={{marginBottom: '1px', lineHeight: '1.2'}}>DECLARED VALUE FOR</div>
+                  <div style={{marginBottom: '1px', lineHeight: '1.2'}}>CUSTOMS AND CURRENCY</div>
+                  <div style={{marginTop: '2px', lineHeight: '1.2'}}><strong>{declaredValue.toFixed(2)} PKR.</strong></div>
               </div>
             </div>
 
-              {/* Barcode */}
-              <div className="barcode-section">
-                <div className="barcode"></div>
-                <div style={{fontWeight: 'bold', fontSize: '14px', marginTop: '5px'}}>*{trackingNumber}*</div>
+              {/* Barcode and Invoice Number */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px 0',
+                borderBottom: '1px solid black'
+              }}>
+                <div className="barcode" style={{height: '40px', width: '140px', marginBottom: '10.5px'}}></div>
+                <div style={{fontWeight: 'bold', fontSize: '14px'}}>{invoice.invoiceNumber}</div>
+              </div>
+
+              {/* Declaration Text */}
+              <div style={{padding: '8px 5px', fontSize: '11px', lineHeight: '1.4'}}>
+                <div>
+                  <strong>انشورنس نوٹس:</strong> بھیجنے والے کی طرف سے انشورنس لازمی ہے۔ اگر اعلان نہیں کیا گیا تو، بھیجنے والا مکمل خطرہ قبول کرتا ہے اور بیان کردہ ذمہ داری کی حد کو تسلیم کرتا ہے۔
                 </div>
               </div>
+
+              {/* Empty barcode section */}
+              {/* <div className="barcode-section">
+              </div> */}
+            </div>
               
             {/* COLUMN 3 (RIGHT) */}
             <div className="col-3">
               {/* References */}
               <div className="section-header bg-grey text-center">CUSTOMER REFERENCE</div>
               <div className="ref-box">{referenceNumber || 'PSS'}</div>
-              
-              <div className="section-header bg-grey text-center">ALTERNATE REFERENCE</div>
-              <div className="ref-box"></div>
 
               {/* Service Type */}
               <div className="service-section">
                 <div className="section-header bg-red">
-                  <span style={{color: 'white'}}>5</span> SERVICE TYPE
+                  SERVICE MODE
                   </div>
                 <div className="bold" style={{margin: '5px 0'}}>{serviceType}</div>
                 <div style={{fontSize: '9px', marginBottom: '8px'}}>
@@ -1084,7 +1162,7 @@ export default function ReceiptPage() {
                   FULL DESCRIPTION OF CONTENTS:-<br />
                   <strong>{contentsDescription.toUpperCase()}</strong>
                 </div>
-                <div style={{marginTop: '5px'}}>
+                <div style={{marginTop: '5px', marginBottom: '0'}}>
                   SPECIAL INSTRUCTIONS:-<br />
                   N/A
                 </div>
@@ -1093,9 +1171,9 @@ export default function ReceiptPage() {
               {/* Size & Weight */}
               <div className="size-section">
                 <div className="section-header bg-red">
-                  <span style={{color: 'white'}}>6</span> SIZE & WEIGHT
+                  SIZE & WEIGHT
                 </div>
-                <div style={{padding: '5px'}}>
+                <div style={{padding: '5px 5px 0 5px'}}>
                   <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee'}}>
                     <span>NO. OF PIECES</span>
                     <strong>{totalPieces}</strong>
@@ -1108,17 +1186,17 @@ export default function ReceiptPage() {
                   <div style={{marginTop: '2px'}}>DIMENSIONS IN CM <span style={{float: 'right'}}>LxWxH</span></div>
                   <div style={{textAlign: 'center', margin: '2px 0'}}>{dimensions}</div>
                   
-                  <div style={{borderTop: '1px solid black', paddingTop: '2px'}}>
-                    VOLUMETRIC / CHARGED WEIGHT
+                  <div style={{borderTop: '1px solid black', paddingTop: '8px', marginTop: '5px'}}>
+                    <div style={{marginBottom: '3px'}}>VOLUMETRIC / CHARGED WEIGHT</div>
                     <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}>
                       <span>{chargedWeight.toFixed(2)}</span>
                       <span>KGS</span>
-                  </div>
-                  </div>
-                  </div>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
           {/* End Grid */}
 
           <div className="footer-strip">
