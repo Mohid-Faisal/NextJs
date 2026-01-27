@@ -43,8 +43,68 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import DeleteDialog from "@/components/DeleteDialog";
+
+export const trackingLinks: Record<string, (id: string) => string> = {
+  // DPEX
+  DPEX: (id) =>
+    `https://www.dpex.com/track-trace/?trackingNo=${id}`,
+
+  // Parcel Force
+  PARCEL_FORCE: (id) =>
+    `https://www.parcelforce.com/track-trace?trackNumber=${id}`,
+
+  // FedEx (all variants)
+  FEDEX: (id) =>
+    `https://www.fedex.com/fedextrack/?tracknumbers=${id}`,
+  FEDEX_LHE: (id) =>
+    `https://www.fedex.com/fedextrack/?tracknumbers=${id}`,
+  FEDEX_DXB: (id) =>
+    `https://www.fedex.com/fedextrack/?tracknumbers=${id}`,
+
+  // UPS (all variants)
+  UPS_RD_LHR: (id) =>
+    `https://www.ups.com/track?tracknum=${id}`,
+  UPS_SV_DXB: (id) =>
+    `https://www.ups.com/track?tracknum=${id}`,
+  UPS_C2S: (id) =>
+    `https://www.ups.com/track?tracknum=${id}`,
+
+  // DPD Europe
+  DPD_EU: (id) =>
+    `https://www.dpd.com/tracking?parcelNumber=${id}`,
+
+  // DHL (all variants)
+  DHL: (id) =>
+    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+  DHL_LHE: (id) =>
+    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+  DHL_SIN: (id) =>
+    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+  DHL_DXB: (id) =>
+    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+  DHL_AIR_LHR: (id) =>
+    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+  DHL_RD_LHR: (id) =>
+    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+  DHL_PK: (id) =>
+    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+
+  // SkyNet Worldwide Express
+  SNWWE: (id) =>
+    `https://www.skynet.net/track/?tracknum=${id}`,
+};
+
+function getTrackingUrl(shipment: Shipment & { invoices: { id: number; status: string }[] }): string | null {
+  const mode = shipment.serviceMode?.trim().toUpperCase();
+  const id = shipment.trackingId?.trim();
+  if (!mode || !id) return null;
+  const fn = trackingLinks[mode];
+  if (!fn) return null;
+  return fn(id);
+}
 
 export default function ShipmentsPage() {
   const router = useRouter();
@@ -83,6 +143,17 @@ export default function ShipmentsPage() {
   const [shipmentToDelete, setShipmentToDelete] = useState<
     (Shipment & { invoices: { id: number; status: string }[] }) | null
   >(null);
+  const [openTrackingDialog, setOpenTrackingDialog] = useState(false);
+  const [shipmentForTracking, setShipmentForTracking] = useState<
+    (Shipment & { invoices: { id: number; status: string }[] }) | null
+  >(null);
+  const [trackingFormStatus, setTrackingFormStatus] = useState<string>("In Transit");
+  const [trackingFormTimestamp, setTrackingFormTimestamp] = useState(() => {
+    const d = new Date();
+    return format(d, "yyyy-MM-dd'T'HH:mm");
+  });
+  const [trackingFormDescription, setTrackingFormDescription] = useState("");
+  const [isSubmittingTracking, setIsSubmittingTracking] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
@@ -325,25 +396,35 @@ export default function ShipmentsPage() {
     setOpenDeleteDialog(true);
   };
 
-  const handleMarkAsDelivered = async (
-    shipment: Shipment & { invoices: { id: number; status: string }[] }
-  ) => {
+  const TRACKING_STATUSES = ["Booked", "Picked Up", "In Transit", "Out for Delivery", "Delivered"] as const;
+
+  const openUpdateTrackingDialog = (shipment: Shipment & { invoices: { id: number; status: string }[] }) => {
+    setShipmentForTracking(shipment);
+    setTrackingFormStatus("In Transit");
+    setTrackingFormTimestamp(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    setTrackingFormDescription("");
+    setOpenTrackingDialog(true);
+  };
+
+  const handleSubmitTrackingStatus = async () => {
+    if (!shipmentForTracking) return;
+    setIsSubmittingTracking(true);
     try {
-      const res = await fetch("/api/update-shipment", {
+      const timestamp = new Date(trackingFormTimestamp).toISOString();
+      const res = await fetch(`/api/shipments/${shipmentForTracking.id}/tracking-status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: shipment.id,
-          deliveryStatus: "Delivered",
+          status: trackingFormStatus,
+          timestamp,
+          description: trackingFormDescription.trim(),
         }),
       });
-
       const data = await res.json();
-
       if (res.ok && data.success) {
-        toast.success("Shipment marked as delivered!");
-        
-        // Refresh the shipments list
+        toast.success("Tracking status added.");
+        setOpenTrackingDialog(false);
+        setShipmentForTracking(null);
         const params = new URLSearchParams({
           page: String(page),
           limit: pageSize === 'all' ? 'all' : String(pageSize),
@@ -359,11 +440,13 @@ export default function ShipmentsPage() {
         setShipments(shipments);
         setTotal(total);
       } else {
-        toast.error(data.message || "Failed to update shipment status");
+        toast.error(data.error || "Failed to update tracking status");
       }
     } catch (error) {
-      console.error("Error marking shipment as delivered:", error);
-      toast.error("Error updating shipment status");
+      console.error("Error updating tracking status:", error);
+      toast.error("Error updating tracking status");
+    } finally {
+      setIsSubmittingTracking(false);
     }
   };
 
@@ -379,13 +462,9 @@ export default function ShipmentsPage() {
           deliveryStatus: "In Transit",
         }),
       });
-
       const data = await res.json();
-
       if (res.ok && data.success) {
         toast.success("Shipment marked as in transit!");
-        
-        // Refresh the shipments list
         const params = new URLSearchParams({
           page: String(page),
           limit: pageSize === 'all' ? 'all' : String(pageSize),
@@ -401,11 +480,49 @@ export default function ShipmentsPage() {
         setShipments(shipments);
         setTotal(total);
       } else {
-        toast.error(data.message || "Failed to update shipment status");
+        toast.error(data.message || "Failed to update delivery status");
       }
     } catch (error) {
       console.error("Error marking shipment as in transit:", error);
-      toast.error("Error updating shipment status");
+      toast.error("Error updating delivery status");
+    }
+  };
+
+  const handleMarkAsDelivered = async (
+    shipment: Shipment & { invoices: { id: number; status: string }[] }
+  ) => {
+    try {
+      const res = await fetch("/api/update-shipment", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: shipment.id,
+          deliveryStatus: "Delivered",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Shipment marked as delivered!");
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: pageSize === 'all' ? 'all' : String(pageSize),
+          ...(searchTerm && { search: searchTerm }),
+          ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
+          ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+          ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+          sortField,
+          sortOrder,
+        });
+        const refreshRes = await fetch(`/api/shipments?${params}`);
+        const { shipments, total } = await refreshRes.json();
+        setShipments(shipments);
+        setTotal(total);
+      } else {
+        toast.error(data.message || "Failed to update delivery status");
+      }
+    } catch (error) {
+      console.error("Error marking shipment as delivered:", error);
+      toast.error("Error updating delivery status");
     }
   };
 
@@ -597,10 +714,10 @@ export default function ShipmentsPage() {
 
   const getShipmentExportData = (shipments: any[]) => {
     const baseHeaders = ["Date", "Receipt #", "Sender Name", "Receiver Name", "Destination", "Package", "Pcs", "Weight", "Tracking"];
-    const headers = deliveryStatusFilter === "All" 
-      ? [...baseHeaders, "Delivery Status", "Total Cost", "Invoice Status"]
+    const headers = deliveryStatusFilter === "All"
+      ? [...baseHeaders, "Status", "Total Cost", "Invoice Status"]
       : [...baseHeaders, "Total Cost", "Invoice Status"];
-    
+
     const data = shipments.map(shipment => {
       const baseData = [
         formatDate(shipment.shipmentDate || shipment.createdAt),
@@ -613,7 +730,6 @@ export default function ShipmentsPage() {
         `${shipment.totalWeight || shipment.weight || 0}`,
         shipment.trackingId,
       ];
-      
       if (deliveryStatusFilter === "All") {
         return [
           ...baseData,
@@ -621,13 +737,12 @@ export default function ShipmentsPage() {
           Number(shipment.totalCost || 0).toLocaleString(),
           shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
         ];
-      } else {
-        return [
-          ...baseData,
-          Number(shipment.totalCost || 0).toLocaleString(),
-          shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
-        ];
       }
+      return [
+        ...baseData,
+        Number(shipment.totalCost || 0).toLocaleString(),
+        shipment.invoices?.[0]?.status || shipment.invoiceStatus || "N/A"
+      ];
     });
     return { headers, data };
   };
@@ -979,13 +1094,25 @@ export default function ShipmentsPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || shipment.weight || 0}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <button
-                          onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                          className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                        >
-                          <span className="hidden sm:inline">{shipment.trackingId}</span>
-                          <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
-                        </button>
+                        {getTrackingUrl(shipment) ? (
+                          <a
+                            href={getTrackingUrl(shipment)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer inline-block"
+                          >
+                            <span className="hidden sm:inline">{shipment.trackingId}</span>
+                            <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                            className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                          >
+                            <span className="hidden sm:inline">{shipment.trackingId}</span>
+                            <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                          </button>
+                        )}
                       </td>
                       {deliveryStatusFilter === "All" && (
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
@@ -1053,6 +1180,10 @@ export default function ShipmentsPage() {
                                 📄 Download Receipt
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem onClick={() => openUpdateTrackingDialog(shipment)}>
+                              <Truck className="mr-2 h-4 w-4" />
+                              Update Tracking Status
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleMarkAsInTransit(shipment)}
                               className="text-blue-600"
@@ -1089,6 +1220,61 @@ export default function ShipmentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Update Tracking Status dialog */}
+      <Dialog open={openTrackingDialog} onOpenChange={(open) => { setOpenTrackingDialog(open); if (!open) setShipmentForTracking(null); }}>
+        <DialogContent className="max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle>Update Tracking Status</DialogTitle>
+          </DialogHeader>
+          {shipmentForTracking && (
+            <div className="grid gap-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Add a status update for <strong>{shipmentForTracking.trackingId}</strong>
+              </p>
+              <div className="grid gap-2">
+                <Label>Status</Label>
+                <Select value={trackingFormStatus} onValueChange={setTrackingFormStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TRACKING_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Date & time</Label>
+                <Input
+                  type="datetime-local"
+                  value={trackingFormTimestamp}
+                  onChange={(e) => setTrackingFormTimestamp(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Description (optional)</Label>
+                <Textarea
+                  placeholder="e.g. En route to hub, Out for delivery today"
+                  value={trackingFormDescription}
+                  onChange={(e) => setTrackingFormDescription(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setOpenTrackingDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitTrackingStatus} disabled={isSubmittingTracking}>
+              {isSubmittingTracking ? "Saving…" : "Add status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete dialog */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>

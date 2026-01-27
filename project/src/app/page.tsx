@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Package, Truck, Globe, Clock, Shield, HeadphonesIcon } from "lucide-react";
-import { Play } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 
@@ -25,84 +24,40 @@ const staggerContainer = {
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative w-full h-screen overflow-hidden">
+      {/* Hero Section - single image, centered tagline */}
+      <section className="relative w-full min-h-screen overflow-hidden -mt-[7.5rem] pt-[7.5rem]">
         <Image
-          src="/company-image-final.png"
-          alt="Courier Truck"
+          src="/banner_new.jpg"
+          alt="Your trusted delivery partner"
           fill
           priority
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-black/50" aria-hidden />
         
-        {/* Content - Left Aligned */}
-        <div className="absolute inset-0 flex items-center z-10">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="max-w-2xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
             >
-              {/* Category Text */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
+              <motion.h1
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
-                className="mb-4"
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight uppercase"
               >
-                <span className="text-white uppercase text-sm tracking-wider font-medium bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full inline-block">
-                  Logistics & Transportation
-                </span>
-              </motion.div>
-              
-              {/* Main Heading */}
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight"
-              >
-                Digital & Trusted Transport Logistic Company
+                FAST. SECURE. GLOBAL
               </motion.h1>
-              
-              {/* Description */}
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
+              <motion.h2
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-                className="text-lg sm:text-xl text-white mb-8 leading-relaxed max-w-xl"
+                transition={{ delay: 0.35, duration: 0.6 }}
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mt-3 leading-tight tracking-tight uppercase"
               >
-                Our experienced team of problem solvers and a commitment to always align with our client's business goals and objectives is what drives mutual success.
-              </motion.p>
-              
-              {/* CTA Buttons */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.6 }}
-                className="flex flex-wrap items-center gap-4"
-              >
-                <Link href="/contact">
-                  <Button
-                    size="lg"
-                    className="bg-[#fbbf24] hover:bg-[#f59e0b] text-white border-0 px-8 py-6 text-base font-semibold rounded-md shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                  >
-                    Contact Us
-                  </Button>
-                </Link>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-3"
-                >
-                  <button className="w-14 h-14 rounded-full border-2 border-[#fbbf24] flex items-center justify-center hover:bg-[#fbbf24]/20 transition-colors group">
-                    <Play className="w-6 h-6 text-[#fbbf24] ml-1 group-hover:scale-110 transition-transform" />
-                  </button>
-                  <span className="text-white text-lg font-medium">How It Works</span>
-                </motion.div>
-              </motion.div>
+                YOUR TRUSTED DELIVERY PARTNER!
+              </motion.h2>
             </motion.div>
           </div>
         </div>

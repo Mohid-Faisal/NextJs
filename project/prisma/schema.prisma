@@ -42,6 +42,8 @@ model Shipment {
   deliveryTime      String?
   invoiceStatus     String?
   deliveryStatus    String?
+  trackingStatus    String?   // Legacy current status; prefer last entry in trackingStatusHistory
+  trackingStatusHistory Json? // [{ status, timestamp (ISO), description }] – full history for public tracking
   shippingMode      String?
   packaging         String?
   vendor            String?
