@@ -116,9 +116,79 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+    margin: 0;
+    padding: 0;
+  }
   body {
     @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
   }
+}
+
+/* Pretty scrollbar - used on homepage (and any element with .scrollbar-pretty) */
+html:has(.scrollbar-pretty),
+html:has(.scrollbar-pretty) * {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.65 0.15 250 / 0.8) oklch(0.92 0.01 250 / 0.3);
+}
+
+html:has(.scrollbar-pretty) *::-webkit-scrollbar,
+.scrollbar-pretty *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html:has(.scrollbar-pretty) *::-webkit-scrollbar-track,
+.scrollbar-pretty *::-webkit-scrollbar-track {
+  background: oklch(0.94 0.01 250 / 0.4);
+  border-radius: 10px;
+}
+
+html:has(.scrollbar-pretty) *::-webkit-scrollbar-thumb,
+.scrollbar-pretty *::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.18 250);
+  border-radius: 10px;
+  border: 2px solid oklch(0.94 0.01 250 / 0.4);
+}
+
+html:has(.scrollbar-pretty) *::-webkit-scrollbar-thumb:hover,
+.scrollbar-pretty *::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0.2 250);
+}
+
+html:has(.scrollbar-pretty) *::-webkit-scrollbar-corner,
+.scrollbar-pretty *::-webkit-scrollbar-corner {
+  background: oklch(0.94 0.01 250 / 0.4);
+  border-radius: 0 0 10px 0;
+}
+
+html.dark:has(.scrollbar-pretty) *,
+.dark .scrollbar-pretty * {
+  scrollbar-color: oklch(0.6 0.2 250 / 0.9) oklch(0.2 0.02 250 / 0.5);
+}
+
+html.dark:has(.scrollbar-pretty) *::-webkit-scrollbar-track,
+.dark .scrollbar-pretty *::-webkit-scrollbar-track {
+  background: oklch(0.2 0.02 250 / 0.5);
+}
+
+html.dark:has(.scrollbar-pretty) *::-webkit-scrollbar-thumb,
+.dark .scrollbar-pretty *::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.2 250);
+  border-color: oklch(0.2 0.02 250 / 0.5);
+}
+
+html.dark:has(.scrollbar-pretty) *::-webkit-scrollbar-thumb:hover,
+.dark .scrollbar-pretty *::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.65 0.18 250);
+}
+
+html.dark:has(.scrollbar-pretty) *::-webkit-scrollbar-corner,
+.dark .scrollbar-pretty *::-webkit-scrollbar-corner {
+  background: oklch(0.2 0.02 250 / 0.5);
 }
 
 /* Custom scrollbar hide utility */

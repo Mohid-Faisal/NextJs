@@ -7,6 +7,7 @@ export type TrackingHistoryEntry = {
   status: string;
   timestamp: string; // ISO
   description?: string;
+  location?: string;
 };
 
 function parseHistory(raw: unknown): TrackingHistoryEntry[] {
@@ -39,7 +40,8 @@ export async function PATCH(
       status,
       timestamp,
       description = "",
-    } = body as { status?: string; timestamp?: string; description?: string };
+      location = "",
+    } = body as { status?: string; timestamp?: string; description?: string; location?: string };
 
     if (!status || typeof status !== "string") {
       return NextResponse.json(
@@ -70,6 +72,7 @@ export async function PATCH(
       status,
       timestamp: occurredAt.toISOString(),
       description: typeof description === "string" ? description : "",
+      location: typeof location === "string" ? location.trim() || undefined : undefined,
     };
     const nextHistory = [...existing, entry];
 

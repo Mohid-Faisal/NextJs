@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, MapPin, Calendar, Search, CheckCircle2, Circle, Route, RotateCw, Info } from "lucide-react";
+import { Package, MapPin, Calendar, Search, CheckCircle2, Circle, Route, RotateCw, Info, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getCountryNameFromCode } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TrackingHistoryEntry = { status: string; timestamp: string; description?: string };
+type TrackingHistoryEntry = { status: string; timestamp: string; description?: string; location?: string };
 
 interface Shipment {
   id: number;
@@ -48,16 +49,52 @@ interface HistoryEvent {
   title: string;
   description?: string;
   detail?: string;
+  location?: string;
   date: Date | string;
   isCurrent: boolean;
   alreadyHappened?: boolean;
 }
 
 export default function TrackingPage() {
-  const [trackingId, setTrackingId] = useState("");
+  const searchParams = useSearchParams();
+  const initialBookingId = searchParams.get("bookingId") ?? "";
+  const [bookingId, setBookingId] = useState(initialBookingId);
   const [shipment, setShipment] = useState<Shipment | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [updatesExpanded, setUpdatesExpanded] = useState(false);
+
+  // When landing with ?bookingId=..., prefill and run search
+  useEffect(() => {
+    const q = initialBookingId.trim();
+    if (!q) return;
+    setBookingId(q);
+    setSearched(true);
+    setLoading(true);
+    fetch(`/api/shipments?search=${encodeURIComponent(q)}&limit=10`)
+      .then((res) => res.json())
+      .then((data: { shipments?: Shipment[] }) => {
+        if (data.shipments?.length) {
+          const found = data.shipments.find((s) => s.invoiceNumber?.toLowerCase() === q.toLowerCase());
+          if (found) {
+            setShipment(found);
+            toast.success("Shipment found!");
+          } else {
+            setShipment(null);
+            toast.error("No shipment found with this booking ID");
+          }
+        } else {
+          setShipment(null);
+          toast.error("No shipment found with this booking ID");
+        }
+      })
+      .catch(() => {
+        toast.error("An error occurred while searching. Please try again.");
+        setShipment(null);
+      })
+      .finally(() => setLoading(false));
+  }, [initialBookingId]);
 
   const getActiveStage = (status: string): DeliveryStage => {
     const s = (status || "").toLowerCase();
@@ -100,8 +137,13 @@ export default function TrackingPage() {
         return {
           status: e.status,
           title: e.status,
-          description: (e.status === "In Transit" && destName) ? "En route to " + destName : undefined,
-          detail: e.description || (e.status === "In Transit" ? "Package in transit" : undefined),
+          description: e.location
+            ? undefined
+            : (e.status === "In Transit" && destName)
+              ? "En route to " + destName
+              : undefined,
+          detail: e.description || (e.status === "In Transit" && !e.location ? "Package in transit" : undefined),
+          location: e.location || undefined,
           date: e.timestamp,
           isCurrent: i === sorted.length - 1,
           alreadyHappened: !isNaN(ts) && ts <= now,
@@ -188,31 +230,31 @@ export default function TrackingPage() {
   };
 
   const handleSearch = async () => {
-    if (!trackingId.trim()) {
-      toast.error("Please enter a tracking ID");
+    if (!bookingId.trim()) {
+      toast.error("Please enter a booking ID");
       return;
     }
     setLoading(true);
     setSearched(true);
     try {
       const response = await fetch(
-        `/api/shipments?search=${encodeURIComponent(trackingId.trim())}&limit=1`
+        `/api/shipments?search=${encodeURIComponent(bookingId.trim())}&limit=10`
       );
       const data = await response.json();
       if (response.ok && data.shipments?.length > 0) {
         const found = data.shipments.find(
-          (s: Shipment) => s.trackingId?.toLowerCase() === trackingId.trim().toLowerCase()
+          (s: Shipment) => s.invoiceNumber?.toLowerCase() === bookingId.trim().toLowerCase()
         );
         if (found) {
           setShipment(found);
           toast.success("Shipment found!");
         } else {
           setShipment(null);
-          toast.error("No shipment found with this tracking ID");
+          toast.error("No shipment found with this booking ID");
         }
       } else {
         setShipment(null);
-        toast.error("No shipment found with this tracking ID");
+        toast.error("No shipment found with this booking ID");
       }
     } catch (error) {
       console.error("Error searching shipment:", error);
@@ -241,6 +283,59 @@ export default function TrackingPage() {
     } catch {
       return "—";
     }
+  };
+
+  const formatTimeWithTz = (date: Date | string | null | undefined) => {
+    if (!date) return "—";
+    try {
+      const d = typeof date === "string" ? new Date(date) : date;
+      const offsetMin = -d.getTimezoneOffset();
+      const sign = offsetMin >= 0 ? "+" : "";
+      const hours = Math.floor(Math.abs(offsetMin) / 60);
+      const mins = Math.abs(offsetMin) % 60;
+      const tz = `UTC${sign}${hours}${mins ? `:${String(mins).padStart(2, "0")}` : ""}`;
+      return `${format(d, "h:mm a")} (${tz})`;
+    } catch {
+      return "—";
+    }
+  };
+
+  const formatDateHeading = (date: Date | string) => {
+    try {
+      const d = typeof date === "string" ? new Date(date) : date;
+      return format(d, "EEEE d MMMM yyyy");
+    } catch {
+      return "—";
+    }
+  };
+
+  const formatDateTimeWithTz = (date: Date | string | null | undefined, location?: string | null) => {
+    if (!date) return "—";
+    try {
+      const d = typeof date === "string" ? new Date(date) : date;
+      const datePart = format(d, "EEEE, d MMMM yyyy");
+      const timeTz = formatTimeWithTz(d);
+      if (location) return `${datePart} at ${timeTz}, ${location}`;
+      return `${datePart} at ${timeTz}`;
+    } catch {
+      return "—";
+    }
+  };
+
+  const getHistoryByDateGroups = (events: HistoryEvent[]) => {
+    const byDate = new Map<string, HistoryEvent[]>();
+    for (const e of events) {
+      const d = typeof e.date === "string" ? new Date(e.date) : e.date;
+      const key = format(d, "yyyy-MM-dd");
+      if (!byDate.has(key)) byDate.set(key, []);
+      byDate.get(key)!.push(e);
+    }
+    for (const arr of byDate.values()) {
+      arr.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+    return Array.from(byDate.entries())
+      .map(([k, evs]) => ({ dateKey: k, dateLabel: formatDateHeading(evs[0]!.date), events: evs }))
+      .sort((a, b) => b.dateKey.localeCompare(a.dateKey));
   };
 
   const getDimensionsDisplay = (s: Shipment): string => {
@@ -288,14 +383,14 @@ export default function TrackingPage() {
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Track Your Package</h1>
             <p className="text-xl opacity-90 mb-8">
-              Enter your tracking ID to get real-time updates on your shipment
+              Enter your booking ID to get real-time updates on your shipment
             </p>
             <div className="flex gap-3 max-w-xl mx-auto">
               <Input
                 type="text"
-                placeholder="Enter tracking ID (e.g., TRK-2024-000001)"
-                value={trackingId}
-                onChange={(e) => setTrackingId(e.target.value)}
+                placeholder="Enter booking ID (e.g., 420001)"
+                value={bookingId}
+                onChange={(e) => setBookingId(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 className="flex-1 text-lg bg-white/10 border-white/30 text-white placeholder:text-white/70 focus:bg-white focus:text-gray-900 focus:placeholder:text-gray-500"
               />
@@ -335,10 +430,13 @@ export default function TrackingPage() {
                             </div>
                             <div>
                               <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                Tracking: {shipment.trackingId}
+                                Booking: {shipment.invoiceNumber}
                               </h2>
                               <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
-                                <Calendar className="w-4 h-4" />
+                                Tracking: {shipment.trackingId}
+                              </p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
+                                <Calendar className="w-4 h-4 shrink-0" />
                                 Booked on {formatDateTime(shipment.shipmentDate ?? shipment.createdAt)}
                               </p>
                             </div>
@@ -352,172 +450,229 @@ export default function TrackingPage() {
                       </CardContent>
                     </Card>
 
-                    {/* 2. Delivery Progress */}
-                    <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-                      <CardContent className="p-6">
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                          <Route className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          Delivery Progress
-                        </h3>
-                        <div className="relative h-10 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-6">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progressPercent}%` }}
-                            transition={{ duration: 0.6, ease: "easeOut" }}
-                            className="absolute inset-y-0 left-0 bg-blue-600 rounded-full flex items-center justify-center min-w-12"
-                          >
-                            <span className="text-sm font-medium text-white">
-                              {Math.round(progressPercent)}%
-                            </span>
-                          </motion.div>
-                        </div>
-                        <div className="grid grid-cols-5 gap-2">
-                          {STAGES.map((stage) => {
-                            const done = STAGES.indexOf(stage) <= STAGES.indexOf(activeStage);
-                            return (
-                              <div
-                                key={stage}
-                                className="flex flex-col items-center text-center"
-                              >
-                                <div
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                                    done
-                                      ? "bg-green-500 text-white"
-                                      : "bg-gray-200 dark:bg-gray-600 text-gray-400"
-                                  }`}
-                                >
-                                  {done ? (
-                                    <CheckCircle2 className="w-4 h-4" />
-                                  ) : (
-                                    <Circle className="w-4 h-4" />
-                                  )}
-                                </div>
-                                <span
-                                  className={`text-xs mt-2 font-medium ${
-                                    done ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-500"
-                                  }`}
-                                >
-                                  {stage}
-                                </span>
+                    {/* 2. Stepper (5 stages) + origin–destination */}
+                    {(() => {
+                      const latestEvent = historyEvents.length > 0
+                        ? [...historyEvents].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+                        : null;
+                      const sortedByTime = [...historyEvents].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                      const originLabel = sortedByTime.find((e) => e.location)?.location ?? "—";
+                      const destLabel = (getCountryNameFromCode(shipment.destination) || shipment.destination || "—").toUpperCase();
+                      const originDisplay = originLabel !== "—" ? originLabel.toUpperCase() : "—";
+                      const statusHeader = latestEvent
+                        ? latestEvent.location
+                          ? `${latestEvent.title} at ${latestEvent.location.toUpperCase()}`
+                          : latestEvent.title
+                        : effectiveStatus;
+                      const statusSubtitle = latestEvent
+                        ? formatDateTimeWithTz(latestEvent.date, latestEvent.location?.toUpperCase())
+                        : formatDateTimeWithTz(shipment.shipmentDate ?? shipment.createdAt);
+                      const activeIndex = STAGES.indexOf(activeStage);
+                      return (
+                        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                          <CardContent className="p-6">
+                            <div className="mb-6">
+                              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                {statusHeader}
+                              </h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                {statusSubtitle}
+                              </p>
+                            </div>
+                            <div className="pt-2 pb-8">
+                              <div className="flex w-full items-start">
+                                {STAGES.map((stage, i) => {
+                                  const done = i < activeIndex;
+                                  const isCurrent = i === activeIndex;
+                                  const isPending = i > activeIndex;
+                                  return (
+                                    <div key={stage} className="flex-1 flex flex-col items-center min-w-0">
+                                      <div className="flex w-full items-center">
+                                        {i > 0 && (
+                                          <div
+                                            className={`flex-1 h-0.5 -mr-0.5 shrink-0 min-w-[8px] ${
+                                              i <= activeIndex ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"
+                                            }`}
+                                          />
+                                        )}
+                                        <span className="relative z-10 flex shrink-0 items-center justify-center">
+                                          {done ? (
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white">
+                                              <CheckCircle2 className="h-4 w-4" />
+                                            </span>
+                                          ) : isCurrent ? (
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 ring-4 ring-green-100 dark:ring-green-900/40">
+                                              <span className="h-2 w-2 rounded-full bg-white" />
+                                            </span>
+                                          ) : (
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800" />
+                                          )}
+                                        </span>
+                                        {i < STAGES.length - 1 && (
+                                          <div
+                                            className={`flex-1 h-0.5 -ml-0.5 shrink-0 min-w-[8px] ${
+                                              i < activeIndex ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"
+                                            }`}
+                                          />
+                                        )}
+                                      </div>
+                                      <span
+                                        className={`mt-2 text-center text-xs font-medium ${
+                                          isCurrent
+                                            ? "text-green-600 dark:text-green-400"
+                                            : done
+                                              ? "text-gray-700 dark:text-gray-300"
+                                              : "text-gray-500 dark:text-gray-400"
+                                        }`}
+                                      >
+                                        {stage}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
+                              <div className="flex justify-between mt-6 text-xs text-gray-600 dark:text-gray-400">
+                                <span>Origin: {originDisplay}</span>
+                                <span>Destination: {destLabel}</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })()}
+
+                    {/* 3. Accordion: More Shipment Details + All Shipment Updates */}
+                    <div className="bg-gray-100 dark:bg-gray-800/50 rounded-lg p-1">
+                      <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+                        {/* More Shipment Details */}
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => setDetailsExpanded((e) => !e)}
+                            className="w-full flex items-center justify-between py-4 px-5 text-left font-bold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          >
+                            <span>More Shipment Details</span>
+                            {detailsExpanded ? (
+                              <ChevronUp className="w-5 h-5 text-red-500 shrink-0" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-red-500 shrink-0" />
+                            )}
+                          </button>
+                          {detailsExpanded && (
+                            <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-700">
+                              <dl className="space-y-4 pt-4">
+                                <div>
+                                  <dt className="text-sm text-gray-500 dark:text-gray-400">Destination</dt>
+                                  <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                    {getCountryNameFromCode(shipment.destination) || shipment.destination || "—"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-sm text-gray-500 dark:text-gray-400">Service / Ship Mode</dt>
+                                  <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                    {shipment.serviceMode || "—"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-sm text-gray-500 dark:text-gray-400">Packaging</dt>
+                                  <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                    {shipment.packaging || "—"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-sm text-gray-500 dark:text-gray-400">Weight</dt>
+                                  <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                    {(shipment.totalWeight ?? shipment.weight) != null
+                                      ? `${Number(shipment.totalWeight ?? shipment.weight).toFixed(2)} kg`
+                                      : "—"}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-sm text-gray-500 dark:text-gray-400">Dimensions</dt>
+                                  <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                    {getDimensionsDisplay(shipment)}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-sm text-gray-500 dark:text-gray-400">Packages</dt>
+                                  <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
+                                    {shipment.amount != null && shipment.amount > 0 ? shipment.amount : "—"}
+                                  </dd>
+                                </div>
+                              </dl>
+                            </div>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
 
-                    {/* 3. Tracking History + Shipment Details */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      <Card className="lg:col-span-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-                        <CardContent className="p-6">
-                          <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-6">
-                            <RotateCw className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                            Tracking History
-                          </h3>
-                          <div className="relative">
-                            <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-gray-600" />
-                            <ul className="space-y-6">
-                              {historyEvents.map((event, i) => {
-                                const happened = event.alreadyHappened ?? (() => {
-                                  try {
-                                    const t = typeof event.date === "string" ? new Date(event.date).getTime() : (event.date as Date).getTime();
-                                    return !isNaN(t) && t <= Date.now();
-                                  } catch {
-                                    return true;
-                                  }
-                                })();
-                                return (
-                                <li key={i} className="relative flex gap-4 pl-1">
-                                  <div
-                                    className={`relative z-10 mt-1 w-6 h-6 rounded-full shrink-0 flex items-center justify-center ${
-                                      happened
-                                        ? event.isCurrent
-                                          ? "bg-blue-600 ring-4 ring-blue-100 dark:ring-blue-900/40"
-                                          : "bg-blue-600"
-                                        : "bg-gray-300 dark:bg-gray-600"
-                                    }`}
-                                  />
-                                  <div className="flex-1 min-w-0 pb-6">
-                                    <p
-                                      className={`font-semibold ${
-                                        event.isCurrent
-                                          ? "text-gray-900 dark:text-white"
-                                          : "text-gray-600 dark:text-gray-300"
-                                      }`}
-                                    >
-                                      {event.title}
+                        {/* Separator */}
+                        <div className="border-t border-gray-200 dark:border-gray-600" />
+
+                        {/* All Shipment Updates */}
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => setUpdatesExpanded((e) => !e)}
+                            className="w-full flex items-center justify-between py-4 px-5 text-left font-bold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          >
+                            <span>All Shipment Updates</span>
+                            {updatesExpanded ? (
+                              <ChevronUp className="w-5 h-5 text-red-500 shrink-0" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-red-500 shrink-0" />
+                            )}
+                          </button>
+                          {updatesExpanded && (
+                            <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-700">
+                              <div className="space-y-6 pt-4">
+                                {getHistoryByDateGroups(historyEvents).map((group) => (
+                                  <div key={group.dateKey} className="relative">
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+                                      {group.dateLabel}
                                     </p>
-                                    {event.description && (
-                                      <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-0.5">
-                                        <MapPin className="w-4 h-4 shrink-0" />
-                                        {event.description}
-                                      </p>
-                                    )}
-                                    {event.detail && (
-                                      <p className="text-sm text-gray-500 dark:text-gray-500 mt-0.5">
-                                        {event.detail}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                                    {formatDateTime(event.date)}
-                                  </p>
-                                </li>
-                              );
-                              })}
-                            </ul>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-                        <CardContent className="p-6">
-                          <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                            <Info className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                            Shipment Details
-                          </h3>
-                          <dl className="space-y-4">
-                            <div>
-                              <dt className="text-sm text-gray-500 dark:text-gray-400">Destination</dt>
-                              <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                                {getCountryNameFromCode(shipment.destination) || shipment.destination || "—"}
-                              </dd>
+                                    <div className="absolute left-[8.5rem] top-6 bottom-0 w-px bg-gray-200 dark:bg-gray-600" aria-hidden />
+                                    <ul className="space-y-0">
+                                      {group.events.map((event, i) => {
+                                        const isDelivered = (event.status || "").toLowerCase().includes("delivered");
+                                        return (
+                                          <li key={`${group.dateKey}-${i}`} className="relative flex gap-3 pb-5 last:pb-0">
+                                          <p className="w-28 shrink-0 text-xs text-gray-500 dark:text-gray-400 pt-0.5">
+                                            {formatTimeWithTz(event.date)}
+                                          </p>
+                                          <div className="relative z-10 shrink-0 w-6 flex justify-center pt-0.5">
+                                            {isDelivered ? (
+                                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                                                <CheckCircle2 className="h-3 w-3 text-white" />
+                                              </span>
+                                            ) : (
+                                              <span className="block h-0 w-0 border-y-[5px] border-y-transparent border-l-[6px] border-l-gray-300 dark:border-l-gray-500" aria-hidden />
+                                            )}
+                                          </div>
+                                          <div className="flex-1 min-w-0 pt-0">
+                                            <p className={isDelivered ? "text-sm font-semibold text-green-600 dark:text-green-400" : "text-sm font-semibold text-gray-900 dark:text-white"}>
+                                              {event.title}
+                                            </p>
+                                            {event.location && (
+                                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                                                {event.location}
+                                              </p>
+                                            )}
+                                            {event.detail && (
+                                              <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                                                {event.detail}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
+                              ))}
+                              </div>
                             </div>
-                            <div>
-                              <dt className="text-sm text-gray-500 dark:text-gray-400">Service / Ship Mode</dt>
-                              <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                                {shipment.serviceMode || "—"}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-sm text-gray-500 dark:text-gray-400">Packaging</dt>
-                              <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                                {shipment.packaging || "—"}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-sm text-gray-500 dark:text-gray-400">Weight</dt>
-                              <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                                {(shipment.totalWeight ?? shipment.weight) != null
-                                  ? `${Number(shipment.totalWeight ?? shipment.weight).toFixed(2)} kg`
-                                  : "—"}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-sm text-gray-500 dark:text-gray-400">Dimensions</dt>
-                              <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                                {getDimensionsDisplay(shipment)}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-sm text-gray-500 dark:text-gray-400">Packages</dt>
-                              <dd className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                                {shipment.amount != null && shipment.amount > 0 ? shipment.amount : "—"}
-                              </dd>
-                            </div>
-                          </dl>
-                        </CardContent>
-                      </Card>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -528,7 +683,7 @@ export default function TrackingPage() {
                         No Shipment Found
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                        We couldn&apos;t find a shipment with the tracking ID you entered. Please
+                        We couldn&apos;t find a shipment with the booking ID you entered. Please
                         check the ID and try again.
                       </p>
                       <Button

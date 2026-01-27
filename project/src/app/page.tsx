@@ -1,11 +1,24 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Package, Truck, Globe, Clock, Shield, HeadphonesIcon } from "lucide-react";
-import { motion } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Package, Truck, Globe, Clock, Shield, HeadphonesIcon, Facebook, Twitter, Instagram, MapPin, Phone, Mail, Search } from "lucide-react";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { toast } from "sonner";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -21,19 +34,319 @@ const staggerContainer = {
   }
 };
 
-export default function HomePage() {
+const CUSTOMER_STORIES: { name: string; title: string; shortQuote: string; fullQuote: string }[] = [
+  { name: "Hilary Ouse", title: "E-Commerce Entrepreneur", shortQuote: "Fantastic service and amazing support!", fullQuote: "As a transportation coordinator, I appreciate the simplicity and power of PSS Worldwide's real-time features. Managing fleets, monitoring routes, and addressing issues proactively - all in one place. It's a game-changer for anyone in the logistics field." },
+  { name: "James Chen", title: "Supply Chain Manager", shortQuote: "Reliable and on time, every time.", fullQuote: "We've been using PSS Worldwide for our international shipments for over two years. The tracking is transparent, customer support is responsive, and our packages always arrive when promised. Highly recommend for B2B logistics." },
+  { name: "Sarah Mitchell", title: "Small Business Owner", shortQuote: "Made shipping simple and affordable.", fullQuote: "As a small business owner, I needed a courier that could handle both domestic and international orders without breaking the bank. PSS Worldwide offered competitive rates and seamless delivery. My customers are happy and so am I." },
+  { name: "David Okonkwo", title: "Import-Export Specialist", shortQuote: "Best customs clearance support we've had.", fullQuote: "The customs clearance assistance from PSS Worldwide has saved us countless hours. They handle documentation, coordinate with authorities, and keep us informed at every step. Professional and stress-free." },
+  { name: "Emma Rodriguez", title: "Fashion Retailer", shortQuote: "Same-day delivery option is a lifesaver.", fullQuote: "When we have urgent orders or last-minute restocks, PSS's same-day delivery option has been a lifesaver. Fast, secure, and our fragile items always arrive in perfect condition. Worth every penny." },
+  { name: "Michael Park", title: "IT Hardware Distributor", shortQuote: "Scaled our shipments without a hitch.", fullQuote: "We grew from shipping a few dozen boxes a month to hundreds. PSS Worldwide scaled with us—same quality, same reliability. Their freight services and warehouse support made the transition smooth." },
+  { name: "Lisa Thompson", title: "Medical Supplies Coordinator", shortQuote: "Critical shipments handled with care.", fullQuote: "We ship time-sensitive medical equipment and supplies. PSS Worldwide understands the urgency and handles every shipment with care. Tracking and notifications give us peace of mind." },
+  { name: "Ahmed Hassan", title: "Textile Exporter", shortQuote: "Global reach, local feel.", fullQuote: "Exporting to multiple countries used to be a headache. With PSS Worldwide, we get one point of contact, clear pricing, and deliveries across Asia, Europe, and the Americas. Feels local even when it's global." },
+  { name: "Rachel Green", title: "Art Gallery Director", shortQuote: "White-glove handling for delicate pieces.", fullQuote: "We ship art and fragile installations. PSS's secure packaging and careful handling mean our pieces arrive exhibition-ready. Their team treats every shipment like it's their own." },
+  { name: "Omar Khalil", title: "Electronics Wholesaler", shortQuote: "Real-time tracking changed how we work.", fullQuote: "The real-time tracking and proof of delivery have cut down customer disputes and support tickets. We always know where a package is and when it was received. Efficiency went up, stress went down." },
+  { name: "Nina Patel", title: "Organic Food Supplier", shortQuote: "Temperature-controlled shipping done right.", fullQuote: "We needed a partner who could handle temperature-sensitive organic produce. PSS Worldwide's logistics and cold-chain options have been solid. Fresh delivery, happy customers, fewer losses." },
+  { name: "Chris Walsh", title: "Automotive Parts Distributor", shortQuote: "Heavy freight and express in one place.", fullQuote: "We use PSS for both heavy freight and express spare parts. Having one provider for both simplifies invoicing, reporting, and relationship management. Quality and consistency across the board." },
+];
+
+const BRANDS = [
+  "INTERWOOD",
+  "BEECHTREE",
+  "Telenor Microfinance Bank",
+  "SANAULLA",
+  "CHASE UP",
+  "Nestlé",
+  "Unilever",
+  "Packages Limited",
+  "Engro",
+  "Habib Metropolitan",
+  "Lucky Cement",
+  "Nishat Mills",
+  "Fauji Foods",
+  "JDW Sugar",
+  "GSK",
+  "PepsiCo",
+  "Coca-Cola",
+  "Philips",
+  "Siemens",
+  "Toyota",
+];
+
+const BRANDS_VISIBLE = 5;
+const BRANDS_STEP = 1;
+
+function BrandsSlideshowSection() {
+  const [startIndex, setStartIndex] = useState(0);
+  const n = BRANDS.length;
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setStartIndex((i) => (i + BRANDS_STEP) % n);
+    }, 3000);
+    return () => clearInterval(t);
+  }, [n]);
+
+  const visibleBrands = Array.from({ length: BRANDS_VISIBLE }, (_, k) => BRANDS[(startIndex + k) % n]);
+
   return (
-    <div className="min-h-screen">
+    <section id="brands" className="py-16 bg-gray-50 dark:bg-gray-900 border-y border-gray-200 dark:border-gray-700">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.h2
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-10"
+        >
+          Proudly working with
+        </motion.h2>
+        <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">
+          {visibleBrands.map((name, i) => (
+            <motion.div
+              key={`${startIndex}-${i}-${name}`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex items-center justify-center min-w-[140px] md:min-w-[160px] h-16 md:h-20 px-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold text-sm md:text-base text-center"
+            >
+              {name}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CustomerStoriesSection() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const stories = CUSTOMER_STORIES;
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setActiveIndex((i) => (i + 1) % stories.length);
+    }, 3000);
+    return () => clearInterval(t);
+  }, [stories.length]);
+
+  const story = stories[activeIndex];
+  const initials = story.name.split(" ").map((n) => n[0]).join("").slice(0, 2);
+
+  return (
+    <section id="customer-stories" className="py-20 bg-white dark:bg-gray-800">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-sm font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-2"
+        >
+          Customer Stories
+        </motion.p>
+        <motion.h2
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.05 }}
+          className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-14"
+        >
+          What Says Our Happy Clients
+        </motion.h2>
+
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex justify-center mb-8"
+          >
+            <div
+              className="w-24 h-24 rounded-full bg-linear-to-br from-emerald-400 via-orange-400 to-amber-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg"
+              aria-hidden
+            >
+              {initials}
+            </div>
+          </motion.div>
+
+          <div className="relative flex items-start justify-center gap-4 md:gap-6 text-left">
+            <span
+              className="text-6xl md:text-7xl font-serif text-red-200 dark:text-red-900/50 select-none leading-none mt-0 shrink-0"
+              aria-hidden
+            >
+              &ldquo;
+            </span>
+            <div className="flex-1 min-w-0">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeIndex}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.35 }}
+                  className="space-y-4"
+                >
+                  <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                    {story.shortQuote}
+                  </p>
+                  <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {story.fullQuote}
+                  </p>
+                  <div className="pt-2">
+                    <p className="font-bold text-gray-900 dark:text-white">{story.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">{story.title}</p>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-1.5 mt-12" role="tablist" aria-label="Testimonial slides">
+            {stories.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                role="tab"
+                aria-selected={i === activeIndex}
+                aria-label={`Go to testimonial ${i + 1}`}
+                onClick={() => setActiveIndex(i)}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  i === activeIndex ? "w-8 bg-red-600" : "w-2 bg-gray-300 dark:bg-gray-600"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TrackYourPackageSection() {
+  const router = useRouter();
+  const [bookingId, setBookingId] = useState("");
+
+  const handleTrack = (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = bookingId.trim();
+    if (id) {
+      router.push(`/tracking?bookingId=${encodeURIComponent(id)}`);
+    } else {
+      router.push("/tracking");
+    }
+  };
+
+  return (
+    <section id="track-package" className="relative py-16 bg-linear-to-r from-[#1a365d] to-[#2E7D7D] text-white">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <motion.h2
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-3xl md:text-4xl font-bold mb-2"
+        >
+          Track Your Package
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 8 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.05 }}
+          className="text-white/90 text-lg mb-8"
+        >
+          Enter your booking ID to get real-time updates on your shipment
+        </motion.p>
+        <motion.form
+          onSubmit={handleTrack}
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-xl mx-auto"
+        >
+          <Input
+            type="text"
+            value={bookingId}
+            onChange={(e) => setBookingId(e.target.value)}
+            placeholder="Enter booking ID (e.g., 420001)"
+            className="flex-1 min-w-0 h-12 px-4 rounded-lg bg-white border-gray-200 text-gray-900 placeholder:text-gray-500"
+          />
+          <Button
+            type="submit"
+            size="lg"
+            className="h-12 px-8 bg-amber-400 hover:bg-amber-500 text-gray-900 font-semibold rounded-lg shrink-0"
+          >
+            <Search className="w-5 h-5 mr-2 inline" />
+            Track
+          </Button>
+        </motion.form>
+      </div>
+    </section>
+  );
+}
+
+const HERO_SLIDES = [
+  { src: "/banner_new.jpg", alt: "Your trusted delivery partner" },
+  { src: "/truck.jpg", alt: "PSS Worldwide logistics" },
+  { src: "/Truck_2.jpg", alt: "PSS Worldwide logistics2" },
+];
+
+export default function HomePage() {
+  const heroRef = useRef<HTMLElement>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const imageY = useTransform(scrollYProgress, [0, 1], ["0%", "22%"]);
+  const imageScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCurrentSlide((i) => (i + 1) % HERO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Smooth-scroll to section when landing with a hash (e.g. from navbar on another page)
+  useEffect(() => {
+    const hash = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
+    if (hash) {
+      const el = document.getElementById(hash);
+      if (el) {
+        requestAnimationFrame(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen scrollbar-pretty">
       {/* Hero Section - single image, centered tagline */}
-      <section className="relative w-full min-h-screen overflow-hidden -mt-30 pt-30">
-        <Image
-          src="/banner_new.jpg"
-          alt="Your trusted delivery partner"
-          fill
-          priority
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-black/50" aria-hidden />
+      <section
+        ref={heroRef}
+        id="home"
+        className="relative w-full min-h-screen overflow-hidden -mt-[115px] pt-[115px]"
+      >
+        <motion.div className="absolute inset-0" style={{ y: imageY, scale: imageScale }}>
+          {HERO_SLIDES.map((img, index) => (
+            <motion.div
+              key={img.src}
+              className="absolute inset-0"
+              style={{ zIndex: index === currentSlide ? 1 : 0 }}
+              initial={false}
+              animate={{ opacity: index === currentSlide ? 1 : 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <Image
+                src={img.src}
+                alt={img.alt}
+                fill
+                priority={index === 0}
+                className="object-cover"
+              />
+            </motion.div>
+          ))}
+        </motion.div>
         
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -62,6 +375,58 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* About Section */}
+      <section id="about" className="py-20 bg-white dark:bg-gray-800">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
+                About PSS Worldwide
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
+                PSS Worldwide is a leading courier and logistics company committed to providing 
+                fast, reliable, and affordable shipping solutions to customers worldwide.
+              </p>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
+                With years of experience in the industry, we have built a reputation for 
+                excellence in international shipping, express delivery, and freight services.
+              </p>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+                Our state-of-the-art tracking system ensures you always know where your package is, 
+                and our dedicated team works around the clock to ensure timely and secure delivery.
+              </p>
+              <Link href="/about">
+                <Button size="lg" className="bg-[#1a365d] hover:bg-[#2c5282] text-white hover:scale-105 transition-transform">
+                  Learn More About Us
+                </Button>
+              </Link>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative h-96 rounded-xl overflow-hidden shadow-2xl"
+            >
+              <Image
+                src="/truck.jpg"
+                alt="About Us"
+                fill
+                className="object-cover"
+              />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Proudly working with - brands slideshow */}
+      <BrandsSlideshowSection />
 
       {/* Services Section */}
       <section id="services" className="py-20 bg-gray-50 dark:bg-gray-900">
@@ -119,92 +484,246 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* About Section */}
-      <section id="about" className="py-20 bg-white dark:bg-gray-800">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
-                About PSS Worldwide
-              </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
-                PSS Worldwide is a leading courier and logistics company committed to providing 
-                fast, reliable, and affordable shipping solutions to customers worldwide.
-              </p>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
-                With years of experience in the industry, we have built a reputation for 
-                excellence in international shipping, express delivery, and freight services.
-              </p>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-                Our state-of-the-art tracking system ensures you always know where your package is, 
-                and our dedicated team works around the clock to ensure timely and secure delivery.
-              </p>
-              <Link href="/about">
-                <Button size="lg" className="bg-[#1a365d] hover:bg-[#2c5282] text-white hover:scale-105 transition-transform">
-                  Learn More About Us
-                </Button>
-              </Link>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="relative h-96 rounded-xl overflow-hidden shadow-2xl"
-            >
-              <Image
-                src="/truck.jpg"
-                alt="About Us"
-                fill
-                className="object-cover"
-              />
-            </motion.div>
-          </div>
+      {/* Track Your Package */}
+      <TrackYourPackageSection />
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
+          >
+            Competitive Pricing
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8"
+          >
+            Get transparent quotes tailored to your shipment. Request a quote below and we&apos;ll respond promptly.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            <a href="#contact">
+              <Button size="lg" className="bg-[#1a365d] hover:bg-[#2c5282] text-white">
+                Get a Quote
+              </Button>
+            </a>
+          </motion.div>
         </div>
       </section>
 
-      {/* Contact CTA Section */}
-      <section id="contact" className="py-20 bg-linear-to-r from-[#1a365d] to-[#2E7D7D] text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10"
-        >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to Ship?
-          </h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Get in touch with us today and experience the difference of world-class courier services.
-          </p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Link href="/contact">
-              <Button
-                size="lg"
-                className="bg-[#fbbf24] hover:bg-[#f59e0b] text-white border-0 hover:scale-105 transition-transform"
-              >
-                Contact Us
-              </Button>
-            </Link>
-            <Link href="/tracking">
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-white/20 text-white hover:bg-white/30 border-white hover:scale-105 transition-transform"
-              >
-                Track Package
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
-      </section>
+      {/* Customer Stories Section */}
+      <CustomerStoriesSection />
+
+      {/* Contact Section - dark footer with map and form */}
+      <ContactSection />
     </div>
+  );
+}
+
+const SERVICES_OPTIONS = [
+  "Express Delivery",
+  "Freight Services",
+  "International Shipping",
+  "Same-Day Delivery",
+  "Secure Packaging",
+  "General Inquiry",
+];
+
+function ContactSection() {
+  const [formData, setFormData] = useState({
+    company: "",
+    name: "",
+    phone: "",
+    email: "",
+    service: "",
+    message: "",
+  });
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email || !formData.message) {
+      toast.error("Please fill in Name, Email and Message.");
+      return;
+    }
+    if (!privacyAccepted) {
+      toast.error("Please accept the privacy policy.");
+      return;
+    }
+    setLoading(true);
+    setTimeout(() => {
+      toast.success("Thank you for your message! We'll get back to you soon.");
+      setFormData({ company: "", name: "", phone: "", email: "", service: "", message: "" });
+      setPrivacyAccepted(false);
+      setLoading(false);
+    }, 1000);
+  };
+
+  return (
+    <section id="contact" className="relative bg-[#1f2937] text-white overflow-hidden">
+      {/* Top blue line */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#2563eb]" aria-hidden />
+      {/* Subtle dotted pattern */}
+      <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-size-[24px_24px]" aria-hidden />
+
+      <div className="relative z-10 pt-12 pb-8 px-[20%] max-xl:px-[15%] max-lg:px-[10%] max-md:px-8 max-sm:px-4">
+        {/* Four columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8 mb-12">
+          {/* Column 1: Logo + description */}
+          <div>
+            <Link href="/" className="inline-block mb-4">
+              <img src="/logo_final.png" alt="PSS Worldwide" className="h-10 w-auto object-contain" />
+            </Link>
+            <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
+              Fast, secure, and reliable courier and logistics solutions. Your trusted delivery partner for express shipping worldwide.
+            </p>
+          </div>
+
+          {/* Column 2: Contact */}
+          <div>
+            <h3 className="font-bold text-white uppercase tracking-wide mb-4">Contact</h3>
+            <ul className="space-y-3 text-gray-400 text-sm">
+              <li className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>LGF-44, Land Mark Plaza, Jail Road<br />Lahore, 54660, Pakistan</span>
+              </li>
+              <li>
+                <a href="tel:+923008482321" className="flex items-center gap-2 hover:text-white transition-colors">
+                  <Phone className="w-4 h-4 shrink-0" /> +92 300 8482 321
+                </a>
+              </li>
+              <li>
+                <a href="mailto:info@psswwe.com" className="flex items-center gap-2 hover:text-white transition-colors">
+                  <Mail className="w-4 h-4 shrink-0" /> info@psswwe.com
+                </a>
+              </li>
+              <li className="pt-2 flex flex-wrap gap-x-2 gap-y-1">
+                <a href="#" className="hover:text-white transition-colors">Legal Notice</a>
+                <span aria-hidden>|</span>
+                <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 3: Navigation */}
+          <div>
+            <h3 className="font-bold text-white uppercase tracking-wide mb-4">Navigation</h3>
+            <ul className="space-y-2 text-gray-400 text-sm">
+              <li><a href="#home" className="hover:text-white transition-colors">Home</a></li>
+              <li><a href="#about" className="hover:text-white transition-colors">About</a></li>
+              <li><a href="#services" className="hover:text-white transition-colors">Service</a></li>
+              <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
+            </ul>
+          </div>
+
+          {/* Column 4: Social media */}
+          <div>
+            <h3 className="font-bold text-white uppercase tracking-wide mb-4">Social media</h3>
+            <ul className="space-y-2 text-gray-400 text-sm">
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-white transition-colors" aria-label="Facebook">
+                  <Facebook className="w-4 h-4" /> Facebook
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-white transition-colors" aria-label="Twitter">
+                  <Twitter className="w-4 h-4" /> Twitter
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-white transition-colors" aria-label="Instagram">
+                  <Instagram className="w-4 h-4" /> Instagram
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Map + Contact form row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6 border-t border-white/10">
+          {/* Map */}
+          <div className="lg:col-span-2 rounded-lg overflow-hidden bg-gray-800/50 aspect-16/10 min-h-[200px]">
+            <iframe
+              title="PSS Worldwide - Land Mark Plaza, Jail Road, Lahore"
+              src="https://www.google.com/maps?q=LGF-44+Land+Mark+Plaza+Jail+Road+Lahore+54660+Pakistan&output=embed"
+              className="w-full h-full border-0"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+
+          {/* Contact form */}
+          <div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="company" className="text-gray-300 text-sm">Company</Label>
+                  <Input id="company" name="company" value={formData.company} onChange={handleChange} placeholder="Company" className="mt-1 bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500 focus-visible:ring-[#2563eb]" />
+                </div>
+                <div>
+                  <Label htmlFor="contact-name" className="text-gray-300 text-sm">Name</Label>
+                  <Input id="contact-name" name="name" value={formData.name} onChange={handleChange} placeholder="Name" required className="mt-1 bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500 focus-visible:ring-[#2563eb]" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="contact-phone" className="text-gray-300 text-sm">Phone</Label>
+                  <Input id="contact-phone" name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="Phone" className="mt-1 bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500 focus-visible:ring-[#2563eb]" />
+                </div>
+                <div>
+                  <Label htmlFor="contact-email" className="text-gray-300 text-sm">Email</Label>
+                  <Input id="contact-email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Email" required className="mt-1 bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500 focus-visible:ring-[#2563eb]" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-gray-300 text-sm">Select a service</Label>
+                <Select value={formData.service} onValueChange={(v) => setFormData({ ...formData, service: v })}>
+                  <SelectTrigger className="mt-1 w-full bg-gray-800/50 border-gray-600 text-white focus:ring-[#2563eb] [&>span]:text-gray-300">
+                    <SelectValue placeholder="Select a service" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    {SERVICES_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s} className="text-white focus:bg-gray-700 focus:text-white">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="contact-message" className="text-gray-300 text-sm">Message</Label>
+                <Textarea id="contact-message" name="message" value={formData.message} onChange={handleChange} placeholder="Message" required rows={4} className="mt-1 bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500 focus-visible:ring-[#2563eb]" />
+              </div>
+              <div className="flex items-start gap-2">
+                <Checkbox id="privacy" checked={privacyAccepted} onCheckedChange={(v) => setPrivacyAccepted(!!v)} className="border-gray-500 data-[state=checked]:bg-[#2563eb] data-[state=checked]:border-[#2563eb] mt-0.5" />
+                <label htmlFor="privacy" className="text-gray-500 text-xs cursor-pointer">
+                  I agree to the processing of my data in accordance with the privacy policy.
+                </label>
+              </div>
+              <Button type="submit" disabled={loading} className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
+                {loading ? "Sending..." : "Send"}
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

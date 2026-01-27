@@ -27,7 +27,7 @@ export const trackingLinks: Record<string, (id: string) => string> = {
   DPD_EU: (id) =>
     `https://tracking.dpd.de/status/en_US/parcel/${id}`,
   // DPD UK (track.dpd.co.uk)
-  DPD_LHE: (id) =>
+  DPD_LHR: (id) =>
     `https://track.dpd.co.uk/parcels/${id}`,
 
   // DHL (all variants)

@@ -95,6 +95,7 @@ export default function ShipmentsPage() {
     return format(d, "yyyy-MM-dd'T'HH:mm");
   });
   const [trackingFormDescription, setTrackingFormDescription] = useState("");
+  const [trackingFormLocation, setTrackingFormLocation] = useState("");
   const [isSubmittingTracking, setIsSubmittingTracking] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
@@ -345,6 +346,7 @@ export default function ShipmentsPage() {
     setTrackingFormStatus("In Transit");
     setTrackingFormTimestamp(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
     setTrackingFormDescription("");
+    setTrackingFormLocation("");
     setOpenTrackingDialog(true);
   };
 
@@ -360,6 +362,7 @@ export default function ShipmentsPage() {
           status: trackingFormStatus,
           timestamp,
           description: trackingFormDescription.trim(),
+          location: trackingFormLocation.trim(),
         }),
       });
       const data = await res.json();
@@ -1193,6 +1196,14 @@ export default function ShipmentsPage() {
                   type="datetime-local"
                   value={trackingFormTimestamp}
                   onChange={(e) => setTrackingFormTimestamp(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Location (optional)</Label>
+                <Input
+                  placeholder="e.g. Karachi Hub, London Gateway"
+                  value={trackingFormLocation}
+                  onChange={(e) => setTrackingFormLocation(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
