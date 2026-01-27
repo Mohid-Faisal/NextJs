@@ -25,7 +25,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section - single image, centered tagline */}
-      <section className="relative w-full min-h-screen overflow-hidden -mt-[7.5rem] pt-[7.5rem]">
+      <section className="relative w-full min-h-screen overflow-hidden -mt-30 pt-30">
         <Image
           src="/banner_new.jpg"
           alt="Your trusted delivery partner"
@@ -169,7 +169,7 @@ export default function HomePage() {
       </section>
 
       {/* Contact CTA Section */}
-      <section id="contact" className="py-20 bg-gradient-to-r from-[#1a365d] to-[#2E7D7D] text-white relative overflow-hidden">
+      <section id="contact" className="py-20 bg-linear-to-r from-[#1a365d] to-[#2E7D7D] text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
