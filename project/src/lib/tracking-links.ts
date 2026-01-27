@@ -1,19 +1,19 @@
 export const trackingLinks: Record<string, (id: string) => string> = {
   // DPEX
   DPEX: (id) =>
-    `https://www.dpex.com/track-trace/?trackingNo=${id}`,
+    `https://dpexonline.com/trace-and-track/index?id=${id}`,
 
   // Parcel Force
   PARCEL_FORCE: (id) =>
-    `https://www.parcelforce.com/track-trace?trackNumber=${id}`,
+    `https://www7.parcelforce.com/track-trace?trackNumber=${id}`,
 
   // FedEx (all variants)
   FEDEX: (id) =>
-    `https://www.fedex.com/fedextrack/?tracknumbers=${id}`,
+    `https://www.fedex.com/fedextrack/?trknbr=${id}`,
   FEDEX_LHE: (id) =>
-    `https://www.fedex.com/fedextrack/?tracknumbers=${id}`,
+    `https://www.fedex.com/fedextrack/?trknbr=${id}`,
   FEDEX_DXB: (id) =>
-    `https://www.fedex.com/fedextrack/?tracknumbers=${id}`,
+    `https://www.fedex.com/fedextrack/?trknbr=${id}`,
 
   // UPS (all variants)
   UPS_RD_LHR: (id) =>
@@ -23,29 +23,32 @@ export const trackingLinks: Record<string, (id: string) => string> = {
   UPS_C2S: (id) =>
     `https://www.ups.com/track?tracknum=${id}`,
 
-  // DPD Europe
+  // DPD Europe (tracking.dpd.de)
   DPD_EU: (id) =>
-    `https://www.dpd.com/tracking?parcelNumber=${id}`,
+    `https://tracking.dpd.de/status/en_US/parcel/${id}`,
+  // DPD UK (track.dpd.co.uk)
+  DPD_LHE: (id) =>
+    `https://track.dpd.co.uk/parcels/${id}`,
 
   // DHL (all variants)
   DHL: (id) =>
-    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+    `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
   DHL_LHE: (id) =>
-    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+    `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
   DHL_SIN: (id) =>
-    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+    `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
   DHL_DXB: (id) =>
-    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+    `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
   DHL_AIR_LHR: (id) =>
-    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+    `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
   DHL_RD_LHR: (id) =>
-    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+    `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
   DHL_PK: (id) =>
-    `https://www.dhl.com/global-en/home/tracking.html?tracking-id=${id}`,
+    `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
 
   // SkyNet Worldwide Express
   SNWWE: (id) =>
-    `https://www.skynet.net/track/?tracknum=${id}`,
+    `https://www.snwwe.com/pk-en/track-shipment?AWB=${id}`,
 };
 
 export function getTrackingUrl(shipment: {
