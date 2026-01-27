@@ -20,15 +20,18 @@ export async function GET(request: NextRequest) {
       where.customerId = parseInt(customerId);
     }
 
-    if (search) {
+    const searchTrimmed = search.trim();
+    if (searchTrimmed) {
       where.OR = [
-        { invoiceNumber: { contains: search, mode: "insensitive" } },
-        { customer: { PersonName: { contains: search, mode: "insensitive" } } },
-        { customer: { CompanyName: { contains: search, mode: "insensitive" } } },
+        { invoiceNumber: { contains: searchTrimmed, mode: "insensitive" } },
+        { customer: { PersonName: { contains: searchTrimmed, mode: "insensitive" } } },
+        { customer: { CompanyName: { contains: searchTrimmed, mode: "insensitive" } } },
       ];
+    } else {
+      // Only fetch when search is provided – search across all invoices by invoice no
+      return NextResponse.json({ invoices: [] });
     }
 
-    // Get invoices with customer information
     const invoices = await prisma.invoice.findMany({
       where,
       select: {
@@ -46,7 +49,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { invoiceDate: "desc" },
-      take: 50, // Limit to 50 results
+      take: 100,
     });
 
     return NextResponse.json({ invoices });

@@ -15,10 +15,11 @@ export async function GET(request: NextRequest) {
     const whereClause: any = {};
 
     // Filter by date range
+    // Use explicit ISO strings so "YYYY-MM-DD" is start-of-day UTC and we never include the previous day
     if (dateFrom || dateTo) {
       whereClause.date = {};
       if (dateFrom) {
-        whereClause.date.gte = new Date(dateFrom);
+        whereClause.date.gte = new Date(dateFrom + 'T00:00:00.000Z');
       }
       if (dateTo) {
         whereClause.date.lte = new Date(dateTo + 'T23:59:59.999Z');

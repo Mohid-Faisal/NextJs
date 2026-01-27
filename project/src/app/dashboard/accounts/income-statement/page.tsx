@@ -72,6 +72,7 @@ export default function IncomeStatementPage() {
   const router = useRouter();
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [accountBalances, setAccountBalances] = useState<AccountBalance[]>([]);
+  const now = new Date();
   const [incomeStatementData, setIncomeStatementData] = useState<IncomeStatementData>({
     revenues: [],
     expenses: [],
@@ -80,8 +81,9 @@ export default function IncomeStatementPage() {
     grossProfit: 0,
     netIncome: 0,
     period: {
-      startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10), // Start of current year
-      endDate: new Date().toISOString().slice(0, 10) // Today
+      // Default "current month": 1st to last day of this month (e.g. 1 Jan - 31 Jan)
+      startDate: format(startOfMonth(now), 'yyyy-MM-dd'),
+      endDate: format(endOfMonth(now), 'yyyy-MM-dd')
     }
   });
   const [loading, setLoading] = useState(false);
@@ -266,44 +268,44 @@ export default function IncomeStatementPage() {
   const updatePeriodDates = () => {
     const now = new Date();
     let startDate: string;
-    let endDate: string = now.toISOString().slice(0, 10);
+    let endDate: string;
 
+    // Use format(..., 'yyyy-MM-dd') so calendar dates are correct in all timezones.
+    // toISOString().slice(0,10) would use UTC and can shift to the previous/next day.
     switch (periodType) {
       case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+        startDate = format(startOfYear(now), 'yyyy-MM-dd');
+        endDate = format(endOfYear(now), 'yyyy-MM-dd');
         break;
       case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+        // Current month only: 1st to last day of that month (e.g. 1 Jan - 31 Jan)
+        startDate = format(startOfMonth(now), 'yyyy-MM-dd');
+        endDate = format(endOfMonth(now), 'yyyy-MM-dd');
         break;
       case 'last3month':
-        // Last 3 months: go back 3 months from today
-        const threeMonthsAgo = new Date(now);
-        threeMonthsAgo.setMonth(now.getMonth() - 3);
-        startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1).toISOString().slice(0, 10);
+        const threeMonthsAgo = subMonths(now, 3);
+        startDate = format(startOfMonth(threeMonthsAgo), 'yyyy-MM-dd');
+        endDate = format(now, 'yyyy-MM-dd');
         break;
       case 'last6month':
-        // Last 6 months: go back 6 months from today
-        const sixMonthsAgo = new Date(now);
-        sixMonthsAgo.setMonth(now.getMonth() - 6);
-        startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1).toISOString().slice(0, 10);
+        const sixMonthsAgo = subMonths(now, 6);
+        startDate = format(startOfMonth(sixMonthsAgo), 'yyyy-MM-dd');
+        endDate = format(now, 'yyyy-MM-dd');
         break;
       case 'financialyear':
-        // Financial year: July 1 to June 30
-        // If current month is July-December (6-11), financial year starts July 1 of current year
-        // If current month is January-June (0-5), financial year starts July 1 of previous year
         if (now.getMonth() >= 6) {
-          // July-December: Financial year is July 1 of current year to today
-          startDate = new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10); // July 1 (month 6)
+          startDate = format(new Date(now.getFullYear(), 6, 1), 'yyyy-MM-dd');
+          endDate = format(now, 'yyyy-MM-dd');
         } else {
-          // January-June: Financial year is July 1 of previous year to today
-          startDate = new Date(now.getFullYear() - 1, 6, 1).toISOString().slice(0, 10); // July 1 of previous year
+          startDate = format(new Date(now.getFullYear() - 1, 6, 1), 'yyyy-MM-dd');
+          endDate = format(now, 'yyyy-MM-dd');
         }
         break;
       case 'custom':
-        // Keep existing dates for custom period
         return;
       default:
-        startDate = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+        startDate = format(startOfYear(now), 'yyyy-MM-dd');
+        endDate = format(now, 'yyyy-MM-dd');
     }
 
     setIncomeStatementData(prev => ({

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeInitializer } from "@/components/theme-initializer";
 import { Toaster } from "@/components/ui/sonner";
+import PublicLayout from "@/components/PublicLayout";
 import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -29,7 +30,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ThemeInitializer>
-            {children}
+            <PublicLayout>
+              {children}
+            </PublicLayout>
             <Toaster position="top-center" richColors />
           </ThemeInitializer>
         </ThemeProvider>

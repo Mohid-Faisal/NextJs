@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Bell, Maximize2, Minimize2, Search, Upload } from "lucide-react";
+import { Menu, Bell, Maximize2, Minimize2, Search, Upload, Package } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import BulkUploadModal from "./BulkUploadModal";
 
@@ -111,6 +111,16 @@ const Navbar = ({
 
       {/* Right section */}
       <div className="flex items-center gap-6">
+        {/* Tracking Page */}
+        <Link
+          href="/tracking"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors duration-200 bg-linear-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700"
+          title="Track Shipment"
+        >
+          <Package className="w-5 h-5" />
+          <span className="text-sm font-medium">Tracking</span>
+        </Link>
+
         {/* Bulk Upload Shipments */}
         <button
           onClick={() => setShowBulkUpload(true)}

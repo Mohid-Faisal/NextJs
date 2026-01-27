@@ -937,13 +937,6 @@ export default function IncomeInvoicesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                window.location.href = `/api/accounts/invoices/${i.id}/receipt`;
-                              }}
-                            >
-                              📄 Download Receipt
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
                                 const shipmentId = (i.shipment as any)?.id;
                                 if (shipmentId) {
                                   window.location.href = `/dashboard/invoices/edit/${shipmentId}?invID=${i.id}`;

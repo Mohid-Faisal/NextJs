@@ -1,63 +1,255 @@
 "use client";
 
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import SplitText from "@/components/SplitText";
+import { Button } from "@/components/ui/button";
+import { Package, Truck, Globe, Clock, Shield, HeadphonesIcon } from "lucide-react";
+import { Play } from "lucide-react";
+import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 30 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6 }
+};
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
 
 export default function HomePage() {
   return (
-    <div className="relative w-full h-screen overflow-hidden">
-      {/* Background Image */}
-      <Image
-        src="/company-image-final.png"
-        alt="Courier Truck"
-        fill
-        priority
-        className="object-cover"
-      />
-
-      {/* Overlay Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-        {/* SplitText animation */}
-        <SplitText
-          text="Fast. Reliable. Affordable."
-          className="text-black font-extrabold text-4xl sm:text-5xl md:text-6xl leading-tight tracking-wide"
-          delay={20}
-          duration={2}
-          ease="elastic.out(1,0.3)"
-          splitType="chars"
-          from={{ opacity: 0, y: 40 }}
-          to={{ opacity: 1, y: 0 }}
-          threshold={0.1}
-          rootMargin="-100px"
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative w-full h-screen overflow-hidden">
+        <Image
+          src="/company-image-final.png"
+          alt="Courier Truck"
+          fill
+          priority
+          className="object-cover"
         />
-
-        {/* Subheading */}
-        <p className="text-base sm:text-xl md:text-2xl text-white max-w-2xl mt-4 mb-8 animate-fade-in delay-100">
-          Experience world-class courier services to 100+ destinations with real-time tracking and unbeatable rates.
-        </p>
-
-        {/* CTA Buttons */}
-        <div className="flex gap-4 flex-wrap justify-center animate-fade-in delay-200">
-          <Link href="/auth/login">
-            <Button
-              size="lg"
-              className="px-8 py-4 text-base sm:text-lg shadow-md hover:scale-105 transition-transform"
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
+        
+        {/* Content - Left Aligned */}
+        <div className="absolute inset-0 flex items-center z-10">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="max-w-2xl"
             >
-              Login
-            </Button>
-          </Link>
-          <Link href="/auth/signup">
-            <Button
-              size="lg"
-              className="px-8 py-4 text-base sm:text-lg shadow-md hover:scale-105 transition-transform"
-            >
-              Sign Up
-            </Button>
-          </Link>
+              {/* Category Text */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="mb-4"
+              >
+                <span className="text-white uppercase text-sm tracking-wider font-medium bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full inline-block">
+                  Logistics & Transportation
+                </span>
+              </motion.div>
+              
+              {/* Main Heading */}
+              <motion.h1
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight"
+              >
+                Digital & Trusted Transport Logistic Company
+              </motion.h1>
+              
+              {/* Description */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+                className="text-lg sm:text-xl text-white mb-8 leading-relaxed max-w-xl"
+              >
+                Our experienced team of problem solvers and a commitment to always align with our client's business goals and objectives is what drives mutual success.
+              </motion.p>
+              
+              {/* CTA Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.6 }}
+                className="flex flex-wrap items-center gap-4"
+              >
+                <Link href="/contact">
+                  <Button
+                    size="lg"
+                    className="bg-[#fbbf24] hover:bg-[#f59e0b] text-white border-0 px-8 py-6 text-base font-semibold rounded-md shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                  >
+                    Contact Us
+                  </Button>
+                </Link>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-3"
+                >
+                  <button className="w-14 h-14 rounded-full border-2 border-[#fbbf24] flex items-center justify-center hover:bg-[#fbbf24]/20 transition-colors group">
+                    <Play className="w-6 h-6 text-[#fbbf24] ml-1 group-hover:scale-110 transition-transform" />
+                  </button>
+                  <span className="text-white text-lg font-medium">How It Works</span>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Services Section */}
+      <section id="services" className="py-20 bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Our Services
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Comprehensive courier solutions tailored to meet your shipping needs
+            </p>
+          </motion.div>
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
+            {[
+              { icon: Package, title: "Express Delivery", desc: "Fast and secure express delivery services to over 100+ countries worldwide.", color: "blue" },
+              { icon: Truck, title: "Freight Services", desc: "Reliable freight and cargo services for businesses of all sizes.", color: "green" },
+              { icon: Globe, title: "International Shipping", desc: "Seamless international shipping with customs clearance support.", color: "purple" },
+              { icon: Clock, title: "Same-Day Delivery", desc: "Urgent delivery options available for time-sensitive shipments.", color: "orange" },
+              { icon: Shield, title: "Secure Packaging", desc: "Professional packaging services to ensure your items arrive safely.", color: "red" },
+              { icon: HeadphonesIcon, title: "24/7 Support", desc: "Round-the-clock customer support to assist you whenever you need help.", color: "cyan" },
+            ].map((service, index) => {
+              const Icon = service.icon;
+              return (
+                <motion.div
+                  key={index}
+                  variants={fadeInUp}
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-700"
+                >
+                  <div className={`w-12 h-12 bg-${service.color}-100 dark:bg-${service.color}-900 rounded-lg flex items-center justify-center mb-4`}>
+                    <Icon className={`w-6 h-6 text-${service.color}-600 dark:text-${service.color}-400`} />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                    {service.title}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {service.desc}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section id="about" className="py-20 bg-white dark:bg-gray-800">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
+                About PSS Worldwide
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
+                PSS Worldwide is a leading courier and logistics company committed to providing 
+                fast, reliable, and affordable shipping solutions to customers worldwide.
+              </p>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
+                With years of experience in the industry, we have built a reputation for 
+                excellence in international shipping, express delivery, and freight services.
+              </p>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+                Our state-of-the-art tracking system ensures you always know where your package is, 
+                and our dedicated team works around the clock to ensure timely and secure delivery.
+              </p>
+              <Link href="/about">
+                <Button size="lg" className="bg-[#1a365d] hover:bg-[#2c5282] text-white hover:scale-105 transition-transform">
+                  Learn More About Us
+                </Button>
+              </Link>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative h-96 rounded-xl overflow-hidden shadow-2xl"
+            >
+              <Image
+                src="/truck.jpg"
+                alt="About Us"
+                fill
+                className="object-cover"
+              />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact CTA Section */}
+      <section id="contact" className="py-20 bg-gradient-to-r from-[#1a365d] to-[#2E7D7D] text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10"
+        >
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Ready to Ship?
+          </h2>
+          <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+            Get in touch with us today and experience the difference of world-class courier services.
+          </p>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Link href="/contact">
+              <Button
+                size="lg"
+                className="bg-[#fbbf24] hover:bg-[#f59e0b] text-white border-0 hover:scale-105 transition-transform"
+              >
+                Contact Us
+              </Button>
+            </Link>
+            <Link href="/tracking">
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-white/20 text-white hover:bg-white/30 border-white hover:scale-105 transition-transform"
+              >
+                Track Package
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
+      </section>
     </div>
   );
 }

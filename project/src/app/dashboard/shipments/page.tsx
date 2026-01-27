@@ -50,7 +50,7 @@ export default function ShipmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [shipments, setShipments] = useState<
-    (Shipment & { invoices: { status: string }[] })[]
+    (Shipment & { invoices: { id: number; status: string }[] })[]
   >([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -81,7 +81,7 @@ export default function ShipmentsPage() {
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [shipmentToDelete, setShipmentToDelete] = useState<
-    (Shipment & { invoices: { status: string }[] }) | null
+    (Shipment & { invoices: { id: number; status: string }[] }) | null
   >(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
@@ -312,21 +312,21 @@ export default function ShipmentsPage() {
 
 
   const handleEdit = (
-    shipment: Shipment & { invoices: { status: string }[] }
+    shipment: Shipment & { invoices: { id: number; status: string }[] }
   ) => {
     // Redirect to add-shipment with id to enable edit mode and prefill
     window.location.href = `/dashboard/add-shipment?id=${shipment.id}`;
   };
 
   const handleDelete = async (
-    shipment: Shipment & { invoices: { status: string }[] }
+    shipment: Shipment & { invoices: { id: number; status: string }[] }
   ) => {
     setShipmentToDelete(shipment);
     setOpenDeleteDialog(true);
   };
 
   const handleMarkAsDelivered = async (
-    shipment: Shipment & { invoices: { status: string }[] }
+    shipment: Shipment & { invoices: { id: number; status: string }[] }
   ) => {
     try {
       const res = await fetch("/api/update-shipment", {
@@ -368,7 +368,7 @@ export default function ShipmentsPage() {
   };
 
   const handleMarkAsInTransit = async (
-    shipment: Shipment & { invoices: { status: string }[] }
+    shipment: Shipment & { invoices: { id: number; status: string }[] }
   ) => {
     try {
       const res = await fetch("/api/update-shipment", {
@@ -1044,6 +1044,15 @@ export default function ShipmentsPage() {
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
+                            {shipment.invoices?.[0]?.id && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  window.location.href = `/api/accounts/invoices/${shipment.invoices[0].id}/receipt`;
+                                }}
+                              >
+                                📄 Download Receipt
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={() => handleMarkAsInTransit(shipment)}
                               className="text-blue-600"

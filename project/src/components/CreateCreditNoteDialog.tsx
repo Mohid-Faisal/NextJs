@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,20 +64,13 @@ export default function CreateCreditNoteDialog({
   const [creditAccountId, setCreditAccountId] = useState<string>("");
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState<string>("");
   const [isInvoiceSelectOpen, setIsInvoiceSelectOpen] = useState<boolean>(false);
+  const [invoicesLoading, setInvoicesLoading] = useState<boolean>(false);
+  const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<Invoice | null>(null);
   const invoiceSearchInputRef = useRef<HTMLInputElement>(null);
+  const invoiceSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch available invoices, customers, and accounts
+  // Fetch customers and accounts on mount (invoices are fetched on search only)
   useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        const res = await fetch("/api/credit-notes/invoices");
-        const data = await res.json();
-        setInvoices(data.invoices);
-      } catch (error) {
-        console.error("Error fetching invoices:", error);
-      }
-    };
-
     const fetchCustomers = async () => {
       try {
         const res = await fetch("/api/customers");
@@ -100,21 +93,51 @@ export default function CreateCreditNoteDialog({
       }
     };
 
-    fetchInvoices();
     fetchCustomers();
     fetchAccounts();
   }, []);
 
-  // Auto-fill customer when invoice is selected
+  // Fetch invoices only when user types in search (debounced, search across all invoices)
+  const fetchInvoicesBySearch = useCallback(async (term: string) => {
+    const q = term.trim();
+    if (!q) {
+      setInvoices([]);
+      return;
+    }
+    setInvoicesLoading(true);
+    try {
+      const res = await fetch(`/api/credit-notes/invoices?search=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      setInvoices(data.invoices || []);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      setInvoices([]);
+    } finally {
+      setInvoicesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (invoiceSearchDebounceRef.current) clearTimeout(invoiceSearchDebounceRef.current);
+    if (!isInvoiceSelectOpen) return;
+    invoiceSearchDebounceRef.current = setTimeout(() => {
+      fetchInvoicesBySearch(invoiceSearchTerm);
+    }, 300);
+    return () => {
+      if (invoiceSearchDebounceRef.current) clearTimeout(invoiceSearchDebounceRef.current);
+    };
+  }, [invoiceSearchTerm, isInvoiceSelectOpen, fetchInvoicesBySearch]);
+
+  // Auto-fill customer when invoice is selected (use selectedInvoiceDetails or find in invoices)
   useEffect(() => {
     if (selectedInvoice) {
-      const invoice = invoices.find(i => i.invoiceNumber === selectedInvoice);
+      const invoice = selectedInvoiceDetails || invoices.find(i => i.invoiceNumber === selectedInvoice);
       if (invoice) {
         setSelectedCustomer(invoice.customer.id.toString());
         setAmount(invoice.totalAmount.toString());
       }
     }
-  }, [selectedInvoice, invoices]);
+  }, [selectedInvoice, invoices, selectedInvoiceDetails]);
 
   // Focus search input when select opens
   useEffect(() => {
@@ -225,57 +248,72 @@ export default function CreateCreditNoteDialog({
           <Select 
             value={selectedInvoice} 
             onValueChange={(value) => {
+              const inv = invoices.find(i => i.invoiceNumber === value) ?? selectedInvoiceDetails;
+              if (inv) setSelectedInvoiceDetails(inv);
               setSelectedInvoice(value);
               setIsInvoiceSelectOpen(false);
               setInvoiceSearchTerm("");
             }}
             open={isInvoiceSelectOpen}
-            onOpenChange={setIsInvoiceSelectOpen}
+            onOpenChange={(open) => {
+              setIsInvoiceSelectOpen(open);
+              if (!open) setInvoiceSearchTerm("");
+            }}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select Invoice" />
+              <SelectValue placeholder="Search by invoice number..." />
             </SelectTrigger>
-            <SelectContent>
-              <div className="p-2 border-b">
+            <SelectContent
+              className="z-[100] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)]"
+              position="popper"
+              align="start"
+              sideOffset={2}
+            >
+              <div className="p-2 border-b min-w-0 overflow-hidden">
                 <div className="relative">
-                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 shrink-0" />
                   <Input
                     ref={invoiceSearchInputRef}
                     type="text"
-                    placeholder="Search by invoice number or customer name..."
+                    placeholder="Search by invoice no. or customer..."
                     value={invoiceSearchTerm}
                     onChange={(e) => setInvoiceSearchTerm(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
-                    className="pl-8 h-9"
+                    className="pl-8 h-9 min-w-0 w-full"
                   />
                 </div>
               </div>
-              <div className="max-h-[300px] overflow-y-auto">
-                {invoices
-                  .filter((invoice) => {
-                    if (!invoiceSearchTerm) return true;
-                    const searchLower = invoiceSearchTerm.toLowerCase();
-                    const invoiceNumber = invoice.invoiceNumber.toLowerCase();
-                    const customerName = (invoice.customer.PersonName || invoice.customer.CompanyName || "").toLowerCase();
-                    return invoiceNumber.includes(searchLower) || customerName.includes(searchLower);
-                  })
-                  .map((invoice) => (
-                    <SelectItem key={invoice.id} value={invoice.invoiceNumber}>
-                      {invoice.invoiceNumber} - {invoice.customer.PersonName || invoice.customer.CompanyName} 
-                      ({invoice.currency} {invoice.totalAmount.toLocaleString()})
-                    </SelectItem>
-                  ))}
-                {invoices.filter((invoice) => {
-                  if (!invoiceSearchTerm) return false;
-                  const searchLower = invoiceSearchTerm.toLowerCase();
-                  const invoiceNumber = invoice.invoiceNumber.toLowerCase();
-                  const customerName = (invoice.customer.PersonName || invoice.customer.CompanyName || "").toLowerCase();
-                  return invoiceNumber.includes(searchLower) || customerName.includes(searchLower);
-                }).length === 0 && (
-                  <div className="px-2 py-6 text-center text-sm text-gray-500">
-                    No invoices found
+              <div className="max-h-[300px] overflow-y-auto overflow-x-hidden min-w-0">
+                {invoicesLoading ? (
+                  <div className="px-2 py-6 text-center text-sm text-gray-500 break-words">
+                    Searching...
                   </div>
+                ) : !invoiceSearchTerm.trim() ? (
+                  <div className="px-2 py-6 text-center text-sm text-gray-500 break-words">
+                    Type invoice number or customer name to search
+                  </div>
+                ) : (
+                  <>
+                    {[
+                      ...(selectedInvoice && selectedInvoiceDetails && !invoices.some(i => i.invoiceNumber === selectedInvoice)
+                        ? [selectedInvoiceDetails]
+                        : []),
+                      ...invoices,
+                    ].map((invoice) => (
+                      <SelectItem key={invoice.id} value={invoice.invoiceNumber} className="truncate max-w-full">
+                        <span className="truncate block">
+                          {invoice.invoiceNumber} - {invoice.customer.PersonName || invoice.customer.CompanyName}{" "}
+                          ({invoice.currency} {invoice.totalAmount.toLocaleString()})
+                        </span>
+                      </SelectItem>
+                    ))}
+                    {invoices.length === 0 && (
+                      <div className="px-2 py-6 text-center text-sm text-gray-500">
+                        No invoices found
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </SelectContent>
@@ -328,7 +366,7 @@ export default function CreateCreditNoteDialog({
               <SelectTrigger id="type" className="w-full h-10">
                 <SelectValue placeholder="Select Type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[100]">
                 <SelectItem value="CREDIT">CREDIT</SelectItem>
                 <SelectItem value="DEBIT">DEBIT</SelectItem>
               </SelectContent>
@@ -367,7 +405,7 @@ export default function CreateCreditNoteDialog({
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Debit Account" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100]">
                   {accounts.map((account) => (
                     <SelectItem key={account.id} value={account.id.toString()}>
                       {account.code} - {account.accountName} ({account.category})
@@ -384,7 +422,7 @@ export default function CreateCreditNoteDialog({
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Credit Account" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100]">
                   {accounts.map((account) => (
                     <SelectItem key={account.id} value={account.id.toString()}>
                       {account.code} - {account.accountName} ({account.category})

@@ -117,6 +117,7 @@ export async function GET(req: Request) {
               profile: "Customer"
             },
             select: {
+              id: true,
               status: true
             }
           }
