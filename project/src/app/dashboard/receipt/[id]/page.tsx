@@ -76,14 +76,20 @@ interface Invoice {
 
 export default function ReceiptPage() {
   const params = useParams();
+  const id = typeof params.id === 'string' ? params.id : (Array.isArray(params.id) ? params.id[0] : '');
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!id) {
+      setError('Missing invoice id');
+      setLoading(false);
+      return;
+    }
     const fetchInvoice = async () => {
       try {
-        const response = await fetch(`/api/accounts/invoices/${params.id}`);
+        const response = await fetch(`/api/accounts/invoices/${id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch invoice');
         }
@@ -95,11 +101,8 @@ export default function ReceiptPage() {
         setLoading(false);
       }
     };
-
-    if (params.id) {
-      fetchInvoice();
-    }
-  }, [params.id]);
+    fetchInvoice();
+  }, [id]);
 
   const handlePrint = () => {
     if (!invoice) {

@@ -125,13 +125,27 @@ const PublicNavbar = () => {
 
             {/* Right - Track order link + Rate calculator button */}
             <div className="hidden lg:flex items-center gap-6 shrink-0">
-              <Link
-                href="/tracking"
-                className="inline-flex items-center gap-1.5 text-md font-medium text-black hover:text-black transition-colors"
-              >
-                <FaArrowRight className="w-5 h-5 fill-current" />
-                <span>Tracking</span>
-              </Link>
+              {pathname === "/" ? (
+                <Link
+                  href="/#track-package"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById("track-package")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="inline-flex items-center gap-1.5 text-md font-medium text-black hover:text-black transition-colors"
+                >
+                  <FaArrowRight className="w-5 h-5 fill-current" />
+                  <span>Tracking</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/tracking"
+                  className="inline-flex items-center gap-1.5 text-md font-medium text-black hover:text-black transition-colors"
+                >
+                  <FaArrowRight className="w-5 h-5 fill-current" />
+                  <span>Tracking</span>
+                </Link>
+              )}
               <Link
                 href="/rate-calculator"
                 className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-md font-medium text-white hover:bg-blue-700 transition-colors"
@@ -168,13 +182,27 @@ const PublicNavbar = () => {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                href="/tracking"
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-lg font-medium text-black"
-              >
-                Track order
-              </Link>
+              {pathname === "/" ? (
+                <Link
+                  href="/#track-package"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById("track-package")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    setIsMenuOpen(false);
+                  }}
+                  className="block px-4 py-3 text-lg font-medium text-black"
+                >
+                  Track order
+                </Link>
+              ) : (
+                <Link
+                  href="/tracking"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-3 text-lg font-medium text-black"
+                >
+                  Track order
+                </Link>
+              )}
               <div className="pt-2 px-4">
                 <Link
                   href="/rate-calculator"

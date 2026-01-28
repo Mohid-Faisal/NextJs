@@ -328,8 +328,7 @@ export default function ShipmentsPage() {
   const handleEdit = (
     shipment: Shipment & { invoices: { id: number; status: string }[] }
   ) => {
-    // Redirect to add-shipment with id to enable edit mode and prefill
-    window.location.href = `/dashboard/add-shipment?id=${shipment.id}`;
+    router.push(`/dashboard/add-shipment?id=${shipment.id}`);
   };
 
   const handleDelete = async (
@@ -1102,57 +1101,38 @@ export default function ShipmentsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem
-                              onClick={() => handleEdit(shipment)}
-                            >
+                            <DropdownMenuItem onSelect={() => handleEdit(shipment)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                window.location.href = `/dashboard/shipments/${shipment.id}`;
-                              }}
-                            >
+                            <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipments/${shipment.id}`)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
                             {shipment.invoices?.[0]?.id && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  window.location.href = `/api/accounts/invoices/${shipment.invoices[0].id}/receipt`;
-                                }}
-                              >
-                                📄 Download Receipt
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem
+                                  onSelect={() => router.push(`/dashboard/receipt/${shipment.invoices![0].id}`)}
+                                >
+                                  📄 Download Receipt
+                                </DropdownMenuItem>
+                              </>
                             )}
-                            <DropdownMenuItem onClick={() => openUpdateTrackingDialog(shipment)}>
+                            <DropdownMenuItem onSelect={() => openUpdateTrackingDialog(shipment)}>
                               <Truck className="mr-2 h-4 w-4" />
                               Update Tracking Status
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleMarkAsInTransit(shipment)}
-                              className="text-blue-600"
-                            >
+                            <DropdownMenuItem onSelect={() => handleMarkAsInTransit(shipment)} className="text-blue-600">
                               <Truck className="mr-2 h-4 w-4" />
                               Mark as In Transit
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleMarkAsDelivered(shipment)}
-                              className="text-green-600"
-                            >
+                            <DropdownMenuItem onSelect={() => handleMarkAsDelivered(shipment)} className="text-green-600">
                               <CheckCircle className="mr-2 h-4 w-4" />
                               Mark as Delivered
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(shipment)}
-                              className="text-red-600"
-                            >
+                            <DropdownMenuItem onSelect={() => handleDelete(shipment)} className="text-red-600">
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Printer className="mr-2 h-4 w-4" />
-                              Print Receipt
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

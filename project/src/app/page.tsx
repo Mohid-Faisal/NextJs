@@ -89,7 +89,7 @@ function BrandsSlideshowSection() {
   const visibleBrands = Array.from({ length: BRANDS_VISIBLE }, (_, k) => BRANDS[(startIndex + k) % n]);
 
   return (
-    <section id="brands" className="py-16 bg-gray-50 dark:bg-gray-900 border-y border-gray-200 dark:border-gray-700">
+    <section id="brands" className="py-16 bg-gray-50 dark:bg-gray-900 border-y border-gray-200 dark:border-gray-700 scroll-mt-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.h2
           initial={{ opacity: 0, y: 12 }}
@@ -132,7 +132,7 @@ function CustomerStoriesSection() {
   const initials = story.name.split(" ").map((n) => n[0]).join("").slice(0, 2);
 
   return (
-    <section id="customer-stories" className="py-20 bg-white dark:bg-gray-800">
+    <section id="customer-stories" className="py-20 bg-white dark:bg-gray-800 scroll-mt-30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <motion.p
           initial={{ opacity: 0, y: 10 }}
@@ -235,13 +235,13 @@ function TrackYourPackageSection() {
   };
 
   return (
-    <section id="track-package" className="relative py-16 bg-linear-to-r from-[#1a365d] to-[#2E7D7D] text-white">
+    <section id="track-package" className="relative py-16 bg-white dark:bg-gray-800 border-t border-b border-gray-100 dark:border-gray-700 scroll-mt-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <motion.h2
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-3xl md:text-4xl font-bold mb-2"
+          className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2"
         >
           Track Your Package
         </motion.h2>
@@ -250,7 +250,7 @@ function TrackYourPackageSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.05 }}
-          className="text-white/90 text-lg mb-8"
+          className="text-gray-600 dark:text-gray-400 text-lg mb-8"
         >
           Enter your booking ID to get real-time updates on your shipment
         </motion.p>
@@ -267,12 +267,12 @@ function TrackYourPackageSection() {
             value={bookingId}
             onChange={(e) => setBookingId(e.target.value)}
             placeholder="Enter booking ID (e.g., 420001)"
-            className="flex-1 min-w-0 h-12 px-4 rounded-lg bg-white border-gray-200 text-gray-900 placeholder:text-gray-500"
+            className="flex-1 min-w-0 h-12 px-4 rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus-visible:ring-blue-600 focus-visible:ring-offset-0"
           />
           <Button
             type="submit"
             size="lg"
-            className="h-12 px-8 bg-amber-400 hover:bg-amber-500 text-gray-900 font-semibold rounded-lg shrink-0"
+            className="h-12 px-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shrink-0"
           >
             <Search className="w-5 h-5 mr-2 inline" />
             Track
@@ -325,7 +325,7 @@ export default function HomePage() {
       <section
         ref={heroRef}
         id="home"
-        className="relative w-full min-h-screen overflow-hidden -mt-[115px] pt-[115px]"
+        className="relative w-full min-h-screen overflow-hidden -mt-[115px] pt-[115px] scroll-mt-32"
       >
         <motion.div className="absolute inset-0" style={{ y: imageY, scale: imageScale }}>
           {HERO_SLIDES.map((img, index) => (
@@ -377,7 +377,7 @@ export default function HomePage() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-20 bg-white dark:bg-gray-800">
+      <section id="about" className="py-20 bg-white dark:bg-gray-800 scroll-mt-30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div
@@ -429,7 +429,7 @@ export default function HomePage() {
       <BrandsSlideshowSection />
 
       {/* Services Section */}
-      <section id="services" className="py-20 bg-gray-50 dark:bg-gray-900">
+      <section id="services" className="py-20 bg-gray-50 dark:bg-gray-900 scroll-mt-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -487,41 +487,6 @@ export default function HomePage() {
       {/* Track Your Package */}
       <TrackYourPackageSection />
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
-          >
-            Competitive Pricing
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8"
-          >
-            Get transparent quotes tailored to your shipment. Request a quote below and we&apos;ll respond promptly.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-          >
-            <a href="#contact">
-              <Button size="lg" className="bg-[#1a365d] hover:bg-[#2c5282] text-white">
-                Get a Quote
-              </Button>
-            </a>
-          </motion.div>
-        </div>
-      </section>
-
       {/* Customer Stories Section */}
       <CustomerStoriesSection />
 
@@ -567,16 +532,36 @@ function ContactSection() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company: formData.company || undefined,
+          name: formData.name,
+          phone: formData.phone || undefined,
+          email: formData.email,
+          service: formData.service || undefined,
+          message: formData.message,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to send. Please try again or email us directly.");
+        return;
+      }
       toast.success("Thank you for your message! We'll get back to you soon.");
       setFormData({ company: "", name: "", phone: "", email: "", service: "", message: "" });
       setPrivacyAccepted(false);
+    } catch {
+      toast.error("Failed to send. Please try again or email us directly.");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
-    <section id="contact" className="relative bg-[#1f2937] text-white overflow-hidden">
+    <section id="contact" className="relative bg-[#1f2937] text-white overflow-hidden scroll-mt-30">
       {/* Top blue line */}
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#2563eb]" aria-hidden />
       {/* Subtle dotted pattern */}
@@ -604,8 +589,8 @@ function ContactSection() {
                 <span>LGF-44, Land Mark Plaza, Jail Road<br />Lahore, 54660, Pakistan</span>
               </li>
               <li>
-                <a href="tel:+923008482321" className="flex items-center gap-2 hover:text-white transition-colors">
-                  <Phone className="w-4 h-4 shrink-0" /> +92 300 8482 321
+                <a href="tel:+92 42 35716494" className="flex items-center gap-2 hover:text-white transition-colors">
+                  <Phone className="w-4 h-4 shrink-0" /> +92 42 35716494
                 </a>
               </li>
               <li>
@@ -661,7 +646,7 @@ function ContactSection() {
           <div className="lg:col-span-2 rounded-lg overflow-hidden bg-gray-800/50 aspect-16/10 min-h-[200px]">
             <iframe
               title="PSS Worldwide - Land Mark Plaza, Jail Road, Lahore"
-              src="https://www.google.com/maps?q=LGF-44+Land+Mark+Plaza+Jail+Road+Lahore+54660+Pakistan&output=embed"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3400.6058668977444!2d74.3469253!3d31.5349833!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391905ede7407d95%3A0x3731d66c5f937a1f!2sPrompt%20Survey%20%26%20Services%20(PSS)!5e0!3m2!1sen!2s!4v1769604264555!5m2!1sen!2s"
               className="w-full h-full border-0"
               allowFullScreen
               loading="lazy"
