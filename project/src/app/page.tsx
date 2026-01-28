@@ -19,6 +19,7 @@ import {
 import { Package, Truck, Globe, Clock, Shield, HeadphonesIcon, Facebook, Twitter, Instagram, MapPin, Phone, Mail, Search, Star } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { toast } from "sonner";
+import TrackingResultsDialog from "@/components/TrackingResultsDialog";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -152,7 +153,7 @@ function CustomerStoriesSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.05 }}
-          className="text-center text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-12"
+          className="text-center text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-12"
         >
           What Says Our Happy Clients
         </motion.h2>
@@ -229,17 +230,14 @@ function CustomerStoriesSection() {
 }
 
 function TrackYourPackageSection() {
-  const router = useRouter();
   const [bookingId, setBookingId] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const handleTrack = (e: React.FormEvent) => {
     e.preventDefault();
     const id = bookingId.trim();
-    if (id) {
-      router.push(`/tracking?bookingId=${encodeURIComponent(id)}`);
-    } else {
-      router.push("/tracking");
-    }
+    if (!id) return;
+    setDialogOpen(true);
   };
 
   return (
@@ -251,7 +249,7 @@ function TrackYourPackageSection() {
           viewport={{ once: true }}
           className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2"
         >
-          Track Your Package
+          Track Your Shipment
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 8 }}
@@ -287,6 +285,13 @@ function TrackYourPackageSection() {
           </Button>
         </motion.form>
       </div>
+
+      <TrackingResultsDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        initialBookingId={bookingId.trim()}
+        autoSearch
+      />
     </section>
   );
 }
@@ -571,7 +576,13 @@ function ContactSection() {
   };
 
   return (
-    <section id="contact" className="relative bg-[#1f2937] text-white overflow-hidden scroll-mt-30">
+    <section
+      id="contact"
+      className="relative text-white overflow-hidden scroll-mt-30 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/map.jpeg')" }}
+    >
+      {/* Black tint over background image */}
+      <div className="absolute inset-0 bg-black/75" aria-hidden />
       {/* Top blue line */}
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#2563eb]" aria-hidden />
       {/* Subtle dotted pattern */}
