@@ -49,33 +49,33 @@ const PublicNavbar = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* Top Bar - dark blue/black, white filled icons & text, email centered, 5% side margin */}
-      <div className="bg-[#0f172a] py-2">
+      {/* Top Bar - match reference: phone | email | address left, language | social right, 5% margin, larger font */}
+      <div className="bg-[#0f172a] py-2.5">
         <div className="w-full mx-auto px-[5%]">
-          <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-y-2 text-sm text-white gap-x-4">
-            {/* Left: Phone | Address with vertical separator */}
-            <div className="flex flex-wrap items-center gap-3 min-w-0 order-2 md:order-1">
-              <a href="tel:+924235716494" className="flex items-center gap-2 hover:text-white/90 transition-colors shrink-0">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 text-sm text-white">
+            {/* Left: Phone | Email | Address, each separated by vertical divider */}
+            <div className="flex flex-wrap items-center gap-0 min-w-0">
+              <a href="tel:+924235716494" className="flex items-center gap-2 hover:text-white/90 transition-colors shrink-0 pr-12 sm:pr-12 border-r border-white/30">
                 <FaPhone className="w-4 h-4 shrink-0 text-white" />
                 <span>+92 42 35716494</span>
               </a>
-            </div>
-            {/* Center: Email */}
-            <div className="flex justify-center order-1 md:order-2">
-              <a href="mailto:info@psswwe.com" className="flex items-center gap-2 hover:text-white/90 transition-colors">
+              <a href="mailto:info@psswwe.com" className="flex items-center gap-2 hover:text-white/90 transition-colors min-w-0 px-12 sm:px-12">
                 <FaEnvelope className="w-4 h-4 shrink-0 text-white" />
-                <span className="truncate">info@psswwe.com</span>
+                <span className="truncate max-w-[180px] sm:max-w-none">info@psswwe.com</span>
               </a>
+              <span className="hidden sm:flex items-center gap-2 min-w-0 pl-30 sm:pl-30">
+                <FaMapMarkerAlt className="w-4 h-4 shrink-0 text-white" />
+                <span className="truncate max-w-[200px] lg:max-w-none">LGF-44 Land Mark Plaza, Jail Road, Lahore, 54660, Pakistan</span>
+              </span>
             </div>
-            {/* Right: Language | Social icons with vertical separators */}
-            <div className="flex items-center justify-start md:justify-end gap-3 shrink-0 order-3">
-              <div className="flex items-center gap-1.5 cursor-pointer hover:text-white/90">
+            {/* Right: Language | Social icons with vertical dividers */}
+            <div className="flex items-center gap-0 shrink-0 border-l border-white/30 pl-12 sm:pl-12">
+              <div className="flex items-center gap-2 cursor-pointer hover:text-white/90 pr-12 sm:pr-12 border-r border-white/30">
                 <FaGlobe className="w-4 h-4 text-white" />
                 <span>EN</span>
                 <FaChevronDown className="w-4 h-4 text-white" />
               </div>
-              <span className="w-px h-4 bg-white/30 shrink-0" aria-hidden />
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4 pl-16 sm:pl-16">
                 <a href="#" className="hover:text-white/90 transition-colors text-white" aria-label="YouTube">
                   <FaYoutube className="w-4 h-4" />
                 </a>
@@ -107,14 +107,14 @@ const PublicNavbar = () => {
               />
             </Link>
 
-            {/* Center - Nav links, sentence case, dark grey, larger font */}
+            {/* Center - Nav links, sentence case, dark grey, increased font */}
             <nav className="hidden lg:flex items-center justify-center flex-1 gap-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.href + link.label}
                   href={link.href}
                   onClick={(e) => handleSectionClick(e, link.href)}
-                  className={`px-1 py-2 text-base font-medium text-slate-700 hover:text-slate-900 transition-colors ${
+                  className={`px-1 py-2 text-lg font-medium text-slate-700 hover:text-slate-900 transition-colors ${
                     isActive(link.href) ? "text-slate-900" : ""
                   }`}
                 >
@@ -127,18 +127,17 @@ const PublicNavbar = () => {
             <div className="hidden lg:flex items-center gap-6 shrink-0">
               <Link
                 href="/tracking"
-                className="inline-flex items-center gap-1.5 text-base font-medium text-black hover:text-black transition-colors"
+                className="inline-flex items-center gap-1.5 text-md font-medium text-black hover:text-black transition-colors"
               >
-                <FaArrowRight className="w-4 h-4 fill-current" />
+                <FaArrowRight className="w-5 h-5 fill-current" />
                 <span>Tracking</span>
               </Link>
               <Link
-                href="/#contact"
-                onClick={(e) => handleSectionClick(e, "/#contact")}
-                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-base font-medium text-white hover:bg-blue-700 transition-colors"
+                href="/rate-calculator"
+                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-md font-medium text-white hover:bg-blue-700 transition-colors"
               >
-                <span>Rate Calculator</span>
-                <FaExternalLinkAlt className="w-4 h-4 fill-current" />
+                <span>Rate calculator</span>
+                <FaExternalLinkAlt className="w-5 h-5 fill-current" />
               </Link>
             </div>
 
@@ -162,7 +161,7 @@ const PublicNavbar = () => {
                     handleSectionClick(e, link.href);
                     setIsMenuOpen(false);
                   }}
-                  className={`block px-4 py-3 text-base font-medium ${
+                  className={`block px-4 py-3 text-lg font-medium ${
                     isActive(link.href) ? "text-slate-900" : "text-slate-700"
                   }`}
                 >
@@ -172,18 +171,15 @@ const PublicNavbar = () => {
               <Link
                 href="/tracking"
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-base font-medium text-black"
+                className="block px-4 py-3 text-lg font-medium text-black"
               >
                 Track order
               </Link>
               <div className="pt-2 px-4">
                 <Link
-                  href="/#contact"
-                  onClick={(e) => {
-                    handleSectionClick(e, "/#contact");
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full py-3 text-center text-base font-medium rounded-full bg-blue-600 text-white"
+                  href="/rate-calculator"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block w-full py-3 text-center text-lg font-medium rounded-full bg-blue-600 text-white"
                 >
                   Rate calculator
                 </Link>
