@@ -175,7 +175,8 @@ export async function GET() {
         totalWeight: true,
         weight: true,
         shipmentDate: true,
-        createdAt: true
+        createdAt: true,
+        serviceMode: true
       }
     });
     
@@ -224,7 +225,8 @@ export async function GET() {
         amount: shipment.amount || 1,
         totalWeight: shipment.totalWeight || shipment.weight || 0,
         shipmentDate: shipment.shipmentDate || shipment.createdAt,
-        createdAt: shipment.createdAt.toISOString()
+        createdAt: shipment.createdAt.toISOString(),
+        serviceMode: shipment.serviceMode
       };
     });
     

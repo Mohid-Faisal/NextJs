@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, Truck, Globe, Clock, Shield, HeadphonesIcon, Facebook, Twitter, Instagram, MapPin, Phone, Mail, Search } from "lucide-react";
+import { Package, Truck, Globe, Clock, Shield, HeadphonesIcon, Facebook, Twitter, Instagram, MapPin, Phone, Mail, Search, Star } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { toast } from "sonner";
 
@@ -34,19 +34,19 @@ const staggerContainer = {
   }
 };
 
-const CUSTOMER_STORIES: { name: string; title: string; shortQuote: string; fullQuote: string }[] = [
-  { name: "Hilary Ouse", title: "E-Commerce Entrepreneur", shortQuote: "Fantastic service and amazing support!", fullQuote: "As a transportation coordinator, I appreciate the simplicity and power of PSS Worldwide's real-time features. Managing fleets, monitoring routes, and addressing issues proactively - all in one place. It's a game-changer for anyone in the logistics field." },
-  { name: "James Chen", title: "Supply Chain Manager", shortQuote: "Reliable and on time, every time.", fullQuote: "We've been using PSS Worldwide for our international shipments for over two years. The tracking is transparent, customer support is responsive, and our packages always arrive when promised. Highly recommend for B2B logistics." },
-  { name: "Sarah Mitchell", title: "Small Business Owner", shortQuote: "Made shipping simple and affordable.", fullQuote: "As a small business owner, I needed a courier that could handle both domestic and international orders without breaking the bank. PSS Worldwide offered competitive rates and seamless delivery. My customers are happy and so am I." },
-  { name: "David Okonkwo", title: "Import-Export Specialist", shortQuote: "Best customs clearance support we've had.", fullQuote: "The customs clearance assistance from PSS Worldwide has saved us countless hours. They handle documentation, coordinate with authorities, and keep us informed at every step. Professional and stress-free." },
-  { name: "Emma Rodriguez", title: "Fashion Retailer", shortQuote: "Same-day delivery option is a lifesaver.", fullQuote: "When we have urgent orders or last-minute restocks, PSS's same-day delivery option has been a lifesaver. Fast, secure, and our fragile items always arrive in perfect condition. Worth every penny." },
-  { name: "Michael Park", title: "IT Hardware Distributor", shortQuote: "Scaled our shipments without a hitch.", fullQuote: "We grew from shipping a few dozen boxes a month to hundreds. PSS Worldwide scaled with us—same quality, same reliability. Their freight services and warehouse support made the transition smooth." },
-  { name: "Lisa Thompson", title: "Medical Supplies Coordinator", shortQuote: "Critical shipments handled with care.", fullQuote: "We ship time-sensitive medical equipment and supplies. PSS Worldwide understands the urgency and handles every shipment with care. Tracking and notifications give us peace of mind." },
-  { name: "Ahmed Hassan", title: "Textile Exporter", shortQuote: "Global reach, local feel.", fullQuote: "Exporting to multiple countries used to be a headache. With PSS Worldwide, we get one point of contact, clear pricing, and deliveries across Asia, Europe, and the Americas. Feels local even when it's global." },
-  { name: "Rachel Green", title: "Art Gallery Director", shortQuote: "White-glove handling for delicate pieces.", fullQuote: "We ship art and fragile installations. PSS's secure packaging and careful handling mean our pieces arrive exhibition-ready. Their team treats every shipment like it's their own." },
-  { name: "Omar Khalil", title: "Electronics Wholesaler", shortQuote: "Real-time tracking changed how we work.", fullQuote: "The real-time tracking and proof of delivery have cut down customer disputes and support tickets. We always know where a package is and when it was received. Efficiency went up, stress went down." },
-  { name: "Nina Patel", title: "Organic Food Supplier", shortQuote: "Temperature-controlled shipping done right.", fullQuote: "We needed a partner who could handle temperature-sensitive organic produce. PSS Worldwide's logistics and cold-chain options have been solid. Fresh delivery, happy customers, fewer losses." },
-  { name: "Chris Walsh", title: "Automotive Parts Distributor", shortQuote: "Heavy freight and express in one place.", fullQuote: "We use PSS for both heavy freight and express spare parts. Having one provider for both simplifies invoicing, reporting, and relationship management. Quality and consistency across the board." },
+const CUSTOMER_STORIES: { name: string; title: string; shortQuote: string; fullQuote: string; photo?: string }[] = [
+  { name: "Sajid Aslam", title: "CEO Cormet Group", shortQuote: "Always reliable, always personal—PSS makes shipping easy.", fullQuote: "As a transportation coordinator, I appreciate the simplicity and power of PSS Worldwide's real-time features. Managing fleets, monitoring routes, and addressing issues proactively - all in one place. It's a game-changer for anyone in the logistics field.", photo: "/customers/Sajid.jpeg" },
+  { name: "Zubair Suleman", title: "Partner Matila Traders", shortQuote: "Exceptional service with a friendly touch every time.", fullQuote: "We've been using PSS Worldwide for our international shipments for over two years. The tracking is transparent, customer support is responsive, and our packages always arrive when promised. Highly recommend for B2B logistics.", photo: "/customers/Zubair.jpeg" },
+  { name: "Shafiq Latif", title: "Swift Global", shortQuote: "Trusted team, smooth delivery, peace of mind.", fullQuote: "As a small business owner, I needed a courier that could handle both domestic and international orders without breaking the bank. PSS Worldwide offered competitive rates and seamless delivery. My customers are happy and so am I." },
+  { name: "Najam Alavi", title: "Xenomorph", shortQuote: "Fast, safe, and handled with care—every shipment counts.", fullQuote: "The customs clearance assistance from PSS Worldwide has saved us countless hours. They handle documentation, coordinate with authorities, and keep us informed at every step. Professional and stress-free.", photo: "/customers/Najam.jpeg" },
+  { name: "Hamza Asif", title: "Vodoo Spell Botique", shortQuote: "Professional, personal, and always going the extra mile.", fullQuote: "When we have urgent orders or last-minute restocks, PSS's same-day delivery option has been a lifesaver. Fast, secure, and our fragile items always arrive in perfect condition. Worth every penny." },
+  { name: "Arshad Rasheed", title: "Owner Friends Tailor", shortQuote: "Your cargo is safe, and the service is seamless.", fullQuote: "We grew from shipping a few dozen boxes a month to hundreds. PSS Worldwide scaled with us—same quality, same reliability. Their freight services and warehouse support made the transition smooth." },
+  { name: "Asad Ullah", title: "Partner Alwan Printers", shortQuote: "Reliable, efficient, and truly cares about your shipment.", fullQuote: "We ship time-sensitive medical equipment and supplies. PSS Worldwide understands the urgency and handles every shipment with care. Tracking and notifications give us peace of mind.", photo: "/customers/Asad.jpeg" },
+  { name: "Shms ul Haq", title: "Owner Nisar Studio", shortQuote: "Shipping made simple, with a team you can trust.", fullQuote: "Exporting to multiple countries used to be a headache. With PSS Worldwide, we get one point of contact, clear pricing, and deliveries across Asia, Europe, and the Americas. Feels local even when it's global." },
+  { name: "Mubashir Malik", title: "GM Minolta Systems", shortQuote: "On time, stress-free, and always professional.", fullQuote: "We ship art and fragile installations. PSS's secure packaging and careful handling mean our pieces arrive exhibition-ready. Their team treats every shipment like it's their own.", photo: "/customers/Mubashir.jpeg" },
+  { name: "Abdur Rahman", title: "Director Sphere Traders", shortQuote: "Friendly service, expert handling, and consistent delivery.", fullQuote: "The real-time tracking and proof of delivery have cut down customer disputes and support tickets. We always know where a package is and when it was received. Efficiency went up, stress went down." },
+  { name: "Aaida Abu Jaber", title: "Tor Tar Fashion", shortQuote: "Every shipment handled with care and attention.", fullQuote: "We needed a partner who could handle temperature-sensitive organic produce. PSS Worldwide's logistics and cold-chain options have been solid. Fresh delivery, happy customers, fewer losses.", photo: "/customers/Aaida.jpeg" },
+  { name: "Amna Shah", title: "Director Rakhtsaaz", shortQuote: "A brilliant team making international shipping effortless.", fullQuote: "We use PSS for both heavy freight and express spare parts. Having one provider for both simplifies invoicing, reporting, and relationship management. Quality and consistency across the board." },
 ];
 
 const BRANDS = [
@@ -117,28 +117,33 @@ function BrandsSlideshowSection() {
   );
 }
 
+const CARDS_PER_VIEW = 3;
+
 function CustomerStoriesSection() {
-  const [activeIndex, setActiveIndex] = useState(0);
   const stories = CUSTOMER_STORIES;
+  const numSlides = Math.ceil(stories.length / CARDS_PER_VIEW);
+  const [activeSlide, setActiveSlide] = useState(0);
 
   useEffect(() => {
     const t = setInterval(() => {
-      setActiveIndex((i) => (i + 1) % stories.length);
+      setActiveSlide((i) => (i + 1) % numSlides);
     }, 3000);
     return () => clearInterval(t);
-  }, [stories.length]);
+  }, [numSlides]);
 
-  const story = stories[activeIndex];
-  const initials = story.name.split(" ").map((n) => n[0]).join("").slice(0, 2);
+  const visibleStories = stories.slice(
+    activeSlide * CARDS_PER_VIEW,
+    activeSlide * CARDS_PER_VIEW + CARDS_PER_VIEW
+  );
 
   return (
-    <section id="customer-stories" className="py-20 bg-white dark:bg-gray-800 scroll-mt-30">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <section id="customer-stories" className="py-20 bg-white dark:bg-gray-800 scroll-mt-32">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-sm font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-2"
+          className="text-center text-sm font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-2"
         >
           Customer Stories
         </motion.p>
@@ -147,69 +152,72 @@ function CustomerStoriesSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.05 }}
-          className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-14"
+          className="text-center text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-12"
         >
           What Says Our Happy Clients
         </motion.h2>
 
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex justify-center mb-8"
-          >
-            <div
-              className="w-24 h-24 rounded-full bg-linear-to-br from-emerald-400 via-orange-400 to-amber-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg"
-              aria-hidden
+        <div className="max-w-6xl mx-auto overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeSlide}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.35 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-6"
             >
-              {initials}
-            </div>
-          </motion.div>
-
-          <div className="relative flex items-start justify-center gap-4 md:gap-6 text-left">
-            <span
-              className="text-6xl md:text-7xl font-serif text-red-200 dark:text-red-900/50 select-none leading-none mt-0 shrink-0"
-              aria-hidden
-            >
-              &ldquo;
-            </span>
-            <div className="flex-1 min-w-0">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeIndex}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.35 }}
-                  className="space-y-4"
-                >
-                  <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                    {story.shortQuote}
-                  </p>
-                  <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {story.fullQuote}
-                  </p>
-                  <div className="pt-2">
-                    <p className="font-bold text-gray-900 dark:text-white">{story.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-500">{story.title}</p>
+              {visibleStories.map((story) => {
+                const initials = story.name.split(" ").map((n) => n[0]).join("").slice(0, 2);
+                return (
+                  <div
+                    key={story.name + story.shortQuote}
+                    className="bg-white dark:bg-gray-700 rounded-xl shadow-md border border-gray-100 dark:border-gray-600 p-5 md:p-6 flex flex-col text-left"
+                  >
+                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-3">
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((_) => (
+                          <Star key={_} className="w-5 h-5 fill-current" />
+                        ))}
+                      </div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">(5) Rating</span>
+                    </div>
+                    <p className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                      {story.shortQuote}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1 line-clamp-4">
+                      {story.fullQuote}
+                    </p>
+                    <div className="mt-4 flex items-center gap-3 pt-3 border-t border-gray-100 dark:border-gray-600">
+                      <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-blue-700 flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden">
+                        {story.photo ? (
+                          <img src={story.photo} alt={story.name} className="w-full h-full object-cover" />
+                        ) : (
+                          initials
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm">{story.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{story.title}</p>
+                      </div>
+                    </div>
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
 
-          <div className="flex justify-center gap-1.5 mt-12" role="tablist" aria-label="Testimonial slides">
-            {stories.map((_, i) => (
+          <div className="flex justify-center gap-2 mt-10" role="tablist" aria-label="Customer story slides">
+            {Array.from({ length: numSlides }).map((_, i) => (
               <button
                 key={i}
                 type="button"
                 role="tab"
-                aria-selected={i === activeIndex}
-                aria-label={`Go to testimonial ${i + 1}`}
-                onClick={() => setActiveIndex(i)}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  i === activeIndex ? "w-8 bg-red-600" : "w-2 bg-gray-300 dark:bg-gray-600"
+                aria-selected={i === activeSlide}
+                aria-label={`Go to slide ${i + 1}`}
+                onClick={() => setActiveSlide(i)}
+                className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
+                  i === activeSlide ? "bg-blue-600 scale-125" : "bg-gray-300 dark:bg-gray-600 hover:bg-gray-400"
                 }`}
               />
             ))}
@@ -287,6 +295,8 @@ const HERO_SLIDES = [
   { src: "/banner_new.jpg", alt: "Your trusted delivery partner" },
   { src: "/truck.jpg", alt: "PSS Worldwide logistics" },
   { src: "/Truck_2.jpg", alt: "PSS Worldwide logistics2" },
+  { src: "/shipment.jpeg", alt: "Your trusted delivery partner" },
+  { src: "/shipment2.jpeg", alt: "Your trusted delivery partner2" },
 ];
 
 export default function HomePage() {

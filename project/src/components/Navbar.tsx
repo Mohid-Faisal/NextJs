@@ -104,7 +104,7 @@ const Navbar = ({
           <img 
             src="/logo_final.png" 
             alt="PSS Logo" 
-            className="h-10 w-auto object-contain"
+            className="h-14 w-auto object-contain"
           />
         </Link>
       </div>

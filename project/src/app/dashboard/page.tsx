@@ -51,6 +51,7 @@ import {
 } from "recharts";
 import { Country } from "country-state-city";
 import { getCountryNameFromCode } from "@/lib/utils";
+import { getTrackingUrl } from "@/lib/tracking-links";
 
 const DashboardPage = () => {
   const router = useRouter();
@@ -83,6 +84,7 @@ const DashboardPage = () => {
       totalWeight: number;
       shipmentDate: Date;
       createdAt: string;
+      serviceMode?: string | null;
     }[],
     recentPayments: [] as {
       id: number;
@@ -752,13 +754,25 @@ const DashboardPage = () => {
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || 0}</td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <button
-                            onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                            className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                          >
-                            <span className="hidden sm:inline">{shipment.trackingId}</span>
-                            <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
-                          </button>
+                          {getTrackingUrl(shipment) ? (
+                            <a
+                              href={getTrackingUrl(shipment)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer inline-block"
+                            >
+                              <span className="hidden sm:inline">{shipment.trackingId}</span>
+                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                            </a>
+                          ) : (
+                            <button
+                              onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                              className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                            >
+                              <span className="hidden sm:inline">{shipment.trackingId}</span>
+                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                            </button>
+                          )}
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                           <span

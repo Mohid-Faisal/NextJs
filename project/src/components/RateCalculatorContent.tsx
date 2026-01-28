@@ -22,7 +22,11 @@ const documentTypes = [
   "FedEx Pak"
 ];
 
-export default function RateCalculatorContent() {
+interface RateCalculatorContentProps {
+  publicView?: boolean;
+}
+
+export default function RateCalculatorContent({ publicView = false }: RateCalculatorContentProps) {
   const [form, setForm] = useState({
     weight: "",
     length: "0",
@@ -31,7 +35,7 @@ export default function RateCalculatorContent() {
     origin: "Pakistan",
     destination: "",
     docType: "",
-    profitPercentage: "0",
+    profitPercentage: publicView ? "10" : "0",
   });
 
   const [countries, setCountries] = useState<any[]>([]);
@@ -111,7 +115,7 @@ export default function RateCalculatorContent() {
     const l = parseFloat(length);
     const wd = parseFloat(width);
     const h = parseFloat(height);
-    const profit = parseFloat(profitPercentage);
+    const profit = publicView ? 10 : parseFloat(profitPercentage);
 
     if ([w, l, wd, h].some((v) => isNaN(v) || v < 0)) {
       setError("Please enter valid non-negative numbers for all dimensions and weight.");
@@ -125,12 +129,12 @@ export default function RateCalculatorContent() {
       return;
     }
 
-    if (isNaN(profit) || profit < 0) {
+    if (!publicView && (isNaN(profit) || profit < 0)) {
       setError("Please enter a valid profit percentage (0 or greater).");
       setResults(null);
       return;
     }
- 
+
     setError(null);
     setLoading(true);
     try {
@@ -145,7 +149,7 @@ export default function RateCalculatorContent() {
           height: h,
           width: wd,
           length: l,
-          profitPercentage: profit
+          profitPercentage: publicView ? 10 : profit
         }),
       });
 
@@ -307,20 +311,22 @@ export default function RateCalculatorContent() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="profitPercentage" className="text-xs sm:text-sm">Profit Percentage (%)</Label>
-              <Input
-                id="profitPercentage"
-                name="profitPercentage"
-                type="number"
-                min="0"
-                step="0.1"
-                value={form.profitPercentage}
-                onChange={handleChange}
-                placeholder="10"
-                className="text-xs sm:text-sm"
-              />
-            </div>
+            {!publicView && (
+              <div className="space-y-2">
+                <Label htmlFor="profitPercentage" className="text-xs sm:text-sm">Profit Percentage (%)</Label>
+                <Input
+                  id="profitPercentage"
+                  name="profitPercentage"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={form.profitPercentage}
+                  onChange={handleChange}
+                  placeholder="10"
+                  className="text-xs sm:text-sm"
+                />
+              </div>
+            )}
           </div>
 
           <Button 
@@ -343,6 +349,7 @@ export default function RateCalculatorContent() {
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 sm:mt-6 space-y-3 sm:space-y-4"
             >
+              {!publicView && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
                 {results.top3Rates.map((rate, index) => (
                   <Card 
@@ -413,6 +420,7 @@ export default function RateCalculatorContent() {
                   </Card>
                 ))}
               </div>
+              )}
 
               <Card>
                 <CardContent className="p-3 sm:p-4">
@@ -420,7 +428,7 @@ export default function RateCalculatorContent() {
                     <h3 className="font-semibold text-sm sm:text-base lg:text-lg">
                       All Available Rates ({results.zones.length} zones)
                     </h3>
-                    {results.fixedCharge && (
+                    {!publicView && results.fixedCharge && (
                       <div className="flex items-center space-x-2">
                         <Switch
                           checked={showFixedCharges}
@@ -437,17 +445,21 @@ export default function RateCalculatorContent() {
                     <table className="w-full text-xs sm:text-sm border-separate border-spacing-y-1 sm:border-spacing-y-2">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Vendor</span><span className="sm:hidden">V</span></th>
+                          {!publicView && (
+                            <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Vendor</span><span className="sm:hidden">V</span></th>
+                          )}
                           <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Zone</span><span className="sm:hidden">Z</span></th>
                           <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Service</span><span className="sm:hidden">Svc</span></th>
                           <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Weight (kg)</span><span className="sm:hidden">W</span></th>
-                          {results.fixedCharge && !showFixedCharges && (
+                          {!publicView && results.fixedCharge && !showFixedCharges && (
                             <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Fixed Charge (Rs.)</span><span className="sm:hidden">Fixed</span></th>
                           )}
                           <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Original Price (Rs.)</span><span className="sm:hidden">Orig</span></th>
                           <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Final Price (Rs.)</span><span className="sm:hidden">Final</span></th>
                           <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Price per kg (Rs.)</span><span className="sm:hidden">Rs/kg</span></th>
-                          <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Status</span><span className="sm:hidden">S</span></th>
+                          {!publicView && (
+                            <th className="text-left py-2 px-2 sm:px-4"><span className="hidden sm:inline">Status</span><span className="sm:hidden">S</span></th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -462,32 +474,36 @@ export default function RateCalculatorContent() {
                             else if (topRate.rank === 3) rowBgColor = 'bg-orange-50 dark:bg-orange-950';
                           }
                           return (
-                            <tr key={index} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${rowBgColor}`}>
-                              <td className="py-2 px-2 sm:px-4 font-medium">
-                                <span className="hidden sm:inline">{rate.vendor}</span>
-                                <span className="sm:hidden">{rate.vendor?.substring(0, 6)}...</span>
-                              </td>
+                            <tr key={index} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${!publicView ? rowBgColor : ""}`}>
+                              {!publicView && (
+                                <td className="py-2 px-2 sm:px-4 font-medium">
+                                  <span className="hidden sm:inline">{rate.vendor}</span>
+                                  <span className="sm:hidden">{rate.vendor?.substring(0, 6)}...</span>
+                                </td>
+                              )}
                               <td className="py-2 px-2 sm:px-4">{rate.zone}</td>
                               <td className="py-2 sm:px-4">
                                 <span className="hidden sm:inline">{rate.service}</span>
                                 <span className="sm:hidden">{rate.service?.substring(0, 8)}...</span>
                               </td>
                               <td className="py-2 px-2 sm:px-4">{rate.weight}</td>
-                              {results.fixedCharge && !showFixedCharges && (
+                              {!publicView && results.fixedCharge && !showFixedCharges && (
                                 <td className="py-2 px-2 sm:px-4 text-purple-600 dark:text-purple-400">{results.fixedCharge.amount}</td>
                               )}
                               <td className="py-2 px-2 sm:px-4 text-gray-600 dark:text-gray-400">{rate.originalPrice}</td>
                               <td className="py-2 px-2 sm:px-4 font-medium">{rate.price}</td>
                               <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{((rate.price)/ rate.weight).toFixed(2)}</td>
-                              <td className="py-2 px-2 sm:px-4">
-                                {topRate ? (
-                                  <span className={`font-medium ${topRate.rank === 1 ? 'text-green-600 dark:text-green-400' : topRate.rank === 2 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                                    {topRate.rank === 1 ? '🥇 Best' : topRate.rank === 2 ? '🥈 2nd' : '🥉 3rd'}
+                              {!publicView && (
+                                <td className="py-2 px-2 sm:px-4">
+                                  {topRate ? (
+                                    <span className={`font-medium ${topRate.rank === 1 ? 'text-green-600 dark:text-green-400' : topRate.rank === 2 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                      {topRate.rank === 1 ? '🥇 Best' : topRate.rank === 2 ? '🥈 2nd' : '🥉 3rd'}
                                   </span>
                                 ) : (
                                   <span className="text-gray-500"><span className="hidden sm:inline">Available</span><span className="sm:hidden">Avail</span></span>
                                 )}
-                              </td>
+                                </td>
+                              )}
                             </tr>
                           );
                         })}

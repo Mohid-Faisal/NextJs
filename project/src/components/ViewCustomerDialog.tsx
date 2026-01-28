@@ -33,6 +33,7 @@ interface Customer {
   Phone: string;
   DocumentType: string;
   DocumentNumber: string;
+  DocumentExpiry?: string | null;
   Country: string;
   State: string;
   City: string;
@@ -142,7 +143,7 @@ export default function ViewCustomerDialog({
 
         <div className="space-y-6">
           {/* Header Card */}
-          <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 border-purple-200 dark:border-purple-800">
+          <Card className="bg-linear-to-r from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 border-purple-200 dark:border-purple-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -461,6 +462,26 @@ export default function ViewCustomerDialog({
                       </p>
                       <p className="text-sm font-medium">
                         {customer.DocumentNumber || "Not specified"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Expiry Date
+                      </p>
+                      <p className="text-sm font-medium">
+                        {customer.DocumentExpiry
+                          ? (() => {
+                              const d = new Date(customer.DocumentExpiry!);
+                              return isNaN(d.getTime())
+                                ? customer.DocumentExpiry
+                                : formatDate(customer.DocumentExpiry);
+                            })()
+                          : "Not specified"}
                       </p>
                     </div>
                   </div>

@@ -427,7 +427,7 @@ export default function ReceiptPage() {
               body { padding: 0; background: white; }
               .waybill-container { border: none; padding: 0; margin: 0; width: 100%; max-width: 100%; }
               @page {
-                size: landscape;
+                size: A5 landscape;
                 margin: 0.5cm;
               }
             }
@@ -980,6 +980,10 @@ export default function ReceiptPage() {
         }
 
         @media print {
+          @page {
+            size: A5 landscape;
+            margin: 0.5cm;
+          }
           .waybill-wrapper .waybill-container {
             border: none;
             padding: 0;
