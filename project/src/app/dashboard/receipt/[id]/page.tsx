@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Printer, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { getCountryNameFromCode } from '@/lib/utils';
+import { getCountryNameFromCode, getStateNameFromCode } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface Package {
@@ -72,6 +72,16 @@ interface Invoice {
     Zip?: string;
     Phone?: string;
   };
+  recipient?: {
+    CompanyName?: string;
+    PersonName?: string;
+    Address?: string;
+    City?: string;
+    State?: string;
+    Country?: string;
+    Zip?: string;
+    Phone?: string;
+  } | null;
 }
 
 export default function ReceiptPage() {
@@ -149,16 +159,18 @@ export default function ReceiptPage() {
               print-color-adjust: exact;
             }
 
-            body {
+            html, body {
               font-family: Arial, Helvetica, sans-serif;
               background-color: #f3f4f6;
               padding: 20px;
               margin: 0;
               font-size: 10px;
+              height: auto;
+              min-height: 0;
             }
 
             .waybill-container {
-              max-width: 900px;
+              max-width: 855px;
               margin: 0 auto;
               background: white;
               padding: 20px;
@@ -223,8 +235,8 @@ export default function ReceiptPage() {
             }
 
             .section-header {
-              background: #e5e7eb;
-              color: black;
+              background: #000;
+              color: #fff;
               padding: 2px 5px;
               font-weight: bold;
               font-size: 10px;
@@ -233,6 +245,7 @@ export default function ReceiptPage() {
               margin: 0;
               width: 100%;
               box-sizing: border-box;
+              text-align: center;
             }
 
             .cell-content {
@@ -245,20 +258,8 @@ export default function ReceiptPage() {
 
             .shipper-container {
               display: flex;
+              flex-direction: column;
               height: 180px;
-            }
-            .vertical-label {
-              background: #d1d5db;
-              width: 20px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border-right: 1px solid black;
-              writing-mode: vertical-rl;
-              transform: rotate(180deg);
-              font-weight: bold;
-              font-size: 10px;
-              letter-spacing: 2px;
             }
             .address-details {
               padding: 8px;
@@ -268,7 +269,6 @@ export default function ReceiptPage() {
             }
 
             .auth-section {
-              height: 120px;
               padding: 0;
               position: relative;
               font-size: 9px;
@@ -294,14 +294,13 @@ export default function ReceiptPage() {
               padding-top: 5px;
             }
             .timestamp {
-              margin-top: 10px;
               text-align: right;
               font-size: 9px;
             }
 
             .pod-section {
-              height: 100px;
               padding: 5px;
+              min-height: 0;
             }
 
             .col-2 {
@@ -380,6 +379,11 @@ export default function ReceiptPage() {
               display: flex;
               flex-direction: column;
             }
+            .col-3 .section-header {
+              margin-right: -2px;
+              width: calc(100% + 2px);
+              box-sizing: border-box;
+            }
             .ref-box {
               height: 25px;
               border-bottom: 1px solid black;
@@ -388,15 +392,14 @@ export default function ReceiptPage() {
               padding: 0 5px;
             }
             .service-section {
-              flex: 1;
+              flex: 0 0 auto;
               padding: 5px 5px 0 5px;
               border-bottom: 1px solid black;
               margin-bottom: 0;
-              max-height: 210px;
-              overflow: hidden;
             }
             .service-section .section-header {
               margin: -5px -5px 0 -5px;
+              margin-right: -2px;
               padding: 2px 5px 0 5px;
               width: calc(100% + 10px);
             }
@@ -404,7 +407,6 @@ export default function ReceiptPage() {
               padding: 0 5px 0 5px;
             }
             .size-section {
-              height: 100px;
               padding: 0;
               margin-top: 0px;
             }
@@ -424,11 +426,14 @@ export default function ReceiptPage() {
             }
 
             @media print {
-              body { padding: 0; background: white; }
+              html, body { padding: 0; margin: 0; background: white; height: auto; min-height: 0; }
               .waybill-container { border: none; padding: 0; margin: 0; width: 100%; max-width: 100%; }
+              .pod-section { height: 0; min-height: 0; padding: 0; overflow: hidden; }
               @page {
-                size: A5 landscape;
+                size: A4;
                 margin: 0.5cm;
+                margin-top: 1.5cm;
+                margin-bottom: 1.5cm;
               }
             }
           </style>
@@ -495,15 +500,24 @@ export default function ReceiptPage() {
   const senderName = shipment?.senderName || invoice.customer?.CompanyName || invoice.customer?.PersonName || 'N/A';
   const senderAddress = shipment?.senderAddress || invoice.customer?.Address || '';
   const senderCity = invoice.customer?.City || '';
-  const senderState = invoice.customer?.State || '';
+  const senderState = invoice.customer?.Country && invoice.customer?.State
+    ? getStateNameFromCode(String(invoice.customer.State), invoice.customer.Country)
+    : (invoice.customer?.State || '');
   const senderCountry = invoice.customer?.Country ? getCountryNameFromCode(invoice.customer.Country) : '';
   const senderZip = invoice.customer?.Zip || '';
   const senderPhone = invoice.customer?.Phone || '';
   
-  // Format recipient address (from shipment)
-  const recipientName = shipment?.recipientName || 'N/A';
-  const recipientAddress = shipment?.recipientAddress || '';
-  const recipientCountry = shipment?.destination ? getCountryNameFromCode(shipment.destination) : '';
+  // Format recipient (from invoice.recipient when available, else shipment)
+  const r = invoice.recipient;
+  const recipientName = r?.CompanyName || r?.PersonName || shipment?.recipientName || 'N/A';
+  const recipientAddress = r?.Address ?? shipment?.recipientAddress ?? '';
+  const recipientCity = r?.City ?? '';
+  const recipientState = r?.Country && r?.State
+    ? getStateNameFromCode(String(r.State), r.Country)
+    : (r?.State ?? '');
+  const recipientZip = r?.Zip ?? '';
+  const recipientPhone = r?.Phone ?? '';
+  const recipientCountry = r?.Country ? getCountryNameFromCode(r.Country) : (shipment?.destination ? getCountryNameFromCode(shipment.destination) : '');
   
   // Format invoice date
   const invoiceDate = invoice.invoiceDate 
@@ -646,7 +660,7 @@ export default function ReceiptPage() {
   // Get declared value (from packages decValue or shipment decValue or total amount)
   const declaredValue = totalDecValue > 0 
     ? totalDecValue 
-    : (shipment?.decValue || invoice.totalAmount || 0);
+    : (shipment?.decValue || 0);
   
   // Format date for timestamp
   const timestampDate = invoice.invoiceDate 
@@ -670,7 +684,7 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .waybill-container {
-          max-width: 900px;
+          max-width: 855px;
               margin: 0 auto;
               background: white;
               padding: 20px;
@@ -737,13 +751,14 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .section-header {
-          background: #e5e7eb;
-          color: black;
+          background: #000;
+          color: #fff;
           padding: 2px 5px;
-              font-weight: bold;
+          font-weight: bold;
           font-size: 10px;
           text-transform: uppercase;
           border-bottom: 1px solid black;
+          text-align: center;
         }
 
         .waybill-wrapper .cell-content {
@@ -756,21 +771,8 @@ export default function ReceiptPage() {
 
         .waybill-wrapper .shipper-container {
           display: flex;
+          flex-direction: column;
           height: 180px;
-        }
-
-        .waybill-wrapper .vertical-label {
-          background: #d1d5db;
-          width: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-right: 1px solid black;
-          writing-mode: vertical-rl;
-          transform: rotate(180deg);
-              font-weight: bold;
-          font-size: 10px;
-          letter-spacing: 2px;
         }
 
         .waybill-wrapper .address-details {
@@ -809,7 +811,7 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .timestamp {
-          margin-top: 10px;
+          margin-top: 5px;
           text-align: right;
           font-size: 9px;
         }
@@ -903,6 +905,11 @@ export default function ReceiptPage() {
           display: flex;
           flex-direction: column;
         }
+        .waybill-wrapper .col-3 .section-header {
+          margin-right: -2px;
+          width: calc(100% + 2px);
+          box-sizing: border-box;
+        }
 
         .waybill-wrapper .ref-box {
           height: 25px;
@@ -913,15 +920,15 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .service-section {
-          flex: 1;
+          flex: 0 0 auto;
           padding: 5px 5px 0 5px;
           border-bottom: 1px solid black;
           margin-bottom: 0;
-          max-height: 210px;
-          overflow: hidden;
+          margin-right: -2px;
         }
         .waybill-wrapper .service-section .section-header {
           margin: -5px -5px 0 -5px;
+          margin-right: -2px;
           padding: 2px 5px 0 5px;
           width: calc(100% + 10px);
         }
@@ -930,7 +937,6 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .size-section {
-          height: 100px;
           padding: 0;
           margin-top: 0px;
         }
@@ -981,8 +987,10 @@ export default function ReceiptPage() {
 
         @media print {
           @page {
-            size: A5 landscape;
+            size: A4;
             margin: 0.5cm;
+            margin-top: 1.5cm;
+            margin-bottom: 1.5cm;
           }
           .waybill-wrapper .waybill-container {
             border: none;
@@ -1004,20 +1012,18 @@ export default function ReceiptPage() {
               <img src="/logo_final.png" alt="PSS Logo" />
           </div>
             
-            {/* Contact Information - Centered between logo and WPX */}
+            {/* Barcode and Booking ID - Centered between logo and WPX */}
             <div style={{
               position: 'absolute',
               left: '50%',
               transform: 'translateX(-50%)',
-              textAlign: 'center',
-              fontSize: '10px',
-              lineHeight: '1.4',
-              color: '#333'
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}>
-              <div>+92 300 8482 321</div>
-              <div>info@psswwe.com</div>
-              <div>LGF-44, Land Mark Plaza, Jail Road</div>
-              <div>Lahore, 54660, Pakistan</div>
+              <div className="barcode" style={{ height: '40px', width: '140px', marginTop: '15px' }} />
+              <div style={{ fontWeight: 'bold', fontSize: '20px' }}>{invoice.invoiceNumber}</div>
             </div>
 
             {packagingLabel && (
@@ -1044,7 +1050,7 @@ export default function ReceiptPage() {
 
               {/* Shipper Info */}
               <div className="shipper-container border-bottom">
-                <div className="vertical-label">SHIPPER</div>
+                <div className="section-header" style={{ borderRight: '3px solid white', marginRight: '-2px', boxSizing: 'border-box' }}>SHIPPER</div>
                 <div className="address-details">
                   <div style={{marginBottom: '8px'}}>
                     <strong>{senderName.toUpperCase()}</strong><br />
@@ -1057,8 +1063,9 @@ export default function ReceiptPage() {
                     {senderCountry && <><br />{senderCountry}</>}
           </div>
                   <div>
-                    {senderName}<br />
+                    Attn: {senderName}<br />
                     {senderPhone || 'N/A'}<br />
+                    <br />
                     CNIC/NTN: N/A
               </div>
               </div>
@@ -1066,7 +1073,7 @@ export default function ReceiptPage() {
 
               {/* Sender Authorization */}
               <div className="auth-section">
-                <div className="section-header bg-red">
+                <div className="section-header">
                   SENDER'S AUTHORIZATION & SIGNATURE
             </div>
                 <div className="terms-text">
@@ -1079,8 +1086,7 @@ export default function ReceiptPage() {
                   <span>SENDER'S SIGNATURE</span>
                 </div>
                 <div className="timestamp">
-                  DATE: {timestampDate}<br />
-                  Received by:
+                  DATE: {timestampDate}
                 </div>
               </div>
               
@@ -1094,28 +1100,30 @@ export default function ReceiptPage() {
             <div className="col-2">
               {/* Consignee Info */}
               <div className="shipper-container border-bottom">
-                <div className="section-header bg-red" style={{position: 'absolute', width: '15px', height: '15px', padding: 0, textAlign: 'center', lineHeight: '15px'}}>2</div>
-                <div className="vertical-label">CONSIGNEE</div>
-                <div className="address-details" style={{paddingLeft: '15px'}}>
+                <div className="section-header" >CONSIGNEE</div>
+                <div className="address-details">
                   <div style={{marginBottom: '8px'}}>
                     <strong>{recipientName.toUpperCase()}</strong><br />
                     {recipientAddress}
                   </div>
                   <div style={{marginBottom: '8px'}}>
-                    {recipientCountry && <>{recipientCountry}</>}
+                    {recipientCity && `${recipientCity}`}
+                    {recipientState && `, ${recipientState}`}
+                    {recipientZip && `, ${recipientZip}`}
+                    {recipientCountry && <><br />{recipientCountry}</>}
                   </div>
                   <div>
                     Attn.: {recipientName}<br />
-                    N/A<br />
+                    {recipientPhone || 'N/A'}<br />
                     <br />
-                    EORI
+                    EORI/VAT
                   </div>
                 </div>
               </div>
               
               {/* DAP & Value */}
               <div className="dap-section">
-                <div className="dap-box">** DAP **</div>
+                <div className="dap-box">** DDU **</div>
                 <div className="currency-box">
                   <div style={{marginBottom: '1px', lineHeight: '1.2'}}>DECLARED VALUE FOR</div>
                   <div style={{marginBottom: '1px', lineHeight: '1.2'}}>CUSTOMS AND CURRENCY</div>
@@ -1123,18 +1131,7 @@ export default function ReceiptPage() {
               </div>
             </div>
 
-              {/* Barcode and Invoice Number */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '20px 0',
-                borderBottom: '1px solid black'
-              }}>
-                <div className="barcode" style={{height: '40px', width: '140px', marginBottom: '10.5px'}}></div>
-                <div style={{fontWeight: 'bold', fontSize: '14px'}}>{invoice.invoiceNumber}</div>
-              </div>
+              {/* Empty space (barcode moved to header) */}
 
               {/* Declaration Text */}
               <div style={{padding: '8px 5px', fontSize: '11px', lineHeight: '1.4'}}>
@@ -1151,33 +1148,33 @@ export default function ReceiptPage() {
             {/* COLUMN 3 (RIGHT) */}
             <div className="col-3">
               {/* References */}
-              <div className="section-header bg-grey text-center">CUSTOMER REFERENCE</div>
+              <div className="section-header text-center" style={{ borderLeft: '2px solid white', boxSizing: 'border-box' }}>CUSTOMER REFERENCE</div>
               <div className="ref-box">{referenceNumber || 'PSS'}</div>
 
               {/* Service Type */}
               <div className="service-section">
-                <div className="section-header bg-red">
+                <div className="section-header">
                   SERVICE MODE
                   </div>
-                <div className="bold" style={{margin: '5px 0'}}>{serviceType}</div>
+                <div className="bold" style={{margin: '5px 0', paddingBottom: '5px', borderBottom: '1px solid black'}}>{serviceType}</div>
                 <div style={{fontSize: '9px', marginBottom: '8px'}}>
-                  IMPORTANT<br />
-                  ATTACH ORIGINAL THREE COPIES OF COMMERCIAL INVOICES WITH PACKAGE FOR CUSTOM PURPOSE
+                  <strong>IMPORTANT:</strong> ATTACH ORIGINAL THREE COPIES OF INVOICES, CNIC AND UNDERTAKING WITH PACKAGE FOR CUSTOM PURPOSE
                   </div>
-                
-                <div style={{borderTop: '1px solid #ccc', paddingTop: '5px'}}>
-                  FULL DESCRIPTION OF CONTENTS:-<br />
-                  <strong>{contentsDescription.toUpperCase()}</strong>
-                </div>
-                <div style={{marginTop: '5px', marginBottom: '0'}}>
-                  SPECIAL INSTRUCTIONS:-<br />
-                  N/A
-                </div>
+              </div>
+
+              {/* Full Description and Special Instructions - direct children of col-3 so they span full width */}
+              <div>
+                <div className="section-header" style={{ borderTop: '1px solid black' }}>FULL DESCRIPTION OF CONTENTS</div>
+                <div style={{ padding: '5px', borderBottom: '1px solid #eee' }}><strong>{contentsDescription.toUpperCase()}</strong></div>
+              </div>
+              <div>
+                <div className="section-header" style={{ borderTop: '1px solid black' }}>SPECIAL INSTRUCTIONS</div>
+                <div style={{ padding: '5px' }}>N/A</div>
               </div>
               
               {/* Size & Weight */}
               <div className="size-section">
-                <div className="section-header bg-red">
+                <div className="section-header">
                   SIZE & WEIGHT
                 </div>
                 <div style={{padding: '5px 5px 0 5px'}}>

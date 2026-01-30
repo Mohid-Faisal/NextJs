@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FcGoogle } from "react-icons/fc";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { ArrowLeft } from "lucide-react";
 
 import { motion } from "framer-motion";
 
@@ -64,6 +65,13 @@ const LoginPage = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to home
+        </Link>
         <h1 className="text-3xl font-bold text-center text-primary mb-6">
           Login
         </h1>

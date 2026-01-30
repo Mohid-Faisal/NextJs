@@ -10,6 +10,7 @@ import { Calendar, CheckCircle2, ChevronDown, ChevronUp, Package, Search } from 
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getCountryNameFromCode } from "@/lib/utils";
+import { getTrackingUrl } from "@/lib/tracking-links";
 import { AnimatePresence, motion } from "framer-motion";
 
 type TrackingHistoryEntry = { status: string; timestamp: string; description?: string; location?: string };
@@ -79,6 +80,16 @@ function formatDateHeading(date: Date | string) {
   try {
     const d = typeof date === "string" ? new Date(date) : date;
     return format(d, "EEEE d MMMM yyyy");
+  } catch {
+    return "—";
+  }
+}
+
+function formatDateOnly(date: Date | string | null | undefined) {
+  if (!date) return "—";
+  try {
+    const d = typeof date === "string" ? new Date(date) : date;
+    return format(d, "d MMMM yyyy");
   } catch {
     return "—";
   }
@@ -212,7 +223,7 @@ function getDimensionsDisplay(s: Shipment): string {
       parsed = [];
     }
   }
-  if (parsed.length === 0) return "—";
+  if (parsed.length === 0) return "0 × 0 × 0";
   let maxL = 0, maxW = 0, maxH = 0;
   for (const pkg of parsed) {
     const l = typeof pkg.length === "number" ? pkg.length : parseFloat(String(pkg.length || 0)) || 0;
@@ -222,7 +233,7 @@ function getDimensionsDisplay(s: Shipment): string {
     if (w > maxW) maxW = w;
     if (h > maxH) maxH = h;
   }
-  return maxL > 0 || maxW > 0 || maxH > 0 ? `${maxL} × ${maxW} × ${maxH} cm` : "—";
+  return maxL > 0 || maxW > 0 || maxH > 0 ? `${maxL} × ${maxW} × ${maxH} cm` : "0 × 0 × 0";
 }
 
 export default function TrackingResultsDialog(props: {
@@ -343,8 +354,7 @@ export default function TrackingResultsDialog(props: {
                               <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div className="min-w-0">
-                              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Booking: {shipment.invoiceNumber}</h2>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Tracking: {shipment.trackingId}</p>
+                              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">HAWB: {shipment.invoiceNumber}</h2>
                               <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
                                 <Calendar className="w-4 h-4 shrink-0" />
                                 Booked on {formatDateTime(shipment.shipmentDate ?? shipment.createdAt)}
@@ -364,35 +374,34 @@ export default function TrackingResultsDialog(props: {
                         </div>
                       </div>
 
-                      <div className="pt-2 pb-6">
-                        <div className="flex w-full items-start">
+                      <div className="pt-2 pb-6 relative">
+                        {/* Connector line behind circles: 4 segments between 5 circles, aligned to grid */}
+                        <div className="absolute left-0 right-0 top-6 h-0.5 flex pointer-events-none px-[10%]" aria-hidden>
+                          <div className={`h-full flex-1 ${activeIndex >= 1 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
+                          <div className={`h-full flex-1 ${activeIndex >= 2 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
+                          <div className={`h-full flex-1 ${activeIndex >= 3 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
+                          <div className={`h-full flex-1 ${activeIndex >= 4 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
+                        </div>
+                        <div className="grid grid-cols-5 gap-0 w-full items-start relative z-10">
                           {STAGES.map((stage, i) => {
                             const done = i < activeIndex;
                             const isCurrent = i === activeIndex;
                             return (
-                              <div key={stage} className="flex-1 flex flex-col items-center min-w-0">
-                                <div className="flex w-full items-center">
-                                  {i > 0 && (
-                                    <div className={`flex-1 h-0.5 -mr-0.5 shrink-0 min-w-[8px] ${i <= activeIndex ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
+                              <div key={stage} className="flex flex-col items-center min-w-0">
+                                <span className="flex shrink-0 items-center justify-center w-8 h-8">
+                                  {done ? (
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white">
+                                      <CheckCircle2 className="h-4 w-4" />
+                                    </span>
+                                  ) : isCurrent ? (
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 ring-4 ring-green-100 dark:ring-green-900/40">
+                                      <span className="h-2 w-2 rounded-full bg-white" />
+                                    </span>
+                                  ) : (
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800" />
                                   )}
-                                  <span className="relative z-10 flex shrink-0 items-center justify-center">
-                                    {done ? (
-                                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white">
-                                        <CheckCircle2 className="h-4 w-4" />
-                                      </span>
-                                    ) : isCurrent ? (
-                                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 ring-4 ring-green-100 dark:ring-green-900/40">
-                                        <span className="h-2 w-2 rounded-full bg-white" />
-                                      </span>
-                                    ) : (
-                                      <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800" />
-                                    )}
-                                  </span>
-                                  {i < STAGES.length - 1 && (
-                                    <div className={`flex-1 h-0.5 -ml-0.5 shrink-0 min-w-[8px] ${i < activeIndex ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
-                                  )}
-                                </div>
-                                <span className={`mt-2 text-center text-xs font-medium ${isCurrent ? "text-green-600 dark:text-green-400" : done ? "text-gray-700 dark:text-gray-300" : "text-gray-500 dark:text-gray-400"}`}>
+                                </span>
+                                <span className={`mt-2 text-center text-xs font-medium whitespace-nowrap ${isCurrent ? "text-green-600 dark:text-green-400" : done ? "text-gray-700 dark:text-gray-300" : "text-gray-500 dark:text-gray-400"}`}>
                                   {stage}
                                 </span>
                               </div>
@@ -421,28 +430,49 @@ export default function TrackingResultsDialog(props: {
                         </button>
                         {detailsExpanded && (
                           <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-700">
-                            <dl className="pt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <dl className="pt-4 grid grid-cols-2 md:grid-cols-6 gap-4">
                               <div>
-                                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Packaging</dt>
-                                <dd className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{shipment.packaging || "—"}</dd>
+                                <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Type</dt>
+                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{shipment.packaging || "—"}</dd>
                               </div>
                               <div>
-                                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Weight</dt>
-                                <dd className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                                <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Weight</dt>
+                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
                                   {(shipment.totalWeight ?? shipment.weight) != null ? `${Number(shipment.totalWeight ?? shipment.weight).toFixed(2)} kg` : "—"}
                                 </dd>
                               </div>
                               <div>
-                                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Packages</dt>
-                                <dd className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{shipment.amount != null && shipment.amount > 0 ? shipment.amount : "—"}</dd>
+                                <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Pcs</dt>
+                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{shipment.amount != null && shipment.amount > 0 ? shipment.amount : "—"}</dd>
                               </div>
                               <div>
-                                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Dimensions</dt>
-                                <dd className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{getDimensionsDisplay(shipment)}</dd>
+                                <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Dimensions</dt>
+                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{getDimensionsDisplay(shipment)}</dd>
                               </div>
                               <div>
-                                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Service</dt>
-                                <dd className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{shipment.serviceMode || "—"}</dd>
+                                <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Service Mode</dt>
+                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{shipment.serviceMode || "—"}</dd>
+                              </div>
+                              <div>
+                                <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Tracking No</dt>
+                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
+                                  {shipment.trackingId ? (
+                                    getTrackingUrl(shipment) ? (
+                                      <a
+                                        href={getTrackingUrl(shipment)!}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                                      >
+                                        {shipment.trackingId}
+                                      </a>
+                                    ) : (
+                                      shipment.trackingId
+                                    )
+                                  ) : (
+                                    "—"
+                                  )}
+                                </dd>
                               </div>
                             </dl>
                           </div>
@@ -463,39 +493,55 @@ export default function TrackingResultsDialog(props: {
                         </button>
                         {updatesExpanded && (
                           <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-700">
-                            <div className="space-y-6 pt-4">
-                              {slides.map((group) => (
-                                <div key={group.dateKey} className="relative">
-                                  <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">{group.dateLabel}</p>
-                                  <div className="absolute left-34 top-6 bottom-0 w-px bg-gray-200 dark:bg-gray-600" aria-hidden />
-                                  <ul className="space-y-0">
-                                    {group.events.map((event, i) => {
+                            <div className="pt-4 w-full overflow-x-auto">
+                              {(() => {
+                                const allEvents = slides.flatMap((g) => g.events);
+                                return (
+                                  <>
+                                    {/* Event log header */}
+                                    <div className="grid grid-cols-4 gap-4 py-2 border-b border-gray-200 dark:border-gray-600 text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide">
+                                      <div className="min-w-0">Time</div>
+                                      <div className="col-span-2 min-w-0">Status Update</div>
+                                      <div className="min-w-0">Location</div>
+                                    </div>
+                                    {/* Event log rows */}
+                                    {allEvents.map((event, i) => {
                                       const isDelivered = (event.status || "").toLowerCase().includes("delivered");
                                       return (
-                                        <li key={`${group.dateKey}-${i}`} className="relative flex gap-3 pb-5 last:pb-0">
-                                          <p className="w-28 shrink-0 text-xs text-gray-500 dark:text-gray-400 pt-0.5">{formatTimeWithTz(event.date)}</p>
-                                          <div className="relative z-10 shrink-0 w-6 flex justify-center pt-0.5">
+                                        <div
+                                          key={i}
+                                          className="grid grid-cols-4 gap-4 py-4 border-b border-gray-100 dark:border-gray-700/70 last:border-b-0"
+                                        >
+                                          <div className="flex items-start gap-2 min-w-0">
                                             {isDelivered ? (
-                                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 mt-0.5">
                                                 <CheckCircle2 className="h-3 w-3 text-white" />
                                               </span>
-                                            ) : (
-                                              <span className="block h-0 w-0 border-y-[5px] border-y-transparent border-l-[6px] border-l-gray-300 dark:border-l-gray-500" aria-hidden />
-                                            )}
+                                            ) : null}
+                                            <div className="min-w-0">
+                                              <p className="text-sm text-gray-900 dark:text-white">{formatDateOnly(event.date)}</p>
+                                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatTimeWithTz(event.date)}</p>
+                                            </div>
                                           </div>
-                                          <div className="flex-1 min-w-0 pt-0">
+                                          <div className="col-span-2 min-w-0">
                                             <p className={isDelivered ? "text-sm font-semibold text-green-600 dark:text-green-400" : "text-sm font-semibold text-gray-900 dark:text-white"}>
                                               {event.title}
                                             </p>
-                                            {event.location && <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{event.location}</p>}
-                                            {event.detail && <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{event.detail}</p>}
+                                            {event.detail ? <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.detail}</p> : null}
                                           </div>
-                                        </li>
+                                          <div className="min-w-0">
+                                            {event.location ? (
+                                              <p className="text-sm text-gray-600 dark:text-gray-400">{event.location}</p>
+                                            ) : (
+                                              <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                                            )}
+                                          </div>
+                                        </div>
                                       );
                                     })}
-                                  </ul>
-                                </div>
-                              ))}
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                         )}

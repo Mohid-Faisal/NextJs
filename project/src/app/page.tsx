@@ -119,22 +119,22 @@ function BrandsSlideshowSection() {
 }
 
 const CARDS_PER_VIEW = 3;
+const STORIES_STEP = 1;
 
 function CustomerStoriesSection() {
   const stories = CUSTOMER_STORIES;
-  const numSlides = Math.ceil(stories.length / CARDS_PER_VIEW);
+  const numSlides = stories.length;
   const [activeSlide, setActiveSlide] = useState(0);
 
   useEffect(() => {
     const t = setInterval(() => {
-      setActiveSlide((i) => (i + 1) % numSlides);
+      setActiveSlide((i) => (i + STORIES_STEP) % numSlides);
     }, 3000);
     return () => clearInterval(t);
   }, [numSlides]);
 
-  const visibleStories = stories.slice(
-    activeSlide * CARDS_PER_VIEW,
-    activeSlide * CARDS_PER_VIEW + CARDS_PER_VIEW
+  const visibleStories = Array.from({ length: CARDS_PER_VIEW }, (_, i) =>
+    stories[(activeSlide + i) % stories.length]
   );
 
   return (
@@ -437,6 +437,41 @@ export default function HomePage() {
               />
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* You're in Good Company */}
+      <section id="good-company" className="py-20 bg-white dark:bg-gray-800 scroll-mt-32">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              You&apos;re in Good Company
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            We leverage a premium network of international shipping giants to offer you flexible, fast, and secure delivery solutions for every single package.
+            </p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="flex justify-center"
+          >
+            <Image
+              src="/boxes.png"
+              alt="Shipping partners - FedEx, UPS, DPD, EVRi, DHL, Parcelforce Worldwide"
+              width={800}
+              height={450}
+              className="w-full max-w-3xl h-auto object-contain"
+            />
+          </motion.div>
         </div>
       </section>
 

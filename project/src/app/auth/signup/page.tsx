@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+import { ArrowLeft } from "lucide-react";
 import { ZodError } from "zod";
 import { signupSchema } from "@/zodschemas/signupSchema";
 
@@ -154,6 +156,13 @@ const SignupPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to home
+          </Link>
           <h1 className="text-3xl font-bold text-center text-primary mb-6">
             Verify Your Email
           </h1>
@@ -228,6 +237,13 @@ const SignupPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to home
+        </Link>
         <h1 className="text-3xl font-bold text-center text-primary mb-6">
           Sign Up
         </h1>

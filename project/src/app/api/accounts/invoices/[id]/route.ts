@@ -30,7 +30,20 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ invoice });
+    // Look up recipient by name (Recipients.CompanyName matches shipment.recipientName) for full address/phone etc.
+    let recipient = null;
+    if (invoice.shipment?.recipientName) {
+      const name = String(invoice.shipment.recipientName).trim();
+      if (name) {
+        recipient = await prisma.recipients.findFirst({
+          where: {
+            CompanyName: { equals: name, mode: "insensitive" },
+          },
+        });
+      }
+    }
+
+    return NextResponse.json({ invoice: { ...invoice, recipient } });
   } catch (error) {
     console.error("Error fetching invoice:", error);
     return NextResponse.json(

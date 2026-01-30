@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import jwt from "jsonwebtoken"
-import { Country } from "country-state-city"
+import { Country, State } from "country-state-city"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -56,6 +56,14 @@ export function getCountryNameFromCode(countryCode: string): string {
   
   const country = Country.getCountryByCode(countryCode.toUpperCase());
   return country ? country.name : countryCode;
+}
+
+// Function to get full state name from state code (and country code)
+export function getStateNameFromCode(stateCode: string, countryCode: string): string {
+  if (!stateCode) return '';
+  if (!countryCode) return stateCode;
+  const state = State.getStateByCodeAndCountry(stateCode.trim().toUpperCase(), countryCode.toUpperCase());
+  return state ? state.name : stateCode;
 }
 
 // Financial transaction utilities
