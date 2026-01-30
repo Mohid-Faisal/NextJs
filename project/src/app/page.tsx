@@ -121,21 +121,56 @@ function BrandsSlideshowSection() {
 const CARDS_PER_VIEW = 3;
 const STORIES_STEP = 1;
 
+const STORIES_GAP_PX = 24;
+
 function CustomerStoriesSection() {
   const stories = CUSTOMER_STORIES;
   const numSlides = stories.length;
-  const [activeSlide, setActiveSlide] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [cardWidth, setCardWidth] = useState(0);
+  const [displayIndex, setDisplayIndex] = useState(0);
+  const [isResetting, setIsResetting] = useState(false);
+  const storiesForStrip = [...stories, ...stories.slice(0, CARDS_PER_VIEW)];
+  const stripLength = storiesForStrip.length;
+
+  const activeSlide = displayIndex % numSlides;
 
   useEffect(() => {
     const t = setInterval(() => {
-      setActiveSlide((i) => (i + STORIES_STEP) % numSlides);
+      setDisplayIndex((i) => (i + STORIES_STEP) % stripLength);
     }, 3000);
     return () => clearInterval(t);
-  }, [numSlides]);
+  }, [stripLength]);
 
-  const visibleStories = Array.from({ length: CARDS_PER_VIEW }, (_, i) =>
-    stories[(activeSlide + i) % stories.length]
-  );
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.offsetWidth;
+      setCardWidth((w - 2 * STORIES_GAP_PX) / CARDS_PER_VIEW + STORIES_GAP_PX);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const handleAnimationComplete = () => {
+    if (displayIndex === numSlides) {
+      setIsResetting(true);
+      setDisplayIndex(0);
+    }
+  };
+
+  useEffect(() => {
+    if (!isResetting) return;
+    const id = requestAnimationFrame(() => setIsResetting(false));
+    return () => cancelAnimationFrame(id);
+  }, [isResetting]);
+
+  const translateX = cardWidth > 0 ? -(displayIndex * cardWidth) : 0;
+  const stripWidth = cardWidth > 0 ? stripLength * cardWidth - STORIES_GAP_PX : 0;
+  const singleCardWidth = cardWidth > 0 ? cardWidth - STORIES_GAP_PX : 0;
 
   return (
     <section id="customer-stories" className="py-20 bg-white dark:bg-gray-800 scroll-mt-32">
@@ -158,55 +193,56 @@ function CustomerStoriesSection() {
           What Says Our Happy Clients
         </motion.h2>
 
-        <div className="w-full max-w-6xl mx-auto overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSlide}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.35 }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-6"
-            >
-              {visibleStories.map((story) => {
-                const initials = story.name.split(" ").map((n) => n[0]).join("").slice(0, 2);
-                return (
-                  <div
-                    key={story.name + story.shortQuote}
-                    className="bg-white dark:bg-gray-700 rounded-xl shadow-md border border-gray-100 dark:border-gray-600 p-5 md:p-6 flex flex-col text-left"
-                  >
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-3">
-                      <div className="flex">
-                        {[1, 2, 3, 4, 5].map((_) => (
-                          <Star key={_} className="w-5 h-5 fill-current" />
-                        ))}
-                      </div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">(5) Rating</span>
+        <div ref={containerRef} className="w-full max-w-6xl mx-auto overflow-hidden">
+          <motion.div
+            className="flex flex-row shrink-0"
+            style={{
+              width: stripWidth || undefined,
+              gap: STORIES_GAP_PX,
+            }}
+            animate={{ x: translateX }}
+            transition={{ duration: isResetting ? 0 : 0.45, ease: "easeInOut" }}
+            onAnimationComplete={handleAnimationComplete}
+          >
+            {storiesForStrip.map((story, index) => {
+              const initials = story.name.split(" ").map((n) => n[0]).join("").slice(0, 2);
+              return (
+                <div
+                  key={`${story.name}-${story.shortQuote}-${index}`}
+                  className="shrink-0 min-w-0 rounded-xl shadow-md border border-gray-100 dark:border-gray-600 p-5 md:p-6 flex flex-col text-left bg-white dark:bg-gray-700"
+                  style={{ width: singleCardWidth || undefined }}
+                >
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-3">
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((_) => (
+                        <Star key={_} className="w-5 h-5 fill-current" />
+                      ))}
                     </div>
-                    <p className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2">
-                      {story.shortQuote}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1 line-clamp-4">
-                      {story.fullQuote}
-                    </p>
-                    <div className="mt-4 flex items-center gap-3 pt-3 border-t border-gray-100 dark:border-gray-600">
-                      <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-blue-700 flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden">
-                        {story.photo ? (
-                          <img src={story.photo} alt={story.name} className="w-full h-full object-cover" />
-                        ) : (
-                          initials
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white text-sm">{story.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{story.title}</p>
-                      </div>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">(5) Rating</span>
+                  </div>
+                  <p className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                    {story.shortQuote}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed flex-1 line-clamp-4">
+                    {story.fullQuote}
+                  </p>
+                  <div className="mt-4 flex items-center gap-3 pt-3 border-t border-gray-100 dark:border-gray-600">
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-blue-700 flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden">
+                      {story.photo ? (
+                        <img src={story.photo} alt={story.name} className="w-full h-full object-cover" />
+                      ) : (
+                        initials
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white text-sm">{story.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{story.title}</p>
                     </div>
                   </div>
-                );
-              })}
-            </motion.div>
-          </AnimatePresence>
+                </div>
+              );
+            })}
+          </motion.div>
 
           <div className="flex justify-center gap-2 mt-10" role="tablist" aria-label="Customer story slides">
             {Array.from({ length: numSlides }).map((_, i) => (
@@ -216,7 +252,7 @@ function CustomerStoriesSection() {
                 role="tab"
                 aria-selected={i === activeSlide}
                 aria-label={`Go to slide ${i + 1}`}
-                onClick={() => setActiveSlide(i)}
+                onClick={() => setDisplayIndex(i)}
                 className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
                   i === activeSlide ? "bg-blue-600 scale-125" : "bg-gray-300 dark:bg-gray-600 hover:bg-gray-400"
                 }`}
@@ -298,35 +334,40 @@ function TrackYourPackageSection() {
 
 const HERO_SLIDES = [
   {
-    src: "/banner_new.jpg",
+    // src: "/banner_new.jpg",
+    src: "/Hero1.jpeg",
     alt: "Your trusted delivery partner",
     tagline: "EXPRESS COURIER & LOGISTICS",
     headingLines: ["Fast. Secure. Global.", "Your trusted delivery partner."],
     paragraph: "Reliable shipping solutions to over 100+ countries. Track every shipment in real time.",
   },
   {
-    src: "/truck.jpg",
+    // src: "/truck.jpg",
+    src: "/Hero2.jpeg",
     alt: "PSS Worldwide logistics",
     tagline: "FREIGHT & CARGO SOLUTIONS",
     headingLines: ["Freight services.", "Scaled to your business."],
     paragraph: "From single parcels to full-container loads. One partner for all your logistics needs.",
   },
   {
-    src: "/Truck_2.jpg",
+    // src: "/Truck_2.jpg",
+    src: "/Hero3.jpeg",
     alt: "PSS Worldwide logistics",
     tagline: "INTERNATIONAL SHIPPING",
     headingLines: ["Borders don't stop us.", "We deliver worldwide."],
     paragraph: "Customs clearance, tracking, and dedicated support. Shipping made simple.",
   },
   {
-    src: "/shipment.jpeg",
+    src: "/shipment2.jpeg",
+    // src: "/shipment.jpeg",
+    // src: "/Hero4.jpeg",
     alt: "Your trusted delivery partner",
     tagline: "SAME-DAY & EXPRESS DELIVERY",
     headingLines: ["Urgent? We've got you.", "Fast. Secure. On time."],
     paragraph: "When it has to get there today. Same-day and express options when you need them most.",
   },
   {
-    src: "/shipment2.jpeg",
+    src: "/Hero5.jpeg",
     alt: "Your trusted delivery partner",
     tagline: "TRACKING & TRANSPARENCY",
     headingLines: ["Always know where it is.", "Real-time tracking."],
@@ -370,7 +411,7 @@ export default function HomePage() {
       <section
         ref={heroRef}
         id="home"
-        className="relative w-full min-h-[calc(100vh+25px)] overflow-hidden -mt-[115px] pt-[115px] scroll-mt-32"
+        className="relative w-full min-h-[calc(100vh+25px)] overflow-hidden -mt-[115px] pt-[115px] scroll-mt-0"
       >
         <motion.div className="absolute inset-0" style={{ y: imageY, scale: imageScale }}>
           {HERO_SLIDES.map((slide, index) => (
@@ -430,11 +471,11 @@ export default function HomePage() {
                     <p className="text-xs sm:text-sm font-medium tracking-widest uppercase text-blue-400 mb-3 sm:mb-4">
                       {HERO_SLIDES[currentSlide].tagline}
                     </p>
-                    <div className="space-y-1 sm:space-y-2">
+                    <div className="flex flex-row flex-wrap items-baseline gap-x-4 gap-y-1 sm:gap-x-5 sm:gap-y-2">
                       {HERO_SLIDES[currentSlide].headingLines.map((line, i) => (
                         <h1
                           key={i}
-                          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl 2xl:text-5xl font-bold text-white leading-tight tracking-tight"
+                          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-6xl 2xl:text-6xl font-bold text-white leading-tight tracking-tight whitespace-nowrap"
                         >
                           {line}
                         </h1>

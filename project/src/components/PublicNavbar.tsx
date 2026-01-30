@@ -31,12 +31,18 @@ const PublicNavbar = () => {
     { href: "/auth/login", label: "Sign in" },
   ];
 
+  const NAVBAR_OFFSET = 115;
+
   const handleSectionClick = (e: React.MouseEvent, href: string) => {
     if (pathname !== "/") return;
     if (href.startsWith("/#")) {
       e.preventDefault();
       const id = href.slice(2);
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const el = document.getElementById(id);
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.scrollY - NAVBAR_OFFSET;
+        window.scrollTo({ top, behavior: "smooth" });
+      }
       setIsMenuOpen(false);
     }
   };
