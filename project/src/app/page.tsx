@@ -91,7 +91,7 @@ function BrandsSlideshowSection() {
 
   return (
     <section id="brands" className="py-16 bg-gray-50 dark:bg-gray-900 border-y border-gray-200 dark:border-gray-700 scroll-mt-32">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
         <motion.h2
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -139,7 +139,7 @@ function CustomerStoriesSection() {
 
   return (
     <section id="customer-stories" className="py-20 bg-white dark:bg-gray-800 scroll-mt-32">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -158,7 +158,7 @@ function CustomerStoriesSection() {
           What Says Our Happy Clients
         </motion.h2>
 
-        <div className="max-w-6xl mx-auto overflow-hidden">
+        <div className="w-full max-w-6xl mx-auto overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSlide}
@@ -242,7 +242,7 @@ function TrackYourPackageSection() {
 
   return (
     <section id="track-package" className="relative py-16 bg-white dark:bg-gray-800 border-t border-b border-gray-100 dark:border-gray-700 scroll-mt-32">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div className="container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 text-center">
         <motion.h2
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -297,11 +297,41 @@ function TrackYourPackageSection() {
 }
 
 const HERO_SLIDES = [
-  { src: "/banner_new.jpg", alt: "Your trusted delivery partner" },
-  { src: "/truck.jpg", alt: "PSS Worldwide logistics" },
-  { src: "/Truck_2.jpg", alt: "PSS Worldwide logistics2" },
-  { src: "/shipment.jpeg", alt: "Your trusted delivery partner" },
-  { src: "/shipment2.jpeg", alt: "Your trusted delivery partner2" },
+  {
+    src: "/banner_new.jpg",
+    alt: "Your trusted delivery partner",
+    tagline: "EXPRESS COURIER & LOGISTICS",
+    headingLines: ["Fast. Secure. Global.", "Your trusted delivery partner."],
+    paragraph: "Reliable shipping solutions to over 100+ countries. Track every shipment in real time.",
+  },
+  {
+    src: "/truck.jpg",
+    alt: "PSS Worldwide logistics",
+    tagline: "FREIGHT & CARGO SOLUTIONS",
+    headingLines: ["Freight services.", "Scaled to your business."],
+    paragraph: "From single parcels to full-container loads. One partner for all your logistics needs.",
+  },
+  {
+    src: "/Truck_2.jpg",
+    alt: "PSS Worldwide logistics",
+    tagline: "INTERNATIONAL SHIPPING",
+    headingLines: ["Borders don't stop us.", "We deliver worldwide."],
+    paragraph: "Customs clearance, tracking, and dedicated support. Shipping made simple.",
+  },
+  {
+    src: "/shipment.jpeg",
+    alt: "Your trusted delivery partner",
+    tagline: "SAME-DAY & EXPRESS DELIVERY",
+    headingLines: ["Urgent? We've got you.", "Fast. Secure. On time."],
+    paragraph: "When it has to get there today. Same-day and express options when you need them most.",
+  },
+  {
+    src: "/shipment2.jpeg",
+    alt: "Your trusted delivery partner",
+    tagline: "TRACKING & TRANSPARENCY",
+    headingLines: ["Always know where it is.", "Real-time tracking."],
+    paragraph: "From pickup to delivery. Full visibility and proof of delivery for every shipment.",
+  },
 ];
 
 export default function HomePage() {
@@ -335,17 +365,17 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen scrollbar-pretty">
-      {/* Hero Section - single image, centered tagline */}
+    <div className="min-h-screen w-full overflow-x-hidden scrollbar-pretty">
+      {/* Hero Section - image + left-aligned text, vertical dots, text/image change per slide */}
       <section
         ref={heroRef}
         id="home"
-        className="relative w-full min-h-screen overflow-hidden -mt-[115px] pt-[115px] scroll-mt-32"
+        className="relative w-full min-h-[calc(100vh+25px)] overflow-hidden -mt-[115px] pt-[115px] scroll-mt-32"
       >
         <motion.div className="absolute inset-0" style={{ y: imageY, scale: imageScale }}>
-          {HERO_SLIDES.map((img, index) => (
+          {HERO_SLIDES.map((slide, index) => (
             <motion.div
-              key={img.src}
+              key={slide.src}
               className="absolute inset-0"
               style={{ zIndex: index === currentSlide ? 1 : 0 }}
               initial={false}
@@ -353,8 +383,8 @@ export default function HomePage() {
               transition={{ duration: 0.8 }}
             >
               <Image
-                src={img.src}
-                alt={img.alt}
+                src={slide.src}
+                alt={slide.alt}
                 fill
                 priority={index === 0}
                 className="object-cover"
@@ -362,38 +392,68 @@ export default function HomePage() {
             </motion.div>
           ))}
         </motion.div>
-        
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut" }}
-            >
-              <motion.h1
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight uppercase"
-              >
-                FAST. SECURE. GLOBAL
-              </motion.h1>
-              <motion.h2
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35, duration: 0.6 }}
-                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mt-3 leading-tight tracking-tight uppercase"
-              >
-                YOUR TRUSTED DELIVERY PARTNER!
-              </motion.h2>
-            </motion.div>
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-black/40 z-1" aria-hidden />
+        {/* Left-aligned content + vertical dots - fixed top position so dots/text don't jump when slide content length changes */}
+        <div className="absolute inset-0 flex items-start z-10 pt-[34%] sm:pt-[32%] md:pt-[30%]">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-start gap-6 sm:gap-8 md:gap-10">
+              {/* Vertical dot navigation - fixed position, no pt that would shift */}
+              <div className="flex flex-col gap-3 shrink-0" role="tablist" aria-label="Hero slides">
+                {HERO_SLIDES.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    role="tab"
+                    aria-selected={i === currentSlide}
+                    aria-label={`Go to slide ${i + 1}`}
+                    onClick={() => setCurrentSlide(i)}
+                    className={`rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 ${
+                      i === currentSlide
+                        ? "w-3 h-3 sm:w-3.5 sm:h-3.5 bg-blue-500 ring-0"
+                        : "w-3 h-3 sm:w-3.5 sm:h-3.5 border-2 border-white bg-transparent hover:border-white/80"
+                    }`}
+                  />
+                ))}
+              </div>
+              {/* Text content - changes with slide */}
+              <div className="min-w-0 flex-1 max-w-2xl lg:max-w-3xl">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentSlide}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.4 }}
+                    className="text-left"
+                  >
+                    <p className="text-xs sm:text-sm font-medium tracking-widest uppercase text-blue-400 mb-3 sm:mb-4">
+                      {HERO_SLIDES[currentSlide].tagline}
+                    </p>
+                    <div className="space-y-1 sm:space-y-2">
+                      {HERO_SLIDES[currentSlide].headingLines.map((line, i) => (
+                        <h1
+                          key={i}
+                          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl 2xl:text-5xl font-bold text-white leading-tight tracking-tight"
+                        >
+                          {line}
+                        </h1>
+                      ))}
+                    </div>
+                    <p className="mt-4 sm:mt-6 text-sm sm:text-base text-gray-300 max-w-lg">
+                      {HERO_SLIDES[currentSlide].paragraph}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* About Section */}
       <section id="about" className="py-20 bg-white dark:bg-gray-800 scroll-mt-30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, x: -50 }}
@@ -442,7 +502,7 @@ export default function HomePage() {
 
       {/* You're in Good Company */}
       <section id="good-company" className="py-20 bg-white dark:bg-gray-800 scroll-mt-32">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -480,7 +540,7 @@ export default function HomePage() {
 
       {/* Services Section */}
       <section id="services" className="py-20 bg-gray-50 dark:bg-gray-900 scroll-mt-24">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -623,7 +683,7 @@ function ContactSection() {
       {/* Subtle dotted pattern */}
       <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-size-[24px_24px]" aria-hidden />
 
-      <div className="relative z-10 pt-12 pb-8 px-[20%] max-xl:px-[15%] max-lg:px-[10%] max-md:px-8 max-sm:px-4">
+      <div className="relative z-10 pt-12 pb-8 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
         {/* Four columns */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8 mb-12">
           {/* Column 1: Logo + description */}
