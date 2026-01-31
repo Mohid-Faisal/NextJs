@@ -497,7 +497,8 @@ export default function ReceiptPage() {
   console.log('=== END D/W FIELD DEBUG ===');
   
   // Format sender address
-  const senderName = shipment?.senderName || invoice.customer?.CompanyName || invoice.customer?.PersonName || 'N/A';
+  const senderName = invoice.customer?.PersonName || 'N/A';
+  const sendercompanyname = invoice.customer?.CompanyName || 'N/A';
   const senderAddress = shipment?.senderAddress || invoice.customer?.Address || '';
   const senderCity = invoice.customer?.City || '';
   const senderState = invoice.customer?.Country && invoice.customer?.State
@@ -509,7 +510,8 @@ export default function ReceiptPage() {
   
   // Format recipient (from invoice.recipient when available, else shipment)
   const r = invoice.recipient;
-  const recipientName = r?.CompanyName || r?.PersonName || shipment?.recipientName || 'N/A';
+  const recipientName = r?.PersonName || shipment?.recipientName || 'N/A';
+  const recipientcompanyname = r?.CompanyName || 'N/A';
   const recipientAddress = r?.Address ?? shipment?.recipientAddress ?? '';
   const recipientCity = r?.City ?? '';
   const recipientState = r?.Country && r?.State
@@ -1053,7 +1055,7 @@ export default function ReceiptPage() {
                 <div className="section-header" style={{ borderRight: '3px solid white', marginRight: '-2px', boxSizing: 'border-box' }}>SHIPPER</div>
                 <div className="address-details">
                   <div style={{marginBottom: '8px'}}>
-                    <strong>{senderName.toUpperCase()}</strong><br />
+                    <strong>{sendercompanyname.toUpperCase()}</strong><br />
                     {senderAddress}
             </div>
                   <div style={{marginBottom: '8px'}}>
@@ -1103,7 +1105,7 @@ export default function ReceiptPage() {
                 <div className="section-header" >CONSIGNEE</div>
                 <div className="address-details">
                   <div style={{marginBottom: '8px'}}>
-                    <strong>{recipientName.toUpperCase()}</strong><br />
+                    <strong>{recipientcompanyname.toUpperCase()}</strong><br />
                     {recipientAddress}
                   </div>
                   <div style={{marginBottom: '8px'}}>
