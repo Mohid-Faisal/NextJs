@@ -99,6 +99,27 @@ export default function ShipmentsPage() {
   const [isSubmittingTracking, setIsSubmittingTracking] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
+  // Edit / Delete tracking status dialog
+  type TrackingEntry = { status: string; timestamp: string; description?: string; location?: string };
+  const [openManageTrackingDialog, setOpenManageTrackingDialog] = useState(false);
+  const [shipmentForManageTracking, setShipmentForManageTracking] = useState<
+    (Shipment & { invoices: { id: number; status: string }[] }) | null
+  >(null);
+  const [trackingHistoryList, setTrackingHistoryList] = useState<TrackingEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editStatus, setEditStatus] = useState("");
+  const [editTimestamp, setEditTimestamp] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
+  const [addingNew, setAddingNew] = useState(false);
+  const [addFormStatus, setAddFormStatus] = useState("In Transit");
+  const [addFormTimestamp, setAddFormTimestamp] = useState(() => format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+  const [addFormLocation, setAddFormLocation] = useState("");
+  const [addFormDescription, setAddFormDescription] = useState("");
+  const [isSubmittingManage, setIsSubmittingManage] = useState(false);
+
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
   type SortField =
     | "trackingId"
@@ -347,6 +368,136 @@ export default function ShipmentsPage() {
     setTrackingFormDescription("");
     setTrackingFormLocation("");
     setOpenTrackingDialog(true);
+  };
+
+  const openManageTrackingDialogFor = (shipment: Shipment & { invoices: { id: number; status: string }[] }) => {
+    setShipmentForManageTracking(shipment);
+    setTrackingHistoryList([]);
+    setEditingIndex(null);
+    setDeletingIndex(null);
+    setAddingNew(false);
+    setOpenManageTrackingDialog(true);
+  };
+
+  useEffect(() => {
+    if (!openManageTrackingDialog || !shipmentForManageTracking) return;
+    setLoadingHistory(true);
+    fetch(`/api/shipments/${shipmentForManageTracking.id}/tracking-status`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.history)) setTrackingHistoryList(data.history);
+        else setTrackingHistoryList([]);
+      })
+      .catch(() => setTrackingHistoryList([]))
+      .finally(() => setLoadingHistory(false));
+  }, [openManageTrackingDialog, shipmentForManageTracking?.id]);
+
+  const startEditTracking = (index: number) => {
+    const entry = trackingHistoryList[index];
+    if (!entry) return;
+    setEditingIndex(index);
+    setEditStatus(entry.status);
+    try {
+      const d = new Date(entry.timestamp);
+      setEditTimestamp(format(d, "yyyy-MM-dd'T'HH:mm"));
+    } catch {
+      setEditTimestamp(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    }
+    setEditDescription(entry.description ?? "");
+    setEditLocation(entry.location ?? "");
+  };
+
+  const handleSaveEditTracking = async () => {
+    if (shipmentForManageTracking == null || editingIndex == null) return;
+    setIsSubmittingManage(true);
+    try {
+      const res = await fetch(`/api/shipments/${shipmentForManageTracking.id}/tracking-status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          index: editingIndex,
+          status: editStatus,
+          timestamp: new Date(editTimestamp).toISOString(),
+          description: editDescription.trim(),
+          location: editLocation.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Tracking status updated.");
+        setTrackingHistoryList(data.history ?? []);
+        setEditingIndex(null);
+      } else {
+        toast.error(data.error || "Failed to update");
+      }
+    } catch {
+      toast.error("Failed to update tracking status");
+    } finally {
+      setIsSubmittingManage(false);
+    }
+  };
+
+  const handleDeleteTracking = async (index: number) => {
+    if (shipmentForManageTracking == null) return;
+    setIsSubmittingManage(true);
+    try {
+      const res = await fetch(`/api/shipments/${shipmentForManageTracking.id}/tracking-status`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Tracking status removed.");
+        setTrackingHistoryList(data.history ?? []);
+        setDeletingIndex(null);
+      } else {
+        toast.error(data.error || "Failed to delete");
+      }
+    } catch {
+      toast.error("Failed to delete tracking status");
+    } finally {
+      setIsSubmittingManage(false);
+    }
+  };
+
+  const openAddForm = () => {
+    setEditingIndex(null);
+    setDeletingIndex(null);
+    setAddFormStatus("In Transit");
+    setAddFormTimestamp(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    setAddFormLocation("");
+    setAddFormDescription("");
+    setAddingNew(true);
+  };
+
+  const handleAddTrackingStatus = async () => {
+    if (shipmentForManageTracking == null) return;
+    setIsSubmittingManage(true);
+    try {
+      const res = await fetch(`/api/shipments/${shipmentForManageTracking.id}/tracking-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: addFormStatus,
+          timestamp: new Date(addFormTimestamp).toISOString(),
+          description: addFormDescription.trim(),
+          location: addFormLocation.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Tracking status added.");
+        setTrackingHistoryList(data.history ?? []);
+        setAddingNew(false);
+      } else {
+        toast.error(data.error || "Failed to add");
+      }
+    } catch {
+      toast.error("Failed to add tracking status");
+    } finally {
+      setIsSubmittingManage(false);
+    }
   };
 
   const handleSubmitTrackingStatus = async () => {
@@ -707,7 +858,7 @@ export default function ShipmentsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0 min-h-screen">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0 min-h-[calc(100vh-64px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">
           📦 All Shipments
@@ -719,9 +870,9 @@ export default function ShipmentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 min-w-0">
         {/* Left side - Page size and Search field */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:max-w-2xl">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:max-w-2xl min-w-0">
           {/* Page size select */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600 dark:text-gray-400">Show:</span>
@@ -763,7 +914,7 @@ export default function ShipmentsPage() {
         </div>
 
         {/* Right side - Export, Delivery Status and Date Range */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto min-w-0 shrink-0">
           {/* Export Dropdown */}
           <div>
             <DropdownMenu>
@@ -868,8 +1019,8 @@ export default function ShipmentsPage() {
       </div>
 
       {/* Shipments Table */}
-      <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
+      <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 min-w-0 w-full">
+        <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto min-w-0">
           {shipments.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
               No shipments found.
@@ -1118,9 +1269,9 @@ export default function ShipmentsPage() {
                                 </DropdownMenuItem>
                               </>
                             )}
-                            <DropdownMenuItem onSelect={() => openUpdateTrackingDialog(shipment)}>
-                              <Truck className="mr-2 h-4 w-4" />
-                              Update Tracking Status
+                            <DropdownMenuItem onSelect={() => openManageTrackingDialogFor(shipment)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Update / Delete tracking status
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => handleMarkAsInTransit(shipment)} className="text-blue-600">
                               <Truck className="mr-2 h-4 w-4" />
@@ -1145,6 +1296,190 @@ export default function ShipmentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit / Delete tracking status dialog */}
+      <Dialog
+        open={openManageTrackingDialog}
+        onOpenChange={(open) => {
+          setOpenManageTrackingDialog(open);
+          if (!open) {
+            setShipmentForManageTracking(null);
+            setEditingIndex(null);
+            setDeletingIndex(null);
+            setAddingNew(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg w-full max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit / Delete tracking status</DialogTitle>
+          </DialogHeader>
+          {shipmentForManageTracking && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Tracking: <strong>{shipmentForManageTracking.trackingId}</strong>
+              </p>
+              {loadingHistory ? (
+                <p className="text-sm text-muted-foreground">Loading history…</p>
+              ) : (
+                <>
+                  {addingNew ? (
+                    <div className="grid gap-3 rounded-lg border p-4">
+                      <Label>Add tracking status</Label>
+                      <Select value={addFormStatus} onValueChange={setAddFormStatus}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TRACKING_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="grid gap-2">
+                        <Label>Date & time</Label>
+                        <Input
+                          type="datetime-local"
+                          value={addFormTimestamp}
+                          onChange={(e) => setAddFormTimestamp(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Location (optional)</Label>
+                        <Input
+                          placeholder="e.g. Lahore, Pakistan"
+                          value={addFormLocation}
+                          onChange={(e) => setAddFormLocation(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Description (optional)</Label>
+                        <Input
+                          placeholder="e.g. En route to hub"
+                          value={addFormDescription}
+                          onChange={(e) => setAddFormDescription(e.target.value)}
+                        />
+                      </div>
+                      <DialogFooter className="mt-2">
+                        <Button variant="outline" onClick={() => setAddingNew(false)}>Cancel</Button>
+                        <Button onClick={handleAddTrackingStatus} disabled={isSubmittingManage}>
+                          {isSubmittingManage ? "Adding…" : "Add status"}
+                        </Button>
+                      </DialogFooter>
+                    </div>
+                  ) : editingIndex !== null ? (
+                    <div className="grid gap-3 rounded-lg border p-4">
+                      <Label>Edit status</Label>
+                      <Select value={editStatus} onValueChange={setEditStatus}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TRACKING_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="grid gap-2">
+                        <Label>Date & time</Label>
+                        <Input
+                          type="datetime-local"
+                          value={editTimestamp}
+                          onChange={(e) => setEditTimestamp(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Location (optional)</Label>
+                        <Input
+                          placeholder="e.g. Karachi Hub"
+                          value={editLocation}
+                          onChange={(e) => setEditLocation(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Description (optional)</Label>
+                        <Input
+                          placeholder="e.g. En route to hub"
+                          value={editDescription}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                        />
+                      </div>
+                      <DialogFooter className="mt-2">
+                        <Button variant="outline" onClick={() => setEditingIndex(null)}>Cancel</Button>
+                        <Button onClick={handleSaveEditTracking} disabled={isSubmittingManage}>
+                          {isSubmittingManage ? "Saving…" : "Save"}
+                        </Button>
+                      </DialogFooter>
+                    </div>
+                  ) : deletingIndex !== null ? (
+                    <div className="rounded-lg border p-4 space-y-3">
+                      <p className="text-sm">Remove this tracking status?</p>
+                      <DialogFooter className="mt-2">
+                        <Button variant="outline" onClick={() => setDeletingIndex(null)}>Cancel</Button>
+                        <Button variant="destructive" onClick={() => handleDeleteTracking(deletingIndex)} disabled={isSubmittingManage}>
+                          {isSubmittingManage ? "Deleting…" : "Delete"}
+                        </Button>
+                      </DialogFooter>
+                    </div>
+                  ) : null}
+                  {!addingNew && editingIndex === null && deletingIndex === null && (
+                    <>
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <Label className="text-xs text-muted-foreground">
+                          {trackingHistoryList.length === 0 ? "No tracking status history yet." : "Status history (oldest first)"}
+                        </Label>
+                        <Button variant="outline" size="sm" onClick={openAddForm} className="shrink-0">
+                          Add
+                        </Button>
+                      </div>
+                      {trackingHistoryList.length > 0 && (
+                        <ul className="space-y-2 max-h-64 overflow-y-auto pr-1 mt-2">
+                          {trackingHistoryList.map((entry, i) => (
+                            <li
+                              key={i}
+                              className="flex flex-wrap items-start justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <span className="font-medium">{entry.status}</span>
+                                <span className="ml-2 text-muted-foreground">
+                                  {format(parseISO(entry.timestamp), "dd/MM/yyyy HH:mm")}
+                                </span>
+                                {(entry.location || entry.description) && (
+                                  <p className="mt-1 text-muted-foreground truncate">
+                                    {[entry.location, entry.description].filter(Boolean).join(" · ")}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8"
+                                  onClick={() => startEditTracking(i)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-destructive hover:text-destructive"
+                                  onClick={() => setDeletingIndex(i)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Update Tracking Status dialog */}
       <Dialog open={openTrackingDialog} onOpenChange={(open) => { setOpenTrackingDialog(open); if (!open) setShipmentForTracking(null); }}>

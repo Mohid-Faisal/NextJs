@@ -345,6 +345,23 @@ export async function POST(req: NextRequest) {
     });
 
     // ============================================================================
+    // SECTION 6.1: AUTO-ADD INITIAL TRACKING STATUS (Booked + Picked Up)
+    // ============================================================================
+    const shipmentDateTime = shipment.shipmentDate ? new Date(shipment.shipmentDate) : new Date(shipment.createdAt);
+    const bookingDateTime = new Date(shipmentDateTime.getTime() - 2.5 * 60 * 60 * 1000); // 2.5 hours before shipment date
+    const initialTrackingHistory = [
+      { status: "Booked", timestamp: bookingDateTime.toISOString(), location: "Lahore, Pakistan" },
+      { status: "Picked Up", timestamp: shipmentDateTime.toISOString(), location: "Lahore, Pakistan" },
+    ];
+    await prisma.shipment.update({
+      where: { id: shipment.id },
+      data: {
+        trackingStatusHistory: initialTrackingHistory as unknown as object,
+        trackingStatus: "Picked Up",
+      } as Record<string, unknown>,
+    });
+
+    // ============================================================================
     // SECTION 7: INVOICE CREATION
     // ============================================================================
     // Initialize variables for invoice creation

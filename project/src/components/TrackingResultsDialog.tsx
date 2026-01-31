@@ -274,7 +274,25 @@ export default function TrackingResultsDialog(props: {
       if (response.ok && data.shipments?.length > 0) {
         const found = data.shipments.find((s: Shipment) => s.invoiceNumber?.toLowerCase() === q.toLowerCase());
         if (found) {
-          setShipment(found);
+          // If shipment has no tracking history (added before auto-tracking), add Booked + Picked Up
+          const history = parseHistory(found.trackingStatusHistory);
+          if (history.length === 0) {
+            try {
+              const ensureRes = await fetch(`/api/shipments/${found.id}/ensure-initial-tracking`, {
+                method: "POST",
+              });
+              const ensureData = await ensureRes.json();
+              if (ensureRes.ok && ensureData.shipment) {
+                setShipment(ensureData.shipment);
+              } else {
+                setShipment(found);
+              }
+            } catch {
+              setShipment(found);
+            }
+          } else {
+            setShipment(found);
+          }
           toast.success("Shipment found!");
         } else {
           setShipment(null);
@@ -355,10 +373,6 @@ export default function TrackingResultsDialog(props: {
                             </div>
                             <div className="min-w-0">
                               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">HAWB: {shipment.invoiceNumber}</h2>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-0.5">
-                                <Calendar className="w-4 h-4 shrink-0" />
-                                Booked on {formatDateTime(shipment.shipmentDate ?? shipment.createdAt)}
-                              </p>
                             </div>
                           </div>
                           <div className="shrink-0">
@@ -430,7 +444,7 @@ export default function TrackingResultsDialog(props: {
                         </button>
                         {detailsExpanded && (
                           <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-700">
-                            <dl className="pt-4 grid grid-cols-2 md:grid-cols-6 gap-4">
+                            <dl className="pt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
                               <div>
                                 <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Type</dt>
                                 <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{shipment.packaging || "—"}</dd>
@@ -444,10 +458,6 @@ export default function TrackingResultsDialog(props: {
                               <div>
                                 <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Pcs</dt>
                                 <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{shipment.amount != null && shipment.amount > 0 ? shipment.amount : "—"}</dd>
-                              </div>
-                              <div>
-                                <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Dimensions</dt>
-                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{getDimensionsDisplay(shipment)}</dd>
                               </div>
                               <div>
                                 <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Service Mode</dt>

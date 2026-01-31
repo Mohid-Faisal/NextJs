@@ -436,6 +436,21 @@ export async function POST(req: NextRequest) {
           }
         });
 
+        // Auto-add initial tracking status: Booked (shipment date - 2.5h) and Picked Up (shipment date), Lahore, Pakistan
+        const shipmentDateTime = shipment.shipmentDate ? new Date(shipment.shipmentDate) : new Date(shipment.createdAt);
+        const bookingDateTime = new Date(shipmentDateTime.getTime() - 2.5 * 60 * 60 * 1000);
+        const initialTrackingHistory = [
+          { status: "Booked", timestamp: bookingDateTime.toISOString(), location: "Lahore, Pakistan" },
+          { status: "Picked Up", timestamp: shipmentDateTime.toISOString(), location: "Lahore, Pakistan" },
+        ];
+        await prisma.shipment.update({
+          where: { id: shipment.id },
+          data: {
+            trackingStatusHistory: initialTrackingHistory as unknown as object,
+            trackingStatus: "Picked Up",
+          } as Record<string, unknown>,
+        });
+
         // Get customer and vendor balances
         const customerBalance = customer.currentBalance || 0;
         const vendorBalance = vendor.currentBalance || 0;
