@@ -248,6 +248,7 @@ export default function TrackingResultsDialog(props: {
   const { open = true, onOpenChange, initialBookingId = "", autoSearch = true, asPage = false } = props;
   const [bookingId, setBookingId] = useState(initialBookingId);
   const [shipment, setShipment] = useState<Shipment | null>(null);
+  const [recipient, setRecipient] = useState<{ City?: string; Country?: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(true);
@@ -279,6 +280,7 @@ export default function TrackingResultsDialog(props: {
         if (found) {
           // If shipment has no tracking history (added before auto-tracking), add Booked + Picked Up
           const history = parseHistory(found.trackingStatusHistory);
+          let finalShipment = found;
           if (history.length === 0) {
             try {
               const ensureRes = await fetch(`/api/shipments/${found.id}/ensure-initial-tracking`, {
@@ -286,28 +288,40 @@ export default function TrackingResultsDialog(props: {
               });
               const ensureData = await ensureRes.json();
               if (ensureRes.ok && ensureData.shipment) {
-                setShipment(ensureData.shipment);
-              } else {
-                setShipment(found);
+                finalShipment = ensureData.shipment;
               }
             } catch {
-              setShipment(found);
+              // keep found
             }
-          } else {
-            setShipment(found);
+          }
+          setShipment(finalShipment);
+          // Fetch recipient for destination city
+          try {
+            const detailRes = await fetch(`/api/shipments/${found.id}`);
+            const detailData = await detailRes.json();
+            if (detailRes.ok && detailData.recipient) {
+              setRecipient(detailData.recipient);
+            } else {
+              setRecipient(null);
+            }
+          } catch {
+            setRecipient(null);
           }
           toast.success("Shipment found!");
         } else {
           setShipment(null);
+          setRecipient(null);
           toast.error("No shipment found with this booking ID");
         }
       } else {
         setShipment(null);
+        setRecipient(null);
         toast.error("No shipment found with this booking ID");
       }
     } catch {
       toast.error("An error occurred while searching. Please try again.");
       setShipment(null);
+      setRecipient(null);
     } finally {
       setLoading(false);
     }
@@ -317,7 +331,10 @@ export default function TrackingResultsDialog(props: {
   const activeStage = shipment ? getActiveStage(effectiveStatus) : "Booked";
   const historyEvents = shipment ? getTrackingHistory(shipment) : [];
   const activeIndex = STAGES.indexOf(activeStage);
-  const destLabel = shipment ? (getCountryNameFromCode(shipment.destination) || shipment.destination || "—").toUpperCase() : "—";
+  const countryName = shipment ? (getCountryNameFromCode(shipment.destination) || shipment.destination || "—").toUpperCase() : "—";
+  const destLabel = shipment && recipient?.City
+    ? `${recipient.City.toUpperCase()}, ${countryName}`
+    : countryName;
   const originDisplay = "LAHORE, PAKISTAN";
   const latestEvent = historyEvents.length > 0 ? [...historyEvents].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] : null;
   const statusHeader = (() => {
@@ -373,7 +390,7 @@ export default function TrackingResultsDialog(props: {
               {shipment ? (
                 <div className="space-y-4">
                   <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-                    <CardContent className="p-6">
+                    <CardContent className="p-6 pt-1 pb-0">
                       <div className="mb-6">
                         <div className="flex flex-row items-center justify-between gap-4">
                           <div className="flex flex-col gap-1 min-w-0">
@@ -400,7 +417,7 @@ export default function TrackingResultsDialog(props: {
                         </div>
                       </div>
 
-                      <div className="pt-2 pb-6 relative">
+                      <div className="pt-2 pb-1 relative">
                         {/* Connector line behind circles: 4 segments between 5 circles, aligned to grid */}
                         <div className="absolute left-0 right-0 top-6 h-0.5 flex pointer-events-none px-[10%]" aria-hidden>
                           <div className={`h-full flex-1 ${activeIndex >= 1 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
