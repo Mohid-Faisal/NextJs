@@ -1260,6 +1260,10 @@ export default function ShipmentsPage() {
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipment-invoice/${shipment.id}`)}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Shipment Invoice
+                            </DropdownMenuItem>
                             {shipment.invoices?.[0]?.id && (
                               <>
                                 <DropdownMenuItem

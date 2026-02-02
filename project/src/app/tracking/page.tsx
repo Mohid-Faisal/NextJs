@@ -35,7 +35,7 @@ export default function TrackingPage() {
             The tracking dialog was closed.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button
+              <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={() => setOpen(true)}
             >
@@ -43,7 +43,7 @@ export default function TrackingPage() {
             </Button>
             <Button variant="outline" onClick={() => router.push("/")}>
               Go Home
-            </Button>
+              </Button>
           </div>
         </div>
       )}

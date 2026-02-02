@@ -31,6 +31,13 @@ export async function GET(
 
     const shipment = await prisma.shipment.findUnique({
       where: { id: shipmentId },
+      include: {
+        invoices: {
+          where: { profile: "Customer" },
+          include: { customer: true },
+          take: 1,
+        },
+      },
     });
 
     if (!shipment) {
@@ -40,7 +47,22 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ shipment });
+    // Look up recipient by name for full address (Address, City, Zip, State, Country)
+    let recipient = null;
+    if (shipment.recipientName) {
+      const name = String(shipment.recipientName).trim();
+      if (name) {
+        recipient = await prisma.recipients.findFirst({
+          where: { CompanyName: { equals: name, mode: "insensitive" } },
+        });
+      }
+    }
+
+    return NextResponse.json({
+      shipment,
+      customer: shipment.invoices?.[0]?.customer ?? null,
+      recipient,
+    });
   } catch (error) {
     console.error("Error fetching shipment:", error);
     return NextResponse.json(

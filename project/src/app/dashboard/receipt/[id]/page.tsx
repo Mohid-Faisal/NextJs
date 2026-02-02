@@ -176,6 +176,8 @@ export default function ReceiptPage() {
               background: white;
               padding: 20px;
               border: 1px solid #ccc;
+              transform: scale(0.9);
+              transform-origin: top center;
             }
 
             .header-area {
@@ -695,6 +697,8 @@ export default function ReceiptPage() {
           border: 1px solid #ccc;
           font-family: Arial, Helvetica, sans-serif;
           font-size: 10px;
+          transform: scale(0.9);
+          transform-origin: top center;
         }
 
         .waybill-wrapper .header-area {
@@ -1131,7 +1135,7 @@ export default function ReceiptPage() {
                 <div className="currency-box">
                   <div style={{marginBottom: '1px', lineHeight: '1.2'}}>DECLARED VALUE FOR</div>
                   <div style={{marginBottom: '1px', lineHeight: '1.2'}}>CUSTOMS AND CURRENCY</div>
-                  <div style={{marginTop: '2px', lineHeight: '1.2'}}><strong>{declaredValue.toFixed(2)} PKR.</strong></div>
+                  <div style={{marginTop: '2px', lineHeight: '1.2'}}><strong>{declaredValue.toFixed(2)} USD.</strong></div>
               </div>
             </div>
 
