@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, CheckCircle2, ChevronDown, ChevronUp, Package, Search } from "lucide-react";
+import { Calendar, CheckCircle2, ChevronDown, ChevronUp, Package, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getCountryNameFromCode } from "@/lib/utils";
@@ -31,6 +31,7 @@ interface Shipment {
   width?: number;
   height?: number;
   serviceMode?: string;
+  vendor?: string;
   packaging?: string;
   amount?: number;
   packages?: unknown;
@@ -237,12 +238,14 @@ function getDimensionsDisplay(s: Shipment): string {
 }
 
 export default function TrackingResultsDialog(props: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   initialBookingId?: string;
   autoSearch?: boolean;
+  /** When true, renders as page content instead of a dialog */
+  asPage?: boolean;
 }) {
-  const { open, onOpenChange, initialBookingId = "", autoSearch = true } = props;
+  const { open = true, onOpenChange, initialBookingId = "", autoSearch = true, asPage = false } = props;
   const [bookingId, setBookingId] = useState(initialBookingId);
   const [shipment, setShipment] = useState<Shipment | null>(null);
   const [loading, setLoading] = useState(false);
@@ -251,14 +254,14 @@ export default function TrackingResultsDialog(props: {
   const [updatesExpanded, setUpdatesExpanded] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!asPage && !open) return;
     const q = initialBookingId.trim();
     if (!q) return;
     setBookingId(q);
     if (!autoSearch) return;
     // eslint-disable-next-line react-hooks/exhaustive-deps
     handleSearch(q);
-  }, [open, initialBookingId, autoSearch]);
+  }, [asPage, open, initialBookingId, autoSearch]);
 
   const handleSearch = async (override?: string) => {
     const q = (override ?? bookingId).trim();
@@ -330,24 +333,30 @@ export default function TrackingResultsDialog(props: {
 
   const slides = useMemo(() => getHistoryByDateGroups(historyEvents), [historyEvents]);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto" size="4xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Track Shipment</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex flex-col sm:flex-row gap-3">
+  const content = (
+    <>
+        <div className={asPage ? "mb-8" : ""}>
+          {asPage && (
+            <div className="text-center mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Track Your Shipment</h1>
+              <p className="text-gray-600 dark:text-gray-400 text-lg">Enter your booking ID to get real-time updates on your shipment</p>
+            </div>
+          )}
+          <div className={`flex flex-col sm:flex-row gap-3 ${asPage ? "max-w-xl mx-auto items-stretch sm:items-center justify-center" : ""}`}>
           <Input
             type="text"
             placeholder="Enter booking ID (e.g., 420001)"
             value={bookingId}
             onChange={(e) => setBookingId(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="flex-1"
+            className={`flex-1 ${asPage ? "min-w-0 h-12 px-4 rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600" : ""}`}
           />
-          <Button onClick={() => handleSearch()} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
-            {loading ? "Searching..." : <><Search className="w-4 h-4 mr-2" />Track</>}
+          <Button
+            onClick={() => handleSearch()}
+            disabled={loading}
+            className={`bg-blue-600 hover:bg-blue-700 text-white ${asPage ? "h-12 px-8 font-semibold rounded-lg shrink-0" : ""}`}
+          >
+            {loading ? "Searching..." : <><Search className="w-5 h-5 mr-2 inline" />Track</>}
           </Button>
         </div>
 
@@ -359,27 +368,30 @@ export default function TrackingResultsDialog(props: {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className="mt-4"
+              className={`mt-4 ${asPage ? "text-left" : ""}`}
             >
               {shipment ? (
                 <div className="space-y-4">
                   <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
                     <CardContent className="p-6">
                       <div className="mb-6">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mt-0.5">
-                              <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="min-w-0">
-                              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">HAWB: {shipment.invoiceNumber}</h2>
-                            </div>
+                        <div className="flex flex-row items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                              Booking ID: <span className="font-bold text-gray-900 dark:text-white">{shipment.invoiceNumber}</span>
+                            </p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                              This shipment is handled by: <span className="font-bold text-gray-900 dark:text-white">{shipment.vendor || shipment.serviceMode || "—"}</span>
+                            </p>
                           </div>
-                          <div className="shrink-0">
-                            <span className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white">
-                              {effectiveStatus}
-                            </span>
-                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={() => window.print()}
+                            className="shrink-0 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-500 dark:hover:bg-red-950/30"
+                          >
+                            Print
+                            <Printer className="w-4 h-4 ml-2" />
+                          </Button>
                         </div>
 
                         <div className="mt-5">
@@ -408,23 +420,23 @@ export default function TrackingResultsDialog(props: {
                                       <CheckCircle2 className="h-4 w-4" />
                                     </span>
                                   ) : isCurrent ? (
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 ring-4 ring-green-100 dark:ring-green-900/40">
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500">
                                       <span className="h-2 w-2 rounded-full bg-white" />
                                     </span>
                                   ) : (
                                     <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800" />
                                   )}
                                 </span>
-                                <span className={`mt-2 text-center text-xs font-medium whitespace-nowrap ${isCurrent ? "text-green-600 dark:text-green-400" : done ? "text-gray-700 dark:text-gray-300" : "text-gray-500 dark:text-gray-400"}`}>
+                                <span className={`mt-2 text-center text-xs font-medium whitespace-nowrap ${isCurrent ? "text-blue-600 dark:text-blue-400" : done ? "text-gray-700 dark:text-gray-300" : "text-gray-500 dark:text-gray-400"}`}>
                                   {stage}
                                 </span>
                               </div>
                             );
                           })}
                         </div>
-                        <div className="flex justify-between mt-6 text-xs text-gray-600 dark:text-gray-400">
-                          <span>Origin: {originDisplay}</span>
-                          <span>Destination: {destLabel}</span>
+                        <div className="flex justify-between mt-6 text-xs text-gray-800 dark:text-gray-400">
+                          <span>Origin: <span className="font-bold">{originDisplay}</span></span>
+                          <span>Destination: <span className="font-bold">{destLabel}</span></span>
                         </div>
                       </div>
                     </CardContent>
@@ -573,6 +585,27 @@ export default function TrackingResultsDialog(props: {
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+    </>
+  );
+
+  if (asPage) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto" size="4xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">Track Shipment</DialogTitle>
+        </DialogHeader>
+        {content}
       </DialogContent>
     </Dialog>
   );

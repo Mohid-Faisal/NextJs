@@ -19,7 +19,6 @@ import {
 import { Package, Truck, Globe, Clock, Shield, HeadphonesIcon, Facebook, Twitter, Instagram, MapPin, Phone, Mail, Search, Star } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { toast } from "sonner";
-import TrackingResultsDialog from "@/components/TrackingResultsDialog";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -266,14 +265,14 @@ function CustomerStoriesSection() {
 }
 
 function TrackYourPackageSection() {
+  const router = useRouter();
   const [bookingId, setBookingId] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   const handleTrack = (e: React.FormEvent) => {
     e.preventDefault();
     const id = bookingId.trim();
     if (!id) return;
-    setDialogOpen(true);
+    router.push(`/tracking?bookingId=${encodeURIComponent(id)}`);
   };
 
   return (
@@ -321,13 +320,6 @@ function TrackYourPackageSection() {
           </Button>
         </motion.form>
       </div>
-
-      <TrackingResultsDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        initialBookingId={bookingId.trim()}
-        autoSearch
-      />
     </section>
   );
 }
@@ -335,7 +327,7 @@ function TrackYourPackageSection() {
 const HERO_SLIDES = [
   {
     // src: "/banner_new.jpg",
-    src: "/Hero1.jpeg",
+    src: "/Hero7.jpeg",
     alt: "Your trusted delivery partner",
     tagline: "EXPRESS COURIER & LOGISTICS",
     headingLines: ["Fast. Secure. Global.", "Your trusted delivery partner."],

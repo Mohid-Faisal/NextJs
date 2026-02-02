@@ -1251,7 +1251,7 @@ export default function ShipmentsPage() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuContent align="end" className="w-43">
                             <DropdownMenuItem onSelect={() => handleEdit(shipment)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
@@ -1269,13 +1269,13 @@ export default function ShipmentsPage() {
                                 <DropdownMenuItem
                                   onSelect={() => router.push(`/dashboard/receipt/${shipment.invoices![0].id}`)}
                                 >
-                                  📄 Download Receipt
+                                  📄 Print Receipt
                                 </DropdownMenuItem>
                               </>
                             )}
                             <DropdownMenuItem onSelect={() => openManageTrackingDialogFor(shipment)}>
                               <Edit className="mr-2 h-4 w-4" />
-                              Update / Delete tracking status
+                              Tracking Status
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => handleMarkAsInTransit(shipment)} className="text-blue-600">
                               <Truck className="mr-2 h-4 w-4" />

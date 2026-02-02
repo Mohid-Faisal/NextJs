@@ -439,51 +439,33 @@ export default function ViewCustomerDialog({
                 <FileText className="w-4 h-4 text-blue-600" />
                 Document Information
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Document Type
-                      </p>
-                      <p className="text-sm font-medium">
-                        {customer.DocumentType || "Not specified"}
-                      </p>
-                    </div>
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex items-center gap-2 flex-1 justify-start">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Document Type</p>
+                    <p className="text-sm font-medium">{customer.DocumentType || "Not specified"}</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Document Number
-                      </p>
-                      <p className="text-sm font-medium">
-                        {customer.DocumentNumber || "Not specified"}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-2 flex-1 justify-center">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Document Number</p>
+                    <p className="text-sm font-medium">{customer.DocumentNumber || "Not specified"}</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Expiry Date
-                      </p>
-                      <p className="text-sm font-medium">
-                        {customer.DocumentExpiry
-                          ? (() => {
-                              const d = new Date(customer.DocumentExpiry!);
-                              return isNaN(d.getTime())
-                                ? customer.DocumentExpiry
-                                : formatDate(customer.DocumentExpiry);
-                            })()
-                          : "Not specified"}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-2 flex-1 justify-end">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Expiry Date</p>
+                    <p className="text-sm font-medium">
+                      {customer.DocumentExpiry
+                        ? (() => {
+                            const d = new Date(customer.DocumentExpiry!);
+                            return isNaN(d.getTime()) ? customer.DocumentExpiry : formatDate(customer.DocumentExpiry);
+                          })()
+                        : "Not specified"}
+                    </p>
                   </div>
                 </div>
               </div>
