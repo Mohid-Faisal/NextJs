@@ -71,6 +71,7 @@ interface Invoice {
     Country?: string;
     Zip?: string;
     Phone?: string;
+    DocumentNumber?: string;
   };
   recipient?: {
     CompanyName?: string;
@@ -507,6 +508,7 @@ export default function ReceiptPage() {
   const senderCountry = invoice.customer?.Country ? getCountryNameFromCode(invoice.customer.Country) : '';
   const senderZip = invoice.customer?.Zip || '';
   const senderPhone = invoice.customer?.Phone || '';
+  const senderDocumentNumber = invoice.customer?.DocumentNumber || '';
   
   // Format recipient (from invoice.recipient when available, else shipment)
   const r = invoice.recipient;
@@ -1068,7 +1070,7 @@ export default function ReceiptPage() {
                     Attn: {senderName}<br />
                     {senderPhone || 'N/A'}<br />
                     <br />
-                    CNIC/NTN: N/A
+                    CNIC/NTN: {senderDocumentNumber ? senderDocumentNumber : 'N/A'}
               </div>
               </div>
               </div>
