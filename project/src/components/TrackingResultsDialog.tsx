@@ -381,7 +381,7 @@ export default function TrackingResultsDialog(props: {
                               Booking ID: <span className="font-bold text-gray-900 dark:text-white">{shipment.invoiceNumber}</span>
                             </p>
                             <p className="text-sm text-gray-700 dark:text-gray-300">
-                              This shipment is handled by: <span className="font-bold text-gray-900 dark:text-white">{shipment.vendor || shipment.serviceMode || "—"}</span>
+                              This shipment is handled by: <span className="font-bold text-gray-900 dark:text-white">{shipment.serviceMode || "—"}</span>
                             </p>
                           </div>
                           <Button
