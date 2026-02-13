@@ -15,6 +15,7 @@ interface Shipment {
   recipientAddress?: string;
   recipientPhone?: string;
   trackingId?: string;
+  packaging?: string;
   destination?: string;
 }
 
@@ -354,7 +355,7 @@ export default function InvoicePage() {
                     <td>${invoice?.shipment?.trackingId || '392433508989'}</td>
                     <td></td>
                     <td>${invoice?.shipment?.destination || 'United States'}</td>
-                    <td>W</td>
+                    <td>${invoice?.shipment?.packaging || 'W'}</td>
                     <td>1.00</td>
                   </tr>
                 </tbody>

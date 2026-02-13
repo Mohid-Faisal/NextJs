@@ -26,6 +26,7 @@ interface InvoiceData {
     destination?: string;
     dayWeek?: boolean;
     packages?: string;
+    packaging?: string;
     calculatedValues?: string;
     shipmentDate?: string;
     referenceNumber?: string;
@@ -564,7 +565,7 @@ export default function EditInvoicePage() {
                   </Label>
                   <Input
                     id="dayWeek"
-                    value={invoiceData.shipment?.dayWeek ? 'D' : 'W'}
+                    value={invoiceData.shipment?.packaging}
                     onChange={(e) => setInvoiceData({
                       ...invoiceData,
                       shipment: {...invoiceData.shipment!, dayWeek: e.target.value === 'D'}

@@ -407,7 +407,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
             <td>${shipment?.trackingId || 'N/A'}</td>
             <td>${shipment?.referenceNumber && shipment.referenceNumber.trim() !== '' ? shipment.referenceNumber : 'N/A'}</td>
             <td>${getCountryName(shipment?.destination)}</td>
-            <td>${invoice.dayWeek || shipment?.dayWeek || 'N/A'}</td>
+            <td>${shipment?.packaging || 'N/A'}</td>
             <td>${totalPieces > 0 ? totalPieces : (shipment?.totalPackages || shipment?.amount || 'N/A')}</td>
             <td>${packages.length > 0 ? packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0).toFixed(2) : (shipment?.totalWeight || shipment?.weight || 'N/A')}</td>
           </tr>

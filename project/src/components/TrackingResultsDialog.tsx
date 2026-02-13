@@ -563,10 +563,10 @@ export default function TrackingResultsDialog(props: {
                                             </div>
                                           </div>
                                           <div className="col-span-2 min-w-0">
-                                            <p className={isDelivered ? "text-sm font-semibold text-green-600 dark:text-green-400" : "text-sm font-semibold text-gray-900 dark:text-white"}>
+                                            {/* <p className={isDelivered ? "text-sm font-semibold text-green-600 dark:text-green-400" : "text-sm font-semibold text-gray-900 dark:text-white"}>
                                               {event.title}
-                                            </p>
-                                            {event.detail ? <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{event.detail}</p> : null}
+                                            </p> */}
+                                            {event.detail ? <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{event.detail}</p> : null}
                                           </div>
                                           <div className="min-w-0">
                                             {event.location ? (
