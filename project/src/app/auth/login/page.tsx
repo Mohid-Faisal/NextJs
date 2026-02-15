@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
@@ -15,11 +16,20 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { ArrowLeft } from "lucide-react";
 
 import { motion } from "framer-motion";
+import Particles from "@/components/Particles";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { AuroraBackground } from "@/components/ui/aurora-background";
 
 const LoginPage = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => setMounted(true), []);
+
+  const isDark = mounted && resolvedTheme === "dark";
 
   useEffect(() => {
     const token = Cookies.get("token");
@@ -58,21 +68,43 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-background px-4">
+    <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? 'bg-[#030014]' : 'bg-white'}`}>
+      {/* Theme Toggle */}
+      <div className="absolute top-6 right-6 z-20">
+        <ThemeToggle />
+      </div>
+      {/* Conditional Background */}
+      {isDark ? (
+        <div className="absolute inset-0 z-0">
+          <Particles
+            particleColors={['#ffffff', '#4f8fff', '#a78bfa']}
+            particleCount={200}
+            particleSpread={10}
+            speed={0.1}
+            particleBaseSize={100}
+            moveParticlesOnHover={false}
+            alphaParticles={false}
+            sizeRandomness={1}
+            cameraDistance={20}
+          />
+        </div>
+      ) : (
+        <AuroraBackground />
+      )}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative z-10"
       >
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6"
+          className={`inline-flex items-center gap-2 text-sm mb-6 ${isDark ? 'text-gray-300 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to home
         </Link>
-        <h1 className="text-3xl font-bold text-center text-primary mb-6">
+        <h1 className={`text-3xl font-bold text-center mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Login
         </h1>
         <Card>
