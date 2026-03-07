@@ -101,6 +101,10 @@ export default function ViewCustomerDialog({
     const statusColors = {
       Delivered:
         "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      "Out for Delivery":
+        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+      "Arrived at Destination":
+        "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
       "In Transit":
         "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
       Pending:

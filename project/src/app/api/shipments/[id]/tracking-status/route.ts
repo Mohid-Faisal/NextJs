@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const TRACKING_STATUSES = ["Booked", "Picked Up", "In Transit", "Out for Delivery", "Delivered"] as const;
+const TRACKING_STATUSES = ["Booked", "Picked Up", "In Transit", "Arrived at Destination", "Out for Delivery", "Delivered"] as const;
 
 export type TrackingHistoryEntry = {
   status: string;

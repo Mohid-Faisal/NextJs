@@ -37,7 +37,7 @@ interface Shipment {
   packages?: unknown;
 }
 
-type DeliveryStage = "Booked" | "Picked Up" | "In Transit" | "Out for Delivery" | "Delivered";
+type DeliveryStage = "Booked" | "Picked Up" | "In Transit" | "Arrived at Destination" | "Out for Delivery" | "Delivered";
 
 interface HistoryEvent {
   status: string;
@@ -50,7 +50,7 @@ interface HistoryEvent {
   alreadyHappened?: boolean;
 }
 
-const STAGES: DeliveryStage[] = ["Booked", "Picked Up", "In Transit", "Out for Delivery", "Delivered"];
+const STAGES: DeliveryStage[] = ["Booked", "Picked Up", "In Transit", "Arrived at Destination", "Out for Delivery", "Delivered"];
 
 function formatDateTime(date: Date | string | null | undefined) {
   if (!date) return "—";
@@ -113,6 +113,7 @@ function getActiveStage(status: string): DeliveryStage {
   const s = (status || "").toLowerCase();
   if (s.includes("delivered")) return "Delivered";
   if (s.includes("out for delivery")) return "Out for Delivery";
+  if (s.includes("arrived at destination") || s.includes("arrived at")) return "Arrived at Destination";
   if (s.includes("in transit") || s.includes("transit")) return "In Transit";
   if (s.includes("picked up") || s.includes("picked")) return "Picked Up";
   return "Booked";
@@ -153,21 +154,28 @@ function getTrackingHistory(s: Shipment): HistoryEvent[] {
   const created = typeof s.createdAt === "string" ? new Date(s.createdAt) : s.createdAt;
   const destName = getCountryNameFromCode(s.destination) || s.destination || "destination";
 
+  const laterStages = ["Arrived at Destination", "Out for Delivery", "Delivered"];
   const stages: HistoryEvent[] = [
     {
       status: "In Transit",
       title: "In Transit",
       description: "En route to " + destName,
       detail: "Package in transit",
-      date: active === "In Transit" || ["Out for Delivery", "Delivered"].includes(active) ? bookedDate : "",
+      date: active === "In Transit" || laterStages.includes(active) ? bookedDate : "",
       isCurrent: active === "In Transit",
     },
     { status: "Picked Up", title: "Picked Up", date: new Date(bookedDate.getTime() - 86400000), isCurrent: false },
     { status: "Booked", title: "Booked", date: created, isCurrent: false },
   ];
 
-  if (active === "Out for Delivery" || active === "Delivered") {
+  if (laterStages.includes(active)) {
     stages[0].isCurrent = false;
+  }
+  if (active === "Arrived at Destination" || active === "Out for Delivery" || active === "Delivered") {
+    stages.unshift({ status: "Arrived at Destination", title: "Arrived at Destination", detail: "Package arrived at destination country", date: bookedDate, isCurrent: active === "Arrived at Destination" });
+  }
+  if (active === "Out for Delivery" || active === "Delivered") {
+    if (stages[0]?.status === "Arrived at Destination") stages[0].isCurrent = false;
     stages.unshift({ status: "Out for Delivery", title: "Out for Delivery", detail: "Package out for delivery", date: bookedDate, isCurrent: active === "Out for Delivery" });
   }
   if (active === "Delivered") {
@@ -418,14 +426,15 @@ export default function TrackingResultsDialog(props: {
                       </div>
 
                       <div className="pt-2 pb-1 relative">
-                        {/* Connector line behind circles: 4 segments between 5 circles, aligned to grid */}
-                        <div className="absolute left-0 right-0 top-6 h-0.5 flex pointer-events-none px-[10%]" aria-hidden>
+                        {/* Connector line: 5 segments between 6 circles */}
+                        <div className="absolute left-0 right-0 top-6 h-0.5 flex pointer-events-none px-[8%]" aria-hidden>
                           <div className={`h-full flex-1 ${activeIndex >= 1 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
                           <div className={`h-full flex-1 ${activeIndex >= 2 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
                           <div className={`h-full flex-1 ${activeIndex >= 3 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
                           <div className={`h-full flex-1 ${activeIndex >= 4 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
+                          <div className={`h-full flex-1 ${activeIndex >= 5 ? "bg-green-500" : "bg-gray-200 dark:bg-gray-600"}`} />
                         </div>
-                        <div className="grid grid-cols-5 gap-0 w-full items-start relative z-10">
+                        <div className="grid grid-cols-6 gap-0 w-full items-start relative z-10">
                           {STAGES.map((stage, i) => {
                             const done = i < activeIndex;
                             const isCurrent = i === activeIndex;

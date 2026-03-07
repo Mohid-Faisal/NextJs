@@ -164,6 +164,8 @@ const UpdateShipmentPage = () => {
                   <SelectContent>
                     <SelectItem value="Pending">Pending</SelectItem>
                     <SelectItem value="In Transit">In Transit</SelectItem>
+                    <SelectItem value="Arrived at Destination">Arrived at Destination</SelectItem>
+                    <SelectItem value="Out for Delivery">Out for Delivery</SelectItem>
                     <SelectItem value="Delivered">Delivered</SelectItem>
                   </SelectContent>
                 </Select>

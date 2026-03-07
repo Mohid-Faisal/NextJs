@@ -1309,6 +1309,10 @@ const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
       case "Delivered":
         return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 border-green-200 dark:border-green-800";
+      case "Out for Delivery":
+        return "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800";
+      case "Arrived at Destination":
+        return "bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-400 border-teal-200 dark:border-teal-800";
       case "In Transit":
         return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border-blue-200 dark:border-blue-800";
       case "Pending":

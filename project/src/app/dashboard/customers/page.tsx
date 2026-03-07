@@ -366,6 +366,9 @@ export default function CustomersPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
+  const [activeTab, setActiveTab] = useState<"all" | "withBalance">("all");
+  const [grandTotal, setGrandTotal] = useState(0);
+  const [withBalanceTotal, setWithBalanceTotal] = useState(0);
 
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
@@ -377,17 +380,20 @@ export default function CustomersPage() {
       ...(searchTerm && { search: searchTerm }),
       sortField: sortField,
       sortOrder: sortOrder,
+      ...(activeTab === "withBalance" ? { onlyWithBalance: "true" } : {}),
     });
 
     const res = await fetch(`/api/customers?${params}`);
-    const { customers, total } = await res.json();
+    const { customers, total, grandTotal: gt, withBalanceTotal: wbt } = await res.json();
     setCustomers(customers);
     setTotal(total);
+    if (typeof gt === "number") setGrandTotal(gt);
+    if (typeof wbt === "number") setWithBalanceTotal(wbt);
   };
 
   useEffect(() => {
     fetchCustomers();
-  }, [page, statusFilter, searchTerm, sortField, sortOrder, pageSize]);
+  }, [page, statusFilter, searchTerm, sortField, sortOrder, pageSize, activeTab]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -628,11 +634,47 @@ export default function CustomersPage() {
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">
-          All Customers
+          Customers
         </h2>
-        <div className="text-right">
-          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{total}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total Customers</div>
+        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("all");
+              setPage(1);
+            }}
+            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[130px] ${
+              activeTab === "all"
+                ? "bg-blue-50 dark:bg-blue-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 hover:text-gray-800 dark:hover:text-gray-100"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">
+              {grandTotal}
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
+              Total Customers
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("withBalance");
+              setPage(1);
+            }}
+            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[130px] ${
+              activeTab === "withBalance"
+                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 hover:text-emerald-700 dark:hover:text-emerald-300"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-300">
+              {withBalanceTotal}
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
+              Customers with Balance
+            </span>
+          </button>
         </div>
       </div>
 

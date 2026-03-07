@@ -359,7 +359,7 @@ export default function ShipmentsPage() {
     setOpenDeleteDialog(true);
   };
 
-  const TRACKING_STATUSES = ["Booked", "Picked Up", "In Transit", "Out for Delivery", "Delivered"] as const;
+  const TRACKING_STATUSES = ["Booked", "Picked Up", "In Transit", "Arrived at Destination", "Out for Delivery", "Delivered"] as const;
 
   const openUpdateTrackingDialog = (shipment: Shipment & { invoices: { id: number; status: string }[] }) => {
     setShipmentForTracking(shipment);
