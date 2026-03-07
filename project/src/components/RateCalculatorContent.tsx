@@ -260,9 +260,9 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-end">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold tracking-wide text-slate-600">Collection from</Label>
-                <div className="flex gap-2 items-center">
+                <div className="grid grid-cols-2 gap-2 items-stretch">
                   <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
-                    <SelectTrigger className="flex-1 min-w-0 h-11 bg-white border-slate-200 rounded-xl text-sm">
+                    <SelectTrigger className="w-full h-11 bg-white border-slate-200 rounded-xl text-sm">
                       <SelectValue placeholder="Select origin" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
@@ -281,7 +281,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     value={form.originZip}
                     onChange={handleChange}
                     placeholder="Zip"
-                    className="h-11 w-24 sm:w-28 shrink-0 bg-white border-slate-200 rounded-xl text-sm"
+                    className="h-11 w-full bg-white border-slate-200 rounded-xl text-sm"
                   />
                 </div>
               </div>
@@ -292,9 +292,9 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold tracking-wide text-slate-600">Delivery to</Label>
-                <div className="flex gap-2 items-center">
+                <div className="grid grid-cols-2 gap-2 items-stretch">
                   <Select onValueChange={(value) => handleSelect(value, "destination")} value={form.destination}>
-                    <SelectTrigger className="flex-1 min-w-0 h-11 bg-white border-slate-200 rounded-xl text-sm">
+                    <SelectTrigger className="w-full h-11 bg-white border-slate-200 rounded-xl text-sm">
                       <SelectValue placeholder="Select destination" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
@@ -313,7 +313,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     value={form.destinationZip}
                     onChange={handleChange}
                     placeholder="Zip"
-                    className="h-11 w-24 sm:w-28 shrink-0 bg-white border-slate-200 rounded-xl text-sm"
+                    className="h-11 w-full bg-white border-slate-200 rounded-xl text-sm"
                   />
                 </div>
               </div>
@@ -495,14 +495,6 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               {rank}
                             </span>
                           )}
-                          {isRemote && (
-                            <div className="flex justify-end mb-1.5 pr-0">
-                              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 text-[10px] sm:text-xs font-semibold">
-                                <AlertTriangle className="w-3 h-3" />
-                                Remote area
-                              </span>
-                            </div>
-                          )}
                           <div className="flex items-center justify-between w-full flex-wrap gap-y-2">
                             <div className="flex items-center justify-center rounded-md bg-white border border-slate-200 px-2 py-1.5 shadow-sm shrink-0 w-[72px] h-[40px] sm:w-[90px] sm:h-[46px]">
                               {logoSrc ? (
@@ -534,19 +526,13 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Delivery</span>
                               <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">on average {getDeliveryDays(rate.service, publicResultsTab === "express")}</span>
                             </div>
-                            <div className="flex flex-col items-center gap-px shrink-0">
-                              <Printer className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
-                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Printer</span>
-                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Necessary</span>
-                            </div>
                             <button
                               type="button"
                               onClick={() => setInfoModalOpen(true)}
                               className="flex flex-col items-center gap-px shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                             >
                               <Info className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
-                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Insurance</span>
-                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Information</span>
+                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Information</span>
                             </button>
 
                             <div className="text-right shrink-0">
@@ -557,6 +543,14 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                                 Rs. {(rate.price / rate.weight).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per kg
                               </p>
                             </div>
+
+                            {isRemote && (
+                              <div className="flex flex-col items-center gap-px shrink-0">
+                                <AlertTriangle className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-red-600" />
+                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Remote area</span>
+                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Surcharge may apply</span>
+                              </div>
+                            )}
 
                             <Link
                               href="/auth/login"
