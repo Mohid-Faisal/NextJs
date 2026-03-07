@@ -390,15 +390,19 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
           </div>
 
           {/* Calculate button */}
-          <div className="flex flex-col items-center gap-3">
-            <Button
-              className="h-12 px-10 rounded-full bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-semibold text-sm sm:text-base shadow-lg shadow-sky-200/50 transition-all"
-              onClick={handleCalculate}
-              disabled={loading}
-            >
-              {loading ? "Calculating..." : "Calculate the Price"}
-              {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
-            </Button>
+          <div className="flex flex-col items-center gap-3 px-5 sm:px-7">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full">
+              <div />
+              <Button
+                className="h-12 w-full rounded-full bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-semibold text-sm sm:text-base shadow-lg shadow-sky-200/50 transition-all"
+                onClick={handleCalculate}
+                disabled={loading}
+              >
+                {loading ? "Calculating..." : "Calculate the Price"}
+                {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
+              </Button>
+              <div />
+            </div>
             <p className="text-xs sm:text-sm text-slate-500 text-center">
               Delivery price is based on the greater of actual or volumetric weight. You can calculate the volumetric weight{" "}
               <a
