@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       weight: number;
       vendor: string;
       service: string;
-      zone: number;
+      zone: string;
       price: number;
       docType: string;
     }[] = [];
@@ -97,16 +97,20 @@ export async function POST(req: NextRequest) {
           h.toLowerCase().includes("weight")
         );
         
-        // Find zone columns
+        // Find zone columns (Zone 1, Zone 7, Zone 7A, Zone 7B, Zone 5A, etc.)
         const zoneColumns = currentHeaders
-          .map((header: string, index: number) => ({ header, index }))
+          .map((header: string, index: number) => ({ header: (header || "").toString().trim(), index }))
           .filter(({ header }: { header: string }) => 
             header.toLowerCase().includes("zone") && /\d+/.test(header)
           )
           .sort((a: { header: string }, b: { header: string }) => {
-            const aNum = parseInt(a.header.match(/\d+/)?.[0] || "0");
-            const bNum = parseInt(b.header.match(/\d+/)?.[0] || "0");
-            return aNum - bNum;
+            const zoneLabel = (h: string) => (h.match(/Zone\s*(\d+[A-Za-z]?)/i) || h.match(/(\d+[A-Za-z]?)/))?.[1] || "";
+            const an = zoneLabel(a.header);
+            const bn = zoneLabel(b.header);
+            const aNum = parseInt(an.replace(/\D/g, "") || "0");
+            const bNum = parseInt(bn.replace(/\D/g, "") || "0");
+            if (aNum !== bNum) return aNum - bNum;
+            return (an || "").localeCompare(bn || "", undefined, { numeric: true });
           });
 
         if (weightIndex === -1 || zoneColumns.length === 0) {
@@ -121,9 +125,10 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Process each zone
+        // Process each zone (store zone as string: "7", "7A", "7B", "5A", etc.)
         for (const { header, index } of zoneColumns) {
-          const zoneNum = parseInt(header.match(/\d+/)?.[0] || "0");
+          const zoneMatch = header.match(/Zone\s*(\d+[A-Za-z]?)/i) || header.match(/(\d+[A-Za-z]?)/);
+          const zoneStr = (zoneMatch ? zoneMatch[1] : header.replace(/^Zone\s*/i, "").trim()) || String(header);
           const priceValue = row[index];
           
           if (priceValue === null || priceValue === undefined || priceValue === "") {
@@ -139,7 +144,7 @@ export async function POST(req: NextRequest) {
           }
 
           if (isNaN(price)) {
-            console.log(`⚠️ Invalid price for zone ${zoneNum}: ${priceValue}`);
+            console.log(`⚠️ Invalid price for zone ${zoneStr}: ${priceValue}`);
             continue;
           }
 
@@ -148,8 +153,8 @@ export async function POST(req: NextRequest) {
             weight: weight,
             vendor: vendor,
             service: service,
-            zone: zoneNum,
-            price,
+            zone: zoneStr,
+            price: Math.round(price),
           });
         }
       }
@@ -244,10 +249,11 @@ export async function GET(req: NextRequest) {
     where.service = service;
   }
 
-  // Search functionality
+  // Search functionality (zone is string e.g. "7", "7A", "7B")
   if (search) {
     where.OR = [
-      { zone: { equals: parseInt(search) || 0 } },
+      { zone: { equals: search } },
+      { zone: { contains: search, mode: "insensitive" } },
       { weight: { equals: parseFloat(search) || 0 } },
       { price: { equals: parseInt(search) || 0 } },
       { docType: { contains: search, mode: "insensitive" } },

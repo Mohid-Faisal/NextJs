@@ -247,7 +247,7 @@ model Rate {
   weight     Float
   vendor    String
   service   String
-  zone       Int
+  zone       String  // e.g. "1", "7", "7A", "7B", "5A"
   price      Int
   docType    String
 }

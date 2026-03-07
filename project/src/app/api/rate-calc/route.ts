@@ -75,26 +75,17 @@ export async function POST(req: NextRequest) {
 
     //  console.log(`📍 Found ${zoneInfos.length} zones for destination: ${destination}`);
 
-    // Step 2: Extract unique zone numbers for this destination
-    const destinationZones = new Set();
+    // Step 2: Extract unique zone keys for this destination ("7", "7A", "7B", "5A", etc.)
+    const destinationZones = new Set<string>();
     zoneInfos.forEach((zoneInfo) => {
-      let zoneNumber: number;
-      if (typeof zoneInfo.zone === "string") {
-        const zoneMatch = zoneInfo.zone.match(/\d+/);
-        if (zoneMatch) {
-          zoneNumber = parseInt(zoneMatch[0]);
-        } else {
-          console.log(`⚠️ No numeric value found in zone: ${zoneInfo.zone}`);
-          return;
-        }
-      } else {
-        zoneNumber = parseInt(zoneInfo.zone);
-      }
-
-      if (!isNaN(zoneNumber)) {
-        destinationZones.add(zoneNumber);
-        (zoneInfo as any).zone = zoneNumber;
-      }
+      const raw = zoneInfo.zone;
+      const zoneKey =
+        typeof raw === "string"
+          ? (raw.match(/Zone\s*(\d+[A-Za-z]?)/i)?.[1] || raw.replace(/^Zone\s*/i, "").trim() || raw
+          : String(raw);
+      if (!zoneKey) return;
+      destinationZones.add(zoneKey);
+      (zoneInfo as any).zone = zoneKey;
     });
     //  console.log(`📍 zoneInfos:`, zoneInfos);
     //  console.log(`📍 Destination zones:`, Array.from(destinationZones));
@@ -103,13 +94,11 @@ export async function POST(req: NextRequest) {
     const allRates = [];
     const bestRates = [];
 
-    for (const zoneNumber of destinationZones) {
-      // console.log(`📍 Processing zone ${zoneNumber}`);
-
+    for (const zoneKey of destinationZones) {
       // First, find which services are available in this zone for the given document type
       const availableServices = await prisma.rate.findMany({
         where: {
-          zone: zoneNumber as number,
+          zone: zoneKey,
           docType: docType,
           weight: {
             gte: weightNumber,
@@ -122,23 +111,18 @@ export async function POST(req: NextRequest) {
       });
 
       if (availableServices.length === 0) {
-        // console.log(`⚠️ No services available for zone ${zoneNumber}, skipping...`);
         continue;
       }
 
-      // console.log(`📍 Available services for zone ${zoneNumber}:`, availableServices.map(s => s.service));
-
-      // For each available service in this zone, get the rates
       for (const serviceData of availableServices) {
         const serviceName = serviceData.service;
         console.log(
-          `📍 Processing service ${serviceName} for zone ${zoneNumber}`
+          `📍 Processing service ${serviceName} for zone ${zoneKey}`
         );
 
-        // Get all rates for this specific zone, service, document type, and weight
         const serviceRates = await prisma.rate.findMany({
           where: {
-            zone: zoneNumber as number,
+            zone: zoneKey,
             service: serviceName,
             docType: docType,
             weight: {
@@ -150,33 +134,19 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // console.log(`📍 Service rates:`, serviceRates);
-
         if (serviceRates.length === 0) {
           console.log(
-            `⚠️ No rates found for zone ${zoneNumber}, service ${serviceName}, skipping...`
+            `⚠️ No rates found for zone ${zoneKey}, service ${serviceName}, skipping...`
           );
           continue;
         }
 
-        // console.log(`📍 Found ${serviceRates.length} rates for zone ${zoneNumber}, service ${serviceName}`);
-
-        // Find the best rate for this service (lowest weight that covers the requested weight)
-        const bestServiceRate = serviceRates[0]; // Already sorted by weight
+        const bestServiceRate = serviceRates[0];
 
         bestRates.push({
-          zone: zoneNumber,
+          zone: zoneKey,
           country:
-            zoneInfos.find((z) => {
-              let zNum: number;
-              if (typeof z.zone === "string") {
-                const match = z.zone.match(/\d+/);
-                zNum = match ? parseInt(match[0]) : 0;
-              } else {
-                zNum = parseInt(z.zone);
-              }
-              return zNum === zoneNumber;
-            })?.country || "Unknown",
+            zoneInfos.find((z) => (z as any).zone === zoneKey)?.country || "Unknown",
           service: serviceName,
           bestRate: {
             weight: bestServiceRate.weight,

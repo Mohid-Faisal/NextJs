@@ -36,9 +36,13 @@ export async function POST(req: NextRequest) {
     const workbook = XLSX.read(buffer, { type: "buffer" });
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 });
+    const raw = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" });
 
-    const headerRow = raw[0]; // Zone names
+    // Use sheet range so we don't miss columns (e.g. Zone 7A, 7B) when first row has fewer cells
+    const range = sheet["!ref"] ? XLSX.utils.decode_range(sheet["!ref"]) : null;
+    const maxCol = range ? range.e.c + 1 : (raw[0]?.length ?? 0);
+
+    const headerRow = raw[0] ?? [];
     const parsedZones: {
       code: string;
       country: string;
@@ -47,23 +51,28 @@ export async function POST(req: NextRequest) {
       phoneCode: string;
     }[] = [];
     const allCountries = Country.getAllCountries();
-    
-    // Log all countries with their ISO codes
-    // console.log("=== ALL COUNTRIES WITH ISO CODES ===");
-    // allCountries.forEach(country => {
-    //   console.log(`${country.name}: ${country.isoCode} (Phone: +${country.phonecode})`);
-    // });
-    // console.log("=== END COUNTRIES LIST ===");
-    // const allIsoCodes = allCountries.map((c) => c.isoCode);
-    // console.log("allCountries", allCountries);
-    // console.log("allIsoCodes", allIsoCodes);
 
-    for (let col = 0; col < headerRow.length; col++) {
-      const zoneName = headerRow[col]?.toString().trim();
+    // Helper to read cell (e.g. for merged cells or when row array is short)
+    const getCell = (r: number, c: number) => {
+      const cellRef = XLSX.utils.encode_cell({ r, c });
+      const cell = sheet[cellRef];
+      return cell?.v != null ? String(cell.v).trim() : (raw[r]?.[c] ?? "").toString().trim();
+    };
+
+    for (let col = 0; col < maxCol; col++) {
+      // Read zone header from row 0; fallback to sheet cell in case of merged/short row
+      let zoneName = (headerRow[col] ?? "").toString().trim().replace(/\s+/g, " ");
+      if (!zoneName) zoneName = getCell(0, col);
+      if (!zoneName && raw[1]) zoneName = (raw[1][col] ?? "").toString().trim().replace(/\s+/g, " ");
       if (!zoneName) continue;
+      // Accept "Zone 1" … "Zone 13", "Zone 7A", "Zone 7B", "Zone 5A", etc.
+      const looksLikeZone = /^Zone\s*\d+[A-Za-z]?$/i.test(zoneName) || /^\d+[A-Za-z]?$/.test(zoneName) || zoneName.toLowerCase().startsWith("zone");
+      if (!looksLikeZone) continue;
+      if (/^\d+[A-Za-z]?$/.test(zoneName)) zoneName = `Zone ${zoneName}`;
 
       for (let row = 1; row < raw.length; row++) {
-        const country = raw[row]?.[col]?.toString().trim();
+        let country = (raw[row]?.[col] ?? "").toString().trim();
+        if (!country) country = getCell(row, col);
         if (!country) continue;
 
         const matchedCountry = allCountries.find(
