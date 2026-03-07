@@ -33,7 +33,20 @@ function getLogoForService(service: string | undefined): string | null {
   if (s.includes("DHL")) return "/logo/DHL.png";
   if (s.includes("FEDEX")) return "/logo/FedEx.png";
   if (s.includes("SNWWE") || s.includes("SKYNET")) return "/logo/Skynet.png";
+  if (s.includes("PARCEL") || s.includes("PARCELFORCE")) return "/logo/Parcelforce.png";
+  if (s.includes("DPD")) return "/logo/DPD.png";
   return null;
+}
+
+function getServiceTypeLabel(service: string | undefined): string {
+  if (!service) return "International Priority";
+  const s = service.toUpperCase();
+  if (s.includes("DHL")) return "Express Worldwide";
+  if (s.includes("UPS")) return "UPS Express Saver\u00AE";
+  if (s.includes("FEDEX")) return "FedEx International Priority";
+  if (s.includes("SNWWE") || s.includes("SKYNET")) return "International Export Express";
+  if (s.includes("PARCEL") || s.includes("PARCELFORCE")) return "Express 48";
+  return "International Priority";
 }
 
 interface RateCalculatorContentProps {
@@ -105,7 +118,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFixedCharges, setShowFixedCharges] = useState(true);
-  const [publicResultsTab, setPublicResultsTab] = useState<"all" | "express">("all");
+  const [publicResultsTab, setPublicResultsTab] = useState<"all" | "express">("express");
 
   useEffect(() => {
     const allCountries = Country.getAllCountries();
@@ -575,75 +588,71 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     : allRates;
 
                 return (
-                  <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-3">
                     {displayRates.map((rate, index) => {
                       const logoSrc = getLogoForService(rate.service);
                       return (
                         <div
                           key={`${rate.vendor}-${rate.service}-${rate.weight}-${index}`}
-                          className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white shadow-sm px-4 sm:px-6 py-3 sm:py-4"
+                          className="flex items-center gap-3 sm:gap-5 rounded-xl border border-slate-200 bg-white shadow-sm px-3 sm:px-5 py-2.5 sm:py-3"
                         >
-                          <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                            <div className="flex items-center justify-center rounded-lg bg-white border border-slate-200 px-3 py-2 shadow-sm min-w-[100px] min-h-[52px]">
-                              {logoSrc ? (
-                                <Image
-                                  src={logoSrc}
-                                  alt={rate.service || rate.vendor || "Carrier"}
-                                  width={88}
-                                  height={40}
-                                  className="h-8 w-auto object-contain sm:h-10"
-                                />
-                              ) : (
-                                <span className="text-sm sm:text-base font-semibold text-slate-900">
-                                  {rate.vendor || "Carrier"}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex flex-col">
-                              <p className="text-sm sm:text-base font-semibold text-slate-900">
-                                {rate.service}
-                              </p>
-                              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] sm:text-xs text-slate-600">
-                                <span className="inline-flex items-center gap-1">
-                                  <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
-                                  <span>International Priority</span>
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
-                                  <span>Collection at sender address</span>
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
-                                  <span>Delivery 1–6 business days</span>
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Printer className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
-                                  <span>Printer required</span>
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
-                                  <span>Insurance options</span>
-                                </span>
-                              </div>
-                            </div>
+                          {/* Logo */}
+                          <div className="flex items-center justify-center rounded-md bg-white border border-slate-200 px-2 py-1.5 shadow-sm shrink-0 w-[80px] h-[44px] sm:w-[100px] sm:h-[50px]">
+                            {logoSrc ? (
+                              <Image
+                                src={logoSrc}
+                                alt={rate.service || rate.vendor || "Carrier"}
+                                width={80}
+                                height={36}
+                                className="h-7 w-auto object-contain sm:h-9"
+                              />
+                            ) : (
+                              <span className="text-xs sm:text-sm font-semibold text-slate-900 text-center leading-tight">
+                                {rate.vendor || "Carrier"}
+                              </span>
+                            )}
                           </div>
 
-                          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                            <div className="text-right">
-                              <p className="text-lg sm:text-xl font-bold text-slate-900">
-                                Rs. {rate.price.toFixed(2)}
-                              </p>
-                              <p className="text-[11px] sm:text-xs text-slate-500">
-                                {rate.weight} kg
-                              </p>
-                            </div>
-                            <Link
-                              href="/auth/login"
-                              className="inline-flex items-center justify-center rounded-full bg-sky-400 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-                            >
-                              Book
-                            </Link>
+                          {/* Feature icons row */}
+                          <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-5 gap-y-1 flex-1 min-w-0 text-[10px] sm:text-xs text-slate-600">
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                              <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
+                              <span>{getServiceTypeLabel(rate.service)}</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                              <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
+                              <span>Collection<br className="sm:hidden" /> Sender address</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                              <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
+                              <span>Delivery<br className="sm:hidden" /> on average 1-6 BD</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                              <Printer className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
+                              <span>Printer<br className="sm:hidden" /> Necessary</span>
+                            </span>
                           </div>
+
+                          {/* Insurance / Shield icons */}
+                          <div className="hidden sm:flex items-center gap-1.5 shrink-0 text-slate-500">
+                            <Shield className="w-4 h-4" />
+                            <Info className="w-4 h-4" />
+                          </div>
+
+                          {/* Price */}
+                          <div className="text-right shrink-0">
+                            <p className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">
+                              Rs. {rate.price.toFixed(2)}
+                            </p>
+                          </div>
+
+                          {/* Book button */}
+                          <Link
+                            href="/auth/login"
+                            className="inline-flex items-center justify-center gap-1 rounded-full border-2 border-sky-400 bg-white px-4 py-1.5 text-xs sm:text-sm font-bold text-sky-500 hover:bg-sky-50 transition-colors shrink-0 whitespace-nowrap"
+                          >
+                            BOOK <span className="ml-0.5">&#10145;</span>
+                          </Link>
                         </div>
                       );
                     })}
