@@ -60,8 +60,8 @@ function getServiceTypeLabel(service: string | undefined): string {
   if (!service) return "International Priority";
   const s = service.toUpperCase();
   if (s.includes("DHL")) return "Express Worldwide";
-  if (s.includes("UPS")) return "UPS Express Saver\u00AE";
-  if (s.includes("FEDEX")) return "FedEx International Priority";
+  if (s.includes("UPS")) return "Express Saver\u00AE";
+  if (s.includes("FEDEX")) return "International Priority";
   if (s.includes("SNWWE") || s.includes("SKYNET")) return "International Export Express";
   if (s.includes("PARCEL") || s.includes("PARCELFORCE")) return "Express 48";
   return "International Priority";
@@ -158,7 +158,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFixedCharges, setShowFixedCharges] = useState(true);
-  const [publicResultsTab, setPublicResultsTab] = useState<"all" | "express">("express");
+  const [publicResultsTab, setPublicResultsTab] = useState<"all" | "express" | "economy">("express");
   const [infoModalOpen, setInfoModalOpen] = useState(false);
 
   useEffect(() => {
@@ -280,7 +280,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     name="originZip"
                     value={form.originZip}
                     onChange={handleChange}
-                    placeholder="Zip"
+                    placeholder="Zip/Area Code"
                     className="h-[42px] w-full bg-white border-slate-200 rounded-xl text-sm"
                   />
                 </div>
@@ -312,7 +312,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     name="destinationZip"
                     value={form.destinationZip}
                     onChange={handleChange}
-                    placeholder="Zip"
+                    placeholder="Zip/Area Code"
                     className="h-[42px] w-full bg-white border-slate-200 rounded-xl text-sm"
                   />
                 </div>
@@ -324,7 +324,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
               <Label className="text-xs font-bold tracking-wide text-slate-600">Type</Label><div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {([
                   { value: "Document", label: "Document", icon: Mail },
-                  { value: "Non Document", label: "Wpx", icon: Package },
+                  { value: "Non Document", label: "Non Document", icon: Package },
                   { value: "FedEx Pak", label: "FedEx Pak", icon: FileText },
                 ] as const).map((pkg) => {
                   const Icon = pkg.icon;
@@ -435,6 +435,17 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 </button>
                 <button
                   type="button"
+                  onClick={() => setPublicResultsTab("economy")}
+                  className={`rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold border transition-colors ${
+                    publicResultsTab === "economy"
+                      ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  Economy
+                </button>
+                <button
+                  type="button"
                   onClick={() => setPublicResultsTab("all")}
                   className={`rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold border transition-colors ${
                     publicResultsTab === "all"
@@ -448,14 +459,20 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
               {(() => {
                 const allRates = results.allRates || [];
-                const EXPRESS_SERVICES = ["SNWWE", "UPS_C2S", "DHL_LHE", "FedEx_LHE"];
+                const EXPRESS_SERVICES = ["UPS_C2S", "DHL_LHE", "FedEx_LHE"];
+                const ECONOMY_SERVICES = ["SNWWE"];
                 const expressRates = allRates.filter(
                   (rate) => rate.service && EXPRESS_SERVICES.includes(rate.service)
+                );
+                const economyRates = allRates.filter(
+                  (rate) => rate.service && ECONOMY_SERVICES.includes(rate.service)
                 );
                 const rawDisplayRates =
                   publicResultsTab === "express" && expressRates.length > 0
                     ? expressRates
-                    : allRates;
+                    : publicResultsTab === "economy" && economyRates.length > 0
+                      ? economyRates
+                      : allRates;
                 const byService = new Map<string, typeof allRates[0]>();
                 for (const rate of rawDisplayRates) {
                   const key = rate.service ?? rate.vendor ?? String(Math.random());
