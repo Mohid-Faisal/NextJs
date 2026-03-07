@@ -98,6 +98,8 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
     height: "0",
     origin: "Pakistan",
     destination: "",
+    originZip: "",
+    destinationZip: "",
     docType: "",
     profitPercentage: publicView ? "10" : "0",
   });
@@ -109,6 +111,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
       weight: number;
       amount: number;
     } | null;
+    remoteAreas?: Record<string, boolean>;
     top3Rates: Array<{
       rank: number;
       zone: number;
@@ -176,7 +179,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
   };
 
   const handleCalculate = async () => {
-    const { weight, length, width, height, origin, destination, docType, profitPercentage } = form;
+    const { weight, length, width, height, origin, destination, originZip, destinationZip, docType, profitPercentage } = form;
     const w = parseFloat(weight);
     const l = parseFloat(length);
     const wd = parseFloat(width);
@@ -210,6 +213,8 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
         body: JSON.stringify({ 
           origin, 
           destination, 
+          originZip,
+          destinationZip,
           weight: w,
           docType,
           height: h,
@@ -270,6 +275,13 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     ))}
                   </SelectContent>
                 </Select>
+                <Input
+                  name="originZip"
+                  value={form.originZip}
+                  onChange={handleChange}
+                  placeholder="Zip / Postal code"
+                  className="h-10 bg-white border-slate-200 rounded-xl text-sm"
+                />
               </div>
               <div className="flex items-center justify-center h-11">
                 <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center">
@@ -293,6 +305,13 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     ))}
                   </SelectContent>
                 </Select>
+                <Input
+                  name="destinationZip"
+                  value={form.destinationZip}
+                  onChange={handleChange}
+                  placeholder="Zip / Postal code"
+                  className="h-10 bg-white border-slate-200 rounded-xl text-sm"
+                />
               </div>
             </div>
 
@@ -327,7 +346,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
             {/* Weight and dimensions row */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold tracking-wide text-slate-600">1. Package</Label>
+              <Label className="text-xs font-bold tracking-wide text-slate-600">Package</Label>
               <div className="grid grid-cols-4 gap-2 sm:gap-3">
                 <div className="relative">
                   <Input
@@ -372,7 +391,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
               onClick={handleCalculate}
               disabled={loading}
             >
-              {loading ? "Calculating..." : "Calculate the price"}
+              {loading ? "Calculating..." : "Calculate the Price"}
               {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
             </Button>
             <p className="text-xs sm:text-sm text-slate-500 text-center">
@@ -454,10 +473,13 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                           ? "Lahore"
                           : getOriginFromService(rate.service);
                       const rank = index < 3 ? index + 1 : null;
+                      const isRemote = results.remoteAreas?.[rate.service] === true;
                       return (
                         <div
                           key={`${rate.vendor}-${rate.service}-${rate.weight}-${index}`}
-                          className="rounded-xl border border-slate-200 bg-white shadow-sm px-3 sm:px-5 py-2.5 sm:py-3 relative"
+                          className={`rounded-xl border bg-white shadow-sm px-3 sm:px-5 py-2.5 sm:py-3 relative ${
+                            isRemote ? "border-amber-400" : "border-slate-200"
+                          }`}
                         >
                           {rank !== null && (
                             <span
@@ -467,6 +489,12 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               aria-label={`Rank ${rank}`}
                             >
                               {rank}
+                            </span>
+                          )}
+                          {isRemote && (
+                            <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[10px] sm:text-xs font-semibold">
+                              <AlertTriangle className="w-3 h-3" />
+                              Remote area
                             </span>
                           )}
                           <div className="flex items-center justify-between w-full flex-wrap gap-y-2">
@@ -587,6 +615,16 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="originZip" className="text-xs sm:text-sm">Origin zip</Label>
+                <Input name="originZip" value={form.originZip} onChange={handleChange} placeholder="Zip / Postal code" className="text-xs sm:text-sm" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="destinationZip" className="text-xs sm:text-sm">Destination zip</Label>
+                <Input name="destinationZip" value={form.destinationZip} onChange={handleChange} placeholder="Zip / Postal code" className="text-xs sm:text-sm" />
               </div>
 
               <div className="space-y-2">
