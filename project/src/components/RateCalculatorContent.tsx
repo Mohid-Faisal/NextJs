@@ -49,6 +49,17 @@ function getServiceTypeLabel(service: string | undefined): string {
   return "International Priority";
 }
 
+function getOriginFromService(service: string | undefined): string {
+  if (!service) return "Pakistan";
+  const s = service.toUpperCase();
+  if (s.includes("LHE") || s.includes("LHR")) return "Lahore";
+  if (s.includes("DXB")) return "Dubai";
+  if (s.includes("KHI")) return "Karachi";
+  if (s.includes("ISB")) return "Islamabad";
+  if (s.includes("SNWWE") || s.includes("SKYNET")) return "Lahore";
+  return "Pakistan";
+}
+
 interface RateCalculatorContentProps {
   publicView?: boolean;
 }
@@ -588,71 +599,85 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     : allRates;
 
                 return (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {displayRates.map((rate, index) => {
                       const logoSrc = getLogoForService(rate.service);
+                      const origin =
+                        publicResultsTab === "express"
+                          ? "Lahore"
+                          : getOriginFromService(rate.service);
                       return (
                         <div
                           key={`${rate.vendor}-${rate.service}-${rate.weight}-${index}`}
-                          className="flex items-center gap-3 sm:gap-5 rounded-xl border border-slate-200 bg-white shadow-sm px-3 sm:px-5 py-2.5 sm:py-3"
+                          className="rounded-2xl border border-slate-200 bg-white shadow-sm px-4 sm:px-6 py-4 sm:py-5"
                         >
-                          {/* Logo */}
-                          <div className="flex items-center justify-center rounded-md bg-white border border-slate-200 px-2 py-1.5 shadow-sm shrink-0 w-[80px] h-[44px] sm:w-[100px] sm:h-[50px]">
-                            {logoSrc ? (
-                              <Image
-                                src={logoSrc}
-                                alt={rate.service || rate.vendor || "Carrier"}
-                                width={80}
-                                height={36}
-                                className="h-7 w-auto object-contain sm:h-9"
-                              />
-                            ) : (
-                              <span className="text-xs sm:text-sm font-semibold text-slate-900 text-center leading-tight">
-                                {rate.vendor || "Carrier"}
-                              </span>
-                            )}
+                          <div className="flex items-center gap-4 sm:gap-6">
+                            {/* Logo */}
+                            <div className="flex items-center justify-center rounded-lg bg-white border border-slate-200 px-3 py-2 shadow-sm shrink-0 w-[90px] h-[52px] sm:w-[120px] sm:h-[60px]">
+                              {logoSrc ? (
+                                <Image
+                                  src={logoSrc}
+                                  alt={rate.service || rate.vendor || "Carrier"}
+                                  width={100}
+                                  height={48}
+                                  className="h-9 w-auto object-contain sm:h-11"
+                                />
+                              ) : (
+                                <span className="text-sm sm:text-base font-bold text-slate-900 text-center leading-tight">
+                                  {rate.vendor || "Carrier"}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Feature details */}
+                            <div className="flex flex-wrap items-center gap-x-5 sm:gap-x-7 gap-y-2 flex-1 min-w-0">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <Plane className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
+                                <span className="text-xs sm:text-sm font-semibold text-slate-800 text-center leading-tight">{getServiceTypeLabel(rate.service)}</span>
+                              </div>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <Info className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
+                                <span className="text-xs sm:text-sm font-medium text-slate-700 text-center leading-tight">Collection</span>
+                                <span className="text-[10px] sm:text-xs text-slate-500 text-center leading-tight">Sender address</span>
+                              </div>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
+                                <span className="text-xs sm:text-sm font-medium text-slate-700 text-center leading-tight">Delivery</span>
+                                <span className="text-[10px] sm:text-xs text-slate-500 text-center leading-tight">on average 1-6 BD</span>
+                              </div>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <Printer className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
+                                <span className="text-xs sm:text-sm font-medium text-slate-700 text-center leading-tight">Printer</span>
+                                <span className="text-[10px] sm:text-xs text-slate-500 text-center leading-tight">Necessary</span>
+                              </div>
+                            </div>
+
+                            {/* Shield / info icons */}
+                            <div className="hidden sm:flex items-center gap-2 shrink-0 text-slate-600">
+                              <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
+                              <Info className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </div>
+
+                            {/* Price */}
+                            <div className="text-right shrink-0">
+                              <p className="text-xl sm:text-2xl font-bold text-slate-900 whitespace-nowrap">
+                                Rs. {rate.price.toFixed(2)}
+                              </p>
+                            </div>
+
+                            {/* Book button */}
+                            <Link
+                              href="/auth/login"
+                              className="inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-sky-400 bg-white px-5 py-2 text-sm sm:text-base font-bold text-sky-500 hover:bg-sky-50 transition-colors shrink-0 whitespace-nowrap"
+                            >
+                              BOOK <span>&#10145;</span>
+                            </Link>
                           </div>
 
-                          {/* Feature icons row */}
-                          <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-5 gap-y-1 flex-1 min-w-0 text-[10px] sm:text-xs text-slate-600">
-                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                              <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
-                              <span>{getServiceTypeLabel(rate.service)}</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                              <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
-                              <span>Collection<br className="sm:hidden" /> Sender address</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                              <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
-                              <span>Delivery<br className="sm:hidden" /> on average 1-6 BD</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                              <Printer className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 shrink-0" />
-                              <span>Printer<br className="sm:hidden" /> Necessary</span>
-                            </span>
-                          </div>
-
-                          {/* Insurance / Shield icons */}
-                          <div className="hidden sm:flex items-center gap-1.5 shrink-0 text-slate-500">
-                            <Shield className="w-4 h-4" />
-                            <Info className="w-4 h-4" />
-                          </div>
-
-                          {/* Price */}
-                          <div className="text-right shrink-0">
-                            <p className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">
-                              Rs. {rate.price.toFixed(2)}
-                            </p>
-                          </div>
-
-                          {/* Book button */}
-                          <Link
-                            href="/auth/login"
-                            className="inline-flex items-center justify-center gap-1 rounded-full border-2 border-sky-400 bg-white px-4 py-1.5 text-xs sm:text-sm font-bold text-sky-500 hover:bg-sky-50 transition-colors shrink-0 whitespace-nowrap"
-                          >
-                            BOOK <span className="ml-0.5">&#10145;</span>
-                          </Link>
+                          {/* Origin line */}
+                          <p className="mt-2 text-xs sm:text-sm text-slate-500 pl-[106px] sm:pl-[144px]">
+                            Origin: <span className="font-medium text-slate-700">{origin}</span>
+                          </p>
                         </div>
                       );
                     })}
