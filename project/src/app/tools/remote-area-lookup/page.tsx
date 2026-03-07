@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, CheckCircle2, XCircle, Search, MapPin } from "lucide-react";
+import { CheckCircle2, XCircle, Search, MapPin } from "lucide-react";
 import { Country } from "country-state-city";
 
 export default function RemoteAreaLookupPage() {
@@ -13,6 +13,8 @@ export default function RemoteAreaLookupPage() {
 
   const [country, setCountry] = useState("");
   const [zipCode, setZipCode] = useState("");
+  const [city, setCity] = useState("");
+  const [searchType, setSearchType] = useState<"zip" | "city">("zip");
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState<{
     isRemote: boolean;
@@ -21,7 +23,8 @@ export default function RemoteAreaLookupPage() {
 
   const handleSearch = async () => {
     if (!country) return;
-    if (!zipCode.trim()) return;
+    if (searchType === "zip" && !zipCode.trim()) return;
+    if (searchType === "city" && !city.trim()) return;
 
     setIsSearching(true);
     setResult(null);
@@ -31,7 +34,7 @@ export default function RemoteAreaLookupPage() {
       const data = await response.json();
 
       if (data.success && data.data) {
-        const searchValue = zipCode.trim();
+        const searchValue = searchType === "zip" ? zipCode.trim() : city.trim().toLowerCase();
         const selectedCountry = countries.find((c) => c.isoCode === country);
         const searchCountryName = selectedCountry?.name || country;
         const searchCountryCode = country;
@@ -41,7 +44,6 @@ export default function RemoteAreaLookupPage() {
           const areaIataCode = (area.iataCode?.toLowerCase() || "").trim();
           const codeLow = searchCountryCode.toLowerCase();
           const nameLow = searchCountryName.toLowerCase();
-
           return (
             areaCountry === codeLow ||
             areaCountry === nameLow ||
@@ -59,38 +61,40 @@ export default function RemoteAreaLookupPage() {
         }
 
         const matchedAreas: Array<{ company: string; area: any }> = [];
-        const zipNumber = parseFloat(searchValue);
 
-        if (!isNaN(zipNumber)) {
-          const rangeMatches = matchingAreas.filter((area: any) => {
-            const low = parseFloat(String(area.low || "").trim());
-            const high = parseFloat(String(area.high || "").trim());
-            return !isNaN(low) && !isNaN(high) && zipNumber >= low && zipNumber <= high;
-          });
-          matchedAreas.push(
-            ...rangeMatches.map((area: any) => ({ company: area.company, area }))
-          );
+        if (searchType === "zip") {
+          const zipNumber = parseFloat(searchValue);
+          if (!isNaN(zipNumber)) {
+            const rangeMatches = matchingAreas.filter((area: any) => {
+              const low = parseFloat(String(area.low || "").trim());
+              const high = parseFloat(String(area.high || "").trim());
+              return !isNaN(low) && !isNaN(high) && zipNumber >= low && zipNumber <= high;
+            });
+            matchedAreas.push(...rangeMatches.map((area: any) => ({ company: area.company, area })));
 
-          const stringMatches = matchingAreas.filter((area: any) => {
-            const lowStr = String(area.low || "").trim();
-            const highStr = String(area.high || "").trim();
-            return (
-              (lowStr.includes(searchValue) || highStr.includes(searchValue)) &&
-              !matchedAreas.some((m) => m.company === area.company && m.area.id === area.id)
-            );
-          });
-          matchedAreas.push(
-            ...stringMatches.map((area: any) => ({ company: area.company, area }))
-          );
+            const stringMatches = matchingAreas.filter((area: any) => {
+              const lowStr = String(area.low || "").trim();
+              const highStr = String(area.high || "").trim();
+              return (
+                (lowStr.includes(searchValue) || highStr.includes(searchValue)) &&
+                !matchedAreas.some((m) => m.company === area.company && m.area.id === area.id)
+              );
+            });
+            matchedAreas.push(...stringMatches.map((area: any) => ({ company: area.company, area })));
+          } else {
+            const stringMatches = matchingAreas.filter((area: any) => {
+              const lowStr = String(area.low || "").trim();
+              const highStr = String(area.high || "").trim();
+              return lowStr.includes(searchValue) || highStr.includes(searchValue);
+            });
+            matchedAreas.push(...stringMatches.map((area: any) => ({ company: area.company, area })));
+          }
         } else {
-          const stringMatches = matchingAreas.filter((area: any) => {
-            const lowStr = String(area.low || "").trim();
-            const highStr = String(area.high || "").trim();
-            return lowStr.includes(searchValue) || highStr.includes(searchValue);
+          const cityMatches = matchingAreas.filter((area: any) => {
+            const areaCity = (area.city || "").toLowerCase().trim();
+            return areaCity === searchValue;
           });
-          matchedAreas.push(
-            ...stringMatches.map((area: any) => ({ company: area.company, area }))
-          );
+          matchedAreas.push(...cityMatches.map((area: any) => ({ company: area.company, area })));
         }
 
         setResult({ isRemote: matchedAreas.length > 0, companies: matchedAreas });
@@ -105,8 +109,14 @@ export default function RemoteAreaLookupPage() {
   const handleReset = () => {
     setCountry("");
     setZipCode("");
+    setCity("");
+    setSearchType("zip");
     setResult(null);
   };
+
+  const canSearch =
+    country &&
+    (searchType === "zip" ? zipCode.trim() : city.trim());
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
@@ -122,7 +132,7 @@ export default function RemoteAreaLookupPage() {
               <span className="text-slate-800">lookup</span>
             </h1>
             <p className="text-slate-500 mt-3 text-base sm:text-lg max-w-lg mx-auto">
-              Check if a destination falls under a remote area surcharge by entering the country and zip code
+              Check if a location is a remote area by selecting a country and entering either a zip code or city name.
             </p>
           </div>
 
@@ -131,7 +141,7 @@ export default function RemoteAreaLookupPage() {
             {/* Country */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold tracking-wide text-slate-600">
-                Country
+                Country <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
                 <select
@@ -150,25 +160,72 @@ export default function RemoteAreaLookupPage() {
               </div>
             </div>
 
-            {/* Zip code */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold tracking-wide text-slate-600">
-                Zip / Postal code
-              </Label>
-              <Input
-                type="text"
-                placeholder="Enter zip code"
-                value={zipCode}
-                onChange={(e) => { setZipCode(e.target.value); setResult(null); }}
-                className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
-              />
+            {/* Search By */}
+            <div className="space-y-2">
+              <Label className="text-xs font-bold tracking-wide text-slate-600">Search by</Label>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="searchType"
+                    value="zip"
+                    checked={searchType === "zip"}
+                    onChange={() => { setSearchType("zip"); setCity(""); setResult(null); }}
+                    className="w-4 h-4 text-sky-500 focus:ring-sky-400"
+                  />
+                  <span className="text-sm text-slate-700">Zip code</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="searchType"
+                    value="city"
+                    checked={searchType === "city"}
+                    onChange={() => { setSearchType("city"); setZipCode(""); setResult(null); }}
+                    className="w-4 h-4 text-sky-500 focus:ring-sky-400"
+                  />
+                  <span className="text-sm text-slate-700">City</span>
+                </label>
+              </div>
             </div>
+
+            {/* Zip code (when Search by Zip) */}
+            {searchType === "zip" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold tracking-wide text-slate-600">
+                  Zip code <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Enter zip code"
+                  value={zipCode}
+                  onChange={(e) => { setZipCode(e.target.value); setResult(null); }}
+                  className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
+                />
+              </div>
+            )}
+
+            {/* City (when Search by City) */}
+            {searchType === "city" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold tracking-wide text-slate-600">
+                  City <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Enter city name"
+                  value={city}
+                  onChange={(e) => { setCity(e.target.value); setResult(null); }}
+                  className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
+                />
+              </div>
+            )}
 
             {/* Buttons */}
             <div className="flex gap-3">
               <Button
                 onClick={handleSearch}
-                disabled={isSearching || !country || !zipCode.trim()}
+                disabled={isSearching || !canSearch}
                 className="flex-1 h-[46px] rounded-xl bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-semibold text-sm"
               >
                 {isSearching ? (
@@ -235,7 +292,7 @@ export default function RemoteAreaLookupPage() {
                     <XCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                     <p className="font-semibold text-slate-800">Not a remote area</p>
                     <p className="text-sm text-slate-500 mt-1">
-                      The zip code you searched is not listed as a remote area in our database.
+                      The location you searched for is not listed as a remote area in our database.
                     </p>
                   </div>
                 )}
