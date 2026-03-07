@@ -634,6 +634,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               <div className="flex flex-col items-center gap-0.5">
                                 <Plane className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
                                 <span className="text-xs sm:text-sm font-semibold text-slate-800 text-center leading-tight">{getServiceTypeLabel(rate.service)}</span>
+                                <span className="text-[10px] sm:text-xs text-slate-500 text-center leading-tight">Originating {origin}</span>
                               </div>
                               <div className="flex flex-col items-center gap-0.5">
                                 <Info className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
@@ -673,11 +674,6 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               BOOK <span>&#10145;</span>
                             </Link>
                           </div>
-
-                          {/* Origin line */}
-                          <p className="mt-2 text-xs sm:text-sm text-slate-500 pl-[106px] sm:pl-[144px]">
-                            Origin: <span className="font-medium text-slate-700">{origin}</span>
-                          </p>
                         </div>
                       );
                     })}
