@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,17 @@ const documentTypes = [
   "Non Document",
   "FedEx Pak"
 ];
+
+/** Maps service name (e.g. UPS_C2S, DHL_LHE, FedEx_LHE, SNWWE) to logo path in public/logo */
+function getLogoForService(service: string | undefined): string | null {
+  if (!service) return null;
+  const s = service.toUpperCase();
+  if (s.includes("UPS")) return "/logo/UPS.png";
+  if (s.includes("DHL")) return "/logo/DHL.png";
+  if (s.includes("FEDEX")) return "/logo/FedEx.png";
+  if (s.includes("SNWWE") || s.includes("SKYNET")) return "/logo/Skynet.png";
+  return null;
+}
 
 interface RateCalculatorContentProps {
   publicView?: boolean;
@@ -529,33 +541,33 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
               <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
-                  onClick={() => setPublicResultsTab("all")}
-                  className={`rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold border transition-colors ${
-                    publicResultsTab === "all"
-                      ? "bg-sky-400 text-white border-sky-400 shadow-sm"
-                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
                   onClick={() => setPublicResultsTab("express")}
                   className={`rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold border transition-colors ${
                     publicResultsTab === "express"
-                      ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                      ? "bg-sky-400 text-white border-sky-400 shadow-sm"
                       : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                   }`}
                 >
                   Express
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setPublicResultsTab("all")}
+                  className={`rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold border transition-colors ${
+                    publicResultsTab === "all"
+                      ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  All
+                </button>
               </div>
 
               {(() => {
                 const allRates = results.allRates || [];
-                const expressRates = allRates.filter((rate) =>
-                  /express/i.test(rate.service) ||
-                  /priority/i.test(rate.service)
+                const EXPRESS_SERVICES = ["SNWWE", "UPS_C2S", "DHL_LHE", "FedEx_LHE"];
+                const expressRates = allRates.filter(
+                  (rate) => rate.service && EXPRESS_SERVICES.includes(rate.service)
                 );
                 const displayRates =
                   publicResultsTab === "express" && expressRates.length > 0
@@ -565,24 +577,31 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 return (
                   <div className="space-y-3 sm:space-y-4">
                     {displayRates.map((rate, index) => {
-                      const serviceLabel =
-                        publicResultsTab === "express"
-                          ? `${rate.service} LHR`
-                          : rate.service;
+                      const logoSrc = getLogoForService(rate.service);
                       return (
                         <div
                           key={`${rate.vendor}-${rate.service}-${rate.weight}-${index}`}
                           className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white shadow-sm px-4 sm:px-6 py-3 sm:py-4"
                         >
                           <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                            <div className="flex items-center justify-center rounded-lg bg-white border border-slate-200 px-3 py-2 shadow-sm">
-                              <span className="text-sm sm:text-base font-semibold text-slate-900">
-                                {rate.vendor || "Carrier"}
-                              </span>
+                            <div className="flex items-center justify-center rounded-lg bg-white border border-slate-200 px-3 py-2 shadow-sm min-w-[100px] min-h-[52px]">
+                              {logoSrc ? (
+                                <Image
+                                  src={logoSrc}
+                                  alt={rate.service || rate.vendor || "Carrier"}
+                                  width={88}
+                                  height={40}
+                                  className="h-8 w-auto object-contain sm:h-10"
+                                />
+                              ) : (
+                                <span className="text-sm sm:text-base font-semibold text-slate-900">
+                                  {rate.vendor || "Carrier"}
+                                </span>
+                              )}
                             </div>
                             <div className="flex flex-col">
                               <p className="text-sm sm:text-base font-semibold text-slate-900">
-                                {serviceLabel}
+                                {rate.service}
                               </p>
                               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] sm:text-xs text-slate-600">
                                 <span className="inline-flex items-center gap-1">
