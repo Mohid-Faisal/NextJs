@@ -538,7 +538,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                             <div className="flex flex-col items-center gap-px shrink-0">
                               <Plane className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
                               <span className="text-[10px] sm:text-xs font-semibold text-slate-800 text-center leading-tight">{getServiceTypeLabel(rate.service)}</span>
-                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Originating {origin}</span>
+                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Origin: {origin}</span>
                             </div>
                             <div className="flex flex-col items-center gap-px shrink-0">
                               <Home className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
