@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Country } from "country-state-city";
-import { Plane, Shield, Info, Printer, Clock } from "lucide-react";
+import { Plane, Shield, Info, Printer, Clock, Home } from "lucide-react";
 
 const documentTypes = [
   "Document",
@@ -47,6 +47,14 @@ function getServiceTypeLabel(service: string | undefined): string {
   if (s.includes("SNWWE") || s.includes("SKYNET")) return "International Export Express";
   if (s.includes("PARCEL") || s.includes("PARCELFORCE")) return "Express 48";
   return "International Priority";
+}
+
+function getDeliveryDays(service: string | undefined, isExpress: boolean): string {
+  if (isExpress) return "4-5 BD";
+  const origin = getOriginFromService(service);
+  const o = origin.toUpperCase();
+  if (o === "DUBAI" || o === "UK" || o === "LONDON") return "8-10 BD";
+  return "1-6 BD";
 }
 
 function getOriginFromService(service: string | undefined): string {
@@ -593,13 +601,23 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 const expressRates = allRates.filter(
                   (rate) => rate.service && EXPRESS_SERVICES.includes(rate.service)
                 );
-                const displayRates =
+                const rawDisplayRates =
                   publicResultsTab === "express" && expressRates.length > 0
                     ? expressRates
                     : allRates;
+                // One result per service: keep the rate with the highest price when same service has multiple vendors
+                const byService = new Map<string, typeof allRates[0]>();
+                for (const rate of rawDisplayRates) {
+                  const key = rate.service ?? rate.vendor ?? String(Math.random());
+                  const existing = byService.get(key);
+                  if (!existing || rate.price > existing.price) {
+                    byService.set(key, rate);
+                  }
+                }
+                const displayRates = Array.from(byService.values());
 
                 return (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {displayRates.map((rate, index) => {
                       const logoSrc = getLogoForService(rate.service);
                       const origin =
@@ -609,59 +627,58 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                       return (
                         <div
                           key={`${rate.vendor}-${rate.service}-${rate.weight}-${index}`}
-                          className="rounded-2xl border border-slate-200 bg-white shadow-sm px-4 sm:px-6 py-4 sm:py-5"
+                          className="rounded-xl border border-slate-200 bg-white shadow-sm px-3 sm:px-5 py-2.5 sm:py-3"
                         >
-                          <div className="flex items-center gap-4 sm:gap-6">
+                          <div className="flex items-center gap-3 sm:gap-5">
                             {/* Logo */}
-                            <div className="flex items-center justify-center rounded-lg bg-white border border-slate-200 px-3 py-2 shadow-sm shrink-0 w-[90px] h-[52px] sm:w-[120px] sm:h-[60px]">
+                            <div className="flex items-center justify-center rounded-md bg-white border border-slate-200 px-2 py-1.5 shadow-sm shrink-0 w-[72px] h-[40px] sm:w-[90px] sm:h-[46px]">
                               {logoSrc ? (
                                 <Image
                                   src={logoSrc}
                                   alt={rate.service || rate.vendor || "Carrier"}
-                                  width={100}
-                                  height={48}
-                                  className="h-9 w-auto object-contain sm:h-11"
+                                  width={80}
+                                  height={36}
+                                  className="h-6 w-auto object-contain sm:h-8"
                                 />
                               ) : (
-                                <span className="text-sm sm:text-base font-bold text-slate-900 text-center leading-tight">
+                                <span className="text-[11px] sm:text-xs font-bold text-slate-900 text-center leading-tight">
                                   {rate.vendor || "Carrier"}
                                 </span>
                               )}
                             </div>
 
                             {/* Feature details */}
-                            <div className="flex flex-wrap items-center gap-x-5 sm:gap-x-7 gap-y-2 flex-1 min-w-0">
-                              <div className="flex flex-col items-center gap-0.5">
-                                <Plane className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-                                <span className="text-xs sm:text-sm font-semibold text-slate-800 text-center leading-tight">{getServiceTypeLabel(rate.service)}</span>
-                                <span className="text-[10px] sm:text-xs text-slate-500 text-center leading-tight">Originating {origin}</span>
+                            <div className="flex flex-wrap items-start gap-x-4 sm:gap-x-6 gap-y-1 flex-1 min-w-0">
+                              <div className="flex flex-col items-center gap-px">
+                                <Plane className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                                <span className="text-[10px] sm:text-xs font-semibold text-slate-800 text-center leading-tight">{getServiceTypeLabel(rate.service)}</span>
+                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Originating {origin}</span>
                               </div>
-                              <div className="flex flex-col items-center gap-0.5">
-                                <Info className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-                                <span className="text-xs sm:text-sm font-medium text-slate-700 text-center leading-tight">Collection</span>
-                                <span className="text-[10px] sm:text-xs text-slate-500 text-center leading-tight">Sender address</span>
+                              <div className="flex flex-col items-center gap-px">
+                                <Home className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Collection</span>
+                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Sender address</span>
                               </div>
-                              <div className="flex flex-col items-center gap-0.5">
-                                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-                                <span className="text-xs sm:text-sm font-medium text-slate-700 text-center leading-tight">Delivery</span>
-                                <span className="text-[10px] sm:text-xs text-slate-500 text-center leading-tight">on average 1-6 BD</span>
+                              <div className="flex flex-col items-center gap-px">
+                                <Clock className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Delivery</span>
+                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">on average {getDeliveryDays(rate.service, publicResultsTab === "express")}</span>
                               </div>
-                              <div className="flex flex-col items-center gap-0.5">
-                                <Printer className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-                                <span className="text-xs sm:text-sm font-medium text-slate-700 text-center leading-tight">Printer</span>
-                                <span className="text-[10px] sm:text-xs text-slate-500 text-center leading-tight">Necessary</span>
+                              <div className="flex flex-col items-center gap-px">
+                                <Printer className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Printer</span>
+                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Necessary</span>
                               </div>
-                            </div>
-
-                            {/* Shield / info icons */}
-                            <div className="hidden sm:flex items-center gap-2 shrink-0 text-slate-600">
-                              <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
-                              <Info className="w-5 h-5 sm:w-6 sm:h-6" />
+                              <div className="flex flex-col items-center gap-px">
+                                <Shield className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Insurance</span>
+                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Information</span>
+                              </div>
                             </div>
 
                             {/* Price */}
                             <div className="text-right shrink-0">
-                              <p className="text-xl sm:text-2xl font-bold text-slate-900 whitespace-nowrap">
+                              <p className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">
                                 Rs. {rate.price.toFixed(2)}
                               </p>
                             </div>
@@ -669,7 +686,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                             {/* Book button */}
                             <Link
                               href="/auth/login"
-                              className="inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-sky-400 bg-white px-5 py-2 text-sm sm:text-base font-bold text-sky-500 hover:bg-sky-50 transition-colors shrink-0 whitespace-nowrap"
+                              className="inline-flex items-center justify-center gap-1 rounded-full border-2 border-sky-400 bg-white px-3.5 py-1.5 text-xs sm:text-sm font-bold text-sky-500 hover:bg-sky-50 transition-colors shrink-0 whitespace-nowrap"
                             >
                               BOOK <span>&#10145;</span>
                             </Link>
