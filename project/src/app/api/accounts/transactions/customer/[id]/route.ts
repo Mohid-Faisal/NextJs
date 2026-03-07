@@ -467,7 +467,7 @@ export async function GET(
 
     // Sort by voucher date (not createdAt) for balance calculation
     // For the same date:
-    // - CREDIT (payment) before DEBIT (shipment)
+    // - CREDIT (payment) after DEBIT (shipment)
     // - Within the same type, order by invoice number ascending so that the
     //   highest invoice ends up last for that date (and therefore gets the
     //   final balance for that date, which the UI then shows at the top).
@@ -477,8 +477,8 @@ export async function GET(
         return dateDiff;
       }
       // Same date, different types
-      if (a.type === "DEBIT" && b.type === "CREDIT") return 1;
-      if (a.type === "CREDIT" && b.type === "DEBIT") return -1;
+      if (a.type === "DEBIT" && b.type === "CREDIT") return -1;
+      if (a.type === "CREDIT" && b.type === "DEBIT") return 1;
 
       // Same date, same type – use invoice number ascending when available
       if (a.invoice && b.invoice) {

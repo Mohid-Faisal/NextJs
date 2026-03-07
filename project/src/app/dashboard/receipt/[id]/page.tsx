@@ -293,7 +293,7 @@ export default function ReceiptPage() {
             .signature-line {
               border-top: 1px solid black;
               width: 100%;
-              margin-top: 5px;
+              margin-top: 15px;
               padding-top: 5px;
             }
             .timestamp {
@@ -308,6 +308,11 @@ export default function ReceiptPage() {
 
             .col-2 {
               border-right: 1px solid black;
+            }
+            .col-2-bottom-box {
+              min-height: 200px;
+              display: flex;
+              flex-direction: column;
             }
             .lhe-header {
               display: flex;
@@ -814,7 +819,7 @@ export default function ReceiptPage() {
         .waybill-wrapper .signature-line {
           border-top: 1px solid black;
           width: 100%;
-          margin-top: 5px;
+          margin-top: 15px;
           padding-top: 5px;
         }
 
@@ -831,6 +836,11 @@ export default function ReceiptPage() {
 
         .waybill-wrapper .col-2 {
           border-right: 1px solid black;
+        }
+        .waybill-wrapper .col-2-bottom-box {
+          min-height: 200px;
+          display: flex;
+          flex-direction: column;
         }
 
         .waybill-wrapper .lhe-header {
@@ -1018,22 +1028,10 @@ export default function ReceiptPage() {
           <div className="header-area" style={{position: 'relative'}}>
             <div className="logo">
               <img src="/logo_final.png" alt="PSS Logo" />
-          </div>
-            
-            {/* Barcode and Booking ID - Centered between logo and WPX */}
-            <div style={{
-              position: 'absolute',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <div className="barcode" style={{ height: '40px', width: '140px', marginTop: '15px' }} />
-              <div style={{ fontWeight: 'bold', fontSize: '20px' }}>{invoice.invoiceNumber}</div>
             </div>
-
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <a href="https://www.psswwe.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>www.psswwe.com</a>
+            </div>
             {packagingLabel && (
               <div style={{
                 background: 'black',
@@ -1139,18 +1137,21 @@ export default function ReceiptPage() {
               </div>
             </div>
 
-              {/* Empty space (barcode moved to header) */}
-
-              {/* Declaration Text */}
-              <div style={{padding: '8px 5px', fontSize: '11px', lineHeight: '1.4'}}>
-                <div>
-                  <strong>انشورنس نوٹس:</strong> بھیجنے والے کی طرف سے انشورنس لازمی ہے۔ اگر اعلان نہیں کیا گیا تو، بھیجنے والا مکمل خطرہ قبول کرتا ہے اور بیان کردہ ذمہ داری کی حد کو تسلیم کرتا ہے۔
+              {/* Middle column bottom box: barcode, separator, Urdu notice */}
+              <div className="col-2-bottom-box">
+                {/* Barcode and Booking ID - inside receipt box, centered */}
+                <div className="barcode-bottom" style={{ padding: '30px 0 20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                  <div className="barcode" style={{ height: '50px', width: '150px' }} />
+                  <div style={{ fontWeight: 'bold', fontSize: '18px', marginTop: '4px' }}>{invoice.invoiceNumber}</div>
+                </div>
+                <div style={{ borderTop: '1px solid black', width: '100%', margin: '4px 0' }} />
+                {/* Declaration Text (Urdu insurance notice) */}
+                <div style={{padding: '0px 5px', fontSize: '11px', lineHeight: '1.4', flex: 1}}>
+                  <div>
+                    <strong>انشورنس نوٹس:</strong> بھیجنے والے کی طرف سے انشورنس لازمی ہے۔ اگر اعلان نہیں کیا گیا تو، بھیجنے والا مکمل خطرہ قبول کرتا ہے اور بیان کردہ ذمہ داری کی حد کو تسلیم کرتا ہے۔
+                  </div>
                 </div>
               </div>
-
-              {/* Empty barcode section */}
-              {/* <div className="barcode-section">
-              </div> */}
             </div>
               
             {/* COLUMN 3 (RIGHT) */}
@@ -1186,19 +1187,19 @@ export default function ReceiptPage() {
                   SIZE & WEIGHT
                 </div>
                 <div style={{padding: '5px 5px 0 5px'}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black', paddingBottom: '8px', marginTop: '2px'}}>
                     <span>NO. OF PIECES</span>
                     <strong>{totalPieces}</strong>
                   </div>
-                  <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black', padding: '2px 0'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black', paddingBottom: '8px', marginTop: '7px'}}>
                     <span>WEIGHT</span>
                     <strong>{totalWeight.toFixed(3)} KGS</strong>
               </div>
               
-                  <div style={{marginTop: '2px'}}>DIMENSIONS IN CM <span style={{float: 'right'}}>LxWxH</span></div>
+                  <div style={{marginTop: '6px'}}>DIMENSIONS IN CM <span style={{float: 'right'}}>LxWxH</span></div>
                   <div style={{textAlign: 'center', margin: '2px 0'}}>{dimensions}</div>
                   
-                  <div style={{borderTop: '1px solid black', paddingTop: '8px', marginTop: '5px'}}>
+                  <div style={{borderTop: '1px solid black', paddingTop: '8px', marginTop: '6px'}}>
                     <div style={{marginBottom: '3px'}}>VOLUMETRIC / CHARGED WEIGHT</div>
                     <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}>
                       <span>{chargedWeight.toFixed(2)}</span>
