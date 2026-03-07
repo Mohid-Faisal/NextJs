@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Country } from "country-state-city";
-import { Plane, Shield, Info, Printer, Clock, Home } from "lucide-react";
+import { Plane, Info, Printer, Clock, Home } from "lucide-react";
 
 const documentTypes = [
   "Document",
@@ -614,7 +614,9 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     byService.set(key, rate);
                   }
                 }
-                const displayRates = Array.from(byService.values());
+                const displayRates = Array.from(byService.values()).sort(
+                  (a, b) => a.price - b.price
+                );
 
                 return (
                   <div className="space-y-3">
@@ -624,12 +626,23 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                         publicResultsTab === "express"
                           ? "Lahore"
                           : getOriginFromService(rate.service);
+                      const rank = index < 3 ? index + 1 : null;
                       return (
                         <div
                           key={`${rate.vendor}-${rate.service}-${rate.weight}-${index}`}
-                          className="rounded-xl border border-slate-200 bg-white shadow-sm px-3 sm:px-5 py-2.5 sm:py-3"
+                          className="rounded-xl border border-slate-200 bg-white shadow-sm px-3 sm:px-5 py-2.5 sm:py-3 relative"
                         >
-                          <div className="flex items-center gap-3 sm:gap-5">
+                          {rank !== null && (
+                            <span
+                              className={`absolute top-2 left-2 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${
+                                rank === 1 ? "bg-amber-500" : rank === 2 ? "bg-slate-400" : "bg-amber-700"
+                              }`}
+                              aria-label={`Rank ${rank}`}
+                            >
+                              {rank}
+                            </span>
+                          )}
+                          <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
                             {/* Logo */}
                             <div className="flex items-center justify-center rounded-md bg-white border border-slate-200 px-2 py-1.5 shadow-sm shrink-0 w-[72px] h-[40px] sm:w-[90px] sm:h-[46px]">
                               {logoSrc ? (
@@ -647,39 +660,40 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               )}
                             </div>
 
-                            {/* Feature details */}
-                            <div className="flex flex-wrap items-start gap-x-4 sm:gap-x-6 gap-y-1 flex-1 min-w-0">
-                              <div className="flex flex-col items-center gap-px">
-                                <Plane className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
-                                <span className="text-[10px] sm:text-xs font-semibold text-slate-800 text-center leading-tight">{getServiceTypeLabel(rate.service)}</span>
-                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Originating {origin}</span>
-                              </div>
-                              <div className="flex flex-col items-center gap-px">
-                                <Home className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
-                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Collection</span>
-                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Sender address</span>
-                              </div>
-                              <div className="flex flex-col items-center gap-px">
-                                <Clock className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
-                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Delivery</span>
-                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">on average {getDeliveryDays(rate.service, publicResultsTab === "express")}</span>
-                              </div>
-                              <div className="flex flex-col items-center gap-px">
-                                <Printer className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
-                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Printer</span>
-                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Necessary</span>
-                              </div>
-                              <div className="flex flex-col items-center gap-px">
-                                <Shield className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
-                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Insurance</span>
-                                <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Information</span>
-                              </div>
+                            {/* Feature details - equal gap between all */}
+                            <div className="flex flex-col items-center gap-px shrink-0">
+                              <Plane className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                              <span className="text-[10px] sm:text-xs font-semibold text-slate-800 text-center leading-tight">{getServiceTypeLabel(rate.service)}</span>
+                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Originating {origin}</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-px shrink-0">
+                              <Home className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Collection</span>
+                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Sender address</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-px shrink-0">
+                              <Clock className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Delivery</span>
+                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">on average {getDeliveryDays(rate.service, publicResultsTab === "express")}</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-px shrink-0">
+                              <Printer className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Printer</span>
+                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Necessary</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-px shrink-0">
+                              <Info className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
+                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Insurance</span>
+                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Information</span>
                             </div>
 
                             {/* Price */}
                             <div className="text-right shrink-0">
                               <p className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">
-                                Rs. {rate.price.toFixed(2)}
+                                Rs. {rate.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">
+                                Rs. {(rate.price / rate.weight).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per kg
                               </p>
                             </div>
 
