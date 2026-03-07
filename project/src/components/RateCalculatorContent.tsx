@@ -78,11 +78,12 @@ function getDeliveryDays(service: string | undefined, isExpress: boolean): strin
 function getOriginFromService(service: string | undefined): string {
   if (!service) return "Pakistan";
   const s = service.toUpperCase();
-  if (s.includes("LHE") || s.includes("LHR")) return "Lahore";
+  if (s.includes("LHE")) return "Lahore";
   if (s.includes("DXB")) return "Dubai";
   if (s.includes("KHI")) return "Karachi";
   if (s.includes("ISB")) return "Islamabad";
   if (s.includes("SNWWE") || s.includes("SKYNET")) return "Lahore";
+  if (s.includes("LHR")) return "London";
   return "Pakistan";
 }
 
@@ -464,9 +465,11 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 const expressRates = allRates.filter(
                   (rate) => rate.service && EXPRESS_SERVICES.includes(rate.service)
                 );
-                const economyRates = allRates.filter(
-                  (rate) => rate.service && ECONOMY_SERVICES.includes(rate.service)
-                );
+                const economyRates = allRates.filter((rate) => {
+                  if (rate.service && ECONOMY_SERVICES.includes(rate.service)) return true;
+                  const origin = getOriginFromService(rate.service).toUpperCase();
+                  return origin === "DUBAI" || origin === "LONDON" || origin === "UK";
+                });
                 const rawDisplayRates =
                   publicResultsTab === "express" && expressRates.length > 0
                     ? expressRates
