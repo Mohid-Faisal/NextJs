@@ -17,7 +17,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Country } from "country-state-city";
-import { Plane, Info, Printer, Clock, Home } from "lucide-react";
+import { Plane, Info, Printer, Clock, Home, Truck, PackageSearch, Shield, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const documentTypes = [
   "Document",
@@ -138,6 +143,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
   const [loading, setLoading] = useState(false);
   const [showFixedCharges, setShowFixedCharges] = useState(true);
   const [publicResultsTab, setPublicResultsTab] = useState<"all" | "express">("express");
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
 
   useEffect(() => {
     const allCountries = Country.getAllCountries();
@@ -642,7 +648,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               {rank}
                             </span>
                           )}
-                          <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+                          <div className="flex items-center justify-between w-full flex-wrap gap-y-2">
                             {/* Logo */}
                             <div className="flex items-center justify-center rounded-md bg-white border border-slate-200 px-2 py-1.5 shadow-sm shrink-0 w-[72px] h-[40px] sm:w-[90px] sm:h-[46px]">
                               {logoSrc ? (
@@ -681,11 +687,14 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Printer</span>
                               <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Necessary</span>
                             </div>
-                            <div className="flex flex-col items-center gap-px shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setInfoModalOpen(true)}
+                              className="flex flex-col items-center gap-px shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            >
                               <Info className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />
-                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Insurance</span>
-                              <span className="text-[9px] sm:text-[10px] text-slate-500 text-center leading-tight">Information</span>
-                            </div>
+                              <span className="text-[10px] sm:text-xs font-medium text-slate-700 text-center leading-tight">Information</span>
+                            </button>
 
                             {/* Price */}
                             <div className="text-right shrink-0">
@@ -715,6 +724,85 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
           )}
         </CardContent>
       </Card>
+
+      {/* Information modal (public rate calculator) */}
+      {publicView && (
+        <Dialog open={infoModalOpen} onOpenChange={setInfoModalOpen}>
+          <DialogContent
+            size="5xl"
+            className="max-h-[90vh] overflow-y-auto border-0 bg-[#1e3a5f] text-white p-0 gap-0 [&_button]:text-white [&_button:hover]:text-white/90"
+            showCloseButton={true}
+          >
+            <DialogTitle className="sr-only">Service information</DialogTitle>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 sm:p-8">
+              {/* Left column */}
+              <div className="space-y-6">
+                <section>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Truck className="w-5 h-5 shrink-0" />
+                    <h3 className="font-bold text-sm uppercase tracking-wide">Delivery term</h3>
+                  </div>
+                  <p className="text-sm text-white/95 leading-relaxed">
+                    Please note that the delivery times given in the calculator are not very precise, please refer to the timescales below.
+                    When sending a shipment outside the EU, the consignee is responsible for customs formalities. The customs brokers of the chosen carrier will contact the consignee directly, and <strong>PSS Worldwide is not involved in customs procedures.</strong>
+                    When sending more than one package, the boxes may be separated during transit and delivered at different times.
+                  </p>
+                </section>
+                <section>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Home className="w-5 h-5 shrink-0" />
+                    <h3 className="font-bold text-sm uppercase tracking-wide">Collection address</h3>
+                  </div>
+                  <p className="text-sm text-white/95 leading-relaxed">
+                    Parcels are collected from home/work addresses on weekdays 09:00 to 17:00 hrs., depending on the sender&apos;s location.
+                    Courier call may not be available in all areas. If the courier cannot arrive, the package must be delivered to the nearest collection point. You can find the nearest location by clicking here.
+                  </p>
+                </section>
+                <section>
+                  <div className="flex items-center gap-2 mb-2">
+                    <PackageSearch className="w-5 h-5 shrink-0" />
+                    <h3 className="font-bold text-sm uppercase tracking-wide">Parcel tracking</h3>
+                  </div>
+                  <p className="text-sm text-white/95 leading-relaxed">Trackable service.</p>
+                </section>
+              </div>
+              {/* Right column */}
+              <div className="space-y-6">
+                <section>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="w-5 h-5 shrink-0" />
+                    <h3 className="font-bold text-sm uppercase tracking-wide">Cover</h3>
+                  </div>
+                  <p className="text-sm text-white/95 leading-relaxed">
+                    Free standard cover of up to 100 EUR per parcel.
+                    Neither the Standard nor the Supplementary insurance is valid for Forbidden Items and Non-Refundable Items. Prohibited items
+                  </p>
+                </section>
+                <section>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-5 h-5 shrink-0" />
+                    <h3 className="font-bold text-sm uppercase tracking-wide">Features and restrictions</h3>
+                  </div>
+                  <p className="text-sm text-white/95 leading-relaxed">
+                    Max. weight - 68 kg.
+                    Max. length - 240 cm.
+                    This service uses the greater of actual weight and volumetric weight when calculating price. If the dimensions and weight of the shipment provided during the order do not correspond to the exact data - the price of the service may be recalculated after the order is submitted.
+                  </p>
+                </section>
+                <section>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Printer className="w-5 h-5 shrink-0" />
+                    <h3 className="font-bold text-sm uppercase tracking-wide">Printer</h3>
+                  </div>
+                  <p className="text-sm text-white/95 leading-relaxed">
+                    Print and attach the shipping documents in a clearly visible place of the packaging (documents will be sent within 15-20 min. after successful payment).
+                  </p>
+                </section>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </motion.div>
   );
 }
