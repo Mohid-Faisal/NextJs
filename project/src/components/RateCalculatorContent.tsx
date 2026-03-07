@@ -84,6 +84,10 @@ function getOriginFromService(service: string | undefined): string {
   if (s.includes("ISB")) return "Islamabad";
   if (s.includes("SNWWE") || s.includes("SKYNET")) return "Lahore";
   if (s.includes("LHR")) return "London";
+  if (s.includes("EU")) return "Germany";
+  if (s.includes("SIN")) return "Singapore";
+  if (s.includes("NY")) return "New York";
+  if (s.includes("KUL")) return "Kuala Lumpur";
   return "Pakistan";
 }
 
@@ -102,7 +106,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
     originZip: "",
     destinationZip: "",
     docType: "",
-    profitPercentage: publicView ? "10" : "0",
+    profitPercentage: publicView ? "5" : "0",
   });
 
   const [countries, setCountries] = useState<any[]>([]);
@@ -185,7 +189,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
     const l = parseFloat(length);
     const wd = parseFloat(width);
     const h = parseFloat(height);
-    const profit = publicView ? 10 : parseFloat(profitPercentage);
+    const profit = publicView ? 5 : parseFloat(profitPercentage);
 
     if ([w, l, wd, h].some((v) => isNaN(v) || v < 0)) {
       setError("Please enter valid non-negative numbers for all dimensions and weight.");
@@ -221,7 +225,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
           height: h,
           width: wd,
           length: l,
-          profitPercentage: publicView ? 10 : profit
+          profitPercentage: publicView ? 5 : profit
         }),
       });
 
@@ -406,9 +410,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
             <p className="text-xs sm:text-sm text-slate-500 text-center">
               Delivery price is based on the greater of actual or volumetric weight. You can calculate the volumetric weight{" "}
               <a
-                href="https://www.omnicalculator.com/other/volumetric-weight"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/tools/volumetric-calculator"
                 className="underline text-sky-500 hover:text-sky-600 font-medium"
               >
                 here

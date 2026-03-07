@@ -105,7 +105,10 @@ export async function GET(req: Request) {
   console.log('=== END SHIPMENTS API SEARCH DEBUG ===');
 
   try {
-    const [shipments, total] = await Promise.all([
+    // Build a base where without the status filter so we can count per-status
+    const { deliveryStatus: _ds, ...baseWhereNoStatus } = where;
+
+    const [shipments, total, grandTotal, inTransitCount, deliveredCount, cancelledCount] = await Promise.all([
       prisma.shipment.findMany({
         skip,
         take: limit,
@@ -124,25 +127,13 @@ export async function GET(req: Request) {
         }
       }),
       prisma.shipment.count({ where }),
+      prisma.shipment.count({ where: baseWhereNoStatus }),
+      prisma.shipment.count({ where: { ...baseWhereNoStatus, deliveryStatus: "In Transit" } }),
+      prisma.shipment.count({ where: { ...baseWhereNoStatus, deliveryStatus: "Delivered" } }),
+      prisma.shipment.count({ where: { ...baseWhereNoStatus, deliveryStatus: "Cancelled" } }),
     ]);
 
-    console.log(`Found ${shipments.length} shipments out of ${total} total`);
-    if (search && shipments.length > 0) {
-      console.log('Sample search results:');
-      shipments.slice(0, 3).forEach((shipment, index) => {
-        console.log(`Result ${index + 1}:`, {
-          id: shipment.id,
-          trackingId: shipment.trackingId,
-          invoiceNumber: shipment.invoiceNumber,
-          senderName: shipment.senderName,
-          recipientName: shipment.recipientName,
-          destination: shipment.destination,
-          packaging: shipment.packaging
-        });
-      });
-    }
-
-    return NextResponse.json({ shipments, total });
+    return NextResponse.json({ shipments, total, grandTotal, inTransitCount, deliveredCount, cancelledCount });
   } catch (error) {
     console.error('Error in shipments API:', error);
     console.error('Search term was:', search);

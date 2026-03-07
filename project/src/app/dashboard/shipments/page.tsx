@@ -59,10 +59,12 @@ export default function ShipmentsPage() {
   const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
 
   const [searchTerm, setSearchTerm] = useState("");
-  // Check if coming from dashboard - if status=All in query params, set to "All"
-  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("All");
-  const [deliveryStatuses, setDeliveryStatuses] = useState<{ id: number; name: string }[]>([]);
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("In Transit");
   const isFromDashboardRef = useRef(false);
+  const [grandTotal, setGrandTotal] = useState(0);
+  const [inTransitCount, setInTransitCount] = useState(0);
+  const [deliveredCount, setDeliveredCount] = useState(0);
+  const [cancelledCount, setCancelledCount] = useState(0);
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
@@ -199,47 +201,14 @@ export default function ShipmentsPage() {
   }, [periodType, customStartDate, customEndDate]);
 
   useEffect(() => {
-    // Check if coming from dashboard with status=All query parameter (only check once on mount)
     if (!isFromDashboardRef.current) {
       const statusParam = searchParams.get('status');
       if (statusParam === 'All') {
         isFromDashboardRef.current = true;
         setDeliveryStatusFilter("All");
-        // Clear the query parameter from URL
         router.replace('/dashboard/shipments', { scroll: false });
       }
     }
-    
-    // Fetch delivery statuses from settings
-    const fetchDeliveryStatuses = async () => {
-      try {
-        const res = await fetch("/api/settings/deliveryStatus");
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setDeliveryStatuses(data);
-          
-          // Only set default to "In Transit" if not coming from dashboard
-          if (!isFromDashboardRef.current) {
-            const inTransitStatus = data.find((status: { id: number; name: string }) => 
-              status.name === "In Transit"
-            );
-            if (inTransitStatus) {
-              setDeliveryStatusFilter("In Transit");
-            } else {
-              setDeliveryStatusFilter("All");
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching delivery statuses:", error);
-        // On error, default to "All" only if not from dashboard
-        if (!isFromDashboardRef.current) {
-          setDeliveryStatusFilter("All");
-        }
-      }
-    };
-
-    fetchDeliveryStatuses();
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -260,9 +229,13 @@ export default function ShipmentsPage() {
       });
 
       const res = await fetch(`/api/shipments?${params}`);
-      const { shipments, total } = await res.json();
-      setShipments(shipments);
-      setTotal(total);
+      const data = await res.json();
+      setShipments(data.shipments);
+      setTotal(data.total);
+      if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
+      if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
+      if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
+      if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
     };
 
     fetchShipments();
@@ -861,11 +834,57 @@ export default function ShipmentsPage() {
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0 min-h-[calc(100vh-64px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">
-          📦 All Shipments
+          Shipments
         </h2>
-        <div className="text-right">
-          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{total}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total Shipments</div>
+        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => { setDeliveryStatusFilter("All"); setPage(1); }}
+            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
+              deliveryStatusFilter === "All"
+                ? "bg-blue-50 dark:bg-blue-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">{grandTotal}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Total</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setDeliveryStatusFilter("In Transit"); setPage(1); }}
+            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
+              deliveryStatusFilter === "In Transit"
+                ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-amber-50/60 dark:hover:bg-amber-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-300">{inTransitCount}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">In Transit</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setDeliveryStatusFilter("Delivered"); setPage(1); }}
+            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
+              deliveryStatusFilter === "Delivered"
+                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-300">{deliveredCount}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Delivered</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setDeliveryStatusFilter("Cancelled"); setPage(1); }}
+            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
+              deliveryStatusFilter === "Cancelled"
+                ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-red-50/60 dark:hover:bg-red-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-red-600 dark:text-red-300">{cancelledCount}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Cancelled</span>
+          </button>
         </div>
       </div>
 
@@ -943,29 +962,6 @@ export default function ShipmentsPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-
-          {/* Delivery Status Filter */}
-          <div>
-            <Select
-              value={deliveryStatusFilter}
-              onValueChange={(value: string) => {
-                setPage(1);
-                setDeliveryStatusFilter(value);
-              }}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Select delivery status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                {deliveryStatuses.map((status) => (
-                  <SelectItem key={status.id} value={status.name}>
-                    {status.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Date Range Filter */}
