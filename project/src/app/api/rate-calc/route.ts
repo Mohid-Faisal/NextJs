@@ -79,10 +79,13 @@ export async function POST(req: NextRequest) {
     const destinationZones = new Set<string>();
     zoneInfos.forEach((zoneInfo) => {
       const raw = zoneInfo.zone;
-      const zoneKey =
-        typeof raw === "string"
-          ? (raw.match(/Zone\s*(\d+[A-Za-z]?)/i)?.[1] || raw.replace(/^Zone\s*/i, "").trim() || raw
-          : String(raw);
+      let zoneKey: string;
+      if (typeof raw === "string") {
+        const m = raw.match(/Zone\s*(\d+[A-Za-z]?)/i);
+        zoneKey = m ? m[1] : raw.replace(/^Zone\s*/i, "").trim() || raw;
+      } else {
+        zoneKey = String(raw);
+      }
       if (!zoneKey) return;
       destinationZones.add(zoneKey);
       (zoneInfo as any).zone = zoneKey;
