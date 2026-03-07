@@ -260,28 +260,30 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-end">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold tracking-wide text-slate-600">Collection from</Label>
-                <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
-                  <SelectTrigger className="w-full h-11 bg-white border-slate-200 rounded-xl text-sm">
-                    <SelectValue placeholder="Select origin" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {countries.map((country) => (
-                      <SelectItem key={country.isoCode} value={country.name} className="text-sm">
-                        <span className="flex items-center gap-2">
-                          <FlagIcon country={country} />
-                          <span>{country.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  name="originZip"
-                  value={form.originZip}
-                  onChange={handleChange}
-                  placeholder="Zip / Postal code"
-                  className="h-10 bg-white border-slate-200 rounded-xl text-sm"
-                />
+                <div className="flex gap-2 items-center">
+                  <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
+                    <SelectTrigger className="flex-1 min-w-0 h-11 bg-white border-slate-200 rounded-xl text-sm">
+                      <SelectValue placeholder="Select origin" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {countries.map((country) => (
+                        <SelectItem key={country.isoCode} value={country.name} className="text-sm">
+                          <span className="flex items-center gap-2">
+                            <FlagIcon country={country} />
+                            <span>{country.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    name="originZip"
+                    value={form.originZip}
+                    onChange={handleChange}
+                    placeholder="Zip"
+                    className="h-11 w-24 sm:w-28 shrink-0 bg-white border-slate-200 rounded-xl text-sm"
+                  />
+                </div>
               </div>
               <div className="flex items-center justify-center h-11">
                 <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center">
@@ -290,28 +292,30 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold tracking-wide text-slate-600">Delivery to</Label>
-                <Select onValueChange={(value) => handleSelect(value, "destination")} value={form.destination}>
-                  <SelectTrigger className="w-full h-11 bg-white border-slate-200 rounded-xl text-sm">
-                    <SelectValue placeholder="Select destination" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {countries.map((country) => (
-                      <SelectItem key={country.isoCode} value={country.name} className="text-sm">
-                        <span className="flex items-center gap-2">
-                          <FlagIcon country={country} />
-                          <span>{country.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  name="destinationZip"
-                  value={form.destinationZip}
-                  onChange={handleChange}
-                  placeholder="Zip / Postal code"
-                  className="h-10 bg-white border-slate-200 rounded-xl text-sm"
-                />
+                <div className="flex gap-2 items-center">
+                  <Select onValueChange={(value) => handleSelect(value, "destination")} value={form.destination}>
+                    <SelectTrigger className="flex-1 min-w-0 h-11 bg-white border-slate-200 rounded-xl text-sm">
+                      <SelectValue placeholder="Select destination" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {countries.map((country) => (
+                        <SelectItem key={country.isoCode} value={country.name} className="text-sm">
+                          <span className="flex items-center gap-2">
+                            <FlagIcon country={country} />
+                            <span>{country.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    name="destinationZip"
+                    value={form.destinationZip}
+                    onChange={handleChange}
+                    placeholder="Zip"
+                    className="h-11 w-24 sm:w-28 shrink-0 bg-white border-slate-200 rounded-xl text-sm"
+                  />
+                </div>
               </div>
             </div>
 
@@ -478,7 +482,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                         <div
                           key={`${rate.vendor}-${rate.service}-${rate.weight}-${index}`}
                           className={`rounded-xl border bg-white shadow-sm px-3 sm:px-5 py-2.5 sm:py-3 relative ${
-                            isRemote ? "border-amber-400" : "border-slate-200"
+                            isRemote ? "border-red-300" : "border-slate-200"
                           }`}
                         >
                           {rank !== null && (
@@ -492,10 +496,12 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                             </span>
                           )}
                           {isRemote && (
-                            <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[10px] sm:text-xs font-semibold">
-                              <AlertTriangle className="w-3 h-3" />
-                              Remote area
-                            </span>
+                            <div className="flex justify-end mb-1.5 pr-0">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 text-[10px] sm:text-xs font-semibold">
+                                <AlertTriangle className="w-3 h-3" />
+                                Remote area
+                              </span>
+                            </div>
                           )}
                           <div className="flex items-center justify-between w-full flex-wrap gap-y-2">
                             <div className="flex items-center justify-center rounded-md bg-white border border-slate-200 px-2 py-1.5 shadow-sm shrink-0 w-[72px] h-[40px] sm:w-[90px] sm:h-[46px]">
