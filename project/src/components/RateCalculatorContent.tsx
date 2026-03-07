@@ -24,16 +24,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-function getFlagEmoji(country: any): string {
-  if (!country) return "";
-  if (country.flag) return country.flag;
-  const code = country.isoCode;
-  if (!code) return "";
-  return code
-    .toUpperCase()
-    .split("")
-    .map((char: string) => String.fromCodePoint(127397 + char.charCodeAt(0)))
-    .join("");
+function FlagIcon({ country, className }: { country: any; className?: string }) {
+  if (!country?.isoCode) return null;
+  const code = country.isoCode.toLowerCase();
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${code}.png`}
+      srcSet={`https://flagcdn.com/w80/${code}.png 2x`}
+      alt={country.name || code}
+      className={className || "w-5 h-3.5 object-cover rounded-sm inline-block"}
+      loading="lazy"
+    />
+  );
 }
 
 const documentTypes = [
@@ -242,15 +244,17 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
       {/* ──── PUBLIC VIEW ──── */}
       {publicView && (
         <div className="space-y-6">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-slate-800">
-            One platform —<br />for all your shipping needs
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center leading-snug">
+            <span className="bg-linear-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">One platform —</span>
+            <br />
+            <span className="text-slate-800">for all your shipping needs</span>
           </h1>
 
           <div className="rounded-2xl bg-slate-100 p-5 sm:p-7 space-y-5">
             {/* Origin / Destination row */}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-end">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wide text-slate-600">Collection from</Label>
+                <Label className="text-xs font-bold tracking-wide text-slate-600">Collection from</Label>
                 <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
                   <SelectTrigger className="w-full h-11 bg-white border-slate-200 rounded-xl text-sm">
                     <SelectValue placeholder="Select origin" />
@@ -259,7 +263,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     {countries.map((country) => (
                       <SelectItem key={country.isoCode} value={country.name} className="text-sm">
                         <span className="flex items-center gap-2">
-                          <span className="text-base" aria-hidden>{getFlagEmoji(country)}</span>
+                          <FlagIcon country={country} />
                           <span>{country.name}</span>
                         </span>
                       </SelectItem>
@@ -273,7 +277,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wide text-slate-600">Delivery to</Label>
+                <Label className="text-xs font-bold tracking-wide text-slate-600">Delivery to</Label>
                 <Select onValueChange={(value) => handleSelect(value, "destination")} value={form.destination}>
                   <SelectTrigger className="w-full h-11 bg-white border-slate-200 rounded-xl text-sm">
                     <SelectValue placeholder="Select destination" />
@@ -282,7 +286,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     {countries.map((country) => (
                       <SelectItem key={country.isoCode} value={country.name} className="text-sm">
                         <span className="flex items-center gap-2">
-                          <span className="text-base" aria-hidden>{getFlagEmoji(country)}</span>
+                          <FlagIcon country={country} />
                           <span>{country.name}</span>
                         </span>
                       </SelectItem>
@@ -294,11 +298,10 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
             {/* Package type selector */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-600">Package</Label>
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <Label className="text-xs font-bold tracking-wide text-slate-600">Type</Label><div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {([
                   { value: "Document", label: "Document", icon: Mail },
-                  { value: "Non Document", label: "Box", icon: Package },
+                  { value: "Non Document", label: "Wpx", icon: Package },
                   { value: "FedEx Pak", label: "FedEx Pak", icon: FileText },
                 ] as const).map((pkg) => {
                   const Icon = pkg.icon;
@@ -324,7 +327,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
             {/* Weight and dimensions row */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wide text-slate-600">1. Package</Label>
+              <Label className="text-xs font-bold tracking-wide text-slate-600">1. Package</Label>
               <div className="grid grid-cols-4 gap-2 sm:gap-3">
                 <div className="relative">
                   <Input
@@ -363,15 +366,26 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
           </div>
 
           {/* Calculate button */}
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-3">
             <Button
               className="h-12 px-10 rounded-full bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-semibold text-sm sm:text-base shadow-lg shadow-sky-200/50 transition-all"
               onClick={handleCalculate}
               disabled={loading}
             >
-              {loading ? "Calculating..." : "CALCULATE THE PRICE"}
+              {loading ? "Calculating..." : "Calculate the price"}
               {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
             </Button>
+            <p className="text-xs sm:text-sm text-slate-500 text-center">
+              Delivery price is based on the greater of actual or volumetric weight. You can calculate the volumetric weight{" "}
+              <a
+                href="https://www.omnicalculator.com/other/volumetric-weight"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-sky-500 hover:text-sky-600 font-medium"
+              >
+                here
+              </a>.
+            </p>
           </div>
 
           {error && (
@@ -547,7 +561,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     {countries.map((country) => (
                       <SelectItem key={country.isoCode} value={country.name} className="text-xs sm:text-sm">
                         <span className="flex items-center gap-2">
-                          <span className="text-base" aria-hidden>{getFlagEmoji(country)}</span>
+                          <FlagIcon country={country} />
                           <span>{country.name}</span>
                         </span>
                       </SelectItem>
@@ -566,7 +580,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     {countries.map((country) => (
                       <SelectItem key={country.isoCode} value={country.name} className="text-xs sm:text-sm">
                         <span className="flex items-center gap-2">
-                          <span className="text-base" aria-hidden>{getFlagEmoji(country)}</span>
+                          <FlagIcon country={country} />
                           <span>{country.name}</span>
                         </span>
                       </SelectItem>
