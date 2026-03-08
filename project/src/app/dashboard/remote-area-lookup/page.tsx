@@ -487,7 +487,7 @@ const RemoteAreaLookupPage = () => {
                         <p className="text-sm text-green-800 dark:text-green-200 font-semibold">
                           Found {result.companies.length} remote area match{result.companies.length !== 1 ? "es" : ""}:
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className={`grid grid-cols-1 gap-4 ${result.companies.length === 1 ? "sm:grid-cols-1" : result.companies.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
                           {result.companies.map((match, index) => (
                             <div key={index} className="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-green-300 dark:border-green-700 flex items-start gap-3">
                               <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />

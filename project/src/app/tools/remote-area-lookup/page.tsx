@@ -150,23 +150,23 @@ export default function RemoteAreaLookupPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
-          {/* Breadcrumb */}
-          <nav className="mb-4 text-sm text-slate-500">
-            <Link href="/" className="hover:text-sky-500">
-              Home
-            </Link>
-            <span className="mx-2">›</span>
-            <Link href="/tools" className="hover:text-sky-500">
-              Tools
-            </Link>
-            <span className="mx-2">›</span>
-            <span className="text-sky-500 font-medium">
-              Remote area lookup
-            </span>
-          </nav>
+      <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
+        {/* Breadcrumb - very left, full width of padded area */}
+        <nav className="mb-4 text-sm text-slate-500 w-full text-left">
+          <Link href="/" className="hover:text-sky-500">
+            Home
+          </Link>
+          <span className="mx-2">›</span>
+          <Link href="/tools" className="hover:text-sky-500">
+            Tools
+          </Link>
+          <span className="mx-2">›</span>
+          <span className="text-sky-500 font-medium">
+            Remote area lookup
+          </span>
+        </nav>
 
+        <div className="max-w-3xl mx-auto">
           {/* Heading - one line */}
           <div className="text-center mb-10">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
@@ -300,7 +300,7 @@ export default function RemoteAreaLookupPage() {
                     <p className="text-center text-sm font-semibold text-slate-500">
                       Found {result.companies.length} remote area match{result.companies.length !== 1 ? "es" : ""}
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className={`grid grid-cols-1 gap-4 ${result.companies.length === 1 ? "sm:grid-cols-1" : result.companies.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
                       {result.companies.map((match, idx) => (
                         <div
                           key={idx}
@@ -311,11 +311,11 @@ export default function RemoteAreaLookupPage() {
                             <p className="font-semibold text-slate-800">
                               {match.company}
                             </p>
-                            <p className="text-sm text-slate-500">
+                            <p className="text-sm text-slate-500 whitespace-nowrap">
                               This is a <span className="font-semibold text-amber-600">remote area</span>
                             </p>
                             {match.area?.low != null && match.area?.high != null && (
-                              <p className="text-xs text-slate-400">
+                              <p className="text-xs text-slate-400 whitespace-nowrap">
                                 Zip range: {match.area.low} &ndash; {match.area.high}
                               </p>
                             )}
@@ -339,8 +339,8 @@ export default function RemoteAreaLookupPage() {
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
