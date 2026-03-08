@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, CheckCircle2, ChevronDown, ChevronUp, Package, Printer, Search } from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, ChevronDown, ChevronUp, Package, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getCountryNameFromCode } from "@/lib/utils";
@@ -360,30 +360,69 @@ export default function TrackingResultsDialog(props: {
 
   const content = (
     <>
-        <div className={asPage ? "mb-8" : ""}>
-          {asPage && (
-            <div className="text-center mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Track Your Shipment</h1>
-              <p className="text-gray-600 dark:text-gray-400 text-lg">Enter your booking ID to get real-time updates on your shipment</p>
+        {asPage ? (
+          <div className="mb-10 pt-8 pb-10 px-4">
+            <div className="max-w-xl mx-auto text-center">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 tracking-tight">
+                <span className="bg-linear-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">
+                  Track Your
+                </span>{" "}
+                <span className="text-slate-900">Shipment</span>
+              </h1>
+              <p className="text-slate-500 text-base sm:text-lg mb-8">
+                Enter your booking ID to get real-time updates on your shipment
+              </p>
+              <div className="relative pb-10">
+                <div className="rounded-2xl bg-slate-100 border border-slate-200 shadow-sm px-6 pt-9 pb-16 sm:px-8">
+                  <div className="flex items-center rounded-xl bg-white border border-slate-300 h-12 overflow-hidden">
+                    <Input
+                      type="text"
+                      placeholder="Enter booking / Shipment ID (e.g., 600001)"
+                      value={bookingId}
+                      onChange={(e) => setBookingId(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      className="flex-1 min-w-0 h-full border-0 bg-transparent text-slate-800 placeholder:text-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-0 -translate-y-1/4">
+                  <button
+                    onClick={() => handleSearch()}
+                    disabled={loading}
+                    className="h-14 px-20 rounded-full bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-semibold text-base shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center whitespace-nowrap"
+                  >
+                    {loading ? "Searching..." : (
+                      <>
+                        Search
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
-          <div className={`flex flex-col sm:flex-row gap-3 ${asPage ? "max-w-xl mx-auto items-stretch sm:items-center justify-center" : ""}`}>
-          <Input
-            type="text"
-            placeholder="Enter booking ID (e.g., 420001)"
-            value={bookingId}
-            onChange={(e) => setBookingId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className={`flex-1 ${asPage ? "min-w-0 h-12 px-4 rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600" : ""}`}
-          />
-          <Button
-            onClick={() => handleSearch()}
-            disabled={loading}
-            className={`bg-blue-600 hover:bg-blue-700 text-white ${asPage ? "h-12 px-8 font-semibold rounded-lg shrink-0" : ""}`}
-          >
-            {loading ? "Searching..." : <><Search className="w-5 h-5 mr-2 inline" />Track</>}
-          </Button>
-        </div>
+          </div>
+        ) : (
+          <div className="mb-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Input
+                type="text"
+                placeholder="Enter booking ID (e.g., 420001)"
+                value={bookingId}
+                onChange={(e) => setBookingId(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                className="flex-1"
+              />
+              <Button
+                onClick={() => handleSearch()}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+              >
+                {loading ? "Searching..." : <><Search className="w-5 h-5 mr-2 inline" />Track</>}
+              </Button>
+            </div>
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           {searched && (
@@ -611,18 +650,11 @@ export default function TrackingResultsDialog(props: {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
     </>
   );
 
   if (asPage) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          {content}
-        </div>
-      </div>
-    );
+    return content;
   }
 
   return (
