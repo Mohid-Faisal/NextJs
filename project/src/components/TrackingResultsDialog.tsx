@@ -52,6 +52,17 @@ interface HistoryEvent {
 
 const STAGES: DeliveryStage[] = ["Booked", "Picked Up", "In Transit", "Arrived at Destination", "Out for Delivery", "Delivered"];
 
+/** Show only parent carrier name (e.g. "dhl pk" → "DHL", "ups_c2s" → "UPS") */
+function getParentCarrierName(serviceMode: string | null | undefined): string {
+  if (!serviceMode || !String(serviceMode).trim()) return "—";
+  const s = String(serviceMode).trim().toLowerCase();
+  if (s.startsWith("dhl")) return "DHL";
+  if (s.startsWith("ups")) return "UPS";
+  if (s.startsWith("fedex") || s.startsWith("fed ex")) return "FedEx";
+  if (s.startsWith("skynet") || s.startsWith("SN")) return "Skynet";
+  return serviceMode;
+}
+
 function formatDateTime(date: Date | string | null | undefined) {
   if (!date) return "—";
   try {
@@ -445,7 +456,7 @@ export default function TrackingResultsDialog(props: {
                               Booking ID: <span className="font-bold text-gray-900 dark:text-white">{shipment.invoiceNumber}</span>
                             </p>
                             <p className="text-sm text-gray-700 dark:text-gray-300">
-                              This shipment is handled by: <span className="font-bold text-gray-900 dark:text-white">{shipment.serviceMode || "—"}</span>
+                              This shipment is handled by: <span className="font-bold text-gray-900 dark:text-white">{getParentCarrierName(shipment.serviceMode)}</span>
                             </p>
                           </div>
                           <Button
@@ -538,7 +549,7 @@ export default function TrackingResultsDialog(props: {
                               </div>
                               <div>
                                 <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Service Mode</dt>
-                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{shipment.serviceMode || "—"}</dd>
+                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{getParentCarrierName(shipment.serviceMode)}</dd>
                               </div>
                               <div>
                                 <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Tracking No</dt>
