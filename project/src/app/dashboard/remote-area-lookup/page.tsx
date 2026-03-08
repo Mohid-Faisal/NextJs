@@ -260,16 +260,24 @@ const RemoteAreaLookupPage = () => {
           found = matchedAreas.length > 0;
         }
 
-        console.log("🎯 Final result:", { found, matchedAreas, count: matchedAreas.length });
+        // One card per company (DHL, FedEx, UPS) — deduplicate by company
+        const byCompany = new Map<string, { company: string; area: any }>();
+        for (const m of matchedAreas) {
+          const key = (m.company || "").trim().toLowerCase();
+          if (key && !byCompany.has(key)) byCompany.set(key, m);
+        }
+        const uniqueByCompany = Array.from(byCompany.values());
+
+        console.log("🎯 Final result:", { found, matchedAreas, uniqueByCompany, count: uniqueByCompany.length });
 
         setResult({
-          isRemote: found,
-          companies: matchedAreas,
+          isRemote: uniqueByCompany.length > 0,
+          companies: uniqueByCompany,
         });
 
-        if (found) {
-          const companyNames = matchedAreas.map(m => m.company).join(", ");
-          toast.success(`Found ${matchedAreas.length} remote area(s) for: ${companyNames}`);
+        if (uniqueByCompany.length > 0) {
+          const companyNames = uniqueByCompany.map(m => m.company).join(", ");
+          toast.success(`Found ${uniqueByCompany.length} remote area(s) for: ${companyNames}`);
         } else {
           toast.info("Location is not a remote area");
         }
@@ -477,39 +485,31 @@ const RemoteAreaLookupPage = () => {
                     {result.isRemote && result.companies && result.companies.length > 0 && (
                       <div className="space-y-4">
                         <p className="text-sm text-green-800 dark:text-green-200 font-semibold">
-                          Found {result.companies.length} remote area match(es):
+                          Found {result.companies.length} remote area match{result.companies.length !== 1 ? "es" : ""}:
                         </p>
-                        {result.companies.map((match, index) => (
-                          <div key={index} className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-green-300 dark:border-green-700">
-                            <p className="text-sm text-green-800 dark:text-green-200 font-medium mb-2">
-                              <strong>Company {index + 1}:</strong> {match.company}
-                            </p>
-                            {match.area && (
-                              <div className="text-sm text-green-800 dark:text-green-200 space-y-1">
-                                {match.area.low && match.area.high && (
-                                  <p>
-                                    <strong>Zip Code Range:</strong> {match.area.low} - {match.area.high}
-                                  </p>
-                                )}
-                                {match.area.city && (
-                                  <p>
-                                    <strong>City:</strong> {match.area.city}
-                                  </p>
-                                )}
-                                {match.area.iataCode && (
-                                  <p>
-                                    <strong>IATA Code:</strong> {match.area.iataCode}
-                                  </p>
-                                )}
-                                {match.area.country && (
-                                  <p>
-                                    <strong>Country:</strong> {match.area.country}
-                                  </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          {result.companies.map((match, index) => (
+                            <div key={index} className="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-green-300 dark:border-green-700 flex items-start gap-3">
+                              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <p className="text-sm text-green-800 dark:text-green-200 font-semibold">
+                                  {match.company}
+                                </p>
+                                <p className="text-xs text-green-700 dark:text-green-300">
+                                  This is a remote area
+                                </p>
+                                {match.area && (
+                                  <div className="text-xs text-green-700 dark:text-green-300 space-y-0.5">
+                                    {match.area.low != null && match.area.high != null && (
+                                      <p>Zip range: {match.area.low} – {match.area.high}</p>
+                                    )}
+                                    {match.area.city && <p>City: {match.area.city}</p>}
+                                  </div>
                                 )}
                               </div>
-                            )}
-                          </div>
-                        ))}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {!result.isRemote && (

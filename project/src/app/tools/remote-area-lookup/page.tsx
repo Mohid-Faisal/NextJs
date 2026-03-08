@@ -119,7 +119,15 @@ export default function RemoteAreaLookupPage() {
           matchedAreas.push(...cityMatches.map((area: any) => ({ company: area.company, area })));
         }
 
-        setResult({ isRemote: matchedAreas.length > 0, companies: matchedAreas });
+        // One card per company (DHL, FedEx, UPS) — deduplicate by company
+        const byCompany = new Map<string, { company: string; area: any }>();
+        for (const m of matchedAreas) {
+          const key = (m.company || "").trim().toLowerCase();
+          if (key && !byCompany.has(key)) byCompany.set(key, m);
+        }
+        const uniqueByCompany = Array.from(byCompany.values());
+
+        setResult({ isRemote: uniqueByCompany.length > 0, companies: uniqueByCompany });
       }
     } catch {
       // silently fail
@@ -290,32 +298,34 @@ export default function RemoteAreaLookupPage() {
                 {result.isRemote && result.companies && result.companies.length > 0 ? (
                   <div className="space-y-3">
                     <p className="text-center text-sm font-semibold text-slate-500">
-                      Found {result.companies.length} remote area match{result.companies.length > 1 ? "es" : ""}
+                      Found {result.companies.length} remote area match{result.companies.length !== 1 ? "es" : ""}
                     </p>
-                    {result.companies.map((match, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-2xl bg-white border-2 border-amber-300 p-5 flex items-start gap-4"
-                      >
-                        <CheckCircle2 className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
-                        <div className="flex-1 space-y-1">
-                          <p className="font-semibold text-slate-800">
-                            {match.company}
-                          </p>
-                          <p className="text-sm text-slate-500">
-                            This is a <span className="font-semibold text-amber-600">remote area</span>
-                          </p>
-                          {match.area?.low && match.area?.high && (
-                            <p className="text-xs text-slate-400">
-                              Zip range: {match.area.low} &ndash; {match.area.high}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {result.companies.map((match, idx) => (
+                        <div
+                          key={idx}
+                          className="rounded-2xl bg-white border-2 border-amber-300 p-5 flex items-start gap-3"
+                        >
+                          <CheckCircle2 className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <p className="font-semibold text-slate-800">
+                              {match.company}
                             </p>
-                          )}
-                          {match.area?.city && (
-                            <p className="text-xs text-slate-400">City: {match.area.city}</p>
-                          )}
+                            <p className="text-sm text-slate-500">
+                              This is a <span className="font-semibold text-amber-600">remote area</span>
+                            </p>
+                            {match.area?.low != null && match.area?.high != null && (
+                              <p className="text-xs text-slate-400">
+                                Zip range: {match.area.low} &ndash; {match.area.high}
+                              </p>
+                            )}
+                            {match.area?.city && (
+                              <p className="text-xs text-slate-400">City: {match.area.city}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div className="rounded-2xl bg-white border-2 border-emerald-300 p-6 text-center">
