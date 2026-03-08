@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
+import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 import { Country } from "country-state-city";
 import { prisma } from "@/lib/prisma";
@@ -38,7 +39,7 @@ async function parseDhlStylePdfText(
     filename: string;
   }[]
 > {
-  const parser = new PDFParse({ data: buffer });
+  const parser = new PDFParse({ data: buffer, CanvasFactory });
   const result = await parser.getText();
   await parser.destroy();
   let text = result?.text ?? "";
