@@ -304,10 +304,11 @@ export default function RemoteAreaLookupPage() {
                       {result.companies.map((match, idx) => (
                         <div
                           key={idx}
-                          className="rounded-2xl bg-white border-2 border-amber-300 p-5 flex items-start gap-3"
+                          className="rounded-2xl bg-white border-2 border-amber-300 p-5 flex justify-center"
                         >
-                          <CheckCircle2 className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-start gap-3 text-left">
+                            <CheckCircle2 className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
                             <p className="font-semibold text-slate-800">
                               {match.company}
                             </p>
@@ -322,6 +323,7 @@ export default function RemoteAreaLookupPage() {
                             {match.area?.city && (
                               <p className="text-xs text-slate-400">City: {match.area.city}</p>
                             )}
+                            </div>
                           </div>
                         </div>
                       ))}

@@ -489,9 +489,10 @@ const RemoteAreaLookupPage = () => {
                         </p>
                         <div className={`grid grid-cols-1 gap-4 ${result.companies.length === 1 ? "sm:grid-cols-1" : result.companies.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
                           {result.companies.map((match, index) => (
-                            <div key={index} className="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-green-300 dark:border-green-700 flex items-start gap-3">
-                              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
-                              <div className="min-w-0 flex-1 space-y-1">
+                            <div key={index} className="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-green-300 dark:border-green-700 flex justify-center">
+                              <div className="flex items-start gap-3 text-left">
+                                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                                <div className="space-y-1">
                                 <p className="text-sm text-green-800 dark:text-green-200 font-semibold">
                                   {match.company}
                                 </p>
@@ -506,6 +507,7 @@ const RemoteAreaLookupPage = () => {
                                     {match.area.city && <p>City: {match.area.city}</p>}
                                   </div>
                                 )}
+                                </div>
                               </div>
                             </div>
                           ))}
