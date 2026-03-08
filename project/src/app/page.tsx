@@ -759,10 +759,31 @@ function ContactSection() {
           <div>
             <h3 className="font-bold text-white uppercase tracking-wide mb-4">Navigation</h3>
             <ul className="space-y-2 text-gray-400 text-sm">
-              <li><a href="#home" className="hover:text-white transition-colors">Home</a></li>
-              <li><a href="#about" className="hover:text-white transition-colors">About</a></li>
-              <li><a href="#services" className="hover:text-white transition-colors">Service</a></li>
-              <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
+              <li>
+                <a href="#home" className="hover:text-white transition-colors">
+                  Home
+                </a>
+              </li>
+              <li>
+                <a href="#about" className="hover:text-white transition-colors">
+                  About
+                </a>
+              </li>
+              <li>
+                <a href="#services" className="hover:text-white transition-colors">
+                  Service
+                </a>
+              </li>
+              <li>
+                <a href="/tools" className="hover:text-white transition-colors">
+                  Tools
+                </a>
+              </li>
+              <li>
+                <a href="#contact" className="hover:text-white transition-colors">
+                  Contact
+                </a>
+              </li>
             </ul>
           </div>
 

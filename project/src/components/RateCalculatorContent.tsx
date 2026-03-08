@@ -474,7 +474,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 const economyRates = allRates.filter((rate) => {
                   if (rate.service && ECONOMY_SERVICES.includes(rate.service)) return true;
                   const origin = getOriginFromService(rate.service).toUpperCase();
-                  return origin === "DUBAI" || origin === "LONDON" || origin === "UK";
+                  return origin === "DUBAI" || origin === "LONDON" || origin === "UK" || origin === "SINGAPORE";
                 });
                 const rawDisplayRates =
                   publicResultsTab === "express" && expressRates.length > 0

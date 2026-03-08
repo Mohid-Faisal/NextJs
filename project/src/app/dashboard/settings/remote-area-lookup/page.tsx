@@ -414,12 +414,12 @@ const RemoteAreaLookupPage = () => {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Paperclip className="w-4 h-4" />
-                  {isLoading ? "Uploading..." : "Upload Excel file"}
+                  {isLoading ? "Uploading..." : "Upload Excel or PDF file"}
                 </label>
                 <input
                   id="file"
                   type="file"
-                  accept=".xlsx,.xls"
+                  accept=".xlsx,.xls,.pdf"
                   onChange={handleUpload}
                   disabled={isLoading}
                   className="hidden"
@@ -629,7 +629,7 @@ const RemoteAreaLookupPage = () => {
 
             {remoteAreas?.length === 0 && (
               <p className="text-center text-gray-500 dark:text-gray-400 mt-4">
-                No remote area data found. Please upload an Excel file to get started.
+                No remote area data found. Please upload an Excel or PDF file to get started.
               </p>
             )}
           </CardContent>

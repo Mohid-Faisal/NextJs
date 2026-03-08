@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +55,21 @@ export default function VolumetricCalculatorPage() {
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Breadcrumb */}
+          <nav className="mb-4 text-sm text-slate-500">
+            <Link href="/" className="hover:text-sky-500">
+              Home
+            </Link>
+            <span className="mx-2">›</span>
+            <Link href="/tools" className="hover:text-sky-500">
+              Tools
+            </Link>
+            <span className="mx-2">›</span>
+            <span className="text-sky-500 font-medium">
+              Parcel volume calculator
+            </span>
+          </nav>
+
           {/* Heading */}
           <div className="text-center mb-10">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-snug">

@@ -1,12 +1,34 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Search, MapPin } from "lucide-react";
+import { CheckCircle2, XCircle, Search } from "lucide-react";
 import { Country } from "country-state-city";
+
+function FlagIcon({ country, className }: { country: { isoCode?: string; name?: string }; className?: string }) {
+  if (!country?.isoCode) return null;
+  const code = country.isoCode.toLowerCase();
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${code}.png`}
+      srcSet={`https://flagcdn.com/w80/${code}.png 2x`}
+      alt={country.name || code}
+      className={className ?? "w-5 h-3.5 object-cover rounded-sm inline-block"}
+      loading="lazy"
+    />
+  );
+}
 
 export default function RemoteAreaLookupPage() {
   const countries = Country.getAllCountries();
@@ -122,128 +144,136 @@ export default function RemoteAreaLookupPage() {
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
-          {/* Heading */}
+          {/* Breadcrumb */}
+          <nav className="mb-4 text-sm text-slate-500">
+            <Link href="/" className="hover:text-sky-500">
+              Home
+            </Link>
+            <span className="mx-2">›</span>
+            <Link href="/tools" className="hover:text-sky-500">
+              Tools
+            </Link>
+            <span className="mx-2">›</span>
+            <span className="text-sky-500 font-medium">
+              Remote area lookup
+            </span>
+          </nav>
+
+          {/* Heading - one line */}
           <div className="text-center mb-10">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-snug">
-              <span className="bg-linear-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">
-                Remote area
-              </span>
-              <br />
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
+              <span className="bg-linear-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">Remote area</span>{" "}
               <span className="text-slate-800">lookup</span>
             </h1>
-            <p className="text-slate-500 mt-3 text-base sm:text-lg max-w-lg mx-auto">
+            <p className="text-slate-500 mt-3 text-base sm:text-lg max-w-2xl mx-auto">
               Check if a location is a remote area by selecting a country and entering either a zip code or city name.
             </p>
           </div>
 
           {/* Form */}
-          <div className="rounded-2xl bg-slate-100 p-5 sm:p-7 space-y-5">
-            {/* Country */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold tracking-wide text-slate-600">
-                Country <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <select
+          <div className="rounded-2xl bg-slate-100 p-5 sm:p-7 space-y-4">
+            {/* Row 1: Country (half) | Zip/City tabs (half) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Country - half width, same as public rate calc */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold tracking-wide text-slate-600">
+                  Country <span className="text-red-500">*</span>
+                </Label>
+                <Select
                   value={country}
-                  onChange={(e) => { setCountry(e.target.value); setResult(null); }}
-                  className="w-full h-[46px] bg-white border border-slate-200 rounded-xl text-sm px-4 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  onValueChange={(v) => {
+                    setCountry(v);
+                    setResult(null);
+                  }}
                 >
-                  <option value="">Select a country</option>
-                  {countries.map((c) => (
-                    <option key={c.isoCode} value={c.isoCode}>
-                      {c.flag} {c.name}
-                    </option>
-                  ))}
-                </select>
-                <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <SelectTrigger className="w-full h-[46px] bg-white border-slate-200 rounded-xl text-sm">
+                    <SelectValue placeholder="Select a country" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {countries.map((c) => (
+                      <SelectItem key={c.isoCode} value={c.isoCode} className="text-sm">
+                        <span className="flex items-center gap-2">
+                          <FlagIcon country={c} />
+                          <span>{c.name}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Search by - tab style */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold tracking-wide text-slate-600">Search by</Label>
+                <div className="flex rounded-xl bg-white border border-slate-200 p-1 h-[46px] box-border">
+                  <button
+                    type="button"
+                    onClick={() => { setSearchType("zip"); setCity(""); setResult(null); }}
+                    className={`flex-1 rounded-lg text-sm font-medium transition-colors ${
+                      searchType === "zip"
+                        ? "bg-sky-500 text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    Zip code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSearchType("city"); setZipCode(""); setResult(null); }}
+                    className={`flex-1 rounded-lg text-sm font-medium transition-colors ${
+                      searchType === "city"
+                        ? "bg-sky-500 text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    City
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Search By */}
-            <div className="space-y-2">
-              <Label className="text-xs font-bold tracking-wide text-slate-600">Search by</Label>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="searchType"
-                    value="zip"
-                    checked={searchType === "zip"}
-                    onChange={() => { setSearchType("zip"); setCity(""); setResult(null); }}
-                    className="w-4 h-4 text-sky-500 focus:ring-sky-400"
-                  />
-                  <span className="text-sm text-slate-700">Zip code</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="searchType"
-                    value="city"
-                    checked={searchType === "city"}
-                    onChange={() => { setSearchType("city"); setZipCode(""); setResult(null); }}
-                    className="w-4 h-4 text-sky-500 focus:ring-sky-400"
-                  />
-                  <span className="text-sm text-slate-700">City</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Zip code (when Search by Zip) */}
-            {searchType === "zip" && (
+            {/* Row 2: Input (half) | Search button (half) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold tracking-wide text-slate-600">
-                  Zip code <span className="text-red-500">*</span>
+                  {searchType === "zip" ? "Zip code" : "City"} <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  type="text"
-                  placeholder="Enter zip code"
-                  value={zipCode}
-                  onChange={(e) => { setZipCode(e.target.value); setResult(null); }}
-                  className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
-                />
-              </div>
-            )}
-
-            {/* City (when Search by City) */}
-            {searchType === "city" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold tracking-wide text-slate-600">
-                  City <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  placeholder="Enter city name"
-                  value={city}
-                  onChange={(e) => { setCity(e.target.value); setResult(null); }}
-                  className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
-                />
-              </div>
-            )}
-
-            {/* Buttons */}
-            <div className="flex gap-3">
-              <Button
-                onClick={handleSearch}
-                disabled={isSearching || !canSearch}
-                className="flex-1 h-[46px] rounded-xl bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-semibold text-sm"
-              >
-                {isSearching ? (
-                  "Searching..."
+                {searchType === "zip" ? (
+                  <Input
+                    type="text"
+                    placeholder="Enter zip code"
+                    value={zipCode}
+                    onChange={(e) => { setZipCode(e.target.value); setResult(null); }}
+                    className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
+                  />
                 ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Search
-                  </>
+                  <Input
+                    type="text"
+                    placeholder="Enter city name"
+                    value={city}
+                    onChange={(e) => { setCity(e.target.value); setResult(null); }}
+                    className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
+                  />
                 )}
-              </Button>
-              <Button
-                onClick={handleReset}
-                variant="outline"
-                className="h-[46px] rounded-xl border-slate-300 text-slate-600 text-sm px-6"
-              >
-                Reset
-              </Button>
+              </div>
+              <div className="space-y-1.5 sm:pt-6">
+                <div className="flex gap-2 h-[46px]">
+                  <Button
+                    onClick={handleSearch}
+                    disabled={isSearching || !canSearch}
+                    className="flex-1 h-full rounded-xl bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-semibold text-sm"
+                  >
+                    {isSearching ? "Searching..." : <><Search className="w-4 h-4 mr-2 inline" /> Search</>}
+                  </Button>
+                  <Button
+                    onClick={handleReset}
+                    variant="outline"
+                    className="h-full rounded-xl border-slate-300 text-slate-600 text-sm px-4 shrink-0"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
