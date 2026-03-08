@@ -372,7 +372,7 @@ export default function TrackingResultsDialog(props: {
   const content = (
     <>
         {asPage ? (
-          <div className="mb-10 pt-8 pb-10 px-4">
+          <div className="mb-0 pt-2 pb-6 px-4">
             <div className="max-w-xl mx-auto text-center">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 tracking-tight">
                 <span className="bg-linear-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">
@@ -443,7 +443,7 @@ export default function TrackingResultsDialog(props: {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className={`mt-4 ${asPage ? "text-left" : ""}`}
+              className={asPage ? "mt-0 text-left" : "mt-2"}
             >
               {shipment ? (
                 <div className="space-y-4">

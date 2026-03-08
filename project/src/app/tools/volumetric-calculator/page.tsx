@@ -53,10 +53,9 @@ export default function VolumetricCalculatorPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
-          {/* Breadcrumb */}
-          <nav className="mb-4 text-sm text-slate-500">
+      <div className="w-full max-w-7xl mx-auto flex gap-6">
+        <div className="flex-1 min-w-0 flex justify-end">
+          <nav className="mb-4 text-sm text-slate-500 text-right shrink-0">
             <Link href="/" className="hover:text-sky-500">
               Home
             </Link>
@@ -69,6 +68,9 @@ export default function VolumetricCalculatorPage() {
               Parcel volume calculator
             </span>
           </nav>
+        </div>
+        <div className="w-full max-w-2xl shrink-0">
+          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
 
           {/* Heading */}
           <div className="text-center mb-10">
@@ -234,6 +236,8 @@ export default function VolumetricCalculatorPage() {
             )}
           </AnimatePresence>
         </motion.div>
+        </div>
+        <div className="flex-1 min-w-0 hidden lg:block" aria-hidden />
       </div>
     </div>
   );

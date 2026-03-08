@@ -150,23 +150,23 @@ export default function RemoteAreaLookupPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
-      <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Breadcrumb - very left, full width of padded area */}
-        <nav className="mb-4 text-sm text-slate-500 w-full text-left">
-          <Link href="/" className="hover:text-sky-500">
-            Home
-          </Link>
-          <span className="mx-2">›</span>
-          <Link href="/tools" className="hover:text-sky-500">
-            Tools
-          </Link>
-          <span className="mx-2">›</span>
-          <span className="text-sky-500 font-medium">
-            Remote area lookup
-          </span>
-        </nav>
-
-        <div className="max-w-3xl mx-auto">
+      <div className="w-full max-w-7xl mx-auto flex gap-6">
+        <div className="flex-1 min-w-0 flex justify-end">
+          <nav className="mb-4 text-sm text-slate-500 text-right shrink-0">
+            <Link href="/" className="hover:text-sky-500">
+              Home
+            </Link>
+            <span className="mx-2">›</span>
+            <Link href="/tools" className="hover:text-sky-500">
+              Tools
+            </Link>
+            <span className="mx-2">›</span>
+            <span className="text-sky-500 font-medium">
+              Remote area lookup
+            </span>
+          </nav>
+        </div>
+        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-4xl shrink-0">
           {/* Heading - one line */}
           <div className="text-center mb-10">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
@@ -341,8 +341,9 @@ export default function RemoteAreaLookupPage() {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-      </motion.div>
+        </motion.div>
+        <div className="flex-1 min-w-0 hidden lg:block" aria-hidden />
+      </div>
     </div>
   );
 }
