@@ -1,14 +1,28 @@
-"use client";
+ "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Package, ArrowRight, Scale, Ruler } from "lucide-react";
 
+function ToolsDisabledPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Page not found</h1>
+        <p className="text-slate-500 text-sm">
+          Public tools are currently disabled. Please contact your administrator.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function VolumetricCalculatorPage() {
+  const [disabled, setDisabled] = useState(false);
   const [length, setLength] = useState("");
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
@@ -20,6 +34,20 @@ export default function VolumetricCalculatorPage() {
     chargedWeight: number;
     useVolumetric: boolean;
   } | null>(null);
+
+  useEffect(() => {
+    const loadFlag = async () => {
+      try {
+        const res = await fetch("/api/public-tools", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setDisabled(!!data?.disabled);
+      } catch (e) {
+        console.error("Failed to load public tools flag", e);
+      }
+    };
+    loadFlag();
+  }, []);
 
   const handleCalculate = () => {
     const l = parseFloat(length) || 0;
@@ -50,6 +78,10 @@ export default function VolumetricCalculatorPage() {
     setActualWeight("");
     setResult(null);
   };
+
+  if (disabled) {
+    return <ToolsDisabledPage />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">

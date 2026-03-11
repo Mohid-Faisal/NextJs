@@ -17,6 +17,7 @@ const Navbar = ({
   const pathname = usePathname();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [publicToolsDisabled, setPublicToolsDisabled] = useState(false);
 
   // Check if fullscreen is supported
   const isFullscreenSupported = typeof document !== 'undefined' && 
@@ -80,6 +81,34 @@ const Navbar = ({
     };
   }, []);
 
+  // Load public tools toggle from server (global for all users)
+  useEffect(() => {
+    const loadFlag = async () => {
+      try {
+        const res = await fetch("/api/public-tools", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setPublicToolsDisabled(!!data?.disabled);
+      } catch (e) {
+        console.error("Failed to load public tools flag", e);
+      }
+    };
+    loadFlag();
+  }, []);
+
+  const handleTogglePublicTools = () => {
+    const next = !publicToolsDisabled;
+    setPublicToolsDisabled(next);
+    // Persist globally via API
+    fetch("/api/public-tools", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ disabled: next }),
+    }).catch((e) => {
+      console.error("Failed to update public tools flag", e);
+    });
+  };
+
   return (
     <header className="w-full h-16 bg-white dark:bg-card border-b border-gray-200 dark:border-zinc-700 px-6 flex items-center justify-between shadow-sm z-50 transition-all duration-300 ease-in-out">
       {/* Left section */}
@@ -134,6 +163,20 @@ const Navbar = ({
           <Search className="w-5 h-5" />
           <span className="text-sm font-medium">Remote Area Lookup</span>
         </Link>
+
+        {/* Public tools availability toggle */}
+        <button
+          type="button"
+          onClick={handleTogglePublicTools}
+          className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors duration-200 ${
+            publicToolsDisabled
+              ? "border-red-400 text-red-600 bg-red-50"
+              : "border-emerald-400 text-emerald-700 bg-emerald-50"
+          }`}
+          title="Toggle public tools availability"
+        >
+          {publicToolsDisabled ? "Public tools OFF" : "Public tools ON"}
+        </button>
 
         {/* Fullscreen button */}
         {isFullscreenSupported && (

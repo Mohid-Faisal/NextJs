@@ -168,6 +168,7 @@ export default function ReceiptPage() {
               font-size: 10px;
               height: auto;
               min-height: 0;
+              line-height: 1.5;
             }
 
             .waybill-container {
@@ -272,6 +273,7 @@ export default function ReceiptPage() {
             }
 
             .auth-section {
+              height: 120px;
               padding: 0;
               position: relative;
               font-size: 9px;
@@ -286,31 +288,33 @@ export default function ReceiptPage() {
               padding: 5px;
             }
             .terms-text {
-              font-size: 9px;
-              margin-bottom: 5px;
+              font-size: 8.5px;
               text-align: justify;
+              margin-bottom: 10px;
+              line-height: 1.5;
             }
             .signature-line {
               border-top: 1px solid black;
               width: 100%;
-              margin-top: 15px;
+              margin-top: 1px;
               padding-top: 5px;
             }
             .timestamp {
+              margin-top: 5px;
               text-align: right;
               font-size: 9px;
             }
 
             .pod-section {
+              height: 100px;
               padding: 5px;
-              min-height: 0;
             }
 
             .col-2 {
               border-right: 1px solid black;
             }
             .col-2-bottom-box {
-              min-height: 200px;
+              min-height: 0;
               display: flex;
               flex-direction: column;
             }
@@ -352,7 +356,7 @@ export default function ReceiptPage() {
               width: 50%;
               padding: 3px 5px;
               font-size: 9px;
-              line-height: 1.3;
+              line-height: 1.5;
               display: flex;
               flex-direction: column;
               justify-content: center;
@@ -360,7 +364,6 @@ export default function ReceiptPage() {
               box-sizing: border-box;
             }
             .barcode-section {
-              height: 140px;
               display: flex;
               flex-direction: column;
               align-items: center;
@@ -368,8 +371,6 @@ export default function ReceiptPage() {
               padding: 10px;
             }
             .barcode {
-              height: 60px;
-              width: 90%;
               background: repeating-linear-gradient(
                 to right,
                 #000 0,
@@ -431,6 +432,73 @@ export default function ReceiptPage() {
               margin-top: 5px;
               font-size: 12px;
               font-weight: bold;
+            }
+
+            /* Utility classes shared with on-screen layout (margins/paddings) */
+            .packaging-label {
+              padding: 5px 15px;
+            }
+            .section-header-shipper-adjust {
+              margin-right: -2px;
+            }
+            .address-block {
+              line-height: 1.5;
+              margin-bottom: 8px;
+            }
+            .declared-label {
+              margin-bottom: 1px;
+              white-space: nowrap;
+            }
+            .declared-value {
+              margin-top: 2px;
+            }
+            .barcode-bottom-padding {
+              padding: 30px 0 20px 0;
+            }
+            .barcode-number {
+              margin-top: 4px;
+            }
+            .separator-small-margin {
+              margin: 4px 0;
+            }
+            .urdu-block {
+              padding: 0 5px;
+            }
+            .service-type-line {
+              line-height: 1.5;
+              margin: 5px 0;
+              padding-bottom: 5px;
+            }
+            .description-row {
+              padding: 5px;
+            }
+            .instructions-row {
+              padding: 5px;
+            }
+            .size-section-inner {
+              padding: 5px 5px 0 5px;
+            }
+            .size-row-primary {
+              padding-bottom: 8px;
+              margin-top: 2px;
+            }
+            .size-row-secondary {
+              padding-bottom: 8px;
+              margin-top: 7px;
+            }
+            .dimensions-label {
+              margin-top: 5px;
+            }
+            .dimensions-value {
+              margin: 5px 0 5px 0;
+            }
+            .charged-weight-block {
+              border-top: 1px solid black;
+              padding-top: 8px;
+              margin-top: 6px;
+            }
+            .charged-weight-label {
+              margin-bottom: 3px;
             }
 
             @media print {
@@ -814,6 +882,7 @@ export default function ReceiptPage() {
           font-size: 9px;
           margin-bottom: 5px;
           text-align: justify;
+          line-height: 1.5;
         }
 
         .waybill-wrapper .signature-line {
@@ -838,7 +907,7 @@ export default function ReceiptPage() {
           border-right: 1px solid black;
         }
         .waybill-wrapper .col-2-bottom-box {
-          min-height: 200px;
+          min-height: 0;
           display: flex;
           flex-direction: column;
         }
@@ -895,17 +964,14 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .barcode-section {
-          height: 140px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-              padding: 10px;
+          padding: 10px;
         }
 
         .waybill-wrapper .barcode {
-          height: 60px;
-          width: 90%;
           background: repeating-linear-gradient(
             to right,
             #000 0,
@@ -975,6 +1041,70 @@ export default function ReceiptPage() {
           font-weight: bold;
         }
 
+        /* Utility classes shared with print template (margins/paddings) */
+        .waybill-wrapper .packaging-label {
+          padding: 5px 15px;
+        }
+        .waybill-wrapper .section-header-shipper-adjust {
+          margin-right: -2px;
+        }
+        .waybill-wrapper .address-block {
+          margin-bottom: 8px;
+        }
+        .waybill-wrapper .declared-label {
+          margin-bottom: 1px;
+        }
+        .waybill-wrapper .declared-value {
+          margin-top: 2px;
+        }
+        .waybill-wrapper .barcode-bottom-padding {
+          padding: 30px 0 20px 0;
+        }
+        .waybill-wrapper .barcode-number {
+          margin-top: 4px;
+        }
+        .waybill-wrapper .separator-small-margin {
+          margin: 4px 0;
+        }
+        .waybill-wrapper .urdu-block {
+          padding: 0 5px;
+        }
+        .waybill-wrapper .service-type-line {
+          margin: 5px 0;
+          padding-bottom: 5px;
+        }
+        .waybill-wrapper .description-row {
+          padding: 5px;
+        }
+        .waybill-wrapper .instructions-row {
+          padding: 5px;
+        }
+        .waybill-wrapper .size-section-inner {
+          padding: 5px 5px 0 5px;
+        }
+        .waybill-wrapper .size-row-primary {
+          padding-bottom: 8px;
+          margin-top: 2px;
+        }
+        .waybill-wrapper .size-row-secondary {
+          padding-bottom: 8px;
+          margin-top: 7px;
+        }
+        .waybill-wrapper .dimensions-label {
+          margin-top: 9px;
+        }
+        .waybill-wrapper .dimensions-value {
+          margin: 2px 0;
+        }
+        .waybill-wrapper .charged-weight-block {
+          border-top: 1px solid black;
+          padding-top: 8px;
+          margin-top: 6px;
+        }
+        .waybill-wrapper .charged-weight-label {
+          margin-bottom: 3px;
+        }
+
         .waybill-print-btn {
           position: fixed;
           bottom: 30px;
@@ -1033,17 +1163,19 @@ export default function ReceiptPage() {
               <a href="https://www.psswwe.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>www.psswwe.com</a>
             </div>
             {packagingLabel && (
-              <div style={{
-                background: 'black',
-                color: 'white',
-                fontSize: '32px',
-                fontWeight: 'bold',
-                padding: '5px 15px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginLeft: 'auto'
-              }}>
+              <div
+                className="packaging-label"
+                style={{
+                  background: 'black',
+                  color: 'white',
+                  fontSize: '32px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: 'auto',
+                }}
+              >
                 {packagingLabel}
               </div>
             )}
@@ -1056,18 +1188,23 @@ export default function ReceiptPage() {
 
               {/* Shipper Info */}
               <div className="shipper-container border-bottom">
-                <div className="section-header" style={{ borderRight: '3px solid white', marginRight: '-2px', boxSizing: 'border-box' }}>SHIPPER</div>
+                <div
+                  className="section-header section-header-shipper-adjust"
+                  style={{ borderRight: '3px solid white', boxSizing: 'border-box' }}
+                >
+                  SHIPPER
+                </div>
                 <div className="address-details">
-                  <div style={{marginBottom: '8px'}}>
+                  <div className="address-block">
                     <strong>{sendercompanyname.toUpperCase()}</strong><br />
                     {senderAddress}
-            </div>
-                  <div style={{marginBottom: '8px'}}>
+                  </div>
+                  <div className="address-block">
                     {senderCity && `${senderCity}`}
                     {senderState && `, ${senderState}`}
                     {senderZip && `, ${senderZip}`}
                     {senderCountry && <><br />{senderCountry}</>}
-          </div>
+                  </div>
                   <div>
                     Attn: {senderName}<br />
                     {senderPhone || 'N/A'}<br />
@@ -1106,13 +1243,13 @@ export default function ReceiptPage() {
             <div className="col-2">
               {/* Consignee Info */}
               <div className="shipper-container border-bottom">
-                <div className="section-header" >CONSIGNEE</div>
+                <div className="section-header">CONSIGNEE</div>
                 <div className="address-details">
-                  <div style={{marginBottom: '8px'}}>
+                  <div className="address-block">
                     <strong>{recipientcompanyname.toUpperCase()}</strong><br />
                     {recipientAddress}
                   </div>
-                  <div style={{marginBottom: '8px'}}>
+                  <div className="address-block">
                     {recipientCity && `${recipientCity}`}
                     {recipientState && `, ${recipientState}`}
                     {recipientZip && `, ${recipientZip}`}
@@ -1131,22 +1268,35 @@ export default function ReceiptPage() {
               <div className="dap-section">
                 <div className="dap-box">** DDU **</div>
                 <div className="currency-box">
-                  <div style={{marginBottom: '1px', lineHeight: '1.2'}}>DECLARED VALUE FOR</div>
-                  <div style={{marginBottom: '1px', lineHeight: '1.2'}}>CUSTOMS AND CURRENCY</div>
-                  <div style={{marginTop: '2px', lineHeight: '1.2'}}><strong>{declaredValue.toFixed(2)} USD.</strong></div>
+                  <div className="declared-label" style={{ lineHeight: '1.2' }}>DECLARED VALUE FOR</div>
+                  <div className="declared-label" style={{ lineHeight: '1.2' }}>CUSTOMS AND CURRENCY</div>
+                  <div className="declared-value" style={{ lineHeight: '1.2' }}>
+                    <strong>{declaredValue.toFixed(2)} USD.</strong>
+                  </div>
               </div>
             </div>
 
               {/* Middle column bottom box: barcode, separator, Urdu notice */}
               <div className="col-2-bottom-box">
                 {/* Barcode and Booking ID - inside receipt box, centered */}
-                <div className="barcode-bottom" style={{ padding: '30px 0 20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                <div
+                  className="barcode-bottom barcode-bottom-padding"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                  }}
+                >
                   <div className="barcode" style={{ height: '50px', width: '150px' }} />
-                  <div style={{ fontWeight: 'bold', fontSize: '18px', marginTop: '4px' }}>{invoice.invoiceNumber}</div>
+                  <div className="barcode-number" style={{ fontWeight: 'bold', fontSize: '18px' }}>
+                    {invoice.invoiceNumber}
+                  </div>
                 </div>
-                <div style={{ borderTop: '1px solid black', width: '100%', margin: '4px 0' }} />
+                <div className="separator-small-margin" style={{ borderTop: '1px solid black', width: '100%' }} />
                 {/* Declaration Text (Urdu insurance notice) */}
-                <div style={{padding: '0px 5px', fontSize: '11px', lineHeight: '1.4', flex: 1}}>
+                <div className="urdu-block" style={{ fontSize: '11px', lineHeight: '1.5' }}>
                   <div>
                     <strong>انشورنس نوٹس:</strong> بھیجنے والے کی طرف سے انشورنس لازمی ہے۔ اگر اعلان نہیں کیا گیا تو، بھیجنے والا مکمل خطرہ قبول کرتا ہے اور بیان کردہ ذمہ داری کی حد کو تسلیم کرتا ہے۔
                   </div>
@@ -1157,7 +1307,9 @@ export default function ReceiptPage() {
             {/* COLUMN 3 (RIGHT) */}
             <div className="col-3">
               {/* References */}
-              <div className="section-header text-center" style={{ borderLeft: '2px solid white', boxSizing: 'border-box' }}>CUSTOMER REFERENCE</div>
+              <div className="section-header text-center" style={{ borderLeft: '2px solid white', boxSizing: 'border-box' }}>
+                CUSTOMER REFERENCE
+              </div>
               <div className="ref-box">{referenceNumber || 'PSS'}</div>
 
               {/* Service Type */}
@@ -1165,8 +1317,10 @@ export default function ReceiptPage() {
                 <div className="section-header">
                   SERVICE MODE
                   </div>
-                <div className="bold" style={{margin: '5px 0', paddingBottom: '5px', borderBottom: '1px solid black'}}>{serviceType}</div>
-                <div style={{fontSize: '9px', marginBottom: '8px'}}>
+                <div className="bold service-type-line" style={{ borderBottom: '1px solid black' }}>
+                  {serviceType}
+                </div>
+                <div className="address-block" style={{ fontSize: '9px' }}>
                   <strong>IMPORTANT:</strong> ATTACH ORIGINAL THREE COPIES OF INVOICES, CNIC AND UNDERTAKING WITH PACKAGE FOR CUSTOM PURPOSE
                   </div>
               </div>
@@ -1174,11 +1328,13 @@ export default function ReceiptPage() {
               {/* Full Description and Special Instructions - direct children of col-3 so they span full width */}
               <div>
                 <div className="section-header" style={{ borderTop: '1px solid black' }}>FULL DESCRIPTION OF CONTENTS</div>
-                <div style={{ padding: '5px', borderBottom: '1px solid #eee' }}><strong>{contentsDescription.toUpperCase()}</strong></div>
+                <div className="description-row" style={{ borderBottom: '1px solid #eee' }}>
+                  <strong>{contentsDescription.toUpperCase()}</strong>
+                </div>
               </div>
               <div>
                 <div className="section-header" style={{ borderTop: '1px solid black' }}>SPECIAL INSTRUCTIONS</div>
-                <div style={{ padding: '5px' }}>N/A</div>
+                <div className="instructions-row">N/A</div>
               </div>
               
               {/* Size & Weight */}
@@ -1186,21 +1342,31 @@ export default function ReceiptPage() {
                 <div className="section-header">
                   SIZE & WEIGHT
                 </div>
-                <div style={{padding: '5px 5px 0 5px'}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black', paddingBottom: '8px', marginTop: '2px'}}>
+                <div className="size-section-inner">
+                  <div
+                    className="size-row-primary"
+                    style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black' }}
+                  >
                     <span>NO. OF PIECES</span>
                     <strong>{totalPieces}</strong>
                   </div>
-                  <div style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black', paddingBottom: '8px', marginTop: '7px'}}>
+                  <div
+                    className="size-row-secondary"
+                    style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black' }}
+                  >
                     <span>WEIGHT</span>
                     <strong>{totalWeight.toFixed(3)} KGS</strong>
               </div>
               
-                  <div style={{marginTop: '6px'}}>DIMENSIONS IN CM <span style={{float: 'right'}}>LxWxH</span></div>
-                  <div style={{textAlign: 'center', margin: '2px 0'}}>{dimensions}</div>
+                  <div className="dimensions-label">
+                    DIMENSIONS IN CM <span style={{ float: 'right' }}>LxWxH</span>
+                  </div>
+                  <div className="dimensions-value" style={{ textAlign: 'center' }}>
+                    {dimensions}
+                  </div>
                   
-                  <div style={{borderTop: '1px solid black', paddingTop: '8px', marginTop: '6px'}}>
-                    <div style={{marginBottom: '3px'}}>VOLUMETRIC / CHARGED WEIGHT</div>
+                  <div className="charged-weight-block">
+                    <div className="charged-weight-label">VOLUMETRIC / CHARGED WEIGHT</div>
                     <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}>
                       <span>{chargedWeight.toFixed(2)}</span>
                       <span>KGS</span>

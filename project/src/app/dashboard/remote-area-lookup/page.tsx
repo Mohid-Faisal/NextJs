@@ -148,9 +148,23 @@ const RemoteAreaLookupPage = () => {
             
             // Find all areas where zip code falls within the range
             const rangeMatches = matchingAreas.filter((area: any) => {
-              const low = parseFloat(String(area.low || '').trim());
-              const high = parseFloat(String(area.high || '').trim());
+              const lowStr = String(area.low || '').trim();
+              const highStr = String(area.high || '').trim();
+              const low = parseFloat(lowStr);
+              const high = parseFloat(highStr);
               
+              let inRange = false;
+              if (!isNaN(low) && !isNaN(high)) {
+                // Normal range low–high
+                inRange = zipNumber >= low && zipNumber <= high;
+              } else if (!isNaN(low) && isNaN(high)) {
+                // Only low provided – treat as exact match
+                inRange = zipNumber === low;
+              } else if (isNaN(low) && !isNaN(high)) {
+                // Only high provided – treat as exact match
+                inRange = zipNumber === high;
+              }
+
               console.log(`  Checking area:`, {
                 company: area.company,
                 country: area.country,
@@ -159,19 +173,13 @@ const RemoteAreaLookupPage = () => {
                 parsedLow: low,
                 parsedHigh: high,
                 zipNumber,
-                inRange: !isNaN(low) && !isNaN(high) && zipNumber >= low && zipNumber <= high
+                inRange,
               });
               
-              // Check if both low and high are valid numbers
-              if (!isNaN(low) && !isNaN(high)) {
-                // Check if zip code falls within the range (inclusive)
-                const inRange = zipNumber >= low && zipNumber <= high;
-                if (inRange) {
-                  console.log(`  ✅ MATCH FOUND! Zip ${zipNumber} is between ${low} and ${high} for ${area.company}`);
-                }
-                return inRange;
+              if (inRange) {
+                console.log(`  ✅ MATCH FOUND! Zip ${zipNumber} matches range/point for ${area.company}`);
               }
-              return false;
+              return inRange;
             });
             
             console.log("Range match results:", rangeMatches);

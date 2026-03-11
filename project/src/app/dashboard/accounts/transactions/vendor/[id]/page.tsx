@@ -944,13 +944,33 @@ export default function VendorTransactionsPage() {
       }
       
       // Build description with consignee for DEBIT rows
-      const baseDescription =
+      let baseDescription =
         transaction.type === "DEBIT" && transaction.consigneeName
           ? `Consignee: ${transaction.consigneeName} | ${transaction.description}`
           : transaction.description;
 
+      if (baseDescription) {
+        // Ensure space before the pipe after Country code:
+        // "Country: UA| Type" -> "Country: UA | Type"
+        baseDescription = baseDescription.replace(
+          /Country:\s*([^|<]+)\|/g,
+          "Country: $1 |"
+        );
+        // For print, put tracking on first line and rest on second:
+        // "... | Country: ..." -> "<br>Country: ..."
+        if (baseDescription.includes(" | Country:")) {
+          baseDescription = baseDescription.replace(
+            " | Country:",
+            "<br>Country:"
+          );
+        }
+      }
+
       // Make pipe characters bold in description
-      const descriptionWithBoldPipes = baseDescription.replace(/\|/g, '<b>|</b>');
+      const descriptionWithBoldPipes = (baseDescription || "").replace(
+        /\|/g,
+        "<b>|</b>"
+      );
       
       // Format balance: show "-" if balance is 0, otherwise show inverted balance
       const balance = transaction.newBalance ?? 0;

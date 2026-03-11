@@ -1,7 +1,7 @@
-"use client";
+ "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,23 @@ function FlagIcon({ country, className }: { country: { isoCode?: string; name?: 
   );
 }
 
+function ToolsDisabledPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Page not found</h1>
+        <p className="text-slate-500 text-sm">
+          Public tools are currently disabled. Please contact your administrator.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function RemoteAreaLookupPage() {
   const countries = Country.getAllCountries();
+
+  const [disabled, setDisabled] = useState(false);
 
   const [country, setCountry] = useState("");
   const [zipCode, setZipCode] = useState("");
@@ -42,6 +57,20 @@ export default function RemoteAreaLookupPage() {
     isRemote: boolean;
     companies?: Array<{ company: string; area: any }>;
   } | null>(null);
+
+  useEffect(() => {
+    const loadFlag = async () => {
+      try {
+        const res = await fetch("/api/public-tools", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setDisabled(!!data?.disabled);
+      } catch (e) {
+        console.error("Failed to load public tools flag", e);
+      }
+    };
+    loadFlag();
+  }, []);
 
   const handleSearch = async () => {
     if (!country) return;
@@ -57,7 +86,11 @@ export default function RemoteAreaLookupPage() {
 
       if (data.success && data.data) {
         const searchValue = searchType === "zip" ? zipCode.trim() : city.trim().toLowerCase();
-        const selectedCountry = countries.find((c) => c.isoCode === country);
+  const selectedCountry = countries.find((c) => c.isoCode === country);
+
+  if (disabled) {
+    return <ToolsDisabledPage />;
+  }
         const searchCountryName = selectedCountry?.name || country;
         const searchCountryCode = country;
 
@@ -88,9 +121,24 @@ export default function RemoteAreaLookupPage() {
           const zipNumber = parseFloat(searchValue);
           if (!isNaN(zipNumber)) {
             const rangeMatches = matchingAreas.filter((area: any) => {
-              const low = parseFloat(String(area.low || "").trim());
-              const high = parseFloat(String(area.high || "").trim());
-              return !isNaN(low) && !isNaN(high) && zipNumber >= low && zipNumber <= high;
+              const lowStr = String(area.low || "").trim();
+              const highStr = String(area.high || "").trim();
+              const low = parseFloat(lowStr);
+              const high = parseFloat(highStr);
+
+              let inRange = false;
+              if (!isNaN(low) && !isNaN(high)) {
+                // Normal range low–high
+                inRange = zipNumber >= low && zipNumber <= high;
+              } else if (!isNaN(low) && isNaN(high)) {
+                // Only low provided – treat as exact match
+                inRange = zipNumber === low;
+              } else if (isNaN(low) && !isNaN(high)) {
+                // Only high provided – treat as exact match
+                inRange = zipNumber === high;
+              }
+
+              return inRange;
             });
             matchedAreas.push(...rangeMatches.map((area: any) => ({ company: area.company, area })));
 

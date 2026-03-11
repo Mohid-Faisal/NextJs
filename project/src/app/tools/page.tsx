@@ -1,9 +1,43 @@
-"use client";
+ "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+function ToolsDisabledPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Page not found</h1>
+        <p className="text-slate-500 text-sm">
+          Public tools are currently disabled. Please contact your administrator.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function ToolsPage() {
+  const [disabled, setDisabled] = useState(false);
+
+  useEffect(() => {
+    const loadFlag = async () => {
+      try {
+        const res = await fetch("/api/public-tools", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setDisabled(!!data?.disabled);
+      } catch (e) {
+        console.error("Failed to load public tools flag", e);
+      }
+    };
+    loadFlag();
+  }, []);
+
+  if (disabled) {
+    return <ToolsDisabledPage />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
