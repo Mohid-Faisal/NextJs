@@ -7,12 +7,9 @@ import RateCalculatorContent from "@/components/RateCalculatorContent";
 function ToolsDisabledPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Page not found</h1>
-        <p className="text-slate-500 text-sm">
-          Public tools are currently disabled. Please contact your administrator.
-        </p>
-      </div>
+      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+        404 Page not found
+      </h1>
     </div>
   );
 }
