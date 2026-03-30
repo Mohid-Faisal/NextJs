@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addCustomerTransaction, createJournalEntryForTransaction } from "@/lib/utils";
+import { addCustomerTransaction, createJournalEntryForTransaction, generateVendorInvoiceNumber } from "@/lib/utils";
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
 
@@ -363,17 +363,50 @@ export async function GET(
         );
 
         if (shipmentInvoiceNumbers.length > 0) {
-          const invoicesForMetrics = await prisma.invoice.findMany({
+          const invoicesForMetricsBase = await prisma.invoice.findMany({
             where: {
               invoiceNumber: { in: shipmentInvoiceNumbers },
               status: { not: "Cancelled" },
             },
             select: {
+              invoiceNumber: true,
               totalAmount: true,
-              shipment: {
-                select: { price: true, cos: true },
-              },
             },
+          });
+
+          const vendorInvoiceNumbersForMetrics = invoicesForMetricsBase
+            .map((inv) => generateVendorInvoiceNumber(inv.invoiceNumber))
+            .filter((invNo, idx, arr) => arr.indexOf(invNo) === idx);
+
+          const vendorInvoicesForMetrics = await prisma.invoice.findMany({
+            where: {
+              invoiceNumber: { in: vendorInvoiceNumbersForMetrics },
+              status: { not: "Cancelled" },
+            },
+            select: {
+              invoiceNumber: true,
+              totalAmount: true,
+            },
+          });
+
+          const vendorAmountByInvoiceNumber = new Map(
+            vendorInvoicesForMetrics.map((inv) => [
+              inv.invoiceNumber,
+              inv.totalAmount || 0,
+            ])
+          );
+
+          const invoicesForMetrics = invoicesForMetricsBase.map((inv) => {
+            const vendorInvoiceNumber = generateVendorInvoiceNumber(
+              inv.invoiceNumber
+            );
+            const vendorInvoiceAmount =
+              vendorAmountByInvoiceNumber.get(vendorInvoiceNumber) ?? 0;
+            return {
+              ...inv,
+              vendorInvoiceNumber,
+              vendorInvoiceAmount,
+            };
           });
 
           const totalShipments = invoicesForMetrics.length;
@@ -381,11 +414,11 @@ export async function GET(
             (sum, inv) => sum + (inv.totalAmount || 0),
             0
           );
-          const grossProfit = invoicesForMetrics.reduce((sum, inv) => {
-            const price = inv.shipment?.price ?? 0;
-            const cos = inv.shipment?.cos ?? 0;
-            return sum + (price - cos);
-          }, 0);
+          const grossProfit = invoicesForMetrics.reduce(
+            (sum, inv) =>
+              sum + ((inv.totalAmount || 0) - (inv.vendorInvoiceAmount || 0)),
+            0
+          );
 
           metrics = {
             totalShipments,
@@ -1005,17 +1038,37 @@ export async function GET(
       );
 
       if (shipmentInvoiceNumbers.length > 0) {
-        const invoicesForMetrics = await prisma.invoice.findMany({
+        const invoicesForMetricsBase = await prisma.invoice.findMany({
           where: {
             invoiceNumber: { in: shipmentInvoiceNumbers },
             status: { not: "Cancelled" },
           },
           select: {
+            invoiceNumber: true,
             totalAmount: true,
-            shipment: {
-              select: { price: true, cos: true },
-            },
           },
+        });
+
+        const vendorInvNos = invoicesForMetricsBase
+          .map((inv) => generateVendorInvoiceNumber(inv.invoiceNumber))
+          .filter((v, i, a) => a.indexOf(v) === i);
+
+        const vendorInvs = await prisma.invoice.findMany({
+          where: {
+            invoiceNumber: { in: vendorInvNos },
+            status: { not: "Cancelled" },
+          },
+          select: { invoiceNumber: true, totalAmount: true },
+        });
+
+        const vendorAmtMap = new Map(
+          vendorInvs.map((inv) => [inv.invoiceNumber, inv.totalAmount || 0])
+        );
+
+        const invoicesForMetrics = invoicesForMetricsBase.map((inv) => {
+          const vendorInvoiceNumber = generateVendorInvoiceNumber(inv.invoiceNumber);
+          const vendorInvoiceAmount = vendorAmtMap.get(vendorInvoiceNumber) ?? 0;
+          return { ...inv, vendorInvoiceNumber, vendorInvoiceAmount };
         });
 
         const totalShipments = invoicesForMetrics.length;
@@ -1023,11 +1076,10 @@ export async function GET(
           (sum, inv) => sum + (inv.totalAmount || 0),
           0
         );
-        const grossProfit = invoicesForMetrics.reduce((sum, inv) => {
-          const price = inv.shipment?.price ?? 0;
-          const cos = inv.shipment?.cos ?? 0;
-          return sum + (price - cos);
-        }, 0);
+        const grossProfit = invoicesForMetrics.reduce(
+          (sum, inv) => sum + ((inv.totalAmount || 0) - (inv.vendorInvoiceAmount || 0)),
+          0
+        );
 
         metrics = {
           totalShipments,
@@ -1485,3 +1537,6 @@ export async function POST(
     );
   }
 }
+
+
+
