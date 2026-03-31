@@ -465,13 +465,13 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
               {(() => {
                 const allRates = results.allRates || [];
-                const EXPRESS_SERVICES = ["UPS_C2S", "DHL_LHE", "FedEx_LHE"];
-                const ECONOMY_SERVICES = ["SNWWE"];
+                const EXPRESS_SERVICES = ["ups_c2s", "dhl_lhe", "fedex_lhe"];
+                const ECONOMY_SERVICES = ["snwwe"];
                 const expressRates = allRates.filter(
-                  (rate) => rate.service && EXPRESS_SERVICES.includes(rate.service)
+                  (rate) => rate.service && EXPRESS_SERVICES.includes(rate.service.toLowerCase())
                 );
                 const economyRates = allRates.filter((rate) => {
-                  if (rate.service && ECONOMY_SERVICES.includes(rate.service)) return true;
+                  if (rate.service && ECONOMY_SERVICES.includes(rate.service.toLowerCase())) return true;
                   const origin = getOriginFromService(rate.service).toUpperCase();
                   return origin === "DUBAI" || origin === "LONDON" || origin === "UK" || origin === "SINGAPORE";
                 });
