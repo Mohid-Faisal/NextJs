@@ -57,7 +57,10 @@ const ManageRateListPage = () => {
           name: vendor.CompanyName,
         }));
         
-        setVendors(transformedVendors);
+        const sortedVendors = [...transformedVendors].sort((a, b) =>
+          (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+        );
+        setVendors(sortedVendors);
 
         // Fetch vendor services
         const vendorServiceRes = await fetch("/api/settings/vendorService");
@@ -76,7 +79,10 @@ const ManageRateListPage = () => {
               });
             }
           });
-          setServices(Array.from(uniqueServices.values()));
+          const sortedServices = Array.from(uniqueServices.values()).sort((a, b) =>
+            (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+          );
+          setServices(sortedServices);
         }
 
         // Fetch all available rate lists
@@ -212,7 +218,10 @@ const ManageRateListPage = () => {
           });
         }
       });
-      setServices(Array.from(uniqueServices.values()));
+      const sortedServices = Array.from(uniqueServices.values()).sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+      );
+      setServices(sortedServices);
       return;
     }
 
@@ -230,7 +239,10 @@ const ManageRateListPage = () => {
         });
       }
     });
-    setServices(Array.from(uniqueServices.values()));
+    const sortedServices = Array.from(uniqueServices.values()).sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+    );
+    setServices(sortedServices);
   };
 
   // Handle search
@@ -625,7 +637,13 @@ const ManageRateListPage = () => {
                           {vendor}
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3">
-                          {filesByVendor[vendor].map(({ fileKey, fileInfo }) => (
+                          {[...filesByVendor[vendor]]
+                            .sort((a, b) =>
+                              (a.fileInfo.service || "").localeCompare(b.fileInfo.service || "", undefined, {
+                                sensitivity: "base",
+                              })
+                            )
+                            .map(({ fileKey, fileInfo }) => (
                             <div
                               key={fileKey}
                               className="p-2 sm:p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900 transition-colors cursor-pointer"
@@ -660,7 +678,7 @@ const ManageRateListPage = () => {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            ))}
                         </div>
                       </div>
                     ))}

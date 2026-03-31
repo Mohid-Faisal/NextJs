@@ -80,15 +80,23 @@ export default function ShipmentSettingsPage() {
 
   const fetchVendors = async () => {
     const res = await fetch("/api/vendors");
-    const data = await res.json();
-    setVendors(data.vendors || []);
+        const data = await res.json();
+        const sortedVendors = [...(data.vendors || [])].sort((a, b) =>
+          (a.CompanyName || "").localeCompare(b.CompanyName || "", undefined, {
+            sensitivity: "base",
+          })
+        );
+        setVendors(sortedVendors);
   };
 
   const fetchServices = async () => {
     // Fetch services from the serviceMode settings
     const res = await fetch("/api/settings/serviceMode");
     const data = await res.json();
-    setServices(data || []);
+    const sortedServices = [...(data || [])].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+    );
+    setServices(sortedServices);
   };
 
   useEffect(() => {
@@ -400,7 +408,11 @@ export default function ShipmentSettingsPage() {
                             groupedVendors[item.vendor].push(item);
                           });
 
-                          return Object.entries(groupedVendors).map(([vendor, services]) => (
+                          return Object.entries(groupedVendors)
+                            .sort(([vendorA], [vendorB]) =>
+                              vendorA.localeCompare(vendorB, undefined, { sensitivity: "base" })
+                            )
+                            .map(([vendor, services]) => (
                             <li
                               key={vendor}
                               className="flex justify-between items-center border px-4 py-3 rounded shadow-sm"
@@ -408,7 +420,13 @@ export default function ShipmentSettingsPage() {
                               <div className="flex flex-col">
                                 <span className="font-medium text-lg">{vendor}</span>
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                  {services.map((service) => (
+                                  {[...services]
+                                    .sort((a, b) =>
+                                      (a.service || "").localeCompare(b.service || "", undefined, {
+                                        sensitivity: "base",
+                                      })
+                                    )
+                                    .map((service) => (
                                     <span
                                       key={service.id}
                                       className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
@@ -423,7 +441,7 @@ export default function ShipmentSettingsPage() {
                                         <Trash2 className="w-3 h-3 text-red-500" />
                                       </Button>
                                     </span>
-                                  ))}
+                                    ))}
                                 </div>
                               </div>
                             </li>

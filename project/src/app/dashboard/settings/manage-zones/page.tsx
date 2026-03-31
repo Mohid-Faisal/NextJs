@@ -44,7 +44,10 @@ const ManageZonesPage = () => {
         // Fetch services
         const servicesRes = await fetch("/api/settings/serviceMode");
         const servicesData = await servicesRes.json();
-        setServiceModes(servicesData || []);
+        const sortedServices = [...(servicesData || [])].sort((a, b) =>
+          (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+        );
+        setServiceModes(sortedServices);
         
         // Fetch available zones
         const zonesRes = await fetch("/api/zones/available");

@@ -15,7 +15,7 @@ export async function GET() {
         uploadedAt: true
       },
       orderBy: {
-        uploadedAt: 'desc'
+        service: "asc"
       }
     });
 

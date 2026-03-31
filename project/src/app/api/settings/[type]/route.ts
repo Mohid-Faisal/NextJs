@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
   const model = modelMap[type];
   if (!model) return NextResponse.json([], { status: 400 });
 
-  const data = await model.findMany({ orderBy: { createdAt: "desc" } });
+  const data = await model.findMany({ orderBy: { name: "asc" } });
   return NextResponse.json(data);
 }
 
@@ -62,6 +62,29 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ t
   if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
 
   try {
+    // For serviceMode, cascade-delete zones, rates, and related records
+    if (type === "serviceMode") {
+      const record = await prisma.serviceMode.findUnique({ where: { id: parseInt(id) } });
+      if (record) {
+        const svc = record.name.toLowerCase();
+        const [deletedZones, deletedRates] = await Promise.all([
+          prisma.zone.deleteMany({ where: { service: { equals: svc, mode: "insensitive" } } }),
+          prisma.rate.deleteMany({ where: { service: { equals: svc, mode: "insensitive" } } }),
+        ]);
+
+        // Clean up upload tracking and filename records
+        await Promise.all([
+          prisma.$executeRaw`DELETE FROM "ZoneUpload" WHERE LOWER("service") = ${svc}`.catch(() => {}),
+          prisma.$executeRaw`DELETE FROM "filename" WHERE LOWER("service") = ${svc}`.catch(() => {}),
+          prisma.vendorservice.deleteMany({ where: { service: { equals: svc, mode: "insensitive" } } }),
+        ]);
+
+        console.log(
+          `Cascade delete for serviceMode "${record.name}": ${deletedZones.count} zones, ${deletedRates.count} rates removed`
+        );
+      }
+    }
+
     await model.delete({ where: { id: parseInt(id) } });
     return NextResponse.json({ success: true });
   } catch (error) {

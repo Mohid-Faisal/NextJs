@@ -98,15 +98,15 @@ interface RateCalculatorContentProps {
 export default function RateCalculatorContent({ publicView = false }: RateCalculatorContentProps) {
   const [form, setForm] = useState({
     weight: "",
-    length: "0",
-    width: "0",
-    height: "0",
+    length: "",
+    width: "",
+    height: "",
     origin: "Pakistan",
     destination: "",
     originZip: "",
     destinationZip: "",
     docType: "",
-    profitPercentage: publicView ? "5" : "0",
+    profitPercentage: publicView ? "5" : "",
   });
 
   const [countries, setCountries] = useState<any[]>([]);
@@ -185,10 +185,10 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
   const handleCalculate = async () => {
     const { weight, length, width, height, origin, destination, originZip, destinationZip, docType, profitPercentage } = form;
     const w = parseFloat(weight);
-    const l = parseFloat(length);
-    const wd = parseFloat(width);
-    const h = parseFloat(height);
-    const profit = publicView ? 5 : parseFloat(profitPercentage);
+    const l = parseFloat(length || "0");
+    const wd = parseFloat(width || "0");
+    const h = parseFloat(height || "0");
+    const profit = publicView ? 5 : parseFloat(profitPercentage || "0");
 
     if ([w, l, wd, h].some((v) => isNaN(v) || v < 0)) {
       setError("Please enter valid non-negative numbers for all dimensions and weight.");
@@ -586,260 +586,366 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
       {/* ──── DASHBOARD VIEW ──── */}
       {!publicView && (
-        <Card className="w-full min-h-[400px] border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <CardContent className="p-3 sm:p-4 lg:p-6 overflow-y-auto h-full">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold mb-4 sm:mb-6 lg:mb-8 text-center text-primary">
-              Rate Calculator
-            </h1>
+        <div className="space-y-6">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center leading-snug">
+            <span className="bg-linear-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">Rate Calculator</span>
+          </h1>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="origin" className="text-xs sm:text-sm">Origin</Label>
-                <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
-                  <SelectTrigger className="w-full text-xs sm:text-sm">
-                    <SelectValue placeholder="Select an origin" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {countries.map((country) => (
-                      <SelectItem key={country.isoCode} value={country.name} className="text-xs sm:text-sm">
-                        <span className="flex items-center gap-2">
-                          <FlagIcon country={country} />
-                          <span>{country.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-gray-700 p-5 sm:p-7 space-y-5">
+            {/* Origin / Destination row */}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-end">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold tracking-wide text-gray-600 dark:text-gray-400">Collection from</Label>
+                <div className="grid grid-cols-2 gap-2 items-center">
+                  <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
+                    <SelectTrigger className="w-full h-[42px] bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm">
+                      <SelectValue placeholder="Select origin" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {countries.map((country) => (
+                        <SelectItem key={country.isoCode} value={country.name} className="text-sm">
+                          <span className="flex items-center gap-2">
+                            <FlagIcon country={country} />
+                            <span>{country.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    name="originZip"
+                    value={form.originZip}
+                    onChange={handleChange}
+                    placeholder="Zip/Area Code"
+                    className="h-[42px] w-full bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                  />
+                </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="destination" className="text-xs sm:text-sm">Destination</Label>
-                <Select onValueChange={(value) => handleSelect(value, "destination")} value={form.destination}>
-                  <SelectTrigger className="w-full text-xs sm:text-sm">
-                    <SelectValue placeholder="Select a destination" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {countries.map((country) => (
-                      <SelectItem key={country.isoCode} value={country.name} className="text-xs sm:text-sm">
-                        <span className="flex items-center gap-2">
-                          <FlagIcon country={country} />
-                          <span>{country.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center justify-center h-11">
+                <div className="w-9 h-9 rounded-full bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center">
+                  <ArrowRight className="w-4 h-4 text-sky-500" />
+                </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="originZip" className="text-xs sm:text-sm">Origin zip</Label>
-                <Input name="originZip" value={form.originZip} onChange={handleChange} placeholder="Zip / Postal code" className="text-xs sm:text-sm" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="destinationZip" className="text-xs sm:text-sm">Destination zip</Label>
-                <Input name="destinationZip" value={form.destinationZip} onChange={handleChange} placeholder="Zip / Postal code" className="text-xs sm:text-sm" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="docType" className="text-xs sm:text-sm">Type</Label>
-                <Select onValueChange={(value) => handleSelect(value, "docType")} value={form.docType}>
-                  <SelectTrigger className="w-full text-xs sm:text-sm">
-                    <SelectValue placeholder="Select document type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {documentTypes.map((type) => (
-                      <SelectItem key={type} value={type} className="text-xs sm:text-sm">{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="weight" className="text-xs sm:text-sm">Weight (kg)</Label>
-                <Input id="weight" name="weight" type="number" min="0" step="0.1" value={form.weight} onChange={handleChange} placeholder="0.5" className="text-xs sm:text-sm" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="length" className="text-xs sm:text-sm">Length (cm)</Label>
-                <Input id="length" name="length" type="number" min="0" value={form.length} onChange={handleChange} placeholder="0" className="text-xs sm:text-sm" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="width" className="text-xs sm:text-sm">Width (cm)</Label>
-                <Input id="width" name="width" type="number" min="0" value={form.width} onChange={handleChange} placeholder="0" className="text-xs sm:text-sm" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="height" className="text-xs sm:text-sm">Height (cm)</Label>
-                <Input id="height" name="height" type="number" min="0" value={form.height} onChange={handleChange} placeholder="0" className="text-xs sm:text-sm" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="profitPercentage" className="text-xs sm:text-sm">Profit Percentage (%)</Label>
-                <Input id="profitPercentage" name="profitPercentage" type="number" min="0" step="0.1" value={form.profitPercentage} onChange={handleChange} placeholder="10" className="text-xs sm:text-sm" />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold tracking-wide text-gray-600 dark:text-gray-400">Delivery to</Label>
+                <div className="grid grid-cols-2 gap-2 items-center">
+                  <Select onValueChange={(value) => handleSelect(value, "destination")} value={form.destination}>
+                    <SelectTrigger className="w-full h-[42px] bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm">
+                      <SelectValue placeholder="Select destination" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {countries.map((country) => (
+                        <SelectItem key={country.isoCode} value={country.name} className="text-sm">
+                          <span className="flex items-center gap-2">
+                            <FlagIcon country={country} />
+                            <span>{country.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    name="destinationZip"
+                    value={form.destinationZip}
+                    onChange={handleChange}
+                    placeholder="Zip/Area Code"
+                    className="h-[42px] w-full bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                  />
+                </div>
               </div>
             </div>
 
-            <Button className="w-full mt-4 sm:mt-6 text-sm sm:text-base lg:text-lg" onClick={handleCalculate} disabled={loading}>
-              {loading ? "Calculating..." : "Calculate Rate"}
-            </Button>
-
-            {error && (
-              <div className="text-red-500 text-center mt-4 font-medium text-xs sm:text-sm">{error}</div>
-            )}
-
-            {results && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 sm:mt-6 space-y-3 sm:space-y-4"
-              >
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {results.top3Rates.map((rate, index) => (
-                    <Card 
-                      key={index}
-                      className={`${
-                        index === 0 
-                          ? 'bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700' 
-                          : index === 1 
-                          ? 'bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700'
-                          : 'bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700'
-                      } border`}
+            {/* Package type selector */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold tracking-wide text-gray-600 dark:text-gray-400">Type</Label>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {([
+                  { value: "Document", label: "Document", icon: Mail },
+                  { value: "Non Document", label: "Non Document", icon: Package },
+                  { value: "FedEx Pak", label: "FedEx Pak", icon: FileText },
+                ] as const).map((pkg) => {
+                  const Icon = pkg.icon;
+                  const selected = form.docType === pkg.value;
+                  return (
+                    <button
+                      key={pkg.value}
+                      type="button"
+                      onClick={() => handleSelect(pkg.value, "docType")}
+                      className={`flex items-center justify-center gap-2 rounded-xl h-11 text-sm font-medium transition-all border ${
+                        selected
+                          ? "bg-white dark:bg-slate-900 border-sky-400 text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-sky-400"
+                          : "bg-white/60 dark:bg-slate-900/60 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-slate-900 hover:border-gray-300"
+                      }`}
                     >
-                      <CardContent className="p-3 sm:p-4">
-                        <div className="flex flex-col justify-between items-start gap-3 h-full">
-                          <div className="w-full">
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className={`font-semibold text-sm sm:text-base lg:text-lg ${
-                                index === 0 ? 'text-green-800 dark:text-green-200' : index === 1 ? 'text-blue-800 dark:text-blue-200' : 'text-orange-800 dark:text-orange-200'
-                              }`}>
-                                {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'} {index === 0 ? 'Best' : index === 1 ? '2nd Best' : '3rd Best'} Rate
-                              </h3>
-                              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                index === 0 ? 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200' 
-                                  : index === 1 ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-                                  : 'bg-orange-200 text-orange-800 dark:bg-orange-800 dark:text-orange-200'
-                              }`}>
-                                #{rate.rank}
-                              </span>
-                            </div>
-                            <p className={`text-xs sm:text-sm mb-2 ${
-                              index === 0 ? 'text-green-600 dark:text-green-300' : index === 1 ? 'text-blue-600 dark:text-blue-300' : 'text-orange-600 dark:text-orange-300'
-                            }`}>
-                              <span className="hidden sm:inline">Country: {rate.country} | Zone: {rate.zone} | Service: {rate.service}</span>
-                              <span className="sm:hidden">{rate.country} | Z{rate.zone} | {rate.service}</span>
-                            </p>
-                            {results.profitPercentage > 0 && (
-                              <p className={`text-xs mb-1 ${index === 0 ? 'text-green-500 dark:text-green-400' : index === 1 ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                                <span className="hidden sm:inline">Profit: +{results.profitPercentage}% | Original: Rs. {rate.bestRate.originalPrice}</span>
-                                <span className="sm:hidden">+{results.profitPercentage}% | Orig: Rs. {rate.bestRate.originalPrice}</span>
-                              </p>
-                            )}
-                            {results.fixedCharge && (
-                              <p className={`text-xs ${index === 0 ? 'text-green-500 dark:text-green-400' : index === 1 ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                                <span className="hidden sm:inline">Total: Rs. {rate.bestRate.price}</span>
-                                <span className="sm:hidden">Total: Rs. {rate.bestRate.price}</span>
-                              </p>
-                            )}
-                          </div>
-                          <div className="w-full text-left">
-                            <p className={`text-sm sm:text-base lg:text-lg font-bold ${
+                      <Icon className="w-4 h-4" />
+                      <span>{pkg.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Weight and dimensions row */}
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+                <div className="relative">
+                  <Input
+                    id="weight" name="weight" type="number" min="0" step="0.1"
+                    value={form.weight} onChange={handleChange} placeholder="Weight"
+                    className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">kg</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="length" name="length" type="number" min="0"
+                    value={form.length} onChange={handleChange} placeholder="Length"
+                    className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">cm</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="width" name="width" type="number" min="0"
+                    value={form.width} onChange={handleChange} placeholder="Width"
+                    className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">cm</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="height" name="height" type="number" min="0"
+                    value={form.height} onChange={handleChange} placeholder="Height"
+                    className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">cm</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="profitPercentage" name="profitPercentage" type="number" min="0" step="0.1"
+                    value={form.profitPercentage} onChange={handleChange} placeholder="Profit"
+                    className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Calculate button */}
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              className="h-12 w-full sm:w-auto sm:min-w-[280px] rounded-full bg-linear-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-semibold text-sm sm:text-base shadow-lg shadow-sky-200/50 dark:shadow-sky-900/30 transition-all"
+              onClick={handleCalculate}
+              disabled={loading}
+            >
+              {loading ? "Calculating..." : "Calculate Rate"}
+              {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
+            </Button>
+          </div>
+
+          {error && (
+            <div className="text-red-500 text-center font-medium text-xs sm:text-sm">{error}</div>
+          )}
+
+          {results && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-3 sm:space-y-4"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+                {results.top3Rates.map((rate, index) => (
+                  <Card 
+                    key={index}
+                    className={`${
+                      index === 0 
+                        ? 'bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700' 
+                        : index === 1 
+                        ? 'bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700'
+                        : 'bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700'
+                    } border`}
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col justify-between items-start gap-3 h-full">
+                        <div className="w-full">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className={`font-semibold text-sm sm:text-base lg:text-lg ${
                               index === 0 ? 'text-green-800 dark:text-green-200' : index === 1 ? 'text-blue-800 dark:text-blue-200' : 'text-orange-800 dark:text-orange-200'
                             }`}>
-                              Rs. {rate.bestRate.price}
-                            </p>
-                            <p className={`text-xs sm:text-sm ${
-                              index === 0 ? 'text-green-600 dark:text-green-300' : index === 1 ? 'text-blue-600 dark:text-blue-300' : 'text-orange-600 dark:text-orange-300'
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'} {index === 0 ? 'Best' : index === 1 ? '2nd Best' : '3rd Best'} Rate
+                            </h3>
+                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                              index === 0 ? 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200' 
+                                : index === 1 ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
+                                : 'bg-orange-200 text-orange-800 dark:bg-orange-800 dark:text-orange-200'
                             }`}>
-                              <span className="hidden sm:inline">Weight: {rate.bestRate.weight}kg | Vendor: {rate.bestRate.vendor}</span>
-                              <span className="sm:hidden">{rate.bestRate.weight}kg | {rate.bestRate.vendor}</span>
-                            </p>
-                            <p className={`text-xs ${index === 0 ? 'text-green-500 dark:text-green-400' : index === 1 ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                              <span className="hidden sm:inline">Price per kg: Rs. {((rate.bestRate.price) / rate.bestRate.weight).toFixed(2)}</span>
-                              <span className="sm:hidden">Rs. {((rate.bestRate.price) / rate.bestRate.weight).toFixed(2)}/kg</span>
-                            </p>
+                              #{rate.rank}
+                            </span>
                           </div>
+                          <p className={`text-xs sm:text-sm mb-2 ${
+                            index === 0 ? 'text-green-600 dark:text-green-300' : index === 1 ? 'text-blue-600 dark:text-blue-300' : 'text-orange-600 dark:text-orange-300'
+                          }`}>
+                            <span className="hidden sm:inline">Country: {rate.country} | Zone: {rate.zone} | Service: {rate.service}</span>
+                            <span className="sm:hidden">{rate.country} | Z{rate.zone} | {rate.service}</span>
+                          </p>
+                          {results.profitPercentage > 0 && (
+                            <p className={`text-xs mb-1 ${index === 0 ? 'text-green-500 dark:text-green-400' : index === 1 ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                              <span className="hidden sm:inline">Profit: +{results.profitPercentage}% | Original: Rs. {rate.bestRate.originalPrice}</span>
+                              <span className="sm:hidden">+{results.profitPercentage}% | Orig: Rs. {rate.bestRate.originalPrice}</span>
+                            </p>
+                          )}
+                          {results.fixedCharge && (
+                            <p className={`text-xs ${index === 0 ? 'text-green-500 dark:text-green-400' : index === 1 ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                              <span className="hidden sm:inline">Total: Rs. {rate.bestRate.price}</span>
+                              <span className="sm:hidden">Total: Rs. {rate.bestRate.price}</span>
+                            </p>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        <div className="w-full text-left">
+                          <p className={`text-sm sm:text-base lg:text-lg font-bold ${
+                            index === 0 ? 'text-green-800 dark:text-green-200' : index === 1 ? 'text-blue-800 dark:text-blue-200' : 'text-orange-800 dark:text-orange-200'
+                          }`}>
+                            Rs. {rate.bestRate.price}
+                          </p>
+                          <p className={`text-xs sm:text-sm ${
+                            index === 0 ? 'text-green-600 dark:text-green-300' : index === 1 ? 'text-blue-600 dark:text-blue-300' : 'text-orange-600 dark:text-orange-300'
+                          }`}>
+                            <span className="hidden sm:inline">Weight: {rate.bestRate.weight}kg | Vendor: {rate.bestRate.vendor}</span>
+                            <span className="sm:hidden">{rate.bestRate.weight}kg | {rate.bestRate.vendor}</span>
+                          </p>
+                          <p className={`text-xs ${index === 0 ? 'text-green-500 dark:text-green-400' : index === 1 ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                            <span className="hidden sm:inline">Price per kg: Rs. {((rate.bestRate.price) / rate.bestRate.weight).toFixed(2)}</span>
+                            <span className="sm:hidden">Rs. {((rate.bestRate.price) / rate.bestRate.weight).toFixed(2)}/kg</span>
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-                <Card>
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4">
-                      <h3 className="font-semibold text-sm sm:text-base lg:text-lg">
-                        All Available Rates ({results.zones.length} zones)
+              <Card>
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                      <h3 className="font-semibold text-sm sm:text-base lg:text-lg mr-2">
+                        Rates
                       </h3>
-                      {results.fixedCharge && (
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={showFixedCharges}
-                            onCheckedChange={(checked) => setShowFixedCharges(!!checked)}
-                            className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                          />
-                          <Label className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Show Charges</Label>
-                        </div>
-                      )}
+                      {(["express", "economy", "all"] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          type="button"
+                          onClick={() => setPublicResultsTab(tab)}
+                          className={`rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold border transition-colors ${
+                            publicResultsTab === tab
+                              ? tab === "express"
+                                ? "bg-sky-400 text-white border-sky-400 shadow-sm"
+                                : tab === "economy"
+                                  ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+                                  : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-sm"
+                              : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        </button>
+                      ))}
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs sm:text-sm border-separate border-spacing-y-1 sm:border-spacing-y-2">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 px-2 sm:px-4">Vendor</th>
-                            <th className="text-left py-2 px-2 sm:px-4">Zone</th>
-                            <th className="text-left py-2 px-2 sm:px-4">Service</th>
-                            <th className="text-left py-2 px-2 sm:px-4">Weight (kg)</th>
-                            {results.fixedCharge && !showFixedCharges && (
-                              <th className="text-left py-2 px-2 sm:px-4">Fixed Charge (Rs.)</th>
-                            )}
-                            <th className="text-left py-2 px-2 sm:px-4">Original Price (Rs.)</th>
-                            <th className="text-left py-2 px-2 sm:px-4">Final Price (Rs.)</th>
-                            <th className="text-left py-2 px-2 sm:px-4">Price per kg (Rs.)</th>
-                            <th className="text-left py-2 px-2 sm:px-4">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {results.allRates.map((rate, index) => {
-                            const topRate = results.top3Rates.find(topRate => 
-                              rate.zone === topRate.zone && rate.weight === topRate.bestRate.weight && rate.price === topRate.bestRate.price
-                            );
-                            let rowBgColor = '';
-                            if (topRate) {
-                              if (topRate.rank === 1) rowBgColor = 'bg-green-50 dark:bg-green-950';
-                              else if (topRate.rank === 2) rowBgColor = 'bg-blue-50 dark:bg-blue-950';
-                              else if (topRate.rank === 3) rowBgColor = 'bg-orange-50 dark:bg-orange-950';
-                            }
-                            return (
-                              <tr key={index} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${rowBgColor}`}>
-                                <td className="py-2 px-2 sm:px-4 font-medium">{rate.vendor}</td>
-                                <td className="py-2 px-2 sm:px-4">{rate.zone}</td>
-                                <td className="py-2 sm:px-4">{rate.service}</td>
-                                <td className="py-2 px-2 sm:px-4">{rate.weight}</td>
-                                {results.fixedCharge && !showFixedCharges && (
-                                  <td className="py-2 px-2 sm:px-4 text-purple-600 dark:text-purple-400">{results.fixedCharge.amount}</td>
-                                )}
-                                <td className="py-2 px-2 sm:px-4 text-gray-600 dark:text-gray-400">{rate.originalPrice}</td>
-                                <td className="py-2 px-2 sm:px-4 font-medium">{rate.price}</td>
-                                <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{((rate.price)/ rate.weight).toFixed(2)}</td>
-                                <td className="py-2 px-2 sm:px-4">
-                                  {topRate ? (
-                                    <span className={`font-medium ${topRate.rank === 1 ? 'text-green-600 dark:text-green-400' : topRate.rank === 2 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                                      {topRate.rank === 1 ? '🥇 Best' : topRate.rank === 2 ? '🥈 2nd' : '🥉 3rd'}
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-500">Available</span>
+                    {results.fixedCharge && (
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={showFixedCharges}
+                          onCheckedChange={(checked) => setShowFixedCharges(!!checked)}
+                          className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                        />
+                        <Label className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Show Charges</Label>
+                      </div>
+                    )}
+                  </div>
+                  {(() => {
+                    const EXPRESS_SERVICES = ["ups_c2s", "dhl_lhe", "fedex_lhe"];
+                    const ECONOMY_SERVICES = ["snwwe"];
+                    const allRates = results.allRates || [];
+                    const filteredRates =
+                      publicResultsTab === "express"
+                        ? allRates.filter((r) => r.service && EXPRESS_SERVICES.includes(r.service.toLowerCase()))
+                        : publicResultsTab === "economy"
+                          ? allRates.filter((r) => {
+                              if (r.service && ECONOMY_SERVICES.includes(r.service.toLowerCase())) return true;
+                              const origin = getOriginFromService(r.service).toUpperCase();
+                              return origin === "DUBAI" || origin === "LONDON" || origin === "UK" || origin === "SINGAPORE";
+                            })
+                          : allRates;
+                    const displayRates = filteredRates.length > 0 ? filteredRates : allRates;
+
+                    return (
+                      <div className="overflow-x-auto">
+                        {filteredRates.length === 0 && publicResultsTab !== "all" && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                            No {publicResultsTab} rates found. Showing all rates.
+                          </p>
+                        )}
+                        <table className="w-full text-xs sm:text-sm border-separate border-spacing-y-1 sm:border-spacing-y-2">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 px-2 sm:px-4">Vendor</th>
+                              <th className="text-left py-2 px-2 sm:px-4">Zone</th>
+                              <th className="text-left py-2 px-2 sm:px-4">Service</th>
+                              <th className="text-left py-2 px-2 sm:px-4">Weight (kg)</th>
+                              {results.fixedCharge && !showFixedCharges && (
+                                <th className="text-left py-2 px-2 sm:px-4">Fixed Charge (Rs.)</th>
+                              )}
+                              <th className="text-left py-2 px-2 sm:px-4">Original Price (Rs.)</th>
+                              <th className="text-left py-2 px-2 sm:px-4">Final Price (Rs.)</th>
+                              <th className="text-left py-2 px-2 sm:px-4">Price per kg (Rs.)</th>
+                              <th className="text-left py-2 px-2 sm:px-4">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {displayRates.map((rate, index) => {
+                              const topRate = results.top3Rates.find(topRate => 
+                                rate.zone === topRate.zone && rate.weight === topRate.bestRate.weight && rate.price === topRate.bestRate.price
+                              );
+                              let rowBgColor = '';
+                              if (topRate) {
+                                if (topRate.rank === 1) rowBgColor = 'bg-green-50 dark:bg-green-950';
+                                else if (topRate.rank === 2) rowBgColor = 'bg-blue-50 dark:bg-blue-950';
+                                else if (topRate.rank === 3) rowBgColor = 'bg-orange-50 dark:bg-orange-950';
+                              }
+                              return (
+                                <tr key={index} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 ${rowBgColor}`}>
+                                  <td className="py-2 px-2 sm:px-4 font-medium">{rate.vendor}</td>
+                                  <td className="py-2 px-2 sm:px-4">{rate.zone}</td>
+                                  <td className="py-2 sm:px-4">{rate.service}</td>
+                                  <td className="py-2 px-2 sm:px-4">{rate.weight}</td>
+                                  {results.fixedCharge && !showFixedCharges && (
+                                    <td className="py-2 px-2 sm:px-4 text-purple-600 dark:text-purple-400">{results.fixedCharge.amount}</td>
                                   )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </CardContent>
-        </Card>
+                                  <td className="py-2 px-2 sm:px-4 text-gray-600 dark:text-gray-400">{rate.originalPrice}</td>
+                                  <td className="py-2 px-2 sm:px-4 font-medium">{rate.price}</td>
+                                  <td className="py-2 px-2 sm:px-4 text-blue-600 dark:text-blue-400">{((rate.price)/ rate.weight).toFixed(2)}</td>
+                                  <td className="py-2 px-2 sm:px-4">
+                                    {topRate ? (
+                                      <span className={`font-medium ${topRate.rank === 1 ? 'text-green-600 dark:text-green-400' : topRate.rank === 2 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                        {topRate.rank === 1 ? '🥇 Best' : topRate.rank === 2 ? '🥈 2nd' : '🥉 3rd'}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-500">Available</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </div>
       )}
 
       {/* Information modal (public rate calculator) */}

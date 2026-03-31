@@ -100,19 +100,23 @@ export async function POST(req: NextRequest) {
 
     log("rates.fetched", { docType, minWeight: weightNumber, totalRows: allDbRates.length });
 
-    // Index rates by (vendor_lower, service_lower, normalizedZone) → cheapest row
-    const rateIndex = new Map<string, (typeof allDbRates)[0]>();
+    // Index rates by (service_lower, normalizedZone) → all matching rows
+    // Multiple vendors can have rates for the same service+zone
+    const rateIndex = new Map<string, (typeof allDbRates)[0][]>();
     for (const r of allDbRates) {
       const normZone = normalizeZoneKey(r.zone);
-      const key = `${r.vendor.toLowerCase()}|${r.service.toLowerCase()}|${normZone}`;
-      if (!rateIndex.has(key)) {
-        rateIndex.set(key, r);
+      const key = `${r.service.toLowerCase()}|${normZone}`;
+      if (!rateIndex.has(key)) rateIndex.set(key, []);
+      const bucket = rateIndex.get(key)!;
+      // Only keep the cheapest per vendor (rates are ordered by weight asc)
+      if (!bucket.some((b) => b.vendor.toLowerCase() === r.vendor.toLowerCase())) {
+        bucket.push(r);
       }
     }
 
     log("rates.indexed", { uniqueKeys: rateIndex.size });
 
-    // ── Step 5: Match zones → vendors → rates ─────────────────────────────
+    // ── Step 5: Match zones → rates (via service + zone key) ──────────────
     type MatchedRate = {
       zoneKey: string;
       country: string;
@@ -132,23 +136,23 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      for (const vendor of vendors) {
-        const key = `${vendor.toLowerCase()}|${z.service}|${z.zoneKey}`;
-        const rate = rateIndex.get(key);
+      const key = `${z.service}|${z.zoneKey}`;
+      const rates = rateIndex.get(key);
 
-        if (!rate) {
-          log("zone.skip.no-rate", {
-            zoneKey: z.zoneKey,
-            vendor,
-            service: z.service,
-            lookupKey: key,
-          });
-          continue;
-        }
+      if (!rates || rates.length === 0) {
+        log("zone.skip.no-rate", {
+          zoneKey: z.zoneKey,
+          service: z.service,
+          vendors,
+          lookupKey: key,
+        });
+        continue;
+      }
 
+      for (const rate of rates) {
         log("zone.matched", {
           zoneKey: z.zoneKey,
-          vendor,
+          vendor: rate.vendor,
           service: z.service,
           rateWeight: rate.weight,
           ratePrice: rate.price,

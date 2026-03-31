@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const vendorServices = await prisma.vendorservice.findMany({
-      orderBy: { id: "asc" },
+      orderBy: [{ vendor: "asc" }, { service: "asc" }],
     });
 
     return NextResponse.json(vendorServices);
@@ -74,6 +74,38 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const record = await prisma.vendorservice.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!record) {
+      return NextResponse.json(
+        { error: "Vendor service not found" },
+        { status: 404 }
+      );
+    }
+
+    // Cascade-delete rates and filename records for this vendor+service
+    const [deletedRates] = await Promise.all([
+      prisma.rate.deleteMany({
+        where: {
+          vendor: { equals: record.vendor, mode: "insensitive" },
+          service: { equals: record.service, mode: "insensitive" },
+        },
+      }),
+      prisma.filename.deleteMany({
+        where: {
+          vendor: { equals: record.vendor, mode: "insensitive" },
+          service: { equals: record.service, mode: "insensitive" },
+          fileType: "rate",
+        },
+      }).catch(() => {}),
+    ]);
+
+    console.log(
+      `Cascade delete for vendorService "${record.vendor} → ${record.service}": ${deletedRates.count} rates removed`
+    );
 
     await prisma.vendorservice.delete({
       where: { id: parseInt(id) },
