@@ -88,6 +88,20 @@ export async function POST(req: NextRequest) {
     log("vendorServices", vendorServices.map((vs) => `${vs.vendor} → ${vs.service}`));
 
     // ── Step 4: For each zone+service, find the rate ─────────────────────
+    // Build a map of what services actually exist in Rate table per vendor
+    const rateServiceSample = await prisma.rate.findMany({
+      where: { docType },
+      distinct: ["vendor", "service"],
+      select: { vendor: true, service: true },
+    });
+    const rateServicesByVendor = new Map<string, string[]>();
+    for (const r of rateServiceSample) {
+      const key = r.vendor.toLowerCase();
+      if (!rateServicesByVendor.has(key)) rateServicesByVendor.set(key, []);
+      rateServicesByVendor.get(key)!.push(r.service);
+    }
+    log("rate.services.inDB", Object.fromEntries(rateServicesByVendor));
+
     type MatchedRate = {
       zoneKey: string;
       country: string;
@@ -107,6 +121,22 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
+      const vendorRateServices = rateServicesByVendor.get(vendor.toLowerCase()) || [];
+      const serviceMatchesInRates = vendorRateServices.filter(
+        (s) => s.toLowerCase() === z.service.toLowerCase()
+      );
+
+      if (serviceMatchesInRates.length === 0) {
+        log("zone.skip.service-mismatch", {
+          zoneKey: z.zoneKey,
+          vendor,
+          zoneService: z.service,
+          rateServicesForVendor: vendorRateServices,
+          hint: "Zone service name doesn't match any Rate service name for this vendor",
+        });
+        continue;
+      }
+
       const rate = await prisma.rate.findFirst({
         where: {
           zone: z.zoneKey,
@@ -119,12 +149,26 @@ export async function POST(req: NextRequest) {
       });
 
       if (!rate) {
+        const maxWeightRow = await prisma.rate.findFirst({
+          where: {
+            vendor: vendor,
+            service: { equals: z.service, mode: "insensitive" },
+            zone: z.zoneKey,
+            docType: docType,
+          },
+          orderBy: { weight: "desc" },
+          select: { weight: true, zone: true },
+        });
         log("zone.skip.no-rate", {
           zoneKey: z.zoneKey,
           vendor,
           service: z.service,
           docType,
-          weight: weightNumber,
+          billedWeight: weightNumber,
+          maxWeightInRates: maxWeightRow?.weight ?? "no rows at all",
+          hint: maxWeightRow
+            ? `Billed weight ${weightNumber} exceeds max rate weight ${maxWeightRow.weight}`
+            : "No rate rows exist for this zone+vendor+service+docType combo",
         });
         continue;
       }
