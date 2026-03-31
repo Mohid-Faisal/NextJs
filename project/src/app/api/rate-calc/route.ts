@@ -6,7 +6,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { origin, destination, originZip, destinationZip, weight, docType, height, width, length, profitPercentage } =
       body;
-    // console.log(`📍 Body:`, body);
+    const debugTag = "[RATE-CALC]";
+    const log = (step: string, payload?: unknown) => {
+      if (payload !== undefined) {
+        console.log(`${debugTag} ${step}`, payload);
+      } else {
+        console.log(`${debugTag} ${step}`);
+      }
+    };
+
+    log("request.received", body);
     if (!origin || !destination || !weight || !docType) {
       return NextResponse.json(
         {
@@ -37,6 +46,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    log("weight.computed", {
+      actualWeight: Number(weight),
+      volumetricWeight: Number.isFinite(volume) ? Number(volume.toFixed(3)) : null,
+      billedWeight: weightNumber,
+      docType,
+      profitPercent,
+    });
+
     // Fetch fixed charge based on weight
     const fixedCharge = await prisma.fixedCharge.findFirst({
       where: {
@@ -61,7 +78,11 @@ export async function POST(req: NextRequest) {
         service: true,
       },
     });
-    //  console.log(`📍 Zone infos:`, zoneInfos);
+    log("zone.lookup.raw", {
+      destination,
+      zoneCount: zoneInfos.length,
+      sample: zoneInfos.slice(0, 10),
+    });
 
     if (zoneInfos.length === 0) {
       return NextResponse.json(
@@ -71,8 +92,6 @@ export async function POST(req: NextRequest) {
         { status: 404 }
       );
     }
-
-    //  console.log(`📍 Found ${zoneInfos.length} zones for destination: ${destination}`);
 
     // Step 2: Extract unique zone keys for this destination ("7", "7A", "7B", "5A", etc.)
     const destinationZones = new Set<string>();
@@ -89,14 +108,17 @@ export async function POST(req: NextRequest) {
       destinationZones.add(zoneKey);
       (zoneInfo as any).zone = zoneKey;
     });
-    //  console.log(`📍 zoneInfos:`, zoneInfos);
-    //  console.log(`📍 Destination zones:`, Array.from(destinationZones));
+    log("zone.normalized", {
+      destinationZones: Array.from(destinationZones),
+      normalizedZoneInfos: zoneInfos.slice(0, 20),
+    });
 
     // Step 3: For each zone, find which services are available and get their rates
     const allRates = [];
     const bestRates = [];
 
     for (const zoneKey of destinationZones) {
+      log("rate.scan.zone.start", { zoneKey, weightNumber, docType });
       // First, find which services are available in this zone for the given document type
       const availableServices = await prisma.rate.findMany({
         where: {
@@ -112,15 +134,19 @@ export async function POST(req: NextRequest) {
         distinct: ["service"],
       });
 
+      log("rate.scan.zone.services", {
+        zoneKey,
+        availableServices: availableServices.map((s) => s.service),
+      });
+
       if (availableServices.length === 0) {
+        log("rate.scan.zone.no-services", { zoneKey });
         continue;
       }
 
       for (const serviceData of availableServices) {
         const serviceName = serviceData.service;
-        console.log(
-          `📍 Processing service ${serviceName} for zone ${zoneKey}`
-        );
+        log("rate.scan.service.start", { zoneKey, serviceName });
 
         const serviceRates = await prisma.rate.findMany({
           where: {
@@ -137,11 +163,20 @@ export async function POST(req: NextRequest) {
         });
 
         if (serviceRates.length === 0) {
-          console.log(
-            `⚠️ No rates found for zone ${zoneKey}, service ${serviceName}, skipping...`
-          );
+          log("rate.scan.service.no-rates", { zoneKey, serviceName, weightNumber, docType });
           continue;
         }
+
+        log("rate.scan.service.rates", {
+          zoneKey,
+          serviceName,
+          count: serviceRates.length,
+          firstFew: serviceRates.slice(0, 5).map((r) => ({
+            weight: r.weight,
+            price: r.price,
+            vendor: r.vendor,
+          })),
+        });
 
         const bestServiceRate = serviceRates[0];
 
@@ -166,7 +201,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    //      console.log(`📍 All rates:`, allRates);
+    log("rate.scan.complete", { allRatesCount: allRates.length });
     const filteredRates = allRates.filter((rate) => {
       return zoneInfos.some((zoneInfo) => {
         return (
@@ -177,7 +212,18 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    //  console.log("✅ Filtered Rates:", filteredRates);
+    log("rate.filtered", {
+      filteredCount: filteredRates.length,
+      targetWeight: weightNumber,
+      note: "filter keeps rows where rate.zone matches normalized destination zone, service matches zone service, and rate.weight equals billed weight",
+      firstFew: filteredRates.slice(0, 10).map((r) => ({
+        zone: r.zone,
+        service: r.service,
+        weight: r.weight,
+        vendor: r.vendor,
+        price: r.price,
+      })),
+    });
 
     if (filteredRates.length === 0) {
       return NextResponse.json(
@@ -227,7 +273,7 @@ export async function POST(req: NextRequest) {
         zone.service === top3Rates[0].service
     );
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       profitPercentage: profitPercent,
       fixedCharge: fixedCharge ? {
@@ -283,7 +329,15 @@ export async function POST(req: NextRequest) {
         service: rate.service,
         originalPrice: rate.price+ (fixedCharge?.fixedCharge ?? 0),
       })),
+    };
+
+    log("response.ready", {
+      zones: responsePayload.zones.length,
+      top3: responsePayload.top3Rates.length,
+      bestOverallRate: responsePayload.bestOverallRate,
     });
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error("❌ Error calculating rate:", error);
     return NextResponse.json(
