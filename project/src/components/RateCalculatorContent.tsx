@@ -595,7 +595,6 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
             {/* Origin / Destination row */}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-end">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold tracking-wide text-gray-600 dark:text-gray-400">Collection from</Label>
                 <div className="grid grid-cols-2 gap-2 items-center">
                   <Select onValueChange={(value) => handleSelect(value, "origin")} value={form.origin}>
                     <SelectTrigger className="w-full h-[42px] bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm">
@@ -627,7 +626,6 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold tracking-wide text-gray-600 dark:text-gray-400">Delivery to</Label>
                 <div className="grid grid-cols-2 gap-2 items-center">
                   <Select onValueChange={(value) => handleSelect(value, "destination")} value={form.destination}>
                     <SelectTrigger className="w-full h-[42px] bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm">
@@ -657,7 +655,6 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
             {/* Package type selector */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold tracking-wide text-gray-600 dark:text-gray-400">Type</Label>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {([
                   { value: "Document", label: "Document", icon: Mail },
@@ -829,9 +826,6 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4">
                     <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                      <h3 className="font-semibold text-sm sm:text-base lg:text-lg mr-2">
-                        Rates
-                      </h3>
                       {(["express", "economy", "all"] as const).map((tab) => (
                         <button
                           key={tab}
@@ -876,13 +870,13 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                               return origin === "DUBAI" || origin === "LONDON" || origin === "UK" || origin === "SINGAPORE";
                             })
                           : allRates;
-                    const displayRates = filteredRates.length > 0 ? filteredRates : allRates;
+                    const displayRates = filteredRates;
 
                     return (
                       <div className="overflow-x-auto">
-                        {filteredRates.length === 0 && publicResultsTab !== "all" && (
+                        {displayRates.length === 0 && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                            No {publicResultsTab} rates found. Showing all rates.
+                            No {publicResultsTab} rates found.
                           </p>
                         )}
                         <table className="w-full text-xs sm:text-sm border-separate border-spacing-y-1 sm:border-spacing-y-2">
