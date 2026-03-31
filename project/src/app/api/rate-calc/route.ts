@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+function normalizeZoneKey(raw: string): string {
+  if (typeof raw !== "string") return String(raw);
+  const m = raw.match(/Zone\s*(\d+[A-Za-z]?)/i);
+  const stripped = m ? m[1] : raw.replace(/^Zone\s*/i, "").trim() || raw;
+  return stripped.replace(/^0+(\d)/, "$1");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -63,45 +70,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Normalize zone strings: "Zone 7A" -> "7A", "Zone 5" -> "5"
-    const normalizedZones = zoneRows.map((z) => {
-      const raw = z.zone;
-      let zoneKey: string;
-      if (typeof raw === "string") {
-        const m = raw.match(/Zone\s*(\d+[A-Za-z]?)/i);
-        zoneKey = m ? m[1] : raw.replace(/^Zone\s*/i, "").trim() || raw;
-      } else {
-        zoneKey = String(raw);
-      }
-      return { zoneKey, service: z.service.toLowerCase(), country: z.country };
-    });
+    const normalizedZones = zoneRows.map((z) => ({
+      zoneKey: normalizeZoneKey(z.zone),
+      service: z.service.toLowerCase(),
+      country: z.country,
+    }));
 
     log("zones.normalized", normalizedZones.slice(0, 20));
 
-    // ── Step 3: Get vendor-service pairs ──────────────────────────────────
+    // ── Step 3: Get vendor-service pairs (one service → many vendors) ─────
     const vendorServices = await prisma.vendorservice.findMany();
-    const vsMap = new Map<string, string>();
+    const vsMultiMap = new Map<string, string[]>();
     vendorServices.forEach((vs) => {
-      vsMap.set(vs.service.toLowerCase(), vs.vendor);
+      const key = vs.service.toLowerCase();
+      if (!vsMultiMap.has(key)) vsMultiMap.set(key, []);
+      vsMultiMap.get(key)!.push(vs.vendor);
     });
 
     log("vendorServices", vendorServices.map((vs) => `${vs.vendor} → ${vs.service}`));
 
-    // ── Step 4: For each zone+service, find the rate ─────────────────────
-    // Build a map of what services actually exist in Rate table per vendor
-    const rateServiceSample = await prisma.rate.findMany({
-      where: { docType },
-      distinct: ["vendor", "service"],
-      select: { vendor: true, service: true },
+    // ── Step 4: Fetch all rates for this docType in one query ─────────────
+    const allDbRates = await prisma.rate.findMany({
+      where: {
+        docType,
+        weight: { gte: weightNumber },
+      },
+      orderBy: { weight: "asc" },
     });
-    const rateServicesByVendor = new Map<string, string[]>();
-    for (const r of rateServiceSample) {
-      const key = r.vendor.toLowerCase();
-      if (!rateServicesByVendor.has(key)) rateServicesByVendor.set(key, []);
-      rateServicesByVendor.get(key)!.push(r.service);
-    }
-    log("rate.services.inDB", Object.fromEntries(rateServicesByVendor));
 
+    log("rates.fetched", { docType, minWeight: weightNumber, totalRows: allDbRates.length });
+
+    // Index rates by (vendor_lower, service_lower, normalizedZone) → cheapest row
+    const rateIndex = new Map<string, (typeof allDbRates)[0]>();
+    for (const r of allDbRates) {
+      const normZone = normalizeZoneKey(r.zone);
+      const key = `${r.vendor.toLowerCase()}|${r.service.toLowerCase()}|${normZone}`;
+      if (!rateIndex.has(key)) {
+        rateIndex.set(key, r);
+      }
+    }
+
+    log("rates.indexed", { uniqueKeys: rateIndex.size });
+
+    // ── Step 5: Match zones → vendors → rates ─────────────────────────────
     type MatchedRate = {
       zoneKey: string;
       country: string;
@@ -115,81 +126,44 @@ export async function POST(req: NextRequest) {
     const matchedRates: MatchedRate[] = [];
 
     for (const z of normalizedZones) {
-      const vendor = vsMap.get(z.service);
-      if (!vendor) {
+      const vendors = vsMultiMap.get(z.service);
+      if (!vendors || vendors.length === 0) {
         log("zone.skip.no-vendor", { zoneKey: z.zoneKey, zoneService: z.service });
         continue;
       }
 
-      const vendorRateServices = rateServicesByVendor.get(vendor.toLowerCase()) || [];
-      const serviceMatchesInRates = vendorRateServices.filter(
-        (s) => s.toLowerCase() === z.service.toLowerCase()
-      );
+      for (const vendor of vendors) {
+        const key = `${vendor.toLowerCase()}|${z.service}|${z.zoneKey}`;
+        const rate = rateIndex.get(key);
 
-      if (serviceMatchesInRates.length === 0) {
-        log("zone.skip.service-mismatch", {
-          zoneKey: z.zoneKey,
-          vendor,
-          zoneService: z.service,
-          rateServicesForVendor: vendorRateServices,
-          hint: "Zone service name doesn't match any Rate service name for this vendor",
-        });
-        continue;
-      }
+        if (!rate) {
+          log("zone.skip.no-rate", {
+            zoneKey: z.zoneKey,
+            vendor,
+            service: z.service,
+            lookupKey: key,
+          });
+          continue;
+        }
 
-      const rate = await prisma.rate.findFirst({
-        where: {
-          zone: z.zoneKey,
-          vendor: vendor,
-          service: { equals: z.service, mode: "insensitive" },
-          docType: docType,
-          weight: { gte: weightNumber },
-        },
-        orderBy: { weight: "asc" },
-      });
-
-      if (!rate) {
-        const maxWeightRow = await prisma.rate.findFirst({
-          where: {
-            vendor: vendor,
-            service: { equals: z.service, mode: "insensitive" },
-            zone: z.zoneKey,
-            docType: docType,
-          },
-          orderBy: { weight: "desc" },
-          select: { weight: true, zone: true },
-        });
-        log("zone.skip.no-rate", {
+        log("zone.matched", {
           zoneKey: z.zoneKey,
           vendor,
           service: z.service,
-          docType,
-          billedWeight: weightNumber,
-          maxWeightInRates: maxWeightRow?.weight ?? "no rows at all",
-          hint: maxWeightRow
-            ? `Billed weight ${weightNumber} exceeds max rate weight ${maxWeightRow.weight}`
-            : "No rate rows exist for this zone+vendor+service+docType combo",
+          rateWeight: rate.weight,
+          ratePrice: rate.price,
         });
-        continue;
+
+        matchedRates.push({
+          zoneKey: z.zoneKey,
+          country: z.country,
+          zoneService: z.service,
+          vendor: rate.vendor,
+          rateService: rate.service,
+          weight: rate.weight,
+          price: rate.price,
+        });
       }
-
-      log("zone.matched", {
-        zoneKey: z.zoneKey,
-        vendor,
-        service: z.service,
-        rateWeight: rate.weight,
-        ratePrice: rate.price,
-      });
-
-      matchedRates.push({
-        zoneKey: z.zoneKey,
-        country: z.country,
-        zoneService: z.service,
-        vendor: rate.vendor,
-        rateService: rate.service,
-        weight: rate.weight,
-        price: rate.price,
-      });
     }
 
     log("matched.total", matchedRates.length);
@@ -203,7 +177,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Step 5: Build response ────────────────────────────────────────────
+    // ── Step 6: Build response ────────────────────────────────────────────
     const fc = fixedCharge?.fixedCharge ?? 0;
 
     const buildPrice = (basePrice: number) => ({
@@ -211,7 +185,6 @@ export async function POST(req: NextRequest) {
       originalPrice: basePrice + fc,
     });
 
-    // Sort by price ascending
     matchedRates.sort((a, b) => a.price - b.price);
 
     const allRates = matchedRates.map((r) => {
