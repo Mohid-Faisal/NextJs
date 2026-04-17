@@ -117,54 +117,84 @@ export async function PUT(
     });
 
     // Update customer/vendor transactions if payment is linked to an invoice
+    // IMPORTANT: Invoice/shipment lines use the same invoice# as reference with type DEBIT.
+    // Payments are type CREDIT. Without `type: 'CREDIT'`, findFirst could match the invoice DEBIT and corrupt it.
     if (existingPayment.invoice) {
       try {
         const paymentReference = existingPayment.reference || `Payment-${paymentId}`;
         const newDate = new Date(body.date);
-        
-        // Update customer transaction if exists
-        if (existingPayment.fromCustomerId) {
+        const newAmountNum = Number(body.amount);
+        const amountDelta = newAmountNum - oldAmount;
+
+        // Customer paying us (INCOME): ledger line is CREDIT (not the shipment DEBIT)
+        if (existingPayment.fromCustomerId && existingPayment.transactionType === "INCOME") {
           const customerTransaction = await prisma.customerTransaction.findFirst({
             where: {
               customerId: existingPayment.fromCustomerId,
               invoice: existingPayment.invoice,
               reference: paymentReference,
+              type: "CREDIT",
             },
           });
 
           if (customerTransaction) {
+            if (amountDelta !== 0) {
+              const cust = await prisma.customers.findUnique({
+                where: { id: existingPayment.fromCustomerId },
+              });
+              if (cust) {
+                await prisma.customers.update({
+                  where: { id: cust.id },
+                  data: { currentBalance: cust.currentBalance + amountDelta },
+                });
+              }
+            }
             await prisma.customerTransaction.update({
               where: { id: customerTransaction.id },
               data: {
-                amount: Number(body.amount),
-                description: body.description || `Payment for invoice ${existingPayment.invoice}`,
-                createdAt: newDate, // Update createdAt to match payment date
+                amount: newAmountNum,
+                description:
+                  body.description || `Payment for invoice ${existingPayment.invoice}`,
+                createdAt: newDate,
               },
             });
-            console.log(`Updated customer transaction ${customerTransaction.id} for payment ${paymentId}`);
+            console.log(`Updated customer CREDIT transaction ${customerTransaction.id} for payment ${paymentId}`);
           }
         }
 
-        // Update vendor transaction if exists
-        if (existingPayment.toVendorId) {
+        // We pay vendor (EXPENSE): payment line is CREDIT (not the shipment/vendor DEBIT)
+        if (existingPayment.toVendorId && existingPayment.transactionType === "EXPENSE") {
           const vendorTransaction = await prisma.vendorTransaction.findFirst({
             where: {
               vendorId: existingPayment.toVendorId,
               invoice: existingPayment.invoice,
               reference: paymentReference,
+              type: "CREDIT",
             },
           });
 
           if (vendorTransaction) {
+            if (amountDelta !== 0) {
+              const ven = await prisma.vendors.findUnique({
+                where: { id: existingPayment.toVendorId },
+              });
+              if (ven) {
+                await prisma.vendors.update({
+                  where: { id: ven.id },
+                  data: { currentBalance: ven.currentBalance - amountDelta },
+                });
+              }
+            }
             await prisma.vendorTransaction.update({
               where: { id: vendorTransaction.id },
               data: {
-                amount: Number(body.amount),
-                description: body.description || `Payment for invoice ${existingPayment.invoice}`,
-                createdAt: newDate, // Update createdAt to match payment date
+                amount: newAmountNum,
+                description:
+                  body.description || `Payment for invoice ${existingPayment.invoice}`,
+                createdAt: newDate,
               },
             });
-            console.log(`Updated vendor transaction ${vendorTransaction.id} for payment ${paymentId}`);
+            console.log(`Updated vendor CREDIT transaction ${vendorTransaction.id} for payment ${paymentId}`);
           }
         }
       } catch (transactionError) {
@@ -337,23 +367,23 @@ export async function DELETE(
       );
     }
 
-    // Delete customer/vendor transactions associated with this payment
+    // Delete customer/vendor transactions associated with this payment (CREDIT rows only — never invoice DEBIT)
     try {
-      // Delete customer transactions with this payment reference
-      if (payment.fromCustomerId) {
+      if (payment.fromCustomerId && payment.transactionType === "INCOME") {
         const customerTransactions = await prisma.customerTransaction.findMany({
           where: {
             customerId: payment.fromCustomerId,
             reference: payment.reference || `Payment-${payment.id}`,
-            invoice: payment.invoice || undefined
-          }
+            invoice: payment.invoice || undefined,
+            type: "CREDIT",
+          },
         });
 
         for (const transaction of customerTransactions) {
           await prisma.customerTransaction.delete({
-            where: { id: transaction.id }
+            where: { id: transaction.id },
           });
-          console.log(`Deleted customer transaction ${transaction.id}`);
+          console.log(`Deleted customer CREDIT transaction ${transaction.id}`);
         }
 
         // Also delete allocation transactions (excess payments allocated to other invoices)
@@ -376,21 +406,21 @@ export async function DELETE(
         }
       }
 
-      // Delete vendor transactions with this payment reference
-      if (payment.toVendorId) {
+      if (payment.toVendorId && payment.transactionType === "EXPENSE") {
         const vendorTransactions = await prisma.vendorTransaction.findMany({
           where: {
             vendorId: payment.toVendorId,
             reference: payment.reference || `Payment-${payment.id}`,
-            invoice: payment.invoice || undefined
-          }
+            invoice: payment.invoice || undefined,
+            type: "CREDIT",
+          },
         });
 
         for (const transaction of vendorTransactions) {
           await prisma.vendorTransaction.delete({
-            where: { id: transaction.id }
+            where: { id: transaction.id },
           });
-          console.log(`Deleted vendor transaction ${transaction.id}`);
+          console.log(`Deleted vendor CREDIT transaction ${transaction.id}`);
         }
 
         // Also delete allocation transactions (excess payments allocated to other invoices)
