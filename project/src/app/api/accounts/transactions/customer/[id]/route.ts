@@ -180,13 +180,20 @@ export async function GET(
         .filter((ref, index, self) => self.indexOf(ref) === index);
 
       const creditNotesMapList = new Map<string, Date>();
+      const creditNoteInvoiceByRefList = new Map<string, string>();
       if (creditNoteRefsList.length > 0) {
         const creditNotesList = await prisma.creditNote.findMany({
           where: { creditNoteNumber: { in: creditNoteRefsList } },
-          select: { creditNoteNumber: true, date: true },
+          select: {
+            creditNoteNumber: true,
+            date: true,
+            invoice: { select: { invoiceNumber: true } },
+          },
         });
         creditNotesList.forEach((cn) => {
           if (cn.date) creditNotesMapList.set(cn.creditNoteNumber, cn.date);
+          const inv = cn.invoice?.invoiceNumber;
+          if (inv) creditNoteInvoiceByRefList.set(cn.creditNoteNumber, inv);
         });
       }
 
@@ -286,7 +293,15 @@ export async function GET(
             }
           }
 
-          return { ...transaction, voucherDate };
+          return {
+            ...transaction,
+            voucherDate,
+            invoice:
+              transaction.invoice ??
+              (transaction.reference
+                ? creditNoteInvoiceByRefList.get(transaction.reference) ?? null
+                : null),
+          };
         }
       );
 
@@ -521,13 +536,20 @@ export async function GET(
 
       // Batch fetch credit notes for paginated transactions
       const paginatedCreditNotesMap = new Map<string, Date>();
+      const paginatedCreditNoteInvoiceMap = new Map<string, string>();
       if (paginatedCreditNoteRefs.length > 0) {
         const paginatedCreditNotes = await prisma.creditNote.findMany({
           where: { creditNoteNumber: { in: paginatedCreditNoteRefs } },
-          select: { creditNoteNumber: true, date: true },
+          select: {
+            creditNoteNumber: true,
+            date: true,
+            invoice: { select: { invoiceNumber: true } },
+          },
         });
         paginatedCreditNotes.forEach((cn) => {
           if (cn.date) paginatedCreditNotesMap.set(cn.creditNoteNumber, cn.date);
+          const inv = cn.invoice?.invoiceNumber;
+          if (inv) paginatedCreditNoteInvoiceMap.set(cn.creditNoteNumber, inv);
         });
       }
 
@@ -641,6 +663,12 @@ export async function GET(
 
           return {
             ...transaction,
+            invoice:
+              transaction.invoice ??
+              (transaction.reference
+                ? paginatedCreditNoteInvoiceMap.get(transaction.reference) ??
+                  null
+                : null),
             shipmentInfo,
             shipmentDate,
             paymentDate,
@@ -694,13 +722,20 @@ export async function GET(
       .filter((ref, index, self) => self.indexOf(ref) === index); // unique refs
     
     const creditNotesMap = new Map<string, Date>();
+    const creditNoteInvoiceByRefHeavy = new Map<string, string>();
     if (creditNoteRefs.length > 0) {
       const creditNotes = await prisma.creditNote.findMany({
         where: { creditNoteNumber: { in: creditNoteRefs } },
-        select: { creditNoteNumber: true, date: true }
+        select: {
+          creditNoteNumber: true,
+          date: true,
+          invoice: { select: { invoiceNumber: true } },
+        },
       });
-      creditNotes.forEach(cn => {
+      creditNotes.forEach((cn) => {
         if (cn.date) creditNotesMap.set(cn.creditNoteNumber, cn.date);
+        const inv = cn.invoice?.invoiceNumber;
+        if (inv) creditNoteInvoiceByRefHeavy.set(cn.creditNoteNumber, inv);
       });
     }
 
@@ -805,6 +840,11 @@ export async function GET(
       return {
         ...transaction,
         voucherDate,
+        invoice:
+          transaction.invoice ??
+          (transaction.reference
+            ? creditNoteInvoiceByRefHeavy.get(transaction.reference) ?? null
+            : null),
       };
     });
 
@@ -1185,13 +1225,20 @@ export async function GET(
     
     // Batch fetch credit notes for paginated transactions
     const paginatedCreditNotesMap = new Map<string, Date>();
+    const paginatedCreditNoteInvoiceMapRecalc = new Map<string, string>();
     if (paginatedCreditNoteRefs.length > 0) {
       const paginatedCreditNotes = await prisma.creditNote.findMany({
         where: { creditNoteNumber: { in: paginatedCreditNoteRefs } },
-        select: { creditNoteNumber: true, date: true }
+        select: {
+          creditNoteNumber: true,
+          date: true,
+          invoice: { select: { invoiceNumber: true } },
+        },
       });
-      paginatedCreditNotes.forEach(cn => {
+      paginatedCreditNotes.forEach((cn) => {
         if (cn.date) paginatedCreditNotesMap.set(cn.creditNoteNumber, cn.date);
+        const inv = cn.invoice?.invoiceNumber;
+        if (inv) paginatedCreditNoteInvoiceMapRecalc.set(cn.creditNoteNumber, inv);
       });
     }
     
@@ -1298,6 +1345,12 @@ export async function GET(
 
       return {
         ...transaction,
+        invoice:
+          transaction.invoice ??
+          (transaction.reference
+            ? paginatedCreditNoteInvoiceMapRecalc.get(transaction.reference) ??
+              null
+            : null),
         shipmentInfo,
         shipmentDate,
         paymentDate,
