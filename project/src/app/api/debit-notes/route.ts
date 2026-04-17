@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { addVendorTransaction } from "@/lib/utils";
+import {
+  formatDebitNoteReference,
+  normalizeNoteLineDescription,
+} from "@/lib/noteFormats";
 
 const prisma = new PrismaClient();
 
@@ -183,11 +187,16 @@ export async function POST(request: NextRequest) {
     });
 
     const nextId = (lastDebitNote?.id || 0) + 1;
-    const debitNoteNumber = `#DEBIT${nextId.toString().padStart(5, "0")}`;
+    const debitNoteNumber = formatDebitNoteReference(nextId);
 
     if (type === "DEBIT") {
       // Use transaction to ensure all operations succeed or fail together
       const result = await prisma.$transaction(async (tx) => {
+        const lineDesc = normalizeNoteLineDescription(
+          "debit",
+          description,
+          debitNoteNumber
+        );
         // Create the debit note
         const debitNote = await tx.debitNote.create({
           data: {
@@ -196,7 +205,7 @@ export async function POST(request: NextRequest) {
             vendorId: parseInt(vendorId),
             amount: parseFloat(amount),
             date: new Date(date),
-            description,
+            description: lineDesc,
             currency,
           },
           include: {
@@ -232,7 +241,7 @@ export async function POST(request: NextRequest) {
             mode: "CASH",
             reference: debitNoteNumber,
             invoice: billId ? `Bill ${billId}` : undefined,
-            description: description || `Credit Note: ${debitNoteNumber}`,
+            description: lineDesc,
           },
         });
 
@@ -242,7 +251,7 @@ export async function POST(request: NextRequest) {
           data: {
             entryNumber: `JE-${Date.now()}`,
             date: journalEntryDate,
-            description: description || `Credit Note: ${debitNoteNumber}`,
+            description: lineDesc,
             reference: debitNoteNumber,
             totalDebit: parseFloat(amount),
             totalCredit: parseFloat(amount),
@@ -263,7 +272,7 @@ export async function POST(request: NextRequest) {
             accountId: debitAccId,
             debitAmount: parseFloat(amount),
             creditAmount: 0,
-            description: description || `Credit Note: ${debitNoteNumber}`,
+            description: lineDesc,
             reference: debitNoteNumber,
           },
         });
@@ -275,7 +284,7 @@ export async function POST(request: NextRequest) {
             accountId: creditAccId,
             debitAmount: 0,
             creditAmount: parseFloat(amount),
-            description: description || `Credit Note: ${debitNoteNumber}`,
+            description: lineDesc,
             reference: debitNoteNumber,
           },
         });
@@ -286,7 +295,7 @@ export async function POST(request: NextRequest) {
           parseInt(vendorId),
           "DEBIT",
           parseFloat(amount),
-          description || `Credit Note: ${debitNoteNumber}`,
+          lineDesc,
           debitNoteNumber,
           billId ? `Bill ${billId}` : undefined,
           new Date(date)
@@ -299,6 +308,11 @@ export async function POST(request: NextRequest) {
     } else if (type === "CREDIT") {
       // Use transaction to ensure all operations succeed or fail together
       const result = await prisma.$transaction(async (tx) => {
+        const lineDesc = normalizeNoteLineDescription(
+          "credit",
+          description,
+          debitNoteNumber
+        );
         // Create the debit note
         const debitNote = await tx.debitNote.create({
           data: {
@@ -307,7 +321,7 @@ export async function POST(request: NextRequest) {
             vendorId: parseInt(vendorId),
             amount: parseFloat(amount),
             date: new Date(date),
-            description,
+            description: lineDesc,
             currency,
           },
           include: {
@@ -342,7 +356,7 @@ export async function POST(request: NextRequest) {
             mode: "CASH",
             reference: debitNoteNumber,
             invoice: billId ? `Bill ${billId}` : undefined,
-            description: description || `Debit Note: ${debitNoteNumber}`,
+            description: lineDesc,
           },
         });
 
@@ -352,7 +366,7 @@ export async function POST(request: NextRequest) {
           data: {
             entryNumber: `JE-${Date.now()}`,
             date: journalEntryDate,
-            description: description || `Debit Note: ${debitNoteNumber}`,
+            description: lineDesc,
             reference: debitNoteNumber,
             totalDebit: Math.abs(parseFloat(amount)),
             totalCredit: Math.abs(parseFloat(amount)),
@@ -373,7 +387,7 @@ export async function POST(request: NextRequest) {
             accountId: debitAccId,
             debitAmount: Math.abs(parseFloat(amount)),
             creditAmount: 0,
-            description: description || `Debit Note: ${debitNoteNumber}`,
+            description: lineDesc,
             reference: debitNoteNumber,
           },
         });
@@ -385,7 +399,7 @@ export async function POST(request: NextRequest) {
             accountId: creditAccId,
             debitAmount: 0,
             creditAmount: Math.abs(parseFloat(amount)),
-            description: description || `Debit Note: ${debitNoteNumber}`,
+            description: lineDesc,
             reference: debitNoteNumber,
           },
         });
@@ -396,7 +410,7 @@ export async function POST(request: NextRequest) {
           parseInt(vendorId),
           "CREDIT",
           parseFloat(amount),
-          description || `Debit Note: ${debitNoteNumber}`,
+          lineDesc,
           debitNoteNumber,
           billId ? `Bill ${billId}` : undefined,
           new Date(date)

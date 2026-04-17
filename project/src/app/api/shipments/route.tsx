@@ -5,9 +5,14 @@ import { Country } from "country-state-city";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "10");
-  const skip = (page - 1) * limit;
+  const limitParam = searchParams.get("limit") ?? "10";
+  const fetchAll =
+    limitParam.toLowerCase() === "all" || limitParam.toLowerCase() === "none";
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+  const limitNum = fetchAll
+    ? 0
+    : Math.max(1, parseInt(limitParam, 10) || 10);
+  const skip = fetchAll ? 0 : (page - 1) * limitNum;
 
   const status = searchParams.get("status") || undefined; // status maps to deliveryStatus
   const invoiceStatus = searchParams.get("invoiceStatus") || undefined;
@@ -110,8 +115,7 @@ export async function GET(req: Request) {
 
     const [shipments, total, grandTotal, inTransitCount, deliveredCount, cancelledCount] = await Promise.all([
       prisma.shipment.findMany({
-        skip,
-        take: limit,
+        ...(fetchAll ? {} : { skip, take: limitNum }),
         where,
         orderBy,
         include: {

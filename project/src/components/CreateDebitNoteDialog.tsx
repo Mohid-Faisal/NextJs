@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,6 +127,23 @@ export default function CreateDebitNoteDialog({
       if (billSearchDebounceRef.current) clearTimeout(billSearchDebounceRef.current);
     };
   }, [billSearchTerm, isBillSelectOpen, fetchBillsBySearch]);
+
+  /** Keeps selected bill in the list for Radix Select + dedupes with search results */
+  const mergedBillOptions = useMemo(() => {
+    const seen = new Set<number>();
+    const out: Bill[] = [];
+    if (selectedBillDetails) {
+      out.push(selectedBillDetails);
+      seen.add(selectedBillDetails.id);
+    }
+    for (const b of bills) {
+      if (!seen.has(b.id)) {
+        out.push(b);
+        seen.add(b.id);
+      }
+    }
+    return out;
+  }, [bills, selectedBillDetails]);
 
   // Auto-fill vendor when bill is selected (use selectedBillDetails or find in bills)
   useEffect(() => {
@@ -267,8 +284,25 @@ export default function CreateDebitNoteDialog({
               if (!open) setBillSearchTerm("");
             }}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Search by invoice number..." />
+            <SelectTrigger className="w-full min-w-0 [&>svg]:shrink-0">
+              <div className="flex min-w-0 flex-1 items-center text-left">
+                {selectedBillDetails ? (
+                  <span
+                    className="truncate text-sm"
+                    title={`${selectedBillDetails.invoiceNumber} — ${selectedBillDetails.vendor.PersonName || selectedBillDetails.vendor.CompanyName}`}
+                  >
+                    {selectedBillDetails.invoiceNumber} —{" "}
+                    {selectedBillDetails.vendor.PersonName ||
+                      selectedBillDetails.vendor.CompanyName}{" "}
+                    <span className="text-muted-foreground">
+                      ({selectedBillDetails.currency}{" "}
+                      {selectedBillDetails.totalAmount.toLocaleString()})
+                    </span>
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Search by bill / invoice number..." />
+                )}
+              </div>
             </SelectTrigger>
             <SelectContent
               className="z-[100] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)]"
@@ -296,31 +330,27 @@ export default function CreateDebitNoteDialog({
                   <div className="px-2 py-6 text-center text-sm text-gray-500 break-words">
                     Searching...
                   </div>
-                ) : !billSearchTerm.trim() ? (
+                ) : !billSearchTerm.trim() && mergedBillOptions.length === 0 ? (
                   <div className="px-2 py-6 text-center text-sm text-gray-500 break-words">
                     Type invoice number or vendor name to search
                   </div>
+                ) : mergedBillOptions.length === 0 ? (
+                  <div className="px-2 py-6 text-center text-sm text-gray-500">
+                    No bills found
+                  </div>
                 ) : (
-                  <>
-                    {[
-                      ...(selectedBill && selectedBillDetails && !bills.some(b => b.id === selectedBillDetails.id)
-                        ? [selectedBillDetails]
-                        : []),
-                      ...bills,
-                    ].map((bill) => (
-                      <SelectItem key={bill.id} value={bill.id.toString()} className="truncate max-w-full">
-                        <span className="truncate block">
-                          {bill.invoiceNumber} - {bill.vendor.PersonName || bill.vendor.CompanyName}{" "}
-                          ({bill.currency} {bill.totalAmount.toLocaleString()})
-                        </span>
-                      </SelectItem>
-                    ))}
-                    {bills.length === 0 && (
-                      <div className="px-2 py-6 text-center text-sm text-gray-500">
-                        No bills found
-                      </div>
-                    )}
-                  </>
+                  mergedBillOptions.map((bill) => (
+                    <SelectItem
+                      key={bill.id}
+                      value={bill.id.toString()}
+                      className="truncate max-w-full"
+                    >
+                      <span className="truncate block">
+                        {bill.invoiceNumber} - {bill.vendor.PersonName || bill.vendor.CompanyName}{" "}
+                        ({bill.currency} {bill.totalAmount.toLocaleString()})
+                      </span>
+                    </SelectItem>
+                  ))
                 )}
               </div>
             </SelectContent>

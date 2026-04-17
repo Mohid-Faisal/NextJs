@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,6 +127,23 @@ export default function CreateCreditNoteDialog({
       if (invoiceSearchDebounceRef.current) clearTimeout(invoiceSearchDebounceRef.current);
     };
   }, [invoiceSearchTerm, isInvoiceSelectOpen, fetchInvoicesBySearch]);
+
+  /** Keeps selected invoice in the list so Radix Select can show the label; dedupes with search results */
+  const mergedInvoiceOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Invoice[] = [];
+    if (selectedInvoiceDetails) {
+      out.push(selectedInvoiceDetails);
+      seen.add(selectedInvoiceDetails.invoiceNumber);
+    }
+    for (const inv of invoices) {
+      if (!seen.has(inv.invoiceNumber)) {
+        out.push(inv);
+        seen.add(inv.invoiceNumber);
+      }
+    }
+    return out;
+  }, [invoices, selectedInvoiceDetails]);
 
   // Auto-fill customer when invoice is selected (use selectedInvoiceDetails or find in invoices)
   useEffect(() => {
@@ -260,8 +277,25 @@ export default function CreateCreditNoteDialog({
               if (!open) setInvoiceSearchTerm("");
             }}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Search by invoice number..." />
+            <SelectTrigger className="w-full min-w-0 [&>svg]:shrink-0">
+              <div className="flex min-w-0 flex-1 items-center text-left">
+                {selectedInvoiceDetails ? (
+                  <span
+                    className="truncate text-sm"
+                    title={`${selectedInvoiceDetails.invoiceNumber} — ${selectedInvoiceDetails.customer.PersonName || selectedInvoiceDetails.customer.CompanyName}`}
+                  >
+                    {selectedInvoiceDetails.invoiceNumber} —{" "}
+                    {selectedInvoiceDetails.customer.PersonName ||
+                      selectedInvoiceDetails.customer.CompanyName}{" "}
+                    <span className="text-muted-foreground">
+                      ({selectedInvoiceDetails.currency}{" "}
+                      {selectedInvoiceDetails.totalAmount.toLocaleString()})
+                    </span>
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Search by invoice number..." />
+                )}
+              </div>
             </SelectTrigger>
             <SelectContent
               className="z-[100] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)]"
@@ -289,31 +323,28 @@ export default function CreateCreditNoteDialog({
                   <div className="px-2 py-6 text-center text-sm text-gray-500 break-words">
                     Searching...
                   </div>
-                ) : !invoiceSearchTerm.trim() ? (
+                ) : !invoiceSearchTerm.trim() && mergedInvoiceOptions.length === 0 ? (
                   <div className="px-2 py-6 text-center text-sm text-gray-500 break-words">
                     Type invoice number or customer name to search
                   </div>
+                ) : mergedInvoiceOptions.length === 0 ? (
+                  <div className="px-2 py-6 text-center text-sm text-gray-500">
+                    No invoices found
+                  </div>
                 ) : (
-                  <>
-                    {[
-                      ...(selectedInvoice && selectedInvoiceDetails && !invoices.some(i => i.invoiceNumber === selectedInvoice)
-                        ? [selectedInvoiceDetails]
-                        : []),
-                      ...invoices,
-                    ].map((invoice) => (
-                      <SelectItem key={invoice.id} value={invoice.invoiceNumber} className="truncate max-w-full">
-                        <span className="truncate block">
-                          {invoice.invoiceNumber} - {invoice.customer.PersonName || invoice.customer.CompanyName}{" "}
-                          ({invoice.currency} {invoice.totalAmount.toLocaleString()})
-                        </span>
-                      </SelectItem>
-                    ))}
-                    {invoices.length === 0 && (
-                      <div className="px-2 py-6 text-center text-sm text-gray-500">
-                        No invoices found
-                      </div>
-                    )}
-                  </>
+                  mergedInvoiceOptions.map((invoice) => (
+                    <SelectItem
+                      key={`${invoice.id}-${invoice.invoiceNumber}`}
+                      value={invoice.invoiceNumber}
+                      className="truncate max-w-full"
+                    >
+                      <span className="truncate block">
+                        {invoice.invoiceNumber} -{" "}
+                        {invoice.customer.PersonName || invoice.customer.CompanyName}{" "}
+                        ({invoice.currency} {invoice.totalAmount.toLocaleString()})
+                      </span>
+                    </SelectItem>
+                  ))
                 )}
               </div>
             </SelectContent>
