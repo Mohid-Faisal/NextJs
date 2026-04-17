@@ -104,6 +104,8 @@ const EditInvoiceForm = ({
             name="invoiceNumber"
             value={form.invoiceNumber}
             onChange={handleChange}
+            readOnly
+            className="bg-muted"
             required
           />
         </div>
