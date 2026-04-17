@@ -292,7 +292,6 @@ const DashboardPage = () => {
             iconColor="text-white"
             onClick={() => setShowReceivableModal(true)}
             currentMonth={(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}
-            footerLabel="This month (new invoices)"
           />
           <MetricCard
             title="Total Shipments"

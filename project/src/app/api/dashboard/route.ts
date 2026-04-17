@@ -5,6 +5,55 @@ import { computeMonthlyPartyNetsUsingVoucherDates } from "@/lib/accounts/dashboa
 
 const prisma = new PrismaClient();
 
+/**
+ * For a calendar period: gross of customer invoices created in that period,
+ * minus customer (INCOME) payments dated in the same period that reference those invoice numbers.
+ * This is the net “still to collect” from invoicing activity in that month (floored at 0).
+ */
+async function netCustomerInvoicedReceivableForPeriod(
+  prismaClient: PrismaClient,
+  rangeStart: Date,
+  rangeEndExclusive: Date
+): Promise<number> {
+  const monthInvoices = await prismaClient.invoice.findMany({
+    where: {
+      customerId: { not: null },
+      status: { not: "Cancelled" },
+      createdAt: {
+        gte: rangeStart,
+        lt: rangeEndExclusive,
+      },
+    },
+    select: {
+      invoiceNumber: true,
+      totalAmount: true,
+    },
+  });
+
+  const gross = monthInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+  const invoiceNumbers = monthInvoices.map((i) => i.invoiceNumber);
+  if (invoiceNumbers.length === 0) return 0;
+
+  const paymentsReceived = await prismaClient.payment.aggregate({
+    where: {
+      transactionType: "INCOME",
+      fromCustomerId: { not: null },
+      date: {
+        gte: rangeStart,
+        lt: rangeEndExclusive,
+      },
+      invoice: { in: invoiceNumbers },
+    },
+    _sum: {
+      amount: true,
+    },
+  });
+
+  const paid = paymentsReceived._sum.amount || 0;
+  const net = gross - paid;
+  return Math.round(Math.max(0, net) * 100) / 100;
+}
+
 export async function GET() {
   try {
     const currentYear = new Date().getFullYear();
@@ -717,38 +766,22 @@ export async function GET() {
       }
     });
     
-    // Calculate current month accounts receivable (from invoices created this month)
-    const currentMonthReceivable = await prisma.invoice.aggregate({
-      where: {
-        customerId: { not: null },
-        status: { not: "Cancelled" },
-        createdAt: {
-          gte: new Date(currentYear, currentMonth, 1),
-          lt: new Date(currentYear, currentMonth + 1, 1)
-        }
-      },
-      _sum: {
-        totalAmount: true
-      }
-    });
-    
-    const currentMonthReceivableAmount = currentMonthReceivable._sum.totalAmount || 0;
+    // This month / last month: net invoiced receivable (new customer invoices minus payments this period toward those invoices)
+    const curMonthStart = new Date(currentYear, currentMonth, 1);
+    const curMonthEnd = new Date(currentYear, currentMonth + 1, 1);
+    const prevMonthStart = new Date(currentYear, currentMonth - 1, 1);
+    const prevMonthEnd = new Date(currentYear, currentMonth, 1);
 
-    // Previous month: same definition (new customer invoices by createdAt) — for MoM % on Receivables card
-    const previousMonthReceivable = await prisma.invoice.aggregate({
-      where: {
-        customerId: { not: null },
-        status: { not: "Cancelled" },
-        createdAt: {
-          gte: new Date(currentYear, currentMonth - 1, 1),
-          lt: new Date(currentYear, currentMonth, 1),
-        },
-      },
-      _sum: {
-        totalAmount: true,
-      },
-    });
-    const previousMonthReceivableAmount = previousMonthReceivable._sum.totalAmount || 0;
+    const currentMonthReceivableAmount = await netCustomerInvoicedReceivableForPeriod(
+      prisma,
+      curMonthStart,
+      curMonthEnd
+    );
+    const previousMonthReceivableAmount = await netCustomerInvoicedReceivableForPeriod(
+      prisma,
+      prevMonthStart,
+      prevMonthEnd
+    );
     
     // Last 12 months: nets from ledger using voucher dates (shipment / payment / note dates), same rules as accounts transaction pages
     const currentDateForAccounts = new Date();
@@ -797,7 +830,7 @@ export async function GET() {
     // Calculate revenue percentage change
     const revenuePercentageChange = calculatePercentageChange(currentMonthTotal, previousMonthTotal);
 
-    // MoM change for new customer invoice volume (matches currentMonthData.accountsReceivable)
+    // MoM change for net invoiced receivable (matches currentMonthData.accountsReceivable)
     const receivablePercentageChange = calculatePercentageChange(
       currentMonthReceivableAmount,
       previousMonthReceivableAmount
