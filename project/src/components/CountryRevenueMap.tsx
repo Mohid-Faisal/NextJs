@@ -123,6 +123,24 @@ export default function CountryRevenueMap({ data, onHoverCountry, onClickCountry
     return out;
   }, [data]);
 
+  /** Totals across all destinations in this dataset (for % of total on hover) */
+  const totalsAll = useMemo(() => {
+    let revenue = 0;
+    let shipments = 0;
+    data.forEach((d) => {
+      revenue += d.revenue || 0;
+      shipments += d.shipments || 0;
+    });
+    return { revenue, shipments };
+  }, [data]);
+
+  const pctOfTotal = useCallback((part: number, total: number) => {
+    if (total <= 0 || part <= 0) return null;
+    const p = (part / total) * 100;
+    const decimals = p > 0 && p < 0.1 ? 2 : 1;
+    return `${p.toFixed(decimals)}%`;
+  }, []);
+
   const colorByIso2 = useMemo(() => {
     const byIso: Record<string, string> = {};
     const entries = Object.entries(revenueByIso2).filter(([, v]) => v.shipments > 0);
@@ -345,18 +363,28 @@ export default function CountryRevenueMap({ data, onHoverCountry, onClickCountry
               ✕
             </button>
           </div>
-          {selected.revenue > 0 ? (
+          {selected.revenue > 0 || selected.shipments > 0 ? (
             <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 <span className="text-gray-500 dark:text-gray-400">Revenue</span>
-                <span className="font-medium text-gray-800 dark:text-gray-100">
+                <span className="font-medium text-gray-800 dark:text-gray-100 text-right">
                   {selected.revenue.toLocaleString()}
+                  {pctOfTotal(selected.revenue, totalsAll.revenue) && (
+                    <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">
+                      ({pctOfTotal(selected.revenue, totalsAll.revenue)} of total)
+                    </span>
+                  )}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 <span className="text-gray-500 dark:text-gray-400">Shipments</span>
-                <span className="font-medium text-gray-800 dark:text-gray-100">
+                <span className="font-medium text-gray-800 dark:text-gray-100 text-right">
                   {selected.shipments.toLocaleString()}
+                  {pctOfTotal(selected.shipments, totalsAll.shipments) && (
+                    <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">
+                      ({pctOfTotal(selected.shipments, totalsAll.shipments)} of total)
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -377,27 +405,39 @@ export default function CountryRevenueMap({ data, onHoverCountry, onClickCountry
       {/* Hover tooltip */}
       {tooltip && !dragging && (
         <div
-          className="pointer-events-none fixed z-50 rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow-lg"
+          className="pointer-events-none fixed z-50 max-w-[min(18rem,calc(100vw-1rem))] rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow-lg"
           style={{ left: tooltip.x + 14, top: tooltip.y - 44 }}
         >
           <div className="font-semibold text-sm">{tooltip.name}</div>
-          {tooltip.revenue > 0 ? (
+          {tooltip.revenue > 0 || tooltip.shipments > 0 ? (
             <>
               <div className="mt-1 text-gray-300">
                 Revenue:{" "}
                 <span className="text-white font-medium">
                   {tooltip.revenue.toLocaleString()}
                 </span>
+                {pctOfTotal(tooltip.revenue, totalsAll.revenue) && (
+                  <span className="text-gray-400">
+                    {" "}
+                    ({pctOfTotal(tooltip.revenue, totalsAll.revenue)} of total)
+                  </span>
+                )}
               </div>
               <div className="text-gray-300">
                 Shipments:{" "}
                 <span className="text-white font-medium">
                   {tooltip.shipments.toLocaleString()}
                 </span>
+                {pctOfTotal(tooltip.shipments, totalsAll.shipments) && (
+                  <span className="text-gray-400">
+                    {" "}
+                    ({pctOfTotal(tooltip.shipments, totalsAll.shipments)} of total)
+                  </span>
+                )}
               </div>
             </>
           ) : (
-            <div className="mt-1 text-gray-400">No revenue data</div>
+            <div className="mt-1 text-gray-400">No shipment data for this country</div>
           )}
         </div>
       )}

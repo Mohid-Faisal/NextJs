@@ -149,6 +149,7 @@ const DashboardPage = () => {
       shipmentPercentageChange: 0,
       customerPercentageChange: 0,
       revenuePercentageChange: 0,
+      receivablePercentageChange: 0,
     },
     accountsData: {
       accountsReceivable: 0,
@@ -285,12 +286,13 @@ const DashboardPage = () => {
           <MetricCard
             title="Receivables"
             value={data.accountsData.accountsReceivable.toLocaleString()}
-            change={data.percentageChanges?.revenuePercentageChange || 0}
+            change={data.percentageChanges?.receivablePercentageChange ?? 0}
             icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
             bgColor="bg-gradient-to-r from-orange-500 to-red-600"
             iconColor="text-white"
             onClick={() => setShowReceivableModal(true)}
             currentMonth={(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}
+            footerLabel="This month (new invoices)"
           />
           <MetricCard
             title="Total Shipments"
@@ -1166,7 +1168,7 @@ const DashboardPage = () => {
   );
 };
 
-const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick, currentMonth }: {
+const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick, currentMonth, footerLabel = "This month" }: {
   title: string | React.ReactNode;
   value: string | number;
   change: number;
@@ -1175,6 +1177,8 @@ const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick, c
   iconColor: string;
   onClick?: () => void;
   currentMonth?: string | number;
+  /** Shown next to the pill; values are current-period totals from the API, not “since last month” deltas */
+  footerLabel?: string;
 }) => {
   // Helper function to get light background color based on bgColor
   const getLightBgColor = () => {
@@ -1222,7 +1226,7 @@ const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick, c
       <div>
         {currentMonth !== undefined && (
           <div className="mt-3 flex items-center justify-end gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Since last month</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400 text-right max-w-[55%] sm:max-w-none">{footerLabel}</span>
             <div className={`px-3 py-1.5 rounded-full ${getLightBgColor()} ${getTextColor()}`}>
               <span className="text-sm font-semibold">
                 {typeof currentMonth === 'number' ? currentMonth.toLocaleString() : currentMonth}

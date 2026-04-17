@@ -182,7 +182,9 @@ export async function GET() {
     });
     
     // Get invoice statuses for all shipments
-    const invoiceNumbers = recentShipments.map(s => s.invoiceNumber).filter(Boolean);
+    const invoiceNumbers = recentShipments
+      .map((s) => s.invoiceNumber)
+      .filter((n): n is string => typeof n === "string" && n.length > 0);
     const invoices = await prisma.invoice.findMany({
       where: {
         invoiceNumber: {
@@ -203,9 +205,11 @@ export async function GET() {
     // Transform recent shipments to match expected format
     const transformedRecentShipments = recentShipments.map(shipment => {
       // Get invoice status from Invoice table, fallback to shipment's invoiceStatus, then "Unpaid"
-      const invoiceStatus = invoiceStatusMap.get(shipment.invoiceNumber) 
-        || shipment.invoiceStatus 
-        || "Unpaid";
+      const invNum = shipment.invoiceNumber ?? "";
+      const invoiceStatus =
+        (invNum ? invoiceStatusMap.get(invNum) : undefined) ||
+        shipment.invoiceStatus ||
+        "Unpaid";
       
       // Convert country code to full country name
       const destinationCountry = shipment.destination 
@@ -729,6 +733,22 @@ export async function GET() {
     });
     
     const currentMonthReceivableAmount = currentMonthReceivable._sum.totalAmount || 0;
+
+    // Previous month: same definition (new customer invoices by createdAt) — for MoM % on Receivables card
+    const previousMonthReceivable = await prisma.invoice.aggregate({
+      where: {
+        customerId: { not: null },
+        status: { not: "Cancelled" },
+        createdAt: {
+          gte: new Date(currentYear, currentMonth - 1, 1),
+          lt: new Date(currentYear, currentMonth, 1),
+        },
+      },
+      _sum: {
+        totalAmount: true,
+      },
+    });
+    const previousMonthReceivableAmount = previousMonthReceivable._sum.totalAmount || 0;
     
     // Last 12 months: nets from ledger using voucher dates (shipment / payment / note dates), same rules as accounts transaction pages
     const currentDateForAccounts = new Date();
@@ -776,6 +796,12 @@ export async function GET() {
     
     // Calculate revenue percentage change
     const revenuePercentageChange = calculatePercentageChange(currentMonthTotal, previousMonthTotal);
+
+    // MoM change for new customer invoice volume (matches currentMonthData.accountsReceivable)
+    const receivablePercentageChange = calculatePercentageChange(
+      currentMonthReceivableAmount,
+      previousMonthReceivableAmount
+    );
     
     // Get deliveries by country (only delivered shipments)
     const deliveriesByCountry = await prisma.shipment.groupBy({
@@ -820,7 +846,8 @@ export async function GET() {
       percentageChanges: {
         shipmentPercentageChange,
         customerPercentageChange,
-        revenuePercentageChange
+        revenuePercentageChange,
+        receivablePercentageChange,
       },
       accountsData: {
         // For receivable: negative customer balances become positive (they owe us money)
@@ -934,7 +961,8 @@ export async function GET() {
       percentageChanges: {
         shipmentPercentageChange: shipmentPercentageChange || 0,
         customerPercentageChange: customerPercentageChange || 0,
-        revenuePercentageChange: revenuePercentageChange || 0
+        revenuePercentageChange: revenuePercentageChange || 0,
+        receivablePercentageChange: receivablePercentageChange || 0,
       },
       accountsData: {
         accountsReceivable: accountsReceivable._sum.currentBalance || 0,
