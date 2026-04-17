@@ -44,12 +44,16 @@ type Account = {
 interface CreateCreditNoteDialogProps {
   onClose: () => void;
   onSuccess: () => void;
+  /** When set, dialog loads the note and submits PUT instead of POST */
+  editId?: number | null;
 }
 
 export default function CreateCreditNoteDialog({
   onClose,
   onSuccess,
+  editId = null,
 }: CreateCreditNoteDialogProps) {
+  const isEditMode = editId != null;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -66,6 +70,7 @@ export default function CreateCreditNoteDialog({
   const [isInvoiceSelectOpen, setIsInvoiceSelectOpen] = useState<boolean>(false);
   const [invoicesLoading, setInvoicesLoading] = useState<boolean>(false);
   const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<Invoice | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
   const invoiceSearchInputRef = useRef<HTMLInputElement>(null);
   const invoiceSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -128,6 +133,64 @@ export default function CreateCreditNoteDialog({
     };
   }, [invoiceSearchTerm, isInvoiceSelectOpen, fetchInvoicesBySearch]);
 
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    setEditLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/credit-notes/${editId}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          alert(data.error || "Failed to load credit note");
+          onClose();
+          return;
+        }
+        const invNum = data.invoiceNumber as string | null;
+        if (invNum && data.customer) {
+          setSelectedInvoiceDetails({
+            id: data.invoice?.id ?? 0,
+            invoiceNumber: invNum,
+            invoiceDate: data.date,
+            totalAmount: Number(data.amount),
+            currency: data.currency ?? "PKR",
+            customer: {
+              id: data.customer.id,
+              PersonName: data.customer.PersonName,
+              CompanyName: data.customer.CompanyName,
+            },
+          });
+          setSelectedInvoice(invNum);
+        } else {
+          setSelectedInvoiceDetails(null);
+          setSelectedInvoice("");
+        }
+        setSelectedCustomer(String(data.customerId));
+        setAmount(String(data.amount));
+        setDate(new Date(data.date).toISOString().slice(0, 10));
+        setDescription((data.descriptionDetail as string) || "");
+        setEntryType(data.type === "DEBIT" ? "DEBIT" : "CREDIT");
+        if (data.debitAccountId != null) {
+          setDebitAccountId(String(data.debitAccountId));
+        }
+        if (data.creditAccountId != null) {
+          setCreditAccountId(String(data.creditAccountId));
+        }
+      } catch {
+        if (!cancelled) {
+          alert("Failed to load credit note");
+          onClose();
+        }
+      } finally {
+        if (!cancelled) setEditLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editId, onClose]);
+
   /** Keeps selected invoice in the list so Radix Select can show the label; dedupes with search results */
   const mergedInvoiceOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -147,6 +210,7 @@ export default function CreateCreditNoteDialog({
 
   // Auto-fill customer when invoice is selected (use selectedInvoiceDetails or find in invoices)
   useEffect(() => {
+    if (isEditMode) return;
     if (selectedInvoice) {
       const invoice = selectedInvoiceDetails || invoices.find(i => i.invoiceNumber === selectedInvoice);
       if (invoice) {
@@ -154,7 +218,7 @@ export default function CreateCreditNoteDialog({
         setAmount(invoice.totalAmount.toString());
       }
     }
-  }, [selectedInvoice, invoices, selectedInvoiceDetails]);
+  }, [selectedInvoice, invoices, selectedInvoiceDetails, isEditMode]);
 
   // Focus search input when select opens
   useEffect(() => {
@@ -165,8 +229,9 @@ export default function CreateCreditNoteDialog({
     }
   }, [isInvoiceSelectOpen]);
 
-  // Automatically set accounts based on entry type
+  // Automatically set accounts based on entry type (create only; edit loads accounts from API)
   useEffect(() => {
+    if (isEditMode) return;
     if (accounts.length > 0) {
       if (entryType === "CREDIT") {
         // CREDIT type: Debit Cash, Credit Logistics Revenue
@@ -195,7 +260,7 @@ export default function CreateCreditNoteDialog({
         if (cashAccount) setCreditAccountId(cashAccount.id.toString());
       }
     }
-  }, [entryType, accounts]);
+  }, [entryType, accounts, isEditMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,32 +277,46 @@ export default function CreateCreditNoteDialog({
       const prefixedDescription = description
         ? `${typePrefix}: ${description}`
         : typePrefix;
-      const response = await fetch("/api/credit-notes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          invoiceNumber: selectedInvoice || null,
-          customerId: selectedCustomer,
-          amount: parseFloat(amount),
-          date,
-          description: prefixedDescription,
-          type: entryType,
-          debitAccountId: parseInt(debitAccountId),
-          creditAccountId: parseInt(creditAccountId),
-        }),
-      });
+      const response = isEditMode
+        ? await fetch(`/api/credit-notes/${editId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              amount: parseFloat(amount),
+              date,
+              description: prefixedDescription,
+              debitAccountId: parseInt(debitAccountId, 10),
+              creditAccountId: parseInt(creditAccountId, 10),
+            }),
+          })
+        : await fetch("/api/credit-notes", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              invoiceNumber: selectedInvoice || null,
+              customerId: selectedCustomer,
+              amount: parseFloat(amount),
+              date,
+              description: prefixedDescription,
+              type: entryType,
+              debitAccountId: parseInt(debitAccountId),
+              creditAccountId: parseInt(creditAccountId),
+            }),
+          });
 
       if (response.ok) {
         onSuccess();
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create credit note");
+        alert(error.error || (isEditMode ? "Failed to update credit note" : "Failed to create credit note"));
       }
     } catch (error) {
-      console.error("Error creating credit note:", error);
-      alert("Failed to create credit note");
+      console.error(isEditMode ? "Error updating credit note:" : "Error creating credit note:", error);
+      alert(isEditMode ? "Failed to update credit note" : "Failed to create credit note");
     } finally {
       setIsLoading(false);
     }
@@ -248,11 +327,19 @@ export default function CreateCreditNoteDialog({
     return date.toLocaleDateString();
   };
 
+  if (isEditMode && editLoading) {
+    return (
+      <div className="p-6 text-center text-sm text-muted-foreground">
+        Loading credit note…
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Create New Credit Note
+          {isEditMode ? "Edit Credit Note" : "Create New Credit Note"}
         </h2>
       </div>
 
@@ -263,6 +350,7 @@ export default function CreateCreditNoteDialog({
             Invoice <span className="text-red-500">*</span>
           </Label>
           <Select 
+            disabled={isEditMode}
             value={selectedInvoice} 
             onValueChange={(value) => {
               const inv = invoices.find(i => i.invoiceNumber === value) ?? selectedInvoiceDetails;
@@ -393,7 +481,11 @@ export default function CreateCreditNoteDialog({
             <Label htmlFor="type" className="text-sm font-medium">
               Type <span className="text-red-500">*</span>
             </Label>
-            <Select value={entryType} onValueChange={(v) => setEntryType(v as "DEBIT" | "CREDIT")}> 
+            <Select
+              disabled={isEditMode}
+              value={entryType}
+              onValueChange={(v) => setEntryType(v as "DEBIT" | "CREDIT")}
+            >
               <SelectTrigger id="type" className="w-full h-10">
                 <SelectValue placeholder="Select Type" />
               </SelectTrigger>
@@ -480,7 +572,7 @@ export default function CreateCreditNoteDialog({
             disabled={isLoading}
             className="flex-1 bg-green-600 hover:bg-green-700"
           >
-            {isLoading ? "Creating..." : "Create"}
+            {isLoading ? (isEditMode ? "Saving…" : "Creating…") : isEditMode ? "Save" : "Create"}
           </Button>
         </div>
       </form>

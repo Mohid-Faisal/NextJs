@@ -44,12 +44,15 @@ type Account = {
 interface CreateDebitNoteDialogProps {
   onClose: () => void;
   onSuccess: () => void;
+  editId?: number | null;
 }
 
 export default function CreateDebitNoteDialog({
   onClose,
   onSuccess,
+  editId = null,
 }: CreateDebitNoteDialogProps) {
+  const isEditMode = editId != null;
   const [bills, setBills] = useState<Bill[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -66,6 +69,7 @@ export default function CreateDebitNoteDialog({
   const [isBillSelectOpen, setIsBillSelectOpen] = useState<boolean>(false);
   const [billsLoading, setBillsLoading] = useState<boolean>(false);
   const [selectedBillDetails, setSelectedBillDetails] = useState<Bill | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
   const billSearchInputRef = useRef<HTMLInputElement>(null);
   const billSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -128,6 +132,64 @@ export default function CreateDebitNoteDialog({
     };
   }, [billSearchTerm, isBillSelectOpen, fetchBillsBySearch]);
 
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    setEditLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/debit-notes/${editId}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          alert(data.error || "Failed to load debit note");
+          onClose();
+          return;
+        }
+        const bid = data.billId as number | null;
+        if (bid != null && data.vendor) {
+          setSelectedBillDetails({
+            id: bid,
+            invoiceNumber: data.billInvoiceNumber ?? data.bill?.invoiceNumber ?? "",
+            invoiceDate: data.date,
+            totalAmount: Number(data.amount),
+            currency: data.currency ?? "USD",
+            vendor: {
+              id: data.vendor.id,
+              PersonName: data.vendor.PersonName,
+              CompanyName: data.vendor.CompanyName,
+            },
+          });
+          setSelectedBill(String(bid));
+        } else {
+          setSelectedBillDetails(null);
+          setSelectedBill("");
+        }
+        setSelectedVendor(String(data.vendorId));
+        setAmount(String(data.amount));
+        setDate(new Date(data.date).toISOString().slice(0, 10));
+        setDescription((data.descriptionDetail as string) || "");
+        setEntryType(data.type === "CREDIT" ? "CREDIT" : "DEBIT");
+        if (data.debitAccountId != null) {
+          setDebitAccountId(String(data.debitAccountId));
+        }
+        if (data.creditAccountId != null) {
+          setCreditAccountId(String(data.creditAccountId));
+        }
+      } catch {
+        if (!cancelled) {
+          alert("Failed to load debit note");
+          onClose();
+        }
+      } finally {
+        if (!cancelled) setEditLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editId, onClose]);
+
   /** Keeps selected bill in the list for Radix Select + dedupes with search results */
   const mergedBillOptions = useMemo(() => {
     const seen = new Set<number>();
@@ -147,6 +209,7 @@ export default function CreateDebitNoteDialog({
 
   // Auto-fill vendor when bill is selected (use selectedBillDetails or find in bills)
   useEffect(() => {
+    if (isEditMode) return;
     if (selectedBill) {
       const bill = selectedBillDetails || bills.find(b => b.id.toString() === selectedBill);
       if (bill) {
@@ -154,7 +217,7 @@ export default function CreateDebitNoteDialog({
         setAmount(bill.totalAmount.toString());
       }
     }
-  }, [selectedBill, bills, selectedBillDetails]);
+  }, [selectedBill, bills, selectedBillDetails, isEditMode]);
 
   // Focus search input when select opens
   useEffect(() => {
@@ -165,8 +228,9 @@ export default function CreateDebitNoteDialog({
     }
   }, [isBillSelectOpen]);
 
-  // Automatically set accounts based on entry type
+  // Automatically set accounts based on entry type (create only)
   useEffect(() => {
+    if (isEditMode) return;
     if (accounts.length > 0) {
       if (entryType === "CREDIT") {
         // CREDIT type: Debit Vendor Expense, Credit Cash
@@ -192,7 +256,7 @@ export default function CreateDebitNoteDialog({
         if (otherRevenueAccount) setCreditAccountId(otherRevenueAccount.id.toString());
       }
     }
-  }, [entryType, accounts]);
+  }, [entryType, accounts, isEditMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,32 +275,46 @@ export default function CreateDebitNoteDialog({
       const prefixedDescription = description
         ? `${typePrefix}: ${description}`
         : typePrefix;
-      const response = await fetch("/api/debit-notes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          billId: selectedBill || null,
-          vendorId: selectedVendor,
-          amount: numericAmount,
-          date,
-          description: prefixedDescription,
-          type: entryType,
-          debitAccountId: parseInt(debitAccountId),
-          creditAccountId: parseInt(creditAccountId),
-        }),
-      });
+      const response = isEditMode
+        ? await fetch(`/api/debit-notes/${editId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              amount: numericAmount,
+              date,
+              description: prefixedDescription,
+              debitAccountId: parseInt(debitAccountId, 10),
+              creditAccountId: parseInt(creditAccountId, 10),
+            }),
+          })
+        : await fetch("/api/debit-notes", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              billId: selectedBill || null,
+              vendorId: selectedVendor,
+              amount: numericAmount,
+              date,
+              description: prefixedDescription,
+              type: entryType,
+              debitAccountId: parseInt(debitAccountId),
+              creditAccountId: parseInt(creditAccountId),
+            }),
+          });
 
       if (response.ok) {
         onSuccess();
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create debit note");
+        alert(error.error || (isEditMode ? "Failed to update debit note" : "Failed to create debit note"));
       }
     } catch (error) {
-      console.error("Error creating debit note:", error);
-      alert("Failed to create debit note");
+      console.error(isEditMode ? "Error updating debit note:" : "Error creating debit note:", error);
+      alert(isEditMode ? "Failed to update debit note" : "Failed to create debit note");
     } finally {
       setIsLoading(false);
     }
@@ -247,11 +325,19 @@ export default function CreateDebitNoteDialog({
     return date.toLocaleDateString();
   };
 
+  if (isEditMode && editLoading) {
+    return (
+      <div className="p-6 text-center text-sm text-muted-foreground">
+        Loading debit note…
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Create New Debit Note
+          {isEditMode ? "Edit Debit Note" : "Create New Debit Note"}
         </h2>
         {/* <Button
           variant="ghost"
@@ -270,6 +356,7 @@ export default function CreateDebitNoteDialog({
             Bill <span className="text-red-500">*</span>
           </Label>
           <Select 
+            disabled={isEditMode}
             value={selectedBill} 
             onValueChange={(value) => {
               const bill = bills.find(b => b.id.toString() === value) ?? selectedBillDetails;
@@ -399,7 +486,11 @@ export default function CreateDebitNoteDialog({
             <Label htmlFor="type" className="text-sm font-medium">
               Type <span className="text-red-500">*</span>
             </Label>
-            <Select value={entryType} onValueChange={(v) => setEntryType(v as "DEBIT" | "CREDIT")}>
+            <Select
+              disabled={isEditMode}
+              value={entryType}
+              onValueChange={(v) => setEntryType(v as "DEBIT" | "CREDIT")}
+            >
               <SelectTrigger id="type" className="w-full h-10">
                 <SelectValue placeholder="Select Type" />
               </SelectTrigger>
@@ -486,7 +577,7 @@ export default function CreateDebitNoteDialog({
             disabled={isLoading}
             className="flex-1 bg-orange-500 hover:bg-orange-700"
           >
-            {isLoading ? "Creating..." : "Create"}
+            {isLoading ? (isEditMode ? "Saving…" : "Creating…") : isEditMode ? "Save" : "Create"}
           </Button>
         </div>
       </form>

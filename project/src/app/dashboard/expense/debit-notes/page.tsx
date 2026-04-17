@@ -27,6 +27,7 @@ import {
   FileText,
   Trash2,
   MoreVertical,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -74,6 +75,7 @@ export default function DebitNotesPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [editNoteId, setEditNoteId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchDebitNotes = async () => {
@@ -275,7 +277,10 @@ export default function DebitNotesPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2 sm:gap-3">
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
-              onClick={() => setOpenCreateDialog(true)}
+              onClick={() => {
+                setEditNoteId(null);
+                setOpenCreateDialog(true);
+              }}
               className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" /> Add New
@@ -416,6 +421,15 @@ export default function DebitNotesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={() => {
+                              setEditNoteId(dn.id);
+                              setOpenCreateDialog(true);
+                            }}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={async () => {
                               if (confirm("Are you sure you want to delete this debit note? This action cannot be undone.")) {
                                 try {
@@ -495,12 +509,24 @@ export default function DebitNotesPage() {
       </div>
 
       {/* Create Debit Note Dialog */}
-      <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
+      <Dialog
+        open={openCreateDialog}
+        onOpenChange={(open) => {
+          setOpenCreateDialog(open);
+          if (!open) setEditNoteId(null);
+        }}
+      >
         <DialogContent className="max-w-md w-full">
           <CreateDebitNoteDialog
-            onClose={() => setOpenCreateDialog(false)}
+            key={editNoteId ?? "new"}
+            editId={editNoteId}
+            onClose={() => {
+              setOpenCreateDialog(false);
+              setEditNoteId(null);
+            }}
             onSuccess={() => {
               setOpenCreateDialog(false);
+              setEditNoteId(null);
               // Refresh the data
               const params = new URLSearchParams({
                 page: String(page),

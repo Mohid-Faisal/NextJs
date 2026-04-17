@@ -28,6 +28,7 @@ import {
   computeDateRangeForPeriod,
   type AccountsPeriodType,
 } from "@/lib/accounts/periodDateRange";
+import { isCustomerCreditNoteReference } from "@/lib/noteFormats";
 
 type Customer = {
   id: number;
@@ -120,7 +121,7 @@ export default function CustomerTransactionsPage() {
       return [...transactions].sort((a, b) => {
         const getVoucherDate = (t: Transaction) => {
           // Check if this is a credit/debit note transaction
-          const isCreditDebitNote = t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT");
+          const isCreditDebitNote = isCustomerCreditNoteReference(t.reference);
           if (isCreditDebitNote && t.creditNoteDate) {
             return t.creditNoteDate;
           }
@@ -893,7 +894,7 @@ export default function CustomerTransactionsPage() {
       let voucherDateToUse: string;
       
       // Check if this is a credit/debit note transaction
-      const isCreditDebitNote = transaction.reference?.startsWith("#CREDIT") || transaction.reference?.startsWith("#DEBIT");
+      const isCreditDebitNote = isCustomerCreditNoteReference(transaction.reference);
       
       if (isCreditDebitNote && transaction.creditNoteDate) {
         // For credit/debit note transactions: use the date from the credit/debit note
@@ -964,7 +965,7 @@ export default function CustomerTransactionsPage() {
       
       return [
         formattedDate,
-        transaction.type === "CREDIT" ? "-" : transaction.invoice || "-",
+        transaction.invoice || "-",
         descriptionWithBoldPipes,
         transaction.reference || "-",
         debit,
@@ -984,7 +985,7 @@ export default function CustomerTransactionsPage() {
     // Use the same sorting logic as the table, but reverse to oldest first
     // This preserves the exact same-date ordering from the table
     const getVoucherDate = (t: Transaction) => {
-      const isCreditDebitNote = t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT");
+      const isCreditDebitNote = isCustomerCreditNoteReference(t.reference);
       if (isCreditDebitNote && t.creditNoteDate) {
         return t.creditNoteDate;
       }
@@ -1054,7 +1055,7 @@ export default function CustomerTransactionsPage() {
     // Sort transactions oldest first for export
     const sortedForExport = [...sortedTransactions].sort((a, b) => {
       const getVoucherDate = (t: Transaction) => {
-        const isCreditDebitNote = t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT");
+        const isCreditDebitNote = isCustomerCreditNoteReference(t.reference);
         if (isCreditDebitNote && t.creditNoteDate) {
           return t.creditNoteDate;
         }
@@ -1406,7 +1407,7 @@ export default function CustomerTransactionsPage() {
                     let shipmentDateToUse: string;
                     
                     // Check if this is a credit/debit note transaction
-                    const isCreditDebitNote = transaction.reference?.startsWith("#CREDIT") || transaction.reference?.startsWith("#DEBIT");
+                    const isCreditDebitNote = isCustomerCreditNoteReference(transaction.reference);
                     
                     if (isCreditDebitNote && transaction.creditNoteDate) {
                       // For credit/debit note transactions: use the date from the credit/debit note
@@ -1444,7 +1445,7 @@ export default function CustomerTransactionsPage() {
                         })()}
                       </td>
                       <td className="px-4 py-3">
-                        {transaction.type === "CREDIT" ? "-" : transaction.invoice || "-"}
+                        {transaction.invoice || "-"}
                       </td>
                       <td className="px-4 py-3">
                         {transaction.type === "DEBIT" && transaction.consigneeName

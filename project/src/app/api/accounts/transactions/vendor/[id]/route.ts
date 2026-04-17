@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { addVendorTransaction, createJournalEntryForTransaction } from "@/lib/utils";
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
+import { isVendorDebitNoteReference } from "@/lib/noteFormats";
 
 export async function GET(
   req: NextRequest,
@@ -168,11 +169,7 @@ export async function GET(
       }
 
       const debitNoteRefsList = listTransactions
-        .filter(
-          (t) =>
-            t.reference?.startsWith("#DEBIT") ||
-            t.reference?.startsWith("#CREDIT")
-        )
+        .filter((t) => isVendorDebitNoteReference(t.reference))
         .map((t) => t.reference!)
         .filter((ref, index, self) => self.indexOf(ref) === index);
 
@@ -389,11 +386,7 @@ export async function GET(
         .filter((inv, index, self) => self.indexOf(inv) === index);
 
       const paginatedDebitNoteRefs = orderedTransactions
-        .filter(
-          (t) =>
-            t.reference?.startsWith("#DEBIT") ||
-            t.reference?.startsWith("#CREDIT")
-        )
+        .filter((t) => isVendorDebitNoteReference(t.reference))
         .map((t) => t.reference!)
         .filter((ref, index, self) => self.indexOf(ref) === index);
 
@@ -589,7 +582,7 @@ export async function GET(
 
     // Batch fetch all related data to avoid N+1 queries
     const debitNoteRefs = allTransactions
-      .filter(t => t.reference?.startsWith("#DEBIT") || t.reference?.startsWith("#CREDIT"))
+      .filter((t) => isVendorDebitNoteReference(t.reference))
       .map(t => t.reference!)
       .filter((ref, index, self) => self.indexOf(ref) === index); // unique refs
     
@@ -975,7 +968,7 @@ export async function GET(
       .filter((inv, index, self) => self.indexOf(inv) === index);
     
     const paginatedDebitNoteRefs = orderedTransactions
-      .filter(t => t.reference?.startsWith("#DEBIT") || t.reference?.startsWith("#CREDIT"))
+      .filter((t) => isVendorDebitNoteReference(t.reference))
       .map(t => t.reference!)
       .filter((ref, index, self) => self.indexOf(ref) === index);
     

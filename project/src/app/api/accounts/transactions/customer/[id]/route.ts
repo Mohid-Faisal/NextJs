@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { addCustomerTransaction, createJournalEntryForTransaction, generateVendorInvoiceNumber } from "@/lib/utils";
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
+import { isCustomerCreditNoteReference } from "@/lib/noteFormats";
 
 export async function GET(
   req: NextRequest,
@@ -174,11 +175,7 @@ export async function GET(
       }
 
       const creditNoteRefsList = listTransactions
-        .filter(
-          (t) =>
-            t.reference?.startsWith("#CREDIT") ||
-            t.reference?.startsWith("#DEBIT")
-        )
+        .filter((t) => isCustomerCreditNoteReference(t.reference))
         .map((t) => t.reference!)
         .filter((ref, index, self) => self.indexOf(ref) === index);
 
@@ -494,11 +491,7 @@ export async function GET(
         .filter((inv, index, self) => self.indexOf(inv) === index);
 
       const paginatedCreditNoteRefs = orderedTransactions
-        .filter(
-          (t) =>
-            t.reference?.startsWith("#CREDIT") ||
-            t.reference?.startsWith("#DEBIT")
-        )
+        .filter((t) => isCustomerCreditNoteReference(t.reference))
         .map((t) => t.reference!)
         .filter((ref, index, self) => self.indexOf(ref) === index);
 
@@ -696,7 +689,7 @@ export async function GET(
 
     // Batch fetch all related data to avoid N+1 queries
     const creditNoteRefs = allTransactions
-      .filter(t => t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT"))
+      .filter((t) => isCustomerCreditNoteReference(t.reference))
       .map(t => t.reference!)
       .filter((ref, index, self) => self.indexOf(ref) === index); // unique refs
     
@@ -1162,7 +1155,7 @@ export async function GET(
       .filter((inv, index, self) => self.indexOf(inv) === index);
     
     const paginatedCreditNoteRefs = orderedTransactions
-      .filter(t => t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT"))
+      .filter((t) => isCustomerCreditNoteReference(t.reference))
       .map(t => t.reference!)
       .filter((ref, index, self) => self.indexOf(ref) === index);
     

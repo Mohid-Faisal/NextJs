@@ -3,6 +3,10 @@ import {
   resolveCreditPaymentVoucherDate,
   type PaymentRowForVoucherDate,
 } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
+import {
+  isCustomerCreditNoteReference,
+  isVendorDebitNoteReference,
+} from "@/lib/noteFormats";
 
 type LedgerTxn = {
   type: string;
@@ -197,18 +201,12 @@ export async function computeMonthlyPartyNetsUsingVoucherDates(
   ]);
 
   const creditNoteRefs = allCustomerTx
-    .filter(
-      (t) =>
-        t.reference?.startsWith("#CREDIT") || t.reference?.startsWith("#DEBIT")
-    )
+    .filter((t) => isCustomerCreditNoteReference(t.reference))
     .map((t) => t.reference!)
     .filter((ref, i, self) => self.indexOf(ref) === i);
 
   const debitNoteRefs = allVendorTx
-    .filter(
-      (t) =>
-        t.reference?.startsWith("#DEBIT") || t.reference?.startsWith("#CREDIT")
-    )
+    .filter((t) => isVendorDebitNoteReference(t.reference))
     .map((t) => t.reference!)
     .filter((ref, i, self) => self.indexOf(ref) === i);
 

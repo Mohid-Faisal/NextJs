@@ -4,6 +4,7 @@ import { addCustomerTransaction } from "@/lib/utils";
 import {
   formatCreditNoteReference,
   normalizeNoteLineDescription,
+  parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
 
 const prisma = new PrismaClient();
@@ -236,7 +237,7 @@ export async function POST(request: NextRequest) {
           invoiceId: resolvedInvoiceId,
           customerId: parseInt(customerId),
           amount: parseFloat(amount),
-          date: new Date(date),
+          date: parseDateInputAsLocalDate(date),
           description: lineDesc,
           currency,
         },
@@ -263,7 +264,7 @@ export async function POST(request: NextRequest) {
         data: {
           transactionType: "INCOME",
           category: "Customer Credit",
-          date: new Date(date),
+          date: parseDateInputAsLocalDate(date),
           amount: parseFloat(amount),
           fromPartyType: "CUSTOMER",
           fromCustomer: "Customer",
@@ -277,7 +278,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Create journal entry
-      const journalEntryDate = new Date(date);
+      const journalEntryDate = parseDateInputAsLocalDate(date);
       const journalEntry = await tx.journalEntry.create({
         data: {
           entryNumber: `JE-${Date.now()}`,
@@ -329,7 +330,7 @@ export async function POST(request: NextRequest) {
         lineDesc,
         creditNoteNumber,
         invoiceNumber ? invoiceNumber : undefined,
-        new Date(date)
+        parseDateInputAsLocalDate(date)
       );
 
       return { creditNote, payment, journalEntry };
@@ -353,7 +354,7 @@ export async function POST(request: NextRequest) {
           invoiceId: resolvedInvoiceId,
           customerId: parseInt(customerId),
           amount: parseFloat(amount),
-          date: new Date(date),
+          date: parseDateInputAsLocalDate(date),
           description: lineDesc,
           currency,
         },
@@ -380,7 +381,7 @@ export async function POST(request: NextRequest) {
         data: {
           transactionType: "EXPENSE",
           category: "Customer Credit",
-          date: new Date(date),
+          date: parseDateInputAsLocalDate(date),
           amount: Math.abs(parseFloat(amount)), // Use absolute value for payment amount
           fromPartyType: "CUSTOMER",
           fromCustomer: "Customer",
@@ -394,7 +395,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Create journal entry
-      const journalEntryDate = new Date(date);
+      const journalEntryDate = parseDateInputAsLocalDate(date);
       const journalEntry = await tx.journalEntry.create({
         data: {
           entryNumber: `JE-${Date.now()}`,
@@ -446,7 +447,7 @@ export async function POST(request: NextRequest) {
         lineDesc,
         creditNoteNumber,
         invoiceNumber ? invoiceNumber : undefined,
-        new Date(date)
+        parseDateInputAsLocalDate(date)
       );
 
       return { creditNote, payment, journalEntry };
