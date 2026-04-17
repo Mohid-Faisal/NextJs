@@ -171,6 +171,99 @@ export async function addVendorTransaction(
   return { previousBalance, newBalance };
 }
 
+/** Same format as add-shipment / bulk-upload customer & vendor invoice DEBIT lines */
+export function buildShipmentDebitTransactionLineDescription(
+  trackingId: string,
+  country: string,
+  packaging: string,
+  weightKg: number
+): string {
+  return `Tracking: ${trackingId} | Country: ${country} | Type: ${packaging} | Weight: ${weightKg}Kg`;
+}
+
+/**
+ * Rewrites primary shipment invoice DEBIT rows so metadata edits (weight, country, etc.) show on account transactions.
+ * Skips CREDIT-* rows (balance application). Prefers rows whose description starts with "Tracking:".
+ */
+export async function syncShipmentInvoiceDebitTransactionDescriptions(
+  prisma: any,
+  params: {
+    lineDescription: string;
+    invoices: Array<{
+      customerId: number | null;
+      vendorId: number | null;
+      invoiceNumber: string;
+    }>;
+  }
+) {
+  const { lineDescription, invoices } = params;
+
+  const isCreditRef = (ref: string | null | undefined, inv: string | null | undefined) =>
+    (ref ?? "").startsWith("CREDIT-") || (inv ?? "").startsWith("CREDIT-");
+
+  for (const inv of invoices) {
+    if (inv.customerId) {
+      const candidates = await prisma.customerTransaction.findMany({
+        where: {
+          customerId: inv.customerId,
+          type: "DEBIT",
+          OR: [
+            { reference: inv.invoiceNumber },
+            { invoice: inv.invoiceNumber },
+            { reference: { startsWith: `Invoice: ${inv.invoiceNumber}` } },
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      const row =
+        candidates.find(
+          (c: { reference?: string | null; invoice?: string | null; description?: string }) =>
+            !isCreditRef(c.reference, c.invoice) && (c.description?.startsWith("Tracking:") ?? false)
+        ) ??
+        candidates.find(
+          (c: { reference?: string | null; invoice?: string | null }) =>
+            !isCreditRef(c.reference, c.invoice)
+        );
+      if (row) {
+        await prisma.customerTransaction.update({
+          where: { id: row.id },
+          data: { description: lineDescription },
+        });
+      }
+    }
+
+    if (inv.vendorId) {
+      const candidates = await prisma.vendorTransaction.findMany({
+        where: {
+          vendorId: inv.vendorId,
+          type: "DEBIT",
+          OR: [
+            { reference: inv.invoiceNumber },
+            { invoice: inv.invoiceNumber },
+            { reference: { startsWith: `Invoice: ${inv.invoiceNumber}` } },
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      const row =
+        candidates.find(
+          (c: { reference?: string | null; invoice?: string | null; description?: string }) =>
+            !isCreditRef(c.reference, c.invoice) && (c.description?.startsWith("Tracking:") ?? false)
+        ) ??
+        candidates.find(
+          (c: { reference?: string | null; invoice?: string | null }) =>
+            !isCreditRef(c.reference, c.invoice)
+        );
+      if (row) {
+        await prisma.vendorTransaction.update({
+          where: { id: row.id },
+          data: { description: lineDescription },
+        });
+      }
+    }
+  }
+}
+
 // Invoice balance update utilities
 export async function updateInvoiceBalance(
   prisma: any,

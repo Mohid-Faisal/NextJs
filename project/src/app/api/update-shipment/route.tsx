@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { createJournalEntryForTransaction, updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/utils";
+import {
+  buildShipmentDebitTransactionLineDescription,
+  createJournalEntryForTransaction,
+  syncShipmentInvoiceDebitTransactionDescriptions,
+  updateInvoiceBalance,
+  updateJournalEntriesForInvoice,
+} from "@/lib/utils";
 
 // Function to update existing journal entries for transactions
 async function updateJournalEntryForTransaction(
@@ -355,6 +361,15 @@ async function handleShipmentUpdate(req: Request) {
     console.log(`Vendor total cost (${effectiveManualRate ? 'CoS' : 'originalPrice - fixedCharge'}):`, vendorTotalCost);
     console.log('=== END PRICING CALCULATIONS ===');
 
+    const totalWeightChanged =
+      totalWeight !== undefined &&
+      Math.abs(
+        parseFloat(String(totalWeight)) -
+          (existingShipment.totalWeight ?? existingShipment.weight ?? 0)
+      ) > 1e-6;
+    const packagingChanged =
+      packaging !== undefined && packaging !== (existingShipment.packaging ?? "");
+
     // Use a transaction to ensure all updates happen together
     const result = await prisma.$transaction(async (tx) => {
       // 1. Update the shipment
@@ -472,12 +487,17 @@ async function handleShipmentUpdate(req: Request) {
       }
 
       // 3. Update related invoices with shipment data
-      // Only update invoices if we have pricing data or if tracking/destination changed
-      const shouldUpdateInvoices = (price !== undefined || fuelSurcharge !== undefined || discount !== undefined) || 
-                                    (trackingId !== undefined && trackingId !== existingShipment.trackingId) ||
-                                    (destination !== undefined && destination !== existingShipment.destination) ||
-                                    (shipmentDate !== undefined) ||
-                                    (effectiveManualRate && cos !== undefined);
+      // Also refresh when weight or packaging changes (invoice line + transaction descriptions must match)
+      const shouldUpdateInvoices =
+        price !== undefined ||
+        fuelSurcharge !== undefined ||
+        discount !== undefined ||
+        (trackingId !== undefined && trackingId !== existingShipment.trackingId) ||
+        (destination !== undefined && destination !== existingShipment.destination) ||
+        shipmentDate !== undefined ||
+        (effectiveManualRate && cos !== undefined) ||
+        totalWeightChanged ||
+        packagingChanged;
       
       if (updatedShipment.invoices && updatedShipment.invoices.length > 0 && shouldUpdateInvoices) {
         const invoiceUpdates = updatedShipment.invoices.map(async (invoice) => {
@@ -623,6 +643,27 @@ async function handleShipmentUpdate(req: Request) {
           console.log(`- If old amount was $100 and new amount is $100: balance stays the same`);
         }
         console.log(`=== END FINAL UPDATE SUMMARY ===`);
+      }
+
+      // 4. Keep customer/vendor invoice DEBIT transaction descriptions in sync with shipment metadata
+      // (updateInvoiceBalance updates amounts but not descriptions; metadata-only edits skip that path)
+      if (updatedShipment.invoices && updatedShipment.invoices.length > 0) {
+        const wRaw = updatedShipment.totalWeight ?? updatedShipment.weight ?? 0;
+        const wNum = typeof wRaw === "number" ? wRaw : parseFloat(String(wRaw)) || 0;
+        const lineDescription = buildShipmentDebitTransactionLineDescription(
+          String(updatedShipment.trackingId ?? ""),
+          String(updatedShipment.destination ?? ""),
+          String(updatedShipment.packaging ?? ""),
+          wNum
+        );
+        await syncShipmentInvoiceDebitTransactionDescriptions(tx, {
+          lineDescription,
+          invoices: updatedShipment.invoices.map((inv) => ({
+            customerId: inv.customerId,
+            vendorId: inv.vendorId,
+            invoiceNumber: inv.invoiceNumber,
+          })),
+        });
       }
 
       return updatedShipment;
