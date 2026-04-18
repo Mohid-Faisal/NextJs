@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { addCustomerTransaction, createJournalEntryForTransaction, generateVendorInvoiceNumber } from "@/lib/utils";
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
+import { debitVoucherDateFromInvoice } from "@/lib/accounts/invoiceDebitVoucherDate";
 import { isCustomerCreditNoteReference } from "@/lib/noteFormats";
 
 export async function GET(
@@ -202,7 +203,10 @@ export async function GET(
         .map((t) => t.invoice!)
         .filter((inv, index, self) => self.indexOf(inv) === index);
 
-      const invoicesMapList = new Map<string, { shipmentDate?: Date }>();
+      const invoicesMapList = new Map<
+        string,
+        { shipmentDate?: Date; invoiceDate?: Date }
+      >();
       if (invoiceNumbersList.length > 0) {
         const invoicesList = await prisma.invoice.findMany({
           where: { invoiceNumber: { in: invoiceNumbersList } },
@@ -213,6 +217,7 @@ export async function GET(
         invoicesList.forEach((inv) => {
           invoicesMapList.set(inv.invoiceNumber, {
             shipmentDate: inv.shipment?.shipmentDate || undefined,
+            invoiceDate: inv.invoiceDate,
           });
         });
       }
@@ -288,8 +293,9 @@ export async function GET(
             }
           } else if (transaction.invoice) {
             const invoiceData = invoicesMapList.get(transaction.invoice);
-            if (transaction.type === "DEBIT" && invoiceData?.shipmentDate) {
-              voucherDate = invoiceData.shipmentDate;
+            if (transaction.type === "DEBIT") {
+              const vd = debitVoucherDateFromInvoice(invoiceData);
+              if (vd) voucherDate = vd;
             }
           }
 
@@ -745,7 +751,10 @@ export async function GET(
       .map(t => t.invoice!)
       .filter((inv, index, self) => self.indexOf(inv) === index); // unique invoices
     
-    const invoicesMap = new Map<string, { shipmentDate?: Date }>();
+    const invoicesMap = new Map<
+      string,
+      { shipmentDate?: Date; invoiceDate?: Date }
+    >();
     if (invoiceNumbers.length > 0) {
       const invoices = await prisma.invoice.findMany({
         where: { invoiceNumber: { in: invoiceNumbers } },
@@ -757,7 +766,8 @@ export async function GET(
       });
       invoices.forEach(inv => {
         invoicesMap.set(inv.invoiceNumber, {
-          shipmentDate: inv.shipment?.shipmentDate || undefined
+          shipmentDate: inv.shipment?.shipmentDate || undefined,
+          invoiceDate: inv.invoiceDate,
         });
       });
     }
@@ -832,8 +842,9 @@ export async function GET(
         }
       } else if (transaction.invoice) {
         const invoiceData = invoicesMap.get(transaction.invoice);
-        if (transaction.type === "DEBIT" && invoiceData?.shipmentDate) {
-          voucherDate = invoiceData.shipmentDate;
+        if (transaction.type === "DEBIT") {
+          const vd = debitVoucherDateFromInvoice(invoiceData);
+          if (vd) voucherDate = vd;
         }
       }
 

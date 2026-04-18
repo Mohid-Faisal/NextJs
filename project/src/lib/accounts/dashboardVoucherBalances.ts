@@ -7,6 +7,10 @@ import {
   isCustomerCreditNoteReference,
   isVendorDebitNoteReference,
 } from "@/lib/noteFormats";
+import {
+  debitVoucherDateFromInvoice,
+  type InvoiceFieldsForDebitVoucher,
+} from "@/lib/accounts/invoiceDebitVoucherDate";
 
 type LedgerTxn = {
   type: string;
@@ -53,7 +57,7 @@ function compareVendorVoucherOrder(a: WithVoucher, b: WithVoucher): number {
 function customerVoucherDate(
   t: LedgerTxn,
   creditNotesMap: Map<string, Date>,
-  invoicesMap: Map<string, { shipmentDate?: Date }>,
+  invoicesMap: Map<string, InvoiceFieldsForDebitVoucher>,
   partyPayments: PaymentRowForVoucherDate[]
 ): Date {
   let voucherDate = t.createdAt;
@@ -77,8 +81,9 @@ function customerVoucherDate(
     }
   } else if (t.invoice) {
     const invoiceData = invoicesMap.get(t.invoice);
-    if (t.type === "DEBIT" && invoiceData?.shipmentDate) {
-      voucherDate = invoiceData.shipmentDate;
+    if (t.type === "DEBIT") {
+      const vd = debitVoucherDateFromInvoice(invoiceData);
+      if (vd) voucherDate = vd;
     }
   }
   return voucherDate;
@@ -87,7 +92,7 @@ function customerVoucherDate(
 function vendorVoucherDate(
   t: LedgerTxn,
   debitNotesMap: Map<string, Date>,
-  invoicesMap: Map<string, { shipmentDate?: Date }>,
+  invoicesMap: Map<string, InvoiceFieldsForDebitVoucher>,
   partyPayments: PaymentRowForVoucherDate[]
 ): Date {
   let voucherDate = t.createdAt;
@@ -111,8 +116,9 @@ function vendorVoucherDate(
     }
   } else if (t.invoice) {
     const invoiceData = invoicesMap.get(t.invoice);
-    if (t.type === "DEBIT" && invoiceData?.shipmentDate) {
-      voucherDate = invoiceData.shipmentDate;
+    if (t.type === "DEBIT") {
+      const vd = debitVoucherDateFromInvoice(invoiceData);
+      if (vd) voucherDate = vd;
     }
   }
   return voucherDate;
@@ -151,8 +157,8 @@ function vendorNetAsOf(sorted: WithVoucher[], endExclusive: Date): number {
 async function buildInvoicesShipmentMap(
   prisma: PrismaClient,
   invoiceNumbers: string[]
-): Promise<Map<string, { shipmentDate?: Date }>> {
-  const map = new Map<string, { shipmentDate?: Date }>();
+): Promise<Map<string, InvoiceFieldsForDebitVoucher>> {
+  const map = new Map<string, InvoiceFieldsForDebitVoucher>();
   if (invoiceNumbers.length === 0) return map;
   const invoices = await prisma.invoice.findMany({
     where: { invoiceNumber: { in: invoiceNumbers } },
@@ -163,6 +169,7 @@ async function buildInvoicesShipmentMap(
   for (const inv of invoices) {
     map.set(inv.invoiceNumber, {
       shipmentDate: inv.shipment?.shipmentDate ?? undefined,
+      invoiceDate: inv.invoiceDate,
     });
   }
   return map;
