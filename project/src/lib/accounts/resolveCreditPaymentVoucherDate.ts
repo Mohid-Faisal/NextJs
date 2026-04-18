@@ -108,5 +108,39 @@ export function resolveCreditPaymentVoucherDate(
   if (byAmt.length === 1) return byAmt[0].date;
   if (byAmt.length > 1) return closestPaymentDate(byAmt, ledger.createdAt);
 
+  // 6) Same invoice: any payment(s) — pick closest amount match, then latest date
+  if (ledger.invoice) {
+    const byInv = payments.filter((p) => p.invoice === ledger.invoice);
+    if (byInv.length === 1) return byInv[0].date;
+    if (byInv.length > 1) {
+      const sorted = [...byInv].sort(
+        (a, b) =>
+          Math.abs(a.amount - ledger.amount) - Math.abs(b.amount - ledger.amount)
+      );
+      const bestAmt = sorted[0].amount;
+      const tied = sorted.filter((p) => Math.abs(p.amount - bestAmt) < AMOUNT_EPS);
+      if (tied.length === 1) return tied[0].date;
+      return tied.reduce((a, b) => (a.date > b.date ? a : b)).date;
+    }
+  }
+
+  // 7) Strong reference only (any amount)
+  if (ledger.reference && !isWeakPaymentReference(ledger.reference)) {
+    const byRef = payments.filter((p) => p.reference === ledger.reference);
+    if (byRef.length === 1) return byRef[0].date;
+    if (byRef.length > 1) {
+      return byRef.reduce((a, b) => (a.date > b.date ? a : b)).date;
+    }
+  }
+
+  // 8) Closest amount among all fetched payments (still returns a Payment.date)
+  if (payments.length >= 1) {
+    const sorted = [...payments].sort(
+      (a, b) =>
+        Math.abs(a.amount - ledger.amount) - Math.abs(b.amount - ledger.amount)
+    );
+    return sorted[0].date;
+  }
+
   return undefined;
 }
