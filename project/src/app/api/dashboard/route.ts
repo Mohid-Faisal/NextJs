@@ -787,13 +787,12 @@ export async function GET() {
     const currentDateForAccounts = new Date();
     const monthNamesForAccounts = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthSlices: { targetDate: Date; endExclusive: Date }[] = [];
+    const y0 = currentDateForAccounts.getUTCFullYear();
+    const m0 = currentDateForAccounts.getUTCMonth();
     for (let i = 11; i >= 0; i--) {
-      const targetDate = new Date(
-        currentDateForAccounts.getFullYear(),
-        currentDateForAccounts.getMonth() - i,
-        1
-      );
-      const endExclusive = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 1);
+      const mi = m0 - i;
+      const targetDate = new Date(Date.UTC(y0, mi, 1));
+      const endExclusive = new Date(Date.UTC(y0, mi + 1, 1));
       monthSlices.push({ targetDate, endExclusive });
     }
 
@@ -809,7 +808,7 @@ export async function GET() {
     }[] = monthSlices.map(({ targetDate }, i) => {
       const { customerNet, vendorNet } = voucherMonthNets[i];
       return {
-        month: `${monthNamesForAccounts[targetDate.getMonth()]} ${targetDate.getFullYear().toString().slice(-2)}`,
+        month: `${monthNamesForAccounts[targetDate.getUTCMonth()]} ${targetDate.getUTCFullYear().toString().slice(-2)}`,
         receivable: Math.abs(Math.min(customerNet, 0)),
         payable: Math.max(vendorNet, 0),
       };

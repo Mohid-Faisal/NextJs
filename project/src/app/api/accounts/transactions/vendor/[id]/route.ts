@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { addVendorTransaction, createJournalEntryForTransaction } from "@/lib/utils";
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
-import { debitVoucherDateFromInvoice } from "@/lib/accounts/invoiceDebitVoucherDate";
+import { computeVendorLedgerVoucherDate } from "@/lib/accounts/vendorLedgerVoucherDate";
+import type { InvoiceFieldsForDebitVoucher } from "@/lib/accounts/invoiceDebitVoucherDate";
 import { isVendorDebitNoteReference } from "@/lib/noteFormats";
 
 export async function GET(
@@ -190,10 +191,7 @@ export async function GET(
         .map((t) => t.invoice!)
         .filter((inv, index, self) => self.indexOf(inv) === index);
 
-      const invoicesMapList = new Map<
-        string,
-        { shipmentDate?: Date; invoiceDate?: Date }
-      >();
+      const invoicesMapList = new Map<string, InvoiceFieldsForDebitVoucher>();
       if (invoiceNumbersList.length > 0) {
         const invoicesList = await prisma.invoice.findMany({
           where: { invoiceNumber: { in: invoiceNumbersList } },
@@ -253,39 +251,11 @@ export async function GET(
 
       const transactionsWithVoucherDatesList = listTransactions.map(
         (transaction) => {
-          let voucherDate = transaction.createdAt;
-
-          if (transaction.reference) {
-            const debitNoteDate = debitNotesMapList.get(transaction.reference);
-            if (debitNoteDate) {
-              voucherDate = debitNoteDate;
-            }
-          }
-
-          if (transaction.type === "CREDIT") {
-            const fromDebitNote =
-              transaction.reference &&
-              debitNotesMapList.has(transaction.reference);
-            if (!fromDebitNote) {
-              const paymentDate = resolveCreditPaymentVoucherDate(
-                {
-                  amount: transaction.amount,
-                  invoice: transaction.invoice,
-                  reference: transaction.reference,
-                  createdAt: transaction.createdAt,
-                },
-                paymentsListForVoucher
-              );
-              if (paymentDate) voucherDate = paymentDate;
-            }
-          } else if (transaction.invoice) {
-            const invoiceData = invoicesMapList.get(transaction.invoice);
-            if (transaction.type === "DEBIT") {
-              const vd = debitVoucherDateFromInvoice(invoiceData);
-              if (vd) voucherDate = vd;
-            }
-          }
-
+          const voucherDate = computeVendorLedgerVoucherDate(transaction, {
+            debitNotesMap: debitNotesMapList,
+            invoicesMap: invoicesMapList,
+            paymentsForVoucher: paymentsListForVoucher,
+          });
           return { ...transaction, voucherDate };
         }
       );
@@ -420,6 +390,14 @@ export async function GET(
         });
       }
 
+      const invoicesFieldsByNumber = new Map<string, InvoiceFieldsForDebitVoucher>();
+      paginatedInvoicesMap.forEach((inv, invoiceNumber) => {
+        invoicesFieldsByNumber.set(invoiceNumber, {
+          shipmentDate: inv.shipment?.shipmentDate ?? undefined,
+          invoiceDate: inv.invoiceDate,
+        });
+      });
+
       // Batch fetch debit notes for paginated transactions
       const paginatedDebitNotesMap = new Map<string, Date>();
       if (paginatedDebitNoteRefs.length > 0) {
@@ -539,6 +517,15 @@ export async function GET(
             }
           }
 
+          const ledgerVoucherDate = computeVendorLedgerVoucherDate(
+            transaction,
+            {
+              debitNotesMap: paginatedDebitNotesMap,
+              invoicesMap: invoicesFieldsByNumber,
+              paymentsForVoucher: paginatedPaymentsList,
+            }
+          );
+
           return {
             ...transaction,
             shipmentInfo,
@@ -546,6 +533,7 @@ export async function GET(
             paymentDate,
             debitNoteDate,
             consigneeName,
+            ledgerVoucherDate: ledgerVoucherDate.toISOString(),
           };
         }
       );
@@ -609,10 +597,7 @@ export async function GET(
       .map(t => t.invoice!)
       .filter((inv, index, self) => self.indexOf(inv) === index); // unique invoices
     
-    const invoicesMap = new Map<
-      string,
-      { shipmentDate?: Date; invoiceDate?: Date }
-    >();
+    const invoicesMap = new Map<string, InvoiceFieldsForDebitVoucher>();
     if (invoiceNumbers.length > 0) {
       const invoices = await prisma.invoice.findMany({
         where: { invoiceNumber: { in: invoiceNumbers } },
@@ -673,38 +658,11 @@ export async function GET(
     }
 
     const transactionsWithVoucherDates = allTransactions.map((transaction) => {
-      let voucherDate = transaction.createdAt;
-
-      if (transaction.reference) {
-        const debitNoteDate = debitNotesMap.get(transaction.reference);
-        if (debitNoteDate) {
-          voucherDate = debitNoteDate;
-        }
-      }
-
-      if (transaction.type === "CREDIT") {
-        const fromDebitNote =
-          transaction.reference && debitNotesMap.has(transaction.reference);
-        if (!fromDebitNote) {
-          const paymentDate = resolveCreditPaymentVoucherDate(
-            {
-              amount: transaction.amount,
-              invoice: transaction.invoice,
-              reference: transaction.reference,
-              createdAt: transaction.createdAt,
-            },
-            paymentsForVoucherHeavy
-          );
-          if (paymentDate) voucherDate = paymentDate;
-        }
-      } else if (transaction.invoice) {
-        const invoiceData = invoicesMap.get(transaction.invoice);
-        if (transaction.type === "DEBIT") {
-          const vd = debitVoucherDateFromInvoice(invoiceData);
-          if (vd) voucherDate = vd;
-        }
-      }
-
+      const voucherDate = computeVendorLedgerVoucherDate(transaction, {
+        debitNotesMap,
+        invoicesMap,
+        paymentsForVoucher: paymentsForVoucherHeavy,
+      });
       return {
         ...transaction,
         voucherDate,
@@ -1006,6 +964,14 @@ export async function GET(
         paginatedInvoicesMap.set(inv.invoiceNumber, inv);
       });
     }
+
+    const invoicesFieldsByNumberRecalc = new Map<string, InvoiceFieldsForDebitVoucher>();
+    paginatedInvoicesMap.forEach((inv, invoiceNumber) => {
+      invoicesFieldsByNumberRecalc.set(invoiceNumber, {
+        shipmentDate: inv.shipment?.shipmentDate ?? undefined,
+        invoiceDate: inv.invoiceDate,
+      });
+    });
     
     // Batch fetch debit notes for paginated transactions
     const paginatedDebitNotesMap = new Map<string, Date>();
@@ -1120,6 +1086,15 @@ export async function GET(
         }
       }
 
+      const ledgerVoucherDateRecalc = computeVendorLedgerVoucherDate(
+        transaction,
+        {
+          debitNotesMap: paginatedDebitNotesMap,
+          invoicesMap: invoicesFieldsByNumberRecalc,
+          paymentsForVoucher: paginatedPaymentsListRecalc,
+        }
+      );
+
       return {
         ...transaction,
         shipmentInfo,
@@ -1127,6 +1102,7 @@ export async function GET(
         paymentDate,
         debitNoteDate,
         consigneeName,
+        ledgerVoucherDate: ledgerVoucherDateRecalc.toISOString(),
       };
     });
 

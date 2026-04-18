@@ -11,6 +11,7 @@ import {
   debitVoucherDateFromInvoice,
   type InvoiceFieldsForDebitVoucher,
 } from "@/lib/accounts/invoiceDebitVoucherDate";
+import { computeVendorLedgerVoucherDate } from "@/lib/accounts/vendorLedgerVoucherDate";
 
 type LedgerTxn = {
   type: string;
@@ -95,33 +96,11 @@ function vendorVoucherDate(
   invoicesMap: Map<string, InvoiceFieldsForDebitVoucher>,
   partyPayments: PaymentRowForVoucherDate[]
 ): Date {
-  let voucherDate = t.createdAt;
-  if (t.reference) {
-    const debitNoteDate = debitNotesMap.get(t.reference);
-    if (debitNoteDate) voucherDate = debitNoteDate;
-  }
-  if (t.type === "CREDIT") {
-    const fromNote = t.reference && debitNotesMap.has(t.reference);
-    if (!fromNote) {
-      const paymentDate = resolveCreditPaymentVoucherDate(
-        {
-          amount: t.amount,
-          invoice: t.invoice,
-          reference: t.reference,
-          createdAt: t.createdAt,
-        },
-        partyPayments
-      );
-      if (paymentDate) voucherDate = paymentDate;
-    }
-  } else if (t.invoice) {
-    const invoiceData = invoicesMap.get(t.invoice);
-    if (t.type === "DEBIT") {
-      const vd = debitVoucherDateFromInvoice(invoiceData);
-      if (vd) voucherDate = vd;
-    }
-  }
-  return voucherDate;
+  return computeVendorLedgerVoucherDate(t, {
+    debitNotesMap,
+    invoicesMap,
+    paymentsForVoucher: partyPayments,
+  });
 }
 
 function customerNetAsOf(sorted: WithVoucher[], endExclusive: Date): number {

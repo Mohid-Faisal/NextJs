@@ -56,6 +56,8 @@ type Transaction = {
   paymentDate?: string;
   debitNoteDate?: string;
   consigneeName?: string;
+  /** Canonical voucher instant — matches recalc / dashboard (use for sort + Date column when set) */
+  ledgerVoucherDate?: string;
 };
 
 export default function VendorTransactionsPage() {
@@ -111,6 +113,9 @@ export default function VendorTransactionsPage() {
       // Sort by voucher date (using the same logic as display)
       return [...transactions].sort((a, b) => {
         const getVoucherDate = (t: Transaction) => {
+          if (t.ledgerVoucherDate) {
+            return t.ledgerVoucherDate;
+          }
           // Check if this is a debit note transaction
           const isDebitNote = isVendorDebitNoteReference(t.reference);
           if (isDebitNote && t.debitNoteDate) {
@@ -878,11 +883,12 @@ export default function VendorTransactionsPage() {
       // Determine voucher date based on transaction type
       let voucherDateToUse: string;
       
-      // Check if this is a debit note transaction
-      const isDebitNote = isVendorDebitNoteReference(transaction.reference);
-      
-      if (isDebitNote && transaction.debitNoteDate) {
-        // For debit note transactions: use the date from the debit note
+      if (transaction.ledgerVoucherDate) {
+        voucherDateToUse = transaction.ledgerVoucherDate;
+      } else if (
+        isVendorDebitNoteReference(transaction.reference) &&
+        transaction.debitNoteDate
+      ) {
         voucherDateToUse = transaction.debitNoteDate;
       } else {
         // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
@@ -971,6 +977,7 @@ export default function VendorTransactionsPage() {
     // Use the same sorting logic as the table, but reverse to oldest first
     // This preserves the exact same-date ordering from the table
     const getVoucherDate = (t: Transaction) => {
+      if (t.ledgerVoucherDate) return t.ledgerVoucherDate;
       const isDebitNote = isVendorDebitNoteReference(t.reference);
       if (isDebitNote && t.debitNoteDate) {
         return t.debitNoteDate;
@@ -1041,6 +1048,7 @@ export default function VendorTransactionsPage() {
     // Sort transactions oldest first for export
     const sortedForExport = [...sortedTransactions].sort((a, b) => {
       const getVoucherDate = (t: Transaction) => {
+        if (t.ledgerVoucherDate) return t.ledgerVoucherDate;
         const isDebitNote = isVendorDebitNoteReference(t.reference);
         if (isDebitNote && t.debitNoteDate) {
           return t.debitNoteDate;
@@ -1447,6 +1455,10 @@ export default function VendorTransactionsPage() {
                       // For debit note transactions: use the date from the debit note
                       voucherDateToUse = transaction.debitNoteDate;
                       shipmentDateToUse = transaction.debitNoteDate;
+                    } else if (transaction.ledgerVoucherDate) {
+                      voucherDateToUse = transaction.ledgerVoucherDate;
+                      shipmentDateToUse =
+                        transaction.shipmentDate || transaction.createdAt;
                     } else {
                       // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
                       const isShipmentTransaction = transaction.type === "DEBIT" && transaction.invoice;
