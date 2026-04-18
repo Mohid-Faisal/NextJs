@@ -60,6 +60,33 @@ type Transaction = {
   ledgerVoucherDate?: string;
 };
 
+function getVendorVoucherDateKey(t: Transaction): string {
+  if (t.ledgerVoucherDate) return t.ledgerVoucherDate;
+  const isDebitNote = isVendorDebitNoteReference(t.reference);
+  if (isDebitNote && t.debitNoteDate) return t.debitNoteDate;
+  const isShipmentTransaction = t.type === "DEBIT" && t.invoice;
+  const isPaymentTransaction = t.type === "CREDIT" && t.invoice;
+  if (isShipmentTransaction) return t.shipmentDate || t.createdAt;
+  if (isPaymentTransaction) return t.paymentDate || t.createdAt;
+  return t.createdAt;
+}
+
+/** Same order as vendor GET recalc (oldest → newest). */
+function compareVendorRecalcOrder(a: Transaction, b: Transaction): number {
+  const ta = new Date(getVendorVoucherDateKey(a)).getTime();
+  const tb = new Date(getVendorVoucherDateKey(b)).getTime();
+  if (ta !== tb) return ta - tb;
+  if (a.type === "DEBIT" && b.type === "CREDIT") return 1;
+  if (a.type === "CREDIT" && b.type === "DEBIT") return -1;
+  if (a.invoice && b.invoice) {
+    const invA = parseInt(a.invoice, 10);
+    const invB = parseInt(b.invoice, 10);
+    if (!Number.isNaN(invA) && !Number.isNaN(invB)) return invA - invB;
+    return a.invoice.localeCompare(b.invoice);
+  }
+  return a.id - b.id;
+}
+
 export default function VendorTransactionsPage() {
   const router = useRouter();
   const params = useParams();
@@ -112,28 +139,8 @@ export default function VendorTransactionsPage() {
     if (sortField === "voucherDate") {
       // Sort by voucher date (using the same logic as display)
       return [...transactions].sort((a, b) => {
-        const getVoucherDate = (t: Transaction) => {
-          if (t.ledgerVoucherDate) {
-            return t.ledgerVoucherDate;
-          }
-          // Check if this is a debit note transaction
-          const isDebitNote = isVendorDebitNoteReference(t.reference);
-          if (isDebitNote && t.debitNoteDate) {
-            return t.debitNoteDate;
-          }
-          
-          const isShipmentTransaction = t.type === "DEBIT" && t.invoice;
-          const isPaymentTransaction = t.type === "CREDIT" && t.invoice;
-          if (isShipmentTransaction) {
-            return t.shipmentDate || t.createdAt;
-          }
-          if (isPaymentTransaction) {
-            return t.paymentDate || t.createdAt;
-          }
-          return t.createdAt;
-        };
-        const dateA = new Date(getVoucherDate(a)).getTime();
-        const dateB = new Date(getVoucherDate(b)).getTime();
+        const dateA = new Date(getVendorVoucherDateKey(a)).getTime();
+        const dateB = new Date(getVendorVoucherDateKey(b)).getTime();
         const dateDiff = sortOrder === "desc" ? dateB - dateA : dateA - dateB;
         
         // Same voucher date
@@ -163,6 +170,21 @@ export default function VendorTransactionsPage() {
     // For other fields, use backend sorting (already sorted)
     return transactions;
   }, [transactions, sortField, sortOrder]);
+
+  /** Running balance after each row, using the same chronological order as server recalc (not table row order when sorted desc). */
+  const displayBalanceById = useMemo(() => {
+    if (sortField !== "voucherDate") return new Map<number, number>();
+    const list = [...sortedTransactions].sort(compareVendorRecalcOrder);
+    const m = new Map<number, number>();
+    if (list.length === 0) return m;
+    let running = list[0].previousBalance;
+    for (const tx of list) {
+      running =
+        tx.type === "DEBIT" ? running + tx.amount : running - tx.amount;
+      m.set(tx.id, running);
+    }
+    return m;
+  }, [sortedTransactions, sortField]);
 
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
@@ -1478,7 +1500,11 @@ export default function VendorTransactionsPage() {
                         shipmentDateToUse = transaction.shipmentDate || transaction.createdAt;
                       }
                     }
-                    
+
+                    const rowBalance =
+                      displayBalanceById.get(transaction.id) ??
+                      transaction.newBalance;
+
                     return (
                     <tr key={transaction.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-3">
@@ -1516,14 +1542,14 @@ export default function VendorTransactionsPage() {
                       <td className="px-4 py-3">
                         <span
                           className={
-                            transaction.newBalance > 0
+                            rowBalance > 0
                               ? "text-red-600 dark:text-red-400"
-                              : transaction.newBalance < 0
+                              : rowBalance < 0
                               ? "text-green-600 dark:text-green-400"
                               : "text-gray-600 dark:text-gray-400"
                           }
                         >
-                          {transaction.newBalance.toLocaleString()}
+                          {rowBalance.toLocaleString()}
                         </span>
                       </td>
                     </tr>
