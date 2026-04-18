@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addCustomerTransaction, addVendorTransaction, calculateInvoicePaymentStatus, processPaymentWithAllocation } from "@/lib/utils";
+import { createJournalEntryForPaymentProcess } from "@/lib/accounts/createJournalEntryForPaymentProcess";
 
 export async function POST(req: NextRequest) {
   try {
@@ -226,75 +227,5 @@ export async function POST(req: NextRequest) {
       { error: "Failed to process payment" },
       { status: 500 }
     );
-  }
-}
-
-async function createJournalEntryForPaymentProcess(payment: any, body: any, invoice: any) {
-  try {
-    // Generate journal entry number
-    const lastEntry = await prisma.journalEntry.findFirst({
-      orderBy: { entryNumber: "desc" }
-    });
-
-    let entryNumber = "JE-0001";
-    if (lastEntry) {
-      const lastNumber = parseInt(lastEntry.entryNumber.split("-")[1]);
-      entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
-    }
-
-    // Create journal entry with lines
-    const journalEntry = await prisma.$transaction(async (tx) => {
-      // Use payment date from body or payment record, fallback to current date
-      const journalEntryDate = body.paymentDate 
-        ? new Date(body.paymentDate) 
-        : (payment.date ? new Date(payment.date) : new Date());
-      
-      // Create the journal entry
-      const entry = await tx.journalEntry.create({
-        data: {
-          entryNumber,
-          date: journalEntryDate,
-          description: `Invoice Payment: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment for ${invoice.invoiceNumber} - ${body.description || 'No description'}`,
-          reference: body.reference || `Payment-${payment.id}`,
-          totalDebit: Number(body.paymentAmount),
-          totalCredit: Number(body.paymentAmount),
-          isPosted: true, // Auto-post payment journal entries
-          postedAt: journalEntryDate
-        }
-      });
-
-      // Create the journal entry lines
-      await Promise.all([
-        // Debit line
-        tx.journalEntryLine.create({
-          data: {
-            journalEntryId: entry.id,
-            accountId: body.debitAccountId,
-            debitAmount: Number(body.paymentAmount),
-            creditAmount: 0,
-            description: `Debit: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment`,
-            reference: body.reference || `Payment-${payment.id}`
-          }
-        }),
-        // Credit line
-        tx.journalEntryLine.create({
-          data: {
-            journalEntryId: entry.id,
-            accountId: body.creditAccountId,
-            debitAmount: 0,
-            creditAmount: Number(body.paymentAmount),
-            description: `Credit: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment`,
-            reference: body.reference || `Payment-${payment.id}`
-          }
-        })
-      ]);
-
-      return entry;
-    });
-
-    console.log(`Created journal entry ${journalEntry.entryNumber} for payment process ${payment.id}`);
-  } catch (error) {
-    console.error("Error creating journal entry for payment process:", error);
-    throw error;
   }
 }

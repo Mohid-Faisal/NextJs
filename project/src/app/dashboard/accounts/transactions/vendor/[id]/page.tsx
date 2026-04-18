@@ -18,8 +18,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Table } from "lucide-react";
+import { ArrowLeft, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Table, Upload } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   format,
   parseISO,
@@ -91,6 +92,8 @@ export default function VendorTransactionsPage() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [loadTime, setLoadTime] = useState<number | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const isInitialMount = useRef(true);
   const isTypingDate = useRef(false);
   const fetchAbortRef = useRef<AbortController | null>(null);
@@ -1059,7 +1062,61 @@ export default function VendorTransactionsPage() {
     exportToPDF(data, headers, 'Vendor Transactions Report', total);
   };
 
+  const handleBulkVendorPaymentsFile = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
 
+    setBulkUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("vendorId", String(vendorId));
+
+      const res = await fetch("/api/accounts/payments/vendor-excel", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || "Import failed");
+        return;
+      }
+
+      const imported = data.summary?.imported ?? data.summary?.success ?? 0;
+      const skipped = data.summary?.skipped ?? 0;
+      const failed = data.summary?.failed ?? 0;
+      toast.success(
+        `Imported ${imported} payment${imported === 1 ? "" : "s"}${
+          skipped > 0
+            ? `, skipped ${skipped} already recorded`
+            : ""
+        }${failed > 0 ? `, ${failed} failed` : ""}`
+      );
+
+      const badRows = (data.results as { row: number; success: boolean; message?: string }[])?.filter(
+        (r) => !r.success
+      );
+      if (badRows?.length) {
+        toast("Some rows need attention", {
+          description: badRows
+            .slice(0, 5)
+            .map((r) => `Row ${r.row}: ${r.message || "Error"}`)
+            .join(" · "),
+        });
+      }
+
+      fetchVendorData();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to import payments from Excel");
+    } finally {
+      setBulkUploading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -1172,6 +1229,24 @@ export default function VendorTransactionsPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <input
+            ref={bulkFileInputRef}
+            type="file"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            className="hidden"
+            onChange={handleBulkVendorPaymentsFile}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="whitespace-nowrap"
+            onClick={() => bulkFileInputRef.current?.click()}
+            disabled={bulkUploading || loading}
+          >
+            <Upload className="mr-2 h-4 w-4 shrink-0" />
+            {bulkUploading ? "Importing…" : "Import payments (Excel)"}
+          </Button>
 
           {/* Export Dropdown */}
           <div>
