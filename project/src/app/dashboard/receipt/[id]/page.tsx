@@ -585,7 +585,10 @@ export default function ReceiptPage() {
   // Format sender address
   const senderName = invoice.customer?.PersonName || 'N/A';
   const sendercompanyname = invoice.customer?.CompanyName || 'N/A';
-  const senderAddress = shipment?.senderAddress || invoice.customer?.Address || '';
+  // Always use the customer's saved address as the source of truth so the
+  // waybill stays in sync with the customer record (and isn't broken by a
+  // bad shipment-time snapshot like a stray "a").
+  const senderAddress = (invoice.customer?.Address || '').trim();
   const senderCity = invoice.customer?.City || '';
   const senderState = invoice.customer?.Country && invoice.customer?.State
     ? getStateNameFromCode(String(invoice.customer.State), invoice.customer.Country)
