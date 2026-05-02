@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Table, Upload } from "lucide-react";
+import { ArrowLeft, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Table, Upload, CircleDollarSign } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {

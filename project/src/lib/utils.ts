@@ -556,6 +556,32 @@ export async function updateInvoiceBalance(
   return { customerUpdated, vendorUpdated };
 }
 
+/** Sum payments per invoice in one query (avoids N sequential aggregates in allocateExcessPayment). */
+async function paymentTotalsByInvoiceForAllocation(
+  prisma: any,
+  invoiceNumbers: string[],
+  transactionType: "INCOME" | "EXPENSE"
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (invoiceNumbers.length === 0) return map;
+
+  const rows = await prisma.payment.groupBy({
+    by: ["invoice"],
+    where: {
+      transactionType,
+      invoice: { in: invoiceNumbers },
+    },
+    _sum: { amount: true },
+  });
+
+  for (const row of rows) {
+    if (row.invoice != null && row.invoice !== "") {
+      map.set(row.invoice, row._sum.amount ?? 0);
+    }
+  }
+  return map;
+}
+
 // Payment allocation utilities for excess payments
 export async function allocateExcessPayment(
   prisma: any,
@@ -600,19 +626,17 @@ export async function allocateExcessPayment(
       return dateA.getTime() - dateB.getTime();
     });
 
+    const paidByInvoice = await paymentTotalsByInvoiceForAllocation(
+      prisma,
+      outstandingInvoices.map((inv: { invoiceNumber: string }) => inv.invoiceNumber),
+      "INCOME"
+    );
+
     // Calculate remaining amounts for each invoice
     for (const invoice of outstandingInvoices) {
       if (remainingAmount <= 0) break;
 
-      const totalPaid = await prisma.payment.aggregate({
-        where: {
-          invoice: invoice.invoiceNumber,
-          transactionType: 'INCOME'
-        },
-        _sum: { amount: true }
-      });
-
-      const alreadyPaid = totalPaid._sum.amount || 0;
+      const alreadyPaid = paidByInvoice.get(invoice.invoiceNumber) ?? 0;
       const remainingInvoiceAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
 
       if (remainingInvoiceAmount > 0) {
@@ -664,19 +688,17 @@ export async function allocateExcessPayment(
       return dateA.getTime() - dateB.getTime();
     });
 
+    const paidByInvoice = await paymentTotalsByInvoiceForAllocation(
+      prisma,
+      outstandingInvoices.map((inv: { invoiceNumber: string }) => inv.invoiceNumber),
+      "EXPENSE"
+    );
+
     // Calculate remaining amounts for each invoice
     for (const invoice of outstandingInvoices) {
       if (remainingAmount <= 0) break;
 
-      const totalPaid = await prisma.payment.aggregate({
-        where: {
-          invoice: invoice.invoiceNumber,
-          transactionType: 'EXPENSE'
-        },
-        _sum: { amount: true }
-      });
-
-      const alreadyPaid = totalPaid._sum.amount || 0;
+      const alreadyPaid = paidByInvoice.get(invoice.invoiceNumber) ?? 0;
       const remainingInvoiceAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
 
       if (remainingInvoiceAmount > 0) {
@@ -759,8 +781,10 @@ export async function processPaymentWithAllocation(
     const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
     const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
 
-    // If there's an overpayment, allocate it to other invoices first
-    if (overpaymentAmount > 0) {
+    // Ignore sub-cent float noise — tiny "overpay" used to trigger allocateExcessPayment
+    // and hundreds of per-invoice aggregates (very slow on large ledgers).
+    const OVERPAY_THRESHOLD = 0.01;
+    if (overpaymentAmount > OVERPAY_THRESHOLD) {
       allocationResult = await allocateExcessPayment(
         prisma,
         invoice.customerId,
@@ -818,8 +842,8 @@ export async function processPaymentWithAllocation(
     const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
     const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
 
-    // If there's an overpayment, allocate it to other invoices first
-    if (overpaymentAmount > 0) {
+    const OVERPAY_THRESHOLD = 0.01;
+    if (overpaymentAmount > OVERPAY_THRESHOLD) {
       allocationResult = await allocateExcessPayment(
         prisma,
         null,

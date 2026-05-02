@@ -581,13 +581,20 @@ export async function GET(
       .filter((ref, index, self) => self.indexOf(ref) === index); // unique refs
     
     const debitNotesMap = new Map<string, Date>();
+    const debitNoteInvoiceByRefHeavy = new Map<string, string>();
     if (debitNoteRefs.length > 0) {
       const debitNotes = await prisma.debitNote.findMany({
         where: { debitNoteNumber: { in: debitNoteRefs } },
-        select: { debitNoteNumber: true, date: true }
+        select: {
+          debitNoteNumber: true,
+          date: true,
+          bill: { select: { invoiceNumber: true } },
+        },
       });
       debitNotes.forEach(dn => {
         if (dn.date) debitNotesMap.set(dn.debitNoteNumber, dn.date);
+        const inv = dn.bill?.invoiceNumber;
+        if (inv) debitNoteInvoiceByRefHeavy.set(dn.debitNoteNumber, inv);
       });
     }
 
@@ -666,6 +673,11 @@ export async function GET(
       return {
         ...transaction,
         voucherDate,
+        invoice:
+          transaction.invoice ??
+          (transaction.reference
+            ? debitNoteInvoiceByRefHeavy.get(transaction.reference) ?? null
+            : null),
       };
     });
 
