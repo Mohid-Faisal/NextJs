@@ -115,7 +115,7 @@ export default function ReceiptPage() {
     fetchInvoice();
   }, [id]);
 
-  const handlePrint = () => {
+  const handlePrint = (copy: 'sender' | 'vendor' = 'sender') => {
     if (!invoice) {
       alert('Invoice data not available');
       return;
@@ -128,6 +128,16 @@ export default function ReceiptPage() {
       return;
     }
 
+    // Clone the DOM so we can adjust the printed copy without
+    // affecting what is shown on screen.
+    const clone = waybillContainer.cloneNode(true) as HTMLElement;
+
+    if (copy === 'vendor') {
+      // Hide the sender phone number for the vendor copy.
+      const phoneEl = clone.querySelector('[data-sender-phone]');
+      if (phoneEl) phoneEl.remove();
+    }
+
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -136,7 +146,7 @@ export default function ReceiptPage() {
     }
 
     // Get the waybill HTML content
-    const waybillHTML = waybillContainer.innerHTML;
+    const waybillHTML = clone.innerHTML;
 
     // Create a complete HTML document for printing
     const printHTML = `
@@ -1105,10 +1115,16 @@ export default function ReceiptPage() {
           margin-bottom: 3px;
         }
 
-        .waybill-print-btn {
+        .waybill-print-btns {
           position: fixed;
           bottom: 30px;
           right: 30px;
+          display: flex;
+          gap: 12px;
+          z-index: 1000;
+        }
+
+        .waybill-print-btn {
           background: #10b981;
           color: white;
           padding: 12px 24px;
@@ -1117,13 +1133,21 @@ export default function ReceiptPage() {
           cursor: pointer;
           font-weight: 600;
           box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-          transition: transform 0.2s;
-          z-index: 1000;
+          transition: transform 0.2s, background 0.2s;
         }
 
         .waybill-print-btn:hover {
           transform: translateY(-2px);
           background: #059669;
+        }
+
+        .waybill-print-btn.vendor {
+          background: #6366f1;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .waybill-print-btn.vendor:hover {
+          background: #4f46e5;
         }
 
         .waybill-back-btn {
@@ -1146,7 +1170,7 @@ export default function ReceiptPage() {
             width: 100%;
             max-width: 100%;
           }
-          .waybill-print-btn, .waybill-back-btn {
+          .waybill-print-btns, .waybill-print-btn, .waybill-back-btn {
             display: none !important;
           }
         }
@@ -1207,7 +1231,7 @@ export default function ReceiptPage() {
                   </div>
                   <div>
                     Attn: {senderName}<br />
-                    {senderPhone || 'N/A'}<br />
+                    <span data-sender-phone>{senderPhone || 'N/A'}<br /></span>
                     <br />
                     CNIC/NTN: {senderDocumentNumber ? senderDocumentNumber : 'N/A'}
               </div>
@@ -1384,17 +1408,22 @@ export default function ReceiptPage() {
         </div>
       </div>
 
-      {/* Floating Print Button */}
-      <button className="waybill-print-btn" onClick={handlePrint}>
-        Print Waybill
-      </button>
+      {/* Floating Print Buttons */}
+      <div className="waybill-print-btns">
+        <button className="waybill-print-btn vendor" onClick={() => handlePrint('vendor')}>
+          Print Vendor Copy
+        </button>
+        <button className="waybill-print-btn" onClick={() => handlePrint('sender')}>
+          Print Waybill
+        </button>
+      </div>
 
-      {/* Back Button */}
+      {/* Cancel Button */}
       <div className="waybill-back-btn">
-        <Link href="/dashboard">
+        <Link href="/dashboard/shipments">
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            Cancel
           </Button>
         </Link>
       </div>
