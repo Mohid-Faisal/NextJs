@@ -336,6 +336,9 @@ export default function ShipmentInvoicePage() {
           ? [shipment.recipientAddress, getCountryName(shipment.destination)].filter(Boolean) as string[]
           : []);
     const recipientPhone = recipient?.Phone || '';
+    const destinationDisplay = [recipient?.City, getCountryName(shipment.destination)]
+      .filter((p) => p && String(p).trim())
+      .join(' - ');
 
     const escapeHtml = (s: string) =>
       String(s)
@@ -414,6 +417,7 @@ export default function ShipmentInvoicePage() {
               width: 100%;
               border-collapse: collapse;
               margin-bottom: 20px;
+              table-layout: fixed;
             }
             
             .main-table td {
@@ -432,7 +436,7 @@ export default function ShipmentInvoicePage() {
             }
             
             .main-table .value {
-              min-width: 150px;
+              width: 200px;
               font-size: 14px;
             }
             
@@ -448,6 +452,7 @@ export default function ShipmentInvoicePage() {
               border-collapse: collapse;
               margin-bottom: 20px;
               font-size: 14px;
+              table-layout: fixed;
             }
             
             .items-table th {
@@ -513,7 +518,7 @@ export default function ShipmentInvoicePage() {
                 <tr><td class="label">CNIC/NTN No.</td><td class="value">${customer?.DocumentNumber || ''}</td></tr>
                 <tr><td class="label">Service Mode</td><td class="value">${shipment.serviceMode || ''}</td></tr>
                 <tr><td class="label">Origin</td><td class="value">${shipment.office || 'LHE-PK'}</td></tr>
-                <tr><td class="section-header" colspan="2">Receiver / Consignee</td><td class="label">Destination</td><td class="value">${getCountryName(shipment.destination)}</td></tr>
+                <tr><td class="section-header" colspan="2">Receiver / Consignee</td><td class="label">Destination</td><td class="value">${destinationDisplay}</td></tr>
                 <tr><td colspan="2" rowspan="4" class="address-block">${recipientBlockHTML}</td><td class="label">Terms Of Trade</td><td class="value">DDU-Delivery Duty Unpaid</td></tr>
                 <tr><td class="label">Net Weight</td><td class="value">${netWeight} KG</td></tr>
                 <tr><td class="label">Dims (cm)</td><td class="value">${dimensions}</td></tr>
@@ -521,9 +526,17 @@ export default function ShipmentInvoicePage() {
               </tbody>
             </table>
             <table class="items-table">
+              <colgroup>
+                <col style="width:50px" />
+                <col style="width:70px" />
+                <col />
+                <col style="width:90px" />
+                <col style="width:100px" />
+                <col style="width:150px" />
+              </colgroup>
               <thead><tr><th>Sr #</th><th>Qty</th><th>Description Of Contents</th><th>HS Code</th><th>Unit Value<br/>USD $</th><th>Sub Total<br/>USD $</th></tr></thead>
               <tbody>${itemsRowsHTML}
-                <tr class="total-row"><td colspan="4" style="text-align:right;padding-right:20px">${amountInWords}</td><td style="text-align:center">Total Invoice Amount</td><td>${totalInvoiceAmount > 0 ? totalInvoiceAmount.toFixed(2) + ' $' : '0.00 $'}</td></tr>
+                <tr class="total-row"><td colspan="4" style="text-align:right;padding-right:20px">${amountInWords}</td><td style="text-align:center">Total</td><td>${totalInvoiceAmount > 0 ? totalInvoiceAmount.toFixed(2) + ' $' : '0.00 $'}</td></tr>
               </tbody>
             </table>
             <table class="declaration-table"><tbody>
@@ -610,6 +623,9 @@ export default function ShipmentInvoicePage() {
         ? [shipment.recipientAddress, getCountryName(shipment.destination)].filter(Boolean) as string[]
         : []);
   const recipientPhone = recipient?.Phone || '';
+  const destinationDisplay = [recipient?.City, getCountryName(shipment.destination)]
+    .filter((p) => p && String(p).trim())
+    .join(' - ');
 
   return (
     <div className="w-full p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -640,9 +656,10 @@ export default function ShipmentInvoicePage() {
         }
         
         .main-table {
-          width: 100%;
-          border-collapse: collapse;
+          width: 100%;;
+          border-collapse: collapse
           margin-bottom: 20px;
+          table-layout: fixed;
         }
         
         .main-table td {
@@ -661,7 +678,7 @@ export default function ShipmentInvoicePage() {
         }
         
         .main-table .value {
-          min-width: 150px;
+          width: 200px;
           font-size: 14px;
         }
         
@@ -682,6 +699,7 @@ export default function ShipmentInvoicePage() {
           border-collapse: collapse;
           margin-bottom: 20px;
           font-size: 14px;
+          table-layout: fixed;
         }
         
         .items-table th {
@@ -865,7 +883,7 @@ export default function ShipmentInvoicePage() {
               <tr>
                 <td className="section-header" colSpan={2}>Receiver / Consignee</td>
                 <td className="label">Destination</td>
-                <td className="value">{getCountryName(shipment.destination)}</td>
+                <td className="value">{destinationDisplay}</td>
               </tr>
               
               {/* Row 8: Recipient Details + Terms of Trade */}
@@ -988,7 +1006,7 @@ export default function ShipmentInvoicePage() {
                 <td colSpan={4} style={{ textAlign: 'right', paddingRight: '20px' }}>
                   {amountInWords}
                 </td>
-                <td style={{ textAlign: 'center' }}>Total Invoice Amount</td>
+                <td style={{ textAlign: 'center' }}>Total</td>
                 <td>{totalInvoiceAmount > 0 ? `${totalInvoiceAmount.toFixed(2)} $` : '0.00 $'}</td>
                 <td className="no-print"></td>
               </tr>
