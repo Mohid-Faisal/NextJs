@@ -514,11 +514,10 @@ export default function ShipmentInvoicePage() {
                 <tr><td class="label">Service Mode</td><td class="value">${shipment.serviceMode || ''}</td></tr>
                 <tr><td class="label">Origin</td><td class="value">${shipment.office || 'LHE-PK'}</td></tr>
                 <tr><td class="section-header" colspan="2">Receiver / Consignee</td><td class="label">Destination</td><td class="value">${getCountryName(shipment.destination)}</td></tr>
-                <tr><td colspan="2" rowspan="5" class="address-block">${recipientBlockHTML}</td><td class="label">Terms Of Trade</td><td class="value">DDU-Delivery Duty Unpaid</td></tr>
+                <tr><td colspan="2" rowspan="4" class="address-block">${recipientBlockHTML}</td><td class="label">Terms Of Trade</td><td class="value">DDU-Delivery Duty Unpaid</td></tr>
                 <tr><td class="label">Net Weight</td><td class="value">${netWeight} KG</td></tr>
                 <tr><td class="label">Dims (cm)</td><td class="value">${dimensions}</td></tr>
                 <tr><td class="label">Shipment Pieces</td><td class="value">${String(totalPieces).padStart(2, '0')}</td></tr>
-                <tr><td class="label">Status</td><td class="value">${shipment.packaging || shipment.packageDescription || 'GOODS'}</td></tr>
               </tbody>
             </table>
             <table class="items-table">
@@ -871,7 +870,7 @@ export default function ShipmentInvoicePage() {
               
               {/* Row 8: Recipient Details + Terms of Trade */}
               <tr>
-                <td colSpan={2} rowSpan={5} className="address-block">
+                <td colSpan={2} rowSpan={4} className="address-block">
                   <strong>{shipment.recipientName}</strong><br />
                   {recipientAddressLines.map((line, idx) => (
                     <span key={idx}>{line}<br /></span>
@@ -903,12 +902,6 @@ export default function ShipmentInvoicePage() {
               <tr>
                 <td className="label">Shipment Pieces</td>
                 <td className="value">{String(totalPieces).padStart(2, '0')}</td>
-              </tr>
-              
-              {/* Row 12: Status */}
-              <tr>
-                <td className="label">Status</td>
-                <td className="value">{shipment.packaging || shipment.packageDescription || 'GOODS'}</td>
               </tr>
             </tbody>
           </table>
