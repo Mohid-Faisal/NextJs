@@ -463,7 +463,7 @@ export default function EditInvoicePage() {
         <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 w-full">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-xl sm:text-2xl font-bold text-center text-gray-800 dark:text-white">
-              Selling Payment Invoice
+              Buying Payment Invoice
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-5 p-4 sm:p-6">

@@ -366,7 +366,7 @@ export default function CustomersPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
-  const [activeTab, setActiveTab] = useState<"all" | "withBalance">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "withBalance">("withBalance");
   const [grandTotal, setGrandTotal] = useState(0);
   const [withBalanceTotal, setWithBalanceTotal] = useState(0);
 

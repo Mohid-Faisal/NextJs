@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText } from "lucide-react";
+import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -84,6 +84,16 @@ export default function PaymentsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+
+  // Bulk-import state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResults, setImportResults] = useState<{
+    summary: { processed: number; imported: number; failed: number };
+    results: { row: number; success: boolean; message?: string; amount?: number; category?: string; type?: string; journalEntry?: string }[];
+  } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Check for query parameter when coming from dashboard
   useEffect(() => {
@@ -181,7 +191,42 @@ export default function PaymentsPage() {
     };
 
     fetchPayments();
-  }, [page, pageSize, typeFilter, modeFilter, searchTerm, dateRange, sortField, sortOrder, periodType, customStartDate, customEndDate]);
+  }, [page, pageSize, typeFilter, modeFilter, searchTerm, dateRange, sortField, sortOrder, periodType, customStartDate, customEndDate, refreshKey]);
+
+  const handleImport = async () => {
+    if (!importFile) {
+      toast.error("Please choose an Excel file first");
+      return;
+    }
+    setImporting(true);
+    setImportResults(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", importFile);
+      const res = await fetch("/api/accounts/payments/bulk-import", {
+        method: "POST",
+        body: fd,
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json?.error || "Import failed");
+        return;
+      }
+      setImportResults(json);
+      const { imported, failed } = json.summary || { imported: 0, failed: 0 };
+      if (failed > 0) {
+        toast.warning(`Imported ${imported}, ${failed} failed. See details below.`);
+      } else {
+        toast.success(`Imported ${imported} transactions`);
+      }
+      // Refresh the list
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -602,6 +647,20 @@ export default function PaymentsPage() {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Import Button */}
+        <Button
+          variant="outline"
+          className="h-9 shrink-0"
+          onClick={() => {
+            setImportFile(null);
+            setImportResults(null);
+            setImportDialogOpen(true);
+          }}
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          Import
+        </Button>
+
         {/* Add Payment Button */}
         <Button asChild className="h-9 shrink-0">
           <Link href="/dashboard/accounts/payments/add" className="flex items-center gap-2">
@@ -808,6 +867,102 @@ export default function PaymentsPage() {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Transactions Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={(open) => {
+        if (!importing) setImportDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-3xl">
+          <div className="p-2">
+            <h2 className="text-xl font-semibold mb-1">Import Transactions from Excel</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Upload a .xlsx / .xls file with columns:
+              <span className="font-medium"> Transaction Type, Category, Date, Amount, Payment Method, Reference, Description</span>.
+              Only Income and Expense rows are supported. The chart-of-accounts is matched by category name.
+            </p>
+
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center bg-gray-50 dark:bg-gray-800/40 mb-4">
+              <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+              <input
+                type="file"
+                accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                onChange={(e) => {
+                  setImportFile(e.target.files?.[0] || null);
+                  setImportResults(null);
+                }}
+                className="block mx-auto text-sm"
+                disabled={importing}
+              />
+              {importFile && (
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
+                  Selected: <span className="font-medium">{importFile.name}</span> ({(importFile.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
+            </div>
+
+            {importResults && (
+              <div className="mb-4">
+                <div className="flex flex-wrap gap-3 mb-3 text-sm">
+                  <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                    Processed: <strong>{importResults.summary.processed}</strong>
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800">
+                    Imported: <strong>{importResults.summary.imported}</strong>
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800">
+                    Failed: <strong>{importResults.summary.failed}</strong>
+                  </span>
+                </div>
+                <div className="max-h-64 overflow-y-auto border rounded-md">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                      <tr className="text-left">
+                        <th className="px-3 py-2">Row</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Type</th>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2">Amount</th>
+                        <th className="px-3 py-2">JE</th>
+                        <th className="px-3 py-2">Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importResults.results.map((r) => (
+                        <tr key={r.row} className="border-t border-gray-100 dark:border-gray-800">
+                          <td className="px-3 py-1.5">{r.row}</td>
+                          <td className="px-3 py-1.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] ${r.success ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"}`}>
+                              {r.success ? "OK" : "Failed"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-1.5">{r.type || "-"}</td>
+                          <td className="px-3 py-1.5">{r.category || "-"}</td>
+                          <td className="px-3 py-1.5">{r.amount ? r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                          <td className="px-3 py-1.5">{r.journalEntry || "-"}</td>
+                          <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{r.message || ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setImportDialogOpen(false)}
+                disabled={importing}
+              >
+                Close
+              </Button>
+              <Button onClick={handleImport} disabled={!importFile || importing}>
+                {importing ? "Importing..." : "Import"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
