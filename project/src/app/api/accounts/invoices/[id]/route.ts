@@ -30,16 +30,28 @@ export async function GET(
       );
     }
 
-    // Look up recipient by name (Recipients.CompanyName matches shipment.recipientName) for full address/phone etc.
+    // Look up recipient using multiple strategies because shipment.recipientName
+    // can be either a company name OR a person name depending on how the
+    // shipment was created.
     let recipient = null;
     if (invoice.shipment?.recipientName) {
       const name = String(invoice.shipment.recipientName).trim();
       if (name) {
-        recipient = await prisma.recipients.findFirst({
-          where: {
-            CompanyName: { equals: name, mode: "insensitive" },
-          },
-        });
+        recipient =
+          (await prisma.recipients.findFirst({
+            where: { CompanyName: { equals: name, mode: "insensitive" } },
+          })) ||
+          (await prisma.recipients.findFirst({
+            where: { PersonName: { equals: name, mode: "insensitive" } },
+          })) ||
+          (await prisma.recipients.findFirst({
+            where: {
+              OR: [
+                { CompanyName: { contains: name, mode: "insensitive" } },
+                { PersonName: { contains: name, mode: "insensitive" } },
+              ],
+            },
+          }));
       }
     }
 

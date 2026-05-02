@@ -47,14 +47,28 @@ export async function GET(
       );
     }
 
-    // Look up recipient by name for full address (Address, City, Zip, State, Country)
+    // Look up recipient using multiple strategies because shipment.recipientName
+    // can be either a company name OR a person name depending on how the
+    // shipment was created.
     let recipient = null;
     if (shipment.recipientName) {
       const name = String(shipment.recipientName).trim();
       if (name) {
-        recipient = await prisma.recipients.findFirst({
-          where: { CompanyName: { equals: name, mode: "insensitive" } },
-        });
+        recipient =
+          (await prisma.recipients.findFirst({
+            where: { CompanyName: { equals: name, mode: "insensitive" } },
+          })) ||
+          (await prisma.recipients.findFirst({
+            where: { PersonName: { equals: name, mode: "insensitive" } },
+          })) ||
+          (await prisma.recipients.findFirst({
+            where: {
+              OR: [
+                { CompanyName: { contains: name, mode: "insensitive" } },
+                { PersonName: { contains: name, mode: "insensitive" } },
+              ],
+            },
+          }));
       }
     }
 
@@ -304,16 +318,22 @@ export async function DELETE(
       }, Invoice: ${shipment.invoiceNumber || "No invoice number"}`
     );
 
+    // Pre-compute non-null values for use across multiple where clauses
+    const trackingId = shipment.trackingId ?? "";
+    const invoiceNumber = shipment.invoiceNumber ?? "";
+    const invoiceNumberInt = invoiceNumber ? parseInt(invoiceNumber, 10) : NaN;
+    const vendorInvoiceNumber = Number.isFinite(invoiceNumberInt)
+      ? (invoiceNumberInt + 2).toString()
+      : "";
+
     // Find related invoices
     console.log("🔍 Searching for related invoices...");
+    const invoiceOr: any[] = [{ shipmentId: shipmentId }];
+    if (trackingId) invoiceOr.push({ trackingNumber: trackingId });
+    if (invoiceNumber) invoiceOr.push({ invoiceNumber: invoiceNumber });
+
     const relatedInvoices = await prisma.invoice.findMany({
-      where: {
-        OR: [
-          { shipmentId: shipmentId },
-          { trackingNumber: shipment.trackingId },
-          { invoiceNumber: shipment.invoiceNumber },
-        ],
-      },
+      where: { OR: invoiceOr },
       include: {
         customer: true,
         vendor: true,
@@ -336,24 +356,24 @@ export async function DELETE(
 
     // Find related journal entries that were created for this shipment
     console.log("🔍 Searching for related journal entries...");
-    const relatedJournalEntries = await prisma.journalEntry.findMany({
-      where: {
-        OR: [
-          // Customer transactions search
-          { reference: shipment.trackingId }, // "1"
-          { description: { contains: shipment.trackingId } }, // contains "1"
-          { description: { contains: shipment.invoiceNumber } }, // contains "420000"
+    const journalEntryOr: any[] = [];
+    if (trackingId) {
+      journalEntryOr.push({ reference: trackingId });
+      journalEntryOr.push({ description: { contains: trackingId } });
+    }
+    if (invoiceNumber) {
+      journalEntryOr.push({ description: { contains: invoiceNumber } });
+    }
+    if (vendorInvoiceNumber) {
+      journalEntryOr.push({ description: { contains: vendorInvoiceNumber } });
+    }
 
-          // Vendor transactions search
-          { reference: shipment.trackingId }, // "1"
-          { description: { contains: shipment.trackingId } }, // contains "1",
-          { description: { contains: (parseInt(shipment.invoiceNumber) + 2).toString() } }, // contains "420002"
-        ],
-      },
-      include: {
-        lines: true,
-      },
-    });
+    const relatedJournalEntries = journalEntryOr.length
+      ? await prisma.journalEntry.findMany({
+          where: { OR: journalEntryOr },
+          include: { lines: true },
+        })
+      : [];
 
     // Delete related journal entries (lines first due to foreign key constraints)
     if (relatedJournalEntries.length > 0) {
@@ -393,29 +413,38 @@ export async function DELETE(
 
     // Find related customer and vendor transactions
     console.log("🔍 Searching for related customer transactions...");
-    const relatedCustomerTransactions =
-      await prisma.customerTransaction.findMany({
-        where: {
-          OR: [
-            { reference: shipment.trackingId },
-            { invoice: shipment.invoiceNumber },
-            { description: { contains: shipment.trackingId } },
-            { description: { contains: shipment.invoiceNumber } },
-          ],
-        },
-      });
+    const customerTxnOr: any[] = [];
+    if (trackingId) {
+      customerTxnOr.push({ reference: trackingId });
+      customerTxnOr.push({ description: { contains: trackingId } });
+    }
+    if (invoiceNumber) {
+      customerTxnOr.push({ invoice: invoiceNumber });
+      customerTxnOr.push({ description: { contains: invoiceNumber } });
+    }
+
+    const relatedCustomerTransactions = customerTxnOr.length
+      ? await prisma.customerTransaction.findMany({
+          where: { OR: customerTxnOr },
+        })
+      : [];
 
     console.log("🔍 Searching for related vendor transactions...");
-    const relatedVendorTransactions = await prisma.vendorTransaction.findMany({
-      where: {
-        OR: [
-          { reference: shipment.trackingId },
-          { invoice: (parseInt(shipment.invoiceNumber) + 2).toString() },
-          { description: { contains: shipment.trackingId } },
-          { description: { contains: (parseInt(shipment.invoiceNumber) + 2).toString() } },
-        ],
-      },
-    });
+    const vendorTxnOr: any[] = [];
+    if (trackingId) {
+      vendorTxnOr.push({ reference: trackingId });
+      vendorTxnOr.push({ description: { contains: trackingId } });
+    }
+    if (vendorInvoiceNumber) {
+      vendorTxnOr.push({ invoice: vendorInvoiceNumber });
+      vendorTxnOr.push({ description: { contains: vendorInvoiceNumber } });
+    }
+
+    const relatedVendorTransactions = vendorTxnOr.length
+      ? await prisma.vendorTransaction.findMany({
+          where: { OR: vendorTxnOr },
+        })
+      : [];
 
     console.log(
       `💰 Found ${relatedCustomerTransactions.length} related customer transactions and ${relatedVendorTransactions.length} vendor transactions for shipment ${shipmentId}`
@@ -991,13 +1020,7 @@ export async function DELETE(
     if (relatedInvoices.length > 0) {
       console.log(`🗑️ Deleting ${relatedInvoices.length} related invoices...`);
       await prisma.invoice.deleteMany({
-        where: {
-          OR: [
-            { shipmentId: shipmentId },
-            { trackingNumber: shipment.trackingId },
-            { invoiceNumber: shipment.invoiceNumber },
-          ],
-        },
+        where: { OR: invoiceOr },
       });
       console.log(
         `✅ Successfully deleted ${relatedInvoices.length} related invoices`
