@@ -171,8 +171,8 @@ export default function ShipmentInvoicePage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : (Array.isArray(params.id) ? params.id[0] : '');
   const [shipment, setShipment] = useState<Shipment | null>(null);
-  const [customer, setCustomer] = useState<{ Address?: string; City?: string; State?: string; Country?: string; Zip?: string; DocumentNumber?: string } | null>(null);
-  const [recipient, setRecipient] = useState<{ Address?: string; City?: string; State?: string; Country?: string; Zip?: string } | null>(null);
+  const [customer, setCustomer] = useState<{ Address?: string; City?: string; State?: string; Country?: string; Zip?: string; DocumentNumber?: string; PersonName?: string; Phone?: string } | null>(null);
+  const [recipient, setRecipient] = useState<{ Address?: string; City?: string; State?: string; Country?: string; Zip?: string; PersonName?: string; Phone?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<EditableItem[]>([]);
@@ -215,6 +215,24 @@ export default function ShipmentInvoicePage() {
     const stateName = state && countryCode ? getStateNameFromCode(state, countryCode) : (state || '');
     const parts = [addr, city, zip, stateName, country].filter((p) => p && String(p).trim());
     return parts.join(', ') || '';
+  };
+
+  // Returns an array of up to 3 lines: [street, "city, state, zip", country]
+  const formatAddressLines = (
+    addr: string,
+    city?: string,
+    zip?: string,
+    state?: string,
+    countryCode?: string
+  ): string[] => {
+    const country = countryCode ? getCountryNameFromCode(countryCode) : '';
+    const stateName = state && countryCode ? getStateNameFromCode(state, countryCode) : (state || '');
+    const cityStateZip = [city, stateName, zip]
+      .filter((p) => p && String(p).trim())
+      .join(', ');
+    return [addr || '', cityStateZip, country]
+      .map((s) => (s || '').trim())
+      .filter(Boolean);
   };
 
   // Initialize items from shipment when it loads
@@ -304,12 +322,38 @@ export default function ShipmentInvoicePage() {
       ? format(parseISO(shipment.shipmentDate), 'dd/MM/yyyy')
       : format(new Date(), 'dd/MM/yyyy');
 
-    const senderFullAddr = customer
-      ? formatFullAddress(customer.Address || '', customer.City, customer.Zip, customer.State, customer.Country) || shipment.senderAddress
-      : shipment.senderAddress;
-    const recipientFullAddr = recipient
-      ? formatFullAddress(recipient.Address || '', recipient.City, recipient.Zip, recipient.State, recipient.Country || shipment.destination) || shipment.recipientAddress
-      : (shipment.recipientAddress + (shipment.destination ? ', ' + getCountryName(shipment.destination) : ''));
+    const senderAddressLines = customer
+      ? formatAddressLines(customer.Address || '', customer.City, customer.Zip, customer.State, customer.Country)
+      : (shipment.senderAddress ? [shipment.senderAddress] : []);
+    if (senderAddressLines.length === 0 && shipment.senderAddress) {
+      senderAddressLines.push(shipment.senderAddress);
+    }
+    const senderAttn = customer?.PersonName || '';
+
+    const recipientAddressLines = recipient
+      ? formatAddressLines(recipient.Address || '', recipient.City, recipient.Zip, recipient.State, recipient.Country || shipment.destination)
+      : (shipment.recipientAddress
+          ? [shipment.recipientAddress, getCountryName(shipment.destination)].filter(Boolean) as string[]
+          : []);
+    const recipientPhone = recipient?.Phone || '';
+
+    const escapeHtml = (s: string) =>
+      String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const senderBlockHTML = `
+      <strong>${escapeHtml(shipment.senderName || '')}</strong>${senderAddressLines.length ? '<br/>' : ''}
+      ${senderAddressLines.map((l) => escapeHtml(l)).join('<br/>')}
+      ${senderAttn ? `<br/><br/>Attn: ${escapeHtml(senderAttn)}` : ''}
+    `;
+
+    const recipientBlockHTML = `
+      <strong>${escapeHtml(shipment.recipientName || '')}</strong>${recipientAddressLines.length ? '<br/>' : ''}
+      ${recipientAddressLines.map((l) => escapeHtml(l)).join('<br/>')}
+      ${recipientPhone ? `<br/><br/>Tel: ${escapeHtml(recipientPhone)}` : ''}
+    `;
 
     const itemsRowsHTML = items.map((item, i) => {
       const sub = item.qty * item.unitValue;
@@ -465,12 +509,12 @@ export default function ShipmentInvoicePage() {
             <table class="main-table">
               <tbody>
                 <tr><td class="section-header" colspan="2">Sender / Consignor</td><td class="label">Invoice Date</td><td class="value">${invoiceDate}</td></tr>
-                <tr><td colspan="2" rowspan="4" class="address-block"><strong>${shipment.senderName}</strong><br/>${senderFullAddr}</td><td class="label">Invoice Number</td><td class="value">${shipment.invoiceNumber}</td></tr>
+                <tr><td colspan="2" rowspan="4" class="address-block">${senderBlockHTML}</td><td class="label">Invoice Number</td><td class="value">${shipment.invoiceNumber}</td></tr>
                 <tr><td class="label">CNIC/NTN No.</td><td class="value">${customer?.DocumentNumber || ''}</td></tr>
                 <tr><td class="label">Service Mode</td><td class="value">${shipment.serviceMode || ''}</td></tr>
                 <tr><td class="label">Origin</td><td class="value">${shipment.office || 'LHE-PK'}</td></tr>
                 <tr><td class="section-header" colspan="2">Receiver / Consignee</td><td class="label">Destination</td><td class="value">${getCountryName(shipment.destination)}</td></tr>
-                <tr><td colspan="2" rowspan="5" class="address-block"><strong>${shipment.recipientName}</strong><br/>${recipientFullAddr}</td><td class="label">Terms Of Trade</td><td class="value">DDU-Delivery Duty Unpaid</td></tr>
+                <tr><td colspan="2" rowspan="5" class="address-block">${recipientBlockHTML}</td><td class="label">Terms Of Trade</td><td class="value">DDU-Delivery Duty Unpaid</td></tr>
                 <tr><td class="label">Net Weight</td><td class="value">${netWeight} KG</td></tr>
                 <tr><td class="label">Dims (cm)</td><td class="value">${dimensions}</td></tr>
                 <tr><td class="label">Shipment Pieces</td><td class="value">${String(totalPieces).padStart(2, '0')}</td></tr>
@@ -552,13 +596,21 @@ export default function ShipmentInvoicePage() {
     ? format(parseISO(shipment.shipmentDate), 'dd/MM/yyyy')
     : format(new Date(), 'dd/MM/yyyy');
 
-  // Full address for display
-  const senderFullAddr = customer
-    ? formatFullAddress(customer.Address || '', customer.City, customer.Zip, customer.State, customer.Country) || shipment.senderAddress
-    : shipment.senderAddress;
-  const recipientFullAddr = recipient
-    ? formatFullAddress(recipient.Address || '', recipient.City, recipient.Zip, recipient.State, recipient.Country || shipment.destination) || shipment.recipientAddress
-    : (shipment.recipientAddress + (shipment.destination ? ', ' + getCountryName(shipment.destination) : ''));
+  // Address split into 3 lines for display
+  const senderAddressLines = customer
+    ? formatAddressLines(customer.Address || '', customer.City, customer.Zip, customer.State, customer.Country)
+    : (shipment.senderAddress ? [shipment.senderAddress] : []);
+  if (senderAddressLines.length === 0 && shipment.senderAddress) {
+    senderAddressLines.push(shipment.senderAddress);
+  }
+  const senderAttn = customer?.PersonName || '';
+
+  const recipientAddressLines = recipient
+    ? formatAddressLines(recipient.Address || '', recipient.City, recipient.Zip, recipient.State, recipient.Country || shipment.destination)
+    : (shipment.recipientAddress
+        ? [shipment.recipientAddress, getCountryName(shipment.destination)].filter(Boolean) as string[]
+        : []);
+  const recipientPhone = recipient?.Phone || '';
 
   return (
     <div className="w-full p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -778,7 +830,15 @@ export default function ShipmentInvoicePage() {
               <tr>
                 <td colSpan={2} rowSpan={4} className="address-block">
                   <strong>{shipment.senderName}</strong><br />
-                  {senderFullAddr}
+                  {senderAddressLines.map((line, idx) => (
+                    <span key={idx}>{line}<br /></span>
+                  ))}
+                  {senderAttn && (
+                    <>
+                      <br />
+                      Attn: {senderAttn}
+                    </>
+                  )}
                 </td>
                 <td className="label">Invoice Number</td>
                 <td className="value">{shipment.invoiceNumber}</td>
@@ -813,7 +873,15 @@ export default function ShipmentInvoicePage() {
               <tr>
                 <td colSpan={2} rowSpan={5} className="address-block">
                   <strong>{shipment.recipientName}</strong><br />
-                  {recipientFullAddr}
+                  {recipientAddressLines.map((line, idx) => (
+                    <span key={idx}>{line}<br /></span>
+                  ))}
+                  {recipientPhone && (
+                    <>
+                      <br />
+                      Tel: {recipientPhone}
+                    </>
+                  )}
                 </td>
                 <td className="label">Terms Of Trade</td>
                 <td className="value">DDU-Delivery Duty Unpaid</td>
