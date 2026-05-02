@@ -277,6 +277,8 @@ export default function IncomeInvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [total, setTotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [allStatusCount, setAllStatusCount] = useState(0);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(10);
@@ -417,6 +419,8 @@ export default function IncomeInvoicesPage() {
       setInvoices(customerInvoices);
       setTotal(json.total || 0);
       setTotalAmount(json.totalAmount || 0);
+      setStatusCounts(json.statusCounts || {});
+      setAllStatusCount(json.allStatusCount || 0);
     };
 
     fetchInvoices();
@@ -463,6 +467,8 @@ export default function IncomeInvoicesPage() {
     setInvoices(customerInvoices);
     setTotal(json.total || 0);
     setTotalAmount(json.totalAmount || 0);
+    setStatusCounts(json.statusCounts || {});
+    setAllStatusCount(json.allStatusCount || 0);
   };
 
   const handleStatusChange = async (invoiceId: number, newStatus: string) => {
@@ -614,22 +620,77 @@ export default function IncomeInvoicesPage() {
             Showing only Customer invoices
           </p>
         </div>
-        <div className="flex items-center gap-4 sm:gap-6">
-          <div className="text-right bg-green-50 dark:bg-green-900/20 px-4 py-3 rounded-lg border border-green-200 dark:border-green-800">
-            <div className="text-lg sm:text-xl font-semibold text-gray-600 dark:text-gray-400 mb-1">
-              Total Records
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
-              {total}
-            </div>
-          </div>
-          <div className="text-right bg-green-50 dark:bg-green-900/20 px-4 py-3 rounded-lg border border-green-200 dark:border-green-800">
-            <div className="text-lg sm:text-xl font-semibold text-gray-600 dark:text-gray-400 mb-1">
-              Total Amount
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
+
+        {/* Status filter tabs */}
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
+          <button
+            type="button"
+            onClick={() => { setStatusFilter("All"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              statusFilter === "All"
+                ? "bg-blue-50 dark:bg-blue-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">{allStatusCount}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">All</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStatusFilter("Unpaid"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              statusFilter === "Unpaid"
+                ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-red-50/60 dark:hover:bg-red-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-red-600 dark:text-red-300">{statusCounts.Unpaid ?? 0}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Unpaid</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStatusFilter("Paid"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              statusFilter === "Paid"
+                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-300">{statusCounts.Paid ?? 0}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Paid</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStatusFilter("Partial"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              statusFilter === "Partial"
+                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">{statusCounts.Partial ?? 0}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Partial</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStatusFilter("Overdue"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              statusFilter === "Overdue"
+                ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-amber-50/60 dark:hover:bg-amber-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-300">{statusCounts.Overdue ?? 0}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Overdue</span>
+          </button>
+          <div
+            aria-disabled
+            className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 min-w-[120px] cursor-default select-none"
+          >
+            <span className="text-lg sm:text-xl font-bold text-green-700 dark:text-green-300">
               {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Total Amount</span>
           </div>
         </div>
       </div>
@@ -675,27 +736,8 @@ export default function IncomeInvoicesPage() {
           </div>
         </div>
 
-        {/* Right side - Status, Date Range, and Export */}
+        {/* Right side - Date Range, and Export */}
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
-          <Select
-            value={statusFilter}
-            onValueChange={(v: string) => {
-              setStatusFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {["All", "Unpaid", "Paid", "Overdue", "Partial"].map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Date Range Filter */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <Select

@@ -15,6 +15,12 @@ export function isSkynetWorldwideExpressVendor(companyName: string): boolean {
   );
 }
 
+/** Matches "APX Logistics" and common variants (case-insensitive). */
+export function isApxLogisticsVendor(companyName: string): boolean {
+  const n = companyName.toLowerCase().trim();
+  return n.includes("apx") && n.includes("logistics");
+}
+
 async function vendorExpensePaidTotalsByInvoice(
   prisma: PrismaClient,
   invoiceNumbers: string[]
@@ -72,7 +78,7 @@ async function getJournalEntryBase(prisma: PrismaClient): Promise<number> {
   return Math.max(maxExisting, tsBase) + 1;
 }
 
-export type SkynetVendorAutoPayRow = {
+export type VendorBulkAutoPayRow = {
   invoiceNumber: string;
   success: boolean;
   skipped?: boolean;
@@ -81,7 +87,7 @@ export type SkynetVendorAutoPayRow = {
   message?: string;
 };
 
-export type SkynetVendorAutoPayResult = {
+export type VendorBulkAutoPayResult = {
   success: boolean;
   vendorId: number;
   vendorName: string;
@@ -91,20 +97,34 @@ export type SkynetVendorAutoPayResult = {
     skippedAlreadyPaid: number;
     failed: number;
   };
-  results: SkynetVendorAutoPayRow[];
+  results: VendorBulkAutoPayRow[];
 };
 
-export type SkynetVendorAutoPayOptions = {
+export type VendorBulkAutoPayOptions = {
   /** Optional hook for CLI / logs (one line per call). */
   onProgress?: (line: string) => void;
 };
 
-export async function runSkynetVendorAutoPay(
+/** Payment methods supported by the bulk vendor auto-pay (subset of Prisma PaymentMode). */
+export type VendorPaymentMethod = "CASH" | "BANK_TRANSFER";
+
+export type VendorBulkAutoPayConfig = {
+  paymentMethod: VendorPaymentMethod;
+  description: string;
+  /** Optional defense-in-depth: reject if vendor.CompanyName doesn't match. */
+  validateVendor?: (companyName: string) => boolean;
+  /** Error message returned if validateVendor fails. */
+  vendorMismatchMessage?: string;
+};
+
+/** Generic Skynet/APX-style bulk auto-pay: settles every unpaid Vendor invoice for the given vendor. */
+export async function runVendorBulkAutoPay(
   prisma: PrismaClient,
   vendorId: number,
-  options?: SkynetVendorAutoPayOptions
+  config: VendorBulkAutoPayConfig,
+  options?: VendorBulkAutoPayOptions
 ): Promise<
-  | { ok: true; data: SkynetVendorAutoPayResult }
+  | { ok: true; data: VendorBulkAutoPayResult }
   | { ok: false; status: number; error: string }
 > {
   const log = options?.onProgress;
@@ -117,12 +137,13 @@ export async function runSkynetVendorAutoPay(
     return { ok: false, status: 404, error: "Vendor not found" };
   }
 
-  if (!isSkynetWorldwideExpressVendor(vendor.CompanyName)) {
+  if (config.validateVendor && !config.validateVendor(vendor.CompanyName)) {
     return {
       ok: false,
       status: 403,
       error:
-        "This action is only allowed for Skynet Worldwide Express (vendor name must include skynet, worldwide, and express)",
+        config.vendorMismatchMessage ??
+        "Vendor name does not match the expected pattern for this auto-pay.",
     };
   }
 
@@ -135,12 +156,14 @@ export async function runSkynetVendorAutoPay(
     category: a.category,
   }));
 
-  const accountIds = resolveVendorPaymentAccountIds(coaRows, "CASH");
+  const accountIds = resolveVendorPaymentAccountIds(coaRows, config.paymentMethod);
   if (!accountIds) {
+    const credit =
+      config.paymentMethod === "CASH" ? "Cash" : "Bank Account";
     return {
       ok: false,
       status: 400,
-      error: "Could not resolve chart of accounts (Accounts Payable / Cash)",
+      error: `Could not resolve chart of accounts (Accounts Payable / ${credit})`,
     };
   }
 
@@ -165,13 +188,16 @@ export async function runSkynetVendorAutoPay(
   let runningVendorBalance = vendor.currentBalance;
 
   log?.(
+    `Vendor ${vendor.CompanyName} (id=${vendorId}); method=${config.paymentMethod}; description="${config.description}".`
+  );
+  log?.(
     `Found ${invoices.length} vendor invoice(s); loaded payment totals; next JE = JE-${nextJENum}.`
   );
 
-  const results: SkynetVendorAutoPayRow[] = [];
+  const results: VendorBulkAutoPayRow[] = [];
 
-  const PAYMENT_METHOD = "CASH" as const;
-  const DESCRIPTION = "Cash paid";
+  const PAYMENT_METHOD = config.paymentMethod;
+  const DESCRIPTION = config.description;
   const total = invoices.length;
 
   for (let i = 0; i < invoices.length; i++) {
@@ -360,4 +386,54 @@ export async function runSkynetVendorAutoPay(
       results,
     },
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Backwards-compatible Skynet wrappers + types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SkynetVendorAutoPayRow = VendorBulkAutoPayRow;
+export type SkynetVendorAutoPayResult = VendorBulkAutoPayResult;
+export type SkynetVendorAutoPayOptions = VendorBulkAutoPayOptions;
+
+export async function runSkynetVendorAutoPay(
+  prisma: PrismaClient,
+  vendorId: number,
+  options?: VendorBulkAutoPayOptions
+) {
+  return runVendorBulkAutoPay(
+    prisma,
+    vendorId,
+    {
+      paymentMethod: "CASH",
+      description: "Cash paid",
+      validateVendor: isSkynetWorldwideExpressVendor,
+      vendorMismatchMessage:
+        "This action is only allowed for Skynet Worldwide Express (vendor name must include skynet, worldwide, and express)",
+    },
+    options
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APX Logistics wrapper (BANK_TRANSFER + "IB- Funds Transfer" description)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function runApxLogisticsAutoPay(
+  prisma: PrismaClient,
+  vendorId: number,
+  options?: VendorBulkAutoPayOptions
+) {
+  return runVendorBulkAutoPay(
+    prisma,
+    vendorId,
+    {
+      paymentMethod: "BANK_TRANSFER",
+      description: "IB- Funds Transfer",
+      validateVendor: isApxLogisticsVendor,
+      vendorMismatchMessage:
+        "This action is only allowed for APX Logistics (vendor name must include apx and logistics)",
+    },
+    options
+  );
 }

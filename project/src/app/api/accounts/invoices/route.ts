@@ -128,8 +128,14 @@ export async function GET(req: NextRequest) {
     console.log('Invoice API - Profile filter:', profile);
     console.log('Invoice API - Where clause:', JSON.stringify(where, null, 2));
 
+    // Same filters as `where`, but without the status filter — used to compute the
+    // per-status counts that drive the tab badges (so they show full counts even
+    // when a tab is currently active).
+    const whereForCounts: any = { ...where };
+    delete whereForCounts.status;
+
     // Fetch invoices with relations
-    const [invoices, total, totalAmountResult] = await Promise.all([
+    const [invoices, total, totalAmountResult, statusCountsRows] = await Promise.all([
       prisma.invoice.findMany({
         where,
         include: {
@@ -148,9 +154,23 @@ export async function GET(req: NextRequest) {
           totalAmount: true,
         },
       }),
+      prisma.invoice.groupBy({
+        by: ["status"],
+        where: whereForCounts,
+        _count: { _all: true },
+      }),
     ]);
 
     const totalAmount = totalAmountResult._sum.totalAmount || 0;
+
+    const statusCounts: Record<string, number> = {};
+    let allStatusCount = 0;
+    for (const row of statusCountsRows) {
+      const key = row.status || "Unknown";
+      const count = row._count._all;
+      statusCounts[key] = count;
+      allStatusCount += count;
+    }
 
     console.log('Invoice API - Found invoices:', invoices.length);
     console.log('Invoice API - Invoice profiles:', invoices.map(i => i.profile));
@@ -257,6 +277,8 @@ export async function GET(req: NextRequest) {
       invoices: invoicesWithRemainingAmount,
       total,
       totalAmount,
+      statusCounts,
+      allStatusCount,
       page,
       totalPages: pageSize ? Math.ceil(total / pageSize) : 1,
     });
