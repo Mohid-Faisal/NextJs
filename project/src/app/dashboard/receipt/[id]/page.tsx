@@ -1150,11 +1150,11 @@ export default function ReceiptPage() {
           background: #4f46e5;
         }
 
-        .waybill-back-btn {
-          position: fixed;
-          bottom: 30px;
-          left: 30px;
-          z-index: 1000;
+        .waybill-top-actions {
+          max-width: 855px;
+          margin: 0 auto 12px auto;
+          display: flex;
+          justify-content: flex-start;
         }
 
         @media print {
@@ -1170,11 +1170,21 @@ export default function ReceiptPage() {
             width: 100%;
             max-width: 100%;
           }
-          .waybill-print-btns, .waybill-print-btn, .waybill-back-btn {
+          .waybill-print-btns, .waybill-print-btn, .waybill-top-actions {
             display: none !important;
           }
         }
       `}</style>
+
+      {/* Cancel Button (in-page) */}
+      <div className="waybill-top-actions">
+        <Link href="/dashboard/shipments">
+          <Button variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Cancel
+          </Button>
+        </Link>
+      </div>
 
       <div className="waybill-wrapper">
         <div className="waybill-container">
@@ -1418,15 +1428,6 @@ export default function ReceiptPage() {
         </button>
       </div>
 
-      {/* Cancel Button */}
-      <div className="waybill-back-btn">
-        <Link href="/dashboard/shipments">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Cancel
-          </Button>
-        </Link>
-      </div>
     </div>
   );
 }
