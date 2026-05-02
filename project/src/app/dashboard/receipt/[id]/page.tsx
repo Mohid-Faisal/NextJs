@@ -1120,8 +1120,14 @@ export default function ReceiptPage() {
           bottom: 30px;
           right: 30px;
           display: flex;
+          align-items: center;
           gap: 12px;
           z-index: 1000;
+        }
+
+        .waybill-cancel-btn {
+          background: white;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .waybill-print-btn {
@@ -1150,12 +1156,6 @@ export default function ReceiptPage() {
           background: #4f46e5;
         }
 
-        .waybill-top-actions {
-          max-width: 855px;
-          margin: 0 auto 12px auto;
-          display: flex;
-          justify-content: flex-start;
-        }
 
         @media print {
           @page {
@@ -1170,21 +1170,11 @@ export default function ReceiptPage() {
             width: 100%;
             max-width: 100%;
           }
-          .waybill-print-btns, .waybill-print-btn, .waybill-top-actions {
+          .waybill-print-btns, .waybill-print-btn {
             display: none !important;
           }
         }
       `}</style>
-
-      {/* Cancel Button (in-page) */}
-      <div className="waybill-top-actions">
-        <Link href="/dashboard/shipments">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Cancel
-          </Button>
-        </Link>
-      </div>
 
       <div className="waybill-wrapper">
         <div className="waybill-container">
@@ -1418,8 +1408,14 @@ export default function ReceiptPage() {
         </div>
       </div>
 
-      {/* Floating Print Buttons */}
+      {/* Floating Action Buttons */}
       <div className="waybill-print-btns">
+        <Link href="/dashboard/shipments">
+          <Button variant="outline" className="waybill-cancel-btn">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Cancel
+          </Button>
+        </Link>
         <button className="waybill-print-btn vendor" onClick={() => handlePrint('vendor')}>
           Print Vendor Copy
         </button>
