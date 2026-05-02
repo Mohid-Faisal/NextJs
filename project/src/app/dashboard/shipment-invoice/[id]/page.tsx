@@ -530,9 +530,9 @@ export default function ShipmentInvoicePage() {
                 <col style="width:50px" />
                 <col style="width:70px" />
                 <col />
-                <col style="width:90px" />
-                <col style="width:100px" />
-                <col style="width:150px" />
+                <col style="width:113px" />
+                <col style="width:113px" />
+                <col style="width:114px" />
               </colgroup>
               <thead><tr><th>Sr #</th><th>Qty</th><th>Description Of Contents</th><th>HS Code</th><th>Unit Value<br/>USD $</th><th>Sub Total<br/>USD $</th></tr></thead>
               <tbody>${itemsRowsHTML}
@@ -937,9 +937,9 @@ export default function ShipmentInvoicePage() {
                 <th style={{ width: '50px' }}>Sr #</th>
                 <th style={{ width: '70px' }}>Qty</th>
                 <th>Description Of Contents</th>
-                <th style={{ width: '90px' }}>HS Code</th>
-                <th style={{ width: '100px' }}>Unit Value<br />USD $</th>
-                <th style={{ width: '100px' }}>Sub Total<br />USD $</th>
+                <th style={{ width: '97px' }}>HS Code</th>
+                <th style={{ width: '97px' }}>Unit Value<br />USD $</th>
+                <th style={{ width: '96px' }}>Sub Total<br />USD $</th>
                 <th className="no-print" style={{ width: '50px' }}></th>
               </tr>
             </thead>

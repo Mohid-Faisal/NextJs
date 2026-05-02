@@ -35,10 +35,7 @@ import {
   Award,
   PlaneTakeoff,
   ShipWheel,
-  ChevronDown,
   ArrowRight,
-  Sparkles,
-  Zap,
 } from "lucide-react";
 import {
   motion,
@@ -926,67 +923,6 @@ function GlobalNetworkSection() {
  *  NEW: CTA banner before contact
  * ──────────────────────────────────────────────────────────────────────────── */
 
-function CTABannerSection() {
-  return (
-    <section className="relative py-20 bg-white dark:bg-gray-950 overflow-hidden">
-      <div className="container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#0f172a] via-[#1e3a8a] to-[#1d4ed8] px-8 py-16 md:px-16 md:py-20 shadow-2xl shadow-blue-900/30"
-        >
-          {/* Decorative network SVG layered subtly */}
-          <div className="absolute inset-0 opacity-30 pointer-events-none">
-            <GlobalNetworkSVG subtle />
-          </div>
-          <div className="absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" aria-hidden />
-          <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-blue-500/30 blur-3xl" aria-hidden />
-
-          <div className="relative grid md:grid-cols-[1.4fr_1fr] gap-10 items-center">
-            <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-blue-100 backdrop-blur-sm mb-4">
-                <Sparkles className="w-3.5 h-3.5" />
-                Ready in 60 seconds
-              </span>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-4">
-                Ready to ship with confidence?
-              </h2>
-              <p className="text-base md:text-lg text-blue-100/80 max-w-xl">
-                Get an instant rate on your next shipment, or talk to a logistics specialist about your business.
-                No long forms. No call-center maze.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row md:flex-col gap-3 md:items-stretch">
-              <Link href="/rate-calculator" className="group">
-                <Button
-                  size="lg"
-                  className="w-full h-14 bg-white hover:bg-blue-50 text-[#1e3a8a] font-semibold rounded-xl shadow-lg cursor-pointer text-base"
-                >
-                  <Zap className="w-5 h-5 mr-2 text-amber-500" />
-                  Get an instant rate
-                  <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
-              <a href="#contact" className="group">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full h-14 bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white hover:border-white/50 font-semibold rounded-xl cursor-pointer text-base"
-                >
-                  Talk to sales
-                  <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </a>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
 /* ────────────────────────────────────────────────────────────────────────────
  *  Hero slides
  * ──────────────────────────────────────────────────────────────────────────── */
@@ -1127,7 +1063,7 @@ export default function HomePage() {
       <section
         ref={heroRef}
         id="home"
-        className="relative w-full min-h-[calc(100vh+25px)] overflow-hidden -mt-[115px] pt-[115px] scroll-mt-0"
+        className="relative w-full min-h-[calc(100vh+50px)] overflow-hidden -mt-[115px] pt-[115px] scroll-mt-0"
       >
         <motion.div className="absolute inset-0" style={{ y: imageY, scale: imageScale }}>
           {HERO_SLIDES.map((slide, index) => (
@@ -1160,11 +1096,6 @@ export default function HomePage() {
           className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-size-[24px_24px] z-1"
           aria-hidden
         />
-        {/* Animated network behind text - extra wow */}
-        <div className="absolute inset-x-0 bottom-0 h-2/3 z-1 opacity-30 pointer-events-none">
-          <GlobalNetworkSVG subtle />
-        </div>
-
         {/* Content */}
         <div className="absolute inset-0 flex items-start z-10 pt-[34%] sm:pt-[32%] md:pt-[30%]">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1199,69 +1130,22 @@ export default function HomePage() {
                     transition={{ duration: 0.4 }}
                     className="text-left"
                   >
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 backdrop-blur-md px-3 py-1 text-[11px] sm:text-xs font-medium tracking-[0.18em] uppercase text-blue-200 mb-4 sm:mb-5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse" />
+                    <p className="text-xs sm:text-sm font-medium tracking-widest uppercase text-blue-400 mb-3 sm:mb-4">
                       {HERO_SLIDES[currentSlide].tagline}
-                    </span>
+                    </p>
                     <div className="flex flex-row flex-wrap items-baseline gap-x-4 gap-y-1 sm:gap-x-5 sm:gap-y-2">
                       {HERO_SLIDES[currentSlide].headingLines.map((line, i) => (
                         <h1
                           key={i}
                           className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-6xl 2xl:text-6xl font-bold text-white leading-tight tracking-tight whitespace-nowrap"
-                          style={{
-                            textShadow: "0 4px 24px rgba(0,0,0,0.35)",
-                          }}
                         >
                           {line}
                         </h1>
                       ))}
                     </div>
-                    <p className="mt-4 sm:mt-6 text-sm sm:text-base text-gray-200/95 max-w-lg">
+                    <p className="mt-4 sm:mt-6 text-sm sm:text-base text-gray-300 max-w-lg">
                       {HERO_SLIDES[currentSlide].paragraph}
                     </p>
-
-                    {/* Trust pill row */}
-                    <div className="mt-6 sm:mt-7 flex flex-wrap gap-2 sm:gap-3">
-                      {[
-                        { icon: BadgeCheck, label: "Customs handled" },
-                        { icon: Globe, label: "100+ countries" },
-                        { icon: Clock, label: "99.8% on-time" },
-                      ].map((p) => {
-                        const Icon = p.icon;
-                        return (
-                          <span
-                            key={p.label}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md px-3 py-1.5 text-xs font-medium text-white"
-                          >
-                            <Icon className="w-3.5 h-3.5 text-cyan-300" />
-                            {p.label}
-                          </span>
-                        );
-                      })}
-                    </div>
-
-                    {/* Primary CTAs */}
-                    <div className="mt-7 sm:mt-8 flex flex-wrap gap-3">
-                      <Link href="/rate-calculator">
-                        <Button
-                          size="lg"
-                          className="h-12 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg cursor-pointer shadow-lg shadow-blue-900/40"
-                        >
-                          <Zap className="w-4 h-4 mr-2" />
-                          Get an instant rate
-                        </Button>
-                      </Link>
-                      <a href="#track-package">
-                        <Button
-                          size="lg"
-                          variant="outline"
-                          className="h-12 px-6 bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white hover:border-white/50 font-semibold rounded-lg cursor-pointer"
-                        >
-                          Track a shipment
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
-                      </a>
-                    </div>
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -1269,26 +1153,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Scroll cue */}
-        {!reduced && (
-          <motion.a
-            href="#stats"
-            aria-label="Scroll down"
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 text-white/80 hover:text-white"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <span className="text-[10px] uppercase tracking-[0.25em]">Scroll</span>
-            <motion.span
-              animate={{ y: [0, 6, 0] }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-              className="inline-flex"
-            >
-              <ChevronDown className="h-5 w-5" />
-            </motion.span>
-          </motion.a>
-        )}
       </section>
 
       {/* ─────────────────────────  STATS BAND  ───────────────────────── */}
@@ -1506,9 +1370,6 @@ export default function HomePage() {
 
       {/* ─────────────────────────  CUSTOMER STORIES  ───────────────────────── */}
       <CustomerStoriesSection />
-
-      {/* ─────────────────────────  CTA BANNER  ───────────────────────── */}
-      <CTABannerSection />
 
       {/* ─────────────────────────  CONTACT  ───────────────────────── */}
       <ContactSection />
