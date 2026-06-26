@@ -754,17 +754,29 @@ export async function GET() {
     // Calculate accounts payable and receivable
     // Note: Customer balances are negative when they owe us money (accounts receivable)
     // Vendor balances are positive when we owe them money (accounts payable)
-    const accountsReceivable = await prisma.customers.aggregate({
+    const accountsReceivableResult = await prisma.customers.aggregate({
+      where: {
+        currentBalance: {
+          lt: 0
+        }
+      },
       _sum: {
         currentBalance: true
       }
     });
+    const totalReceivable = Math.abs(accountsReceivableResult._sum.currentBalance || 0);
     
-    const accountsPayable = await prisma.vendors.aggregate({
+    const accountsPayableResult = await prisma.vendors.aggregate({
+      where: {
+        currentBalance: {
+          gt: 0
+        }
+      },
       _sum: {
         currentBalance: true
       }
     });
+    const totalPayable = accountsPayableResult._sum.currentBalance || 0;
     
     // This month / last month: net invoiced receivable (new customer invoices minus payments this period toward those invoices)
     const curMonthStart = new Date(currentYear, currentMonth, 1);
@@ -882,10 +894,8 @@ export async function GET() {
         receivablePercentageChange,
       },
       accountsData: {
-        // For receivable: negative customer balances become positive (they owe us money)
-        accountsReceivable: Math.abs(Math.min(accountsReceivable._sum.currentBalance || 0, 0)),
-        // For payable: positive vendor balances stay positive (we owe them money)
-        accountsPayable: Math.max(accountsPayable._sum.currentBalance || 0, 0),
+        accountsReceivable: totalReceivable,
+        accountsPayable: totalPayable,
         monthlyAccountsData
       },
       currentMonthData: {
@@ -997,8 +1007,8 @@ export async function GET() {
         receivablePercentageChange: receivablePercentageChange || 0,
       },
       accountsData: {
-        accountsReceivable: accountsReceivable._sum.currentBalance || 0,
-        accountsPayable: accountsPayable._sum.currentBalance || 0,
+        accountsReceivable: totalReceivable,
+        accountsPayable: totalPayable,
         monthlyAccountsData: monthlyAccountsData.length > 0 ? monthlyAccountsData : [
           { month: "Jan", receivable: 0, payable: 0 },
           { month: "Feb", receivable: 0, payable: 0 },
