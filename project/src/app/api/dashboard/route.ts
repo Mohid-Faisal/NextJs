@@ -616,9 +616,14 @@ export async function GET() {
     }));
     
     // Sort by shipment count (descending) and take top 25
-    const transformedTopCustomers = customersWithMetrics
+    const transformedTopCustomers = [...customersWithMetrics]
       .sort((a, b) => b.shipments - a.shipments)
       .slice(0, 25);
+
+    // Filter and sort for receivable customers (who owe us money)
+    const receivableCustomers = [...customersWithMetrics]
+      .filter(c => c.currentBalance < 0)
+      .sort((a, b) => a.currentBalance - b.currentBalance);
     
     // Calculate performance metrics
     const totalDelivered = await prisma.shipment.count({
@@ -896,6 +901,7 @@ export async function GET() {
       accountsData: {
         accountsReceivable: totalReceivable,
         accountsPayable: totalPayable,
+        receivableCustomers,
         monthlyAccountsData
       },
       currentMonthData: {
@@ -1009,6 +1015,7 @@ export async function GET() {
       accountsData: {
         accountsReceivable: totalReceivable,
         accountsPayable: totalPayable,
+        receivableCustomers: receivableCustomers || [],
         monthlyAccountsData: monthlyAccountsData.length > 0 ? monthlyAccountsData : [
           { month: "Jan", receivable: 0, payable: 0 },
           { month: "Feb", receivable: 0, payable: 0 },

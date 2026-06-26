@@ -154,6 +154,7 @@ const DashboardPage = () => {
     accountsData: {
       accountsReceivable: 0,
       accountsPayable: 0,
+      receivableCustomers: [] as { customer: string; shipments: number; totalSpent: number; avgOrderValue: number; currentBalance: number; lastShipmentDate: string | null }[],
       monthlyAccountsData: [] as { month: string; receivable: number; payable: number }[],
     },
     currentMonthData: {
@@ -912,7 +913,7 @@ const DashboardPage = () => {
                     <div>
                       <p className="text-sm text-blue-600 dark:text-blue-400">Customers with Balances</p>
                       <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                        {data.topCustomers.filter(c => c.currentBalance < 0).length}
+                        {(data.accountsData.receivableCustomers || []).length}
                       </p>
                     </div>
                     <Users className="w-8 h-8 text-blue-600" />
@@ -923,8 +924,8 @@ const DashboardPage = () => {
                     <div>
                       <p className="text-sm text-orange-600 dark:text-orange-400">Largest Balance</p>
                       <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">
-                        {data.topCustomers.filter(c => c.currentBalance < 0).length > 0 
-                          ? Math.abs(Math.min(...data.topCustomers.filter(c => c.currentBalance < 0).map(c => c.currentBalance))).toLocaleString()
+                        {(data.accountsData.receivableCustomers || []).length > 0 
+                          ? Math.abs(Math.min(...(data.accountsData.receivableCustomers || []).map(c => c.currentBalance))).toLocaleString()
                           : '0'
                         }
                       </p>
@@ -963,38 +964,35 @@ const DashboardPage = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-slate-700 divide-y divide-gray-200 dark:divide-gray-600">
-                      {data.topCustomers
-                        .filter(customer => customer.currentBalance < 0)
-                        .sort((a, b) => a.currentBalance - b.currentBalance) // Sort by most negative first (most owed)
-                        .map((customer, index) => (
-                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                {customer.customer}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900 dark:text-white font-medium">
-                                {customer.totalSpent.toLocaleString()}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {customer.shipments}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {customer.avgOrderValue.toLocaleString()}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-red-600 dark:text-red-400">
-                                {Math.abs(customer.currentBalance).toLocaleString()}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                      {(data.accountsData.receivableCustomers || []).map((customer, index) => (
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {customer.customer}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 dark:text-white font-medium">
+                              {customer.totalSpent.toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {customer.shipments}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {customer.avgOrderValue.toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-red-600 dark:text-red-400">
+                              {Math.abs(customer.currentBalance).toLocaleString()}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
