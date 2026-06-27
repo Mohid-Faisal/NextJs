@@ -411,16 +411,32 @@ export async function DELETE(
       });
     }
 
-    // Find related customer and vendor transactions
+    // Find related customer and vendor transactions.
+    // IMPORTANT: Match ONLY by exact invoice number / reference / tracking id.
+    // We must NEVER match on description substrings (`description contains ...`).
+    // Charge transactions store the tracking number inside their description
+    // (e.g. "Tracking: 000512287096 | Country: GB | ..."), and this query is not
+    // scoped to a single customer/vendor, so a `contains` match would also catch
+    // unrelated customers' ledger rows and delete them when a shipment is removed.
     console.log("🔍 Searching for related customer transactions...");
+    const customerInvoiceNumbers = Array.from(
+      new Set(
+        relatedInvoices
+          .filter((inv) => inv.profile === "Customer")
+          .map((inv) => inv.invoiceNumber)
+      )
+    );
+
     const customerTxnOr: any[] = [];
+    if (customerInvoiceNumbers.length > 0) {
+      customerTxnOr.push({ invoice: { in: customerInvoiceNumbers } });
+      customerTxnOr.push({ reference: { in: customerInvoiceNumbers } });
+      customerTxnOr.push({
+        reference: { in: customerInvoiceNumbers.map((n) => `CREDIT-${n}`) },
+      });
+    }
     if (trackingId) {
       customerTxnOr.push({ reference: trackingId });
-      customerTxnOr.push({ description: { contains: trackingId } });
-    }
-    if (invoiceNumber) {
-      customerTxnOr.push({ invoice: invoiceNumber });
-      customerTxnOr.push({ description: { contains: invoiceNumber } });
     }
 
     const relatedCustomerTransactions = customerTxnOr.length
@@ -430,14 +446,25 @@ export async function DELETE(
       : [];
 
     console.log("🔍 Searching for related vendor transactions...");
+    const vendorInvoiceNumbers = Array.from(
+      new Set([
+        ...relatedInvoices
+          .filter((inv) => inv.profile === "Vendor")
+          .map((inv) => inv.invoiceNumber),
+        ...(vendorInvoiceNumber ? [vendorInvoiceNumber] : []),
+      ])
+    );
+
     const vendorTxnOr: any[] = [];
+    if (vendorInvoiceNumbers.length > 0) {
+      vendorTxnOr.push({ invoice: { in: vendorInvoiceNumbers } });
+      vendorTxnOr.push({ reference: { in: vendorInvoiceNumbers } });
+      vendorTxnOr.push({
+        reference: { in: vendorInvoiceNumbers.map((n) => `CREDIT-${n}`) },
+      });
+    }
     if (trackingId) {
       vendorTxnOr.push({ reference: trackingId });
-      vendorTxnOr.push({ description: { contains: trackingId } });
-    }
-    if (vendorInvoiceNumber) {
-      vendorTxnOr.push({ invoice: vendorInvoiceNumber });
-      vendorTxnOr.push({ description: { contains: vendorInvoiceNumber } });
     }
 
     const relatedVendorTransactions = vendorTxnOr.length
@@ -873,11 +900,16 @@ export async function DELETE(
     // For paid invoices, we've already processed the financial adjustments
     const unpaidCustomerTransactions = relatedCustomerTransactions.filter(
       (t) => {
+        // Normalize references like "CREDIT-618615" / "REFUND-618615" back to the
+        // underlying invoice number so the paid-status check resolves correctly.
+        const normalizedRef = t.reference
+          ? t.reference.replace(/^(CREDIT|REFUND)-/, "")
+          : null;
         const relatedInvoice = relatedInvoices.find(
           (inv) =>
-            inv.invoiceNumber === t.invoice ||
-            inv.trackingNumber === t.reference ||
-            inv.shipmentId === shipmentId
+            (t.invoice && inv.invoiceNumber === t.invoice) ||
+            (normalizedRef && inv.invoiceNumber === normalizedRef) ||
+            (t.reference && inv.trackingNumber === t.reference)
         );
         return !relatedInvoice || relatedInvoice.status !== "Paid";
       }
@@ -946,11 +978,14 @@ export async function DELETE(
     // Delete related vendor transactions ONLY for unpaid invoices
     // For paid invoices, we've already processed the financial adjustments
     const unpaidVendorTransactions = relatedVendorTransactions.filter((t) => {
+      const normalizedRef = t.reference
+        ? t.reference.replace(/^(CREDIT|REFUND)-/, "")
+        : null;
       const relatedInvoice = relatedInvoices.find(
         (inv) =>
-          inv.invoiceNumber === t.invoice ||
-          inv.trackingNumber === t.reference ||
-          inv.shipmentId === shipmentId
+          (t.invoice && inv.invoiceNumber === t.invoice) ||
+          (normalizedRef && inv.invoiceNumber === normalizedRef) ||
+          (t.reference && inv.trackingNumber === t.reference)
       );
       return !relatedInvoice || relatedInvoice.status !== "Paid";
     });
