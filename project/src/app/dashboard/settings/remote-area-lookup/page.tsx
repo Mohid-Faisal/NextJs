@@ -9,6 +9,7 @@ import { Paperclip, Search, Trash2, ArrowLeft, ChevronLeft, ChevronRight } from 
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { TablePagination } from "@/components/TablePagination";
 import {
   Select,
   SelectContent,
@@ -439,10 +440,11 @@ const RemoteAreaLookupPage = () => {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       Remote Area Details
                     </h3>
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {startIndex + 1}-{Math.min(endIndex, filteredAreas?.length || 0)} of {filteredAreas?.length || 0} entries
-                    {filteredAreas && filteredAreas.length !== (remoteAreas?.length || 0) && ` (filtered from ${remoteAreas?.length || 0} total)`}
+                    {filteredAreas && filteredAreas.length !== (remoteAreas?.length || 0) && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Filtered from {remoteAreas?.length || 0} total
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -538,92 +540,17 @@ const RemoteAreaLookupPage = () => {
                   </table>
                 </div>
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    {/* Items per page selector */}
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm text-gray-600 dark:text-gray-400">
-                        Items per page:
-                      </Label>
-                      <Select
-                        value={itemsPerPage.toString()}
-                        onValueChange={(value: string) => {
-                          setItemsPerPage(Number(value));
-                          setCurrentPage(1);
-                        }}
-                      >
-                        <SelectTrigger className="w-20 h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="10">10</SelectItem>
-                          <SelectItem value="20">20</SelectItem>
-                          <SelectItem value="50">50</SelectItem>
-                          <SelectItem value="100">100</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Page navigation */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="flex items-center gap-1"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </Button>
-
-                      {/* Page numbers */}
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum: number;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={currentPage === pageNum ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handlePageChange(pageNum)}
-                              className="w-10 h-9"
-                            >
-                              {pageNum}
-                            </Button>
-                          );
-                        })}
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center gap-1"
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    {/* Page info */}
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Page {currentPage} of {totalPages}
-                    </div>
-                  </div>
-                )}
+                <TablePagination
+                  page={currentPage}
+                  totalPages={Math.max(1, totalPages)}
+                  total={filteredAreas?.length || 0}
+                  pageSize={itemsPerPage}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={(s) => typeof s === "number" && setItemsPerPage(s)}
+                  entityName="entries"
+                  showAllOption={false}
+                  pageSizeOptions={[10, 20, 50, 100]}
+                />
               </motion.div>
             )}
 

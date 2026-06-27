@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import CreateDebitNoteDialog from "@/components/CreateDebitNoteDialog";
+import { TablePagination } from "@/components/TablePagination";
 
 type DebitNote = {
   id: number;
@@ -233,30 +234,8 @@ export default function DebitNotesPage() {
       </div>
 
       <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
-        {/* Left side - Page size and Search bar */}
+        {/* Left side - Search bar */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Show:</span>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(value) => {
-                setPageSize(value === "all" ? "all" : parseInt(value));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-24 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="flex w-full max-w-sm">
             <Input
               placeholder="Search..."
@@ -476,37 +455,15 @@ export default function DebitNotesPage() {
         </CardContent>
       </Card>
 
-      {/* Pagination and Total Count */}
-      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
-        <div className="text-center sm:text-left">
-          {pageSize === 'all' 
-            ? `Showing all ${total} debit notes`
-            : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} debit notes`
-          }
-        </div>
-        
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <Button
-              disabled={page <= 1}
-              onClick={() => setPage((prev) => prev - 1)}
-              className="hover:scale-105 transition-transform w-full sm:w-auto"
-            >
-              ← Prev
-            </Button>
-            <span>
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              disabled={page >= totalPages}
-              onClick={() => setPage((prev) => prev + 1)}
-              className="hover:scale-105 transition-transform w-full sm:w-auto"
-            >
-              Next →
-            </Button>
-          </div>
-        )}
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        entityName="debit notes"
+      />
 
       {/* Create Debit Note Dialog */}
       <Dialog

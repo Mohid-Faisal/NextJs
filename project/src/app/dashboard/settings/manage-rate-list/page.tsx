@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { TablePagination } from "@/components/TablePagination";
 
 const ManageRateListPage = () => {
   const router = useRouter();
@@ -528,54 +529,15 @@ const ManageRateListPage = () => {
                   </table>
                 </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                      Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, total)} of {total} results
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="w-full sm:w-auto"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </Button>
-                      
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const page = i + 1;
-                          return (
-                            <Button
-                              key={page}
-                              variant={currentPage === page ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handlePageChange(page)}
-                              className="w-8 h-8"
-                            >
-                              {page}
-                            </Button>
-                          );
-                        })}
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="w-full sm:w-auto"
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <TablePagination
+                  page={currentPage}
+                  totalPages={totalPages}
+                  total={total}
+                  pageSize={10}
+                  onPageChange={handlePageChange}
+                  showPageSize={false}
+                  entityName="entries"
+                />
               </motion.div>
             )}
 

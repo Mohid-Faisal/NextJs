@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TablePagination } from "@/components/TablePagination";
 
 type Invoice = {
   id: number;
@@ -604,27 +605,6 @@ export default function ExpensePaymentsPage() {
                   className="w-full"
                 />
               </div>
-              <div className="shrink-0 w-20 sm:w-24">
-                <Label className="mb-2 block text-xs sm:text-sm">Show</Label>
-                <Select
-                  value={pageSize.toString()}
-                  onValueChange={(value: string) => {
-                    setPageSize(parseInt(value));
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Show" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[10, 25, 50, 100].map((size) => (
-                      <SelectItem key={size} value={size.toString()}>
-                        {size}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="shrink-0 w-24 sm:w-32">
                 <Label className="mb-2 block text-xs sm:text-sm">Status</Label>
                 <Select
@@ -723,28 +703,16 @@ export default function ExpensePaymentsPage() {
               )}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
-                <Button
-                  disabled={page <= 1}
-                  onClick={() => setPage((prev) => prev - 1)}
-                  className="hover:scale-105 transition-transform w-full sm:w-auto"
-                >
-                  ← Prev
-                </Button>
-                <span className="text-center">
-                  Page {page} of {totalPages}
-                </span>
-                <Button
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((prev) => prev + 1)}
-                  className="hover:scale-105 transition-transform w-full sm:w-auto"
-                >
-                  Next →
-                </Button>
-              </div>
-            )}
+            <TablePagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => typeof s === "number" && setPageSize(s)}
+              entityName="invoices"
+              showAllOption={false}
+            />
           </CardContent>
         </Card>
 

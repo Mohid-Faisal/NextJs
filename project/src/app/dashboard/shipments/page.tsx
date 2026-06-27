@@ -47,6 +47,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import DeleteDialog from "@/components/DeleteDialog";
+import { TablePagination } from "@/components/TablePagination";
 import { getTrackingUrl } from "@/lib/tracking-links";
 
 function truncateName(name: string | null | undefined, maxLen: number): string {
@@ -898,29 +899,6 @@ export default function ShipmentsPage() {
       <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 min-w-0">
         {/* Left side - Page size and Search field */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:max-w-2xl min-w-0">
-          {/* Page size select */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Show:</span>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(value) => {
-                setPageSize(value === 'all' ? 'all' : parseInt(value));
-                setPage(1); // Reset to first page when changing page size
-              }}
-            >
-              <SelectTrigger className="w-20 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Search field */}
           <div className="flex w-full max-w-sm">
             <Input
@@ -1101,7 +1079,7 @@ export default function ShipmentsPage() {
                       {getSortIcon("totalWeight")}
                     </button>
                   </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[140px]">
                     <button
                       onClick={() => handleSort("trackingId")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
@@ -1111,12 +1089,6 @@ export default function ShipmentsPage() {
                       {getSortIcon("trackingId")}
                     </button>
                   </th>
-                  {deliveryStatusFilter === "All" && (
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                      <span className="hidden sm:inline">Status</span>
-                      <span className="sm:hidden">DS</span>
-                    </th>
-                  )}
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("totalCost")}
@@ -1178,65 +1150,58 @@ export default function ShipmentsPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || shipment.weight || 0}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        {getTrackingUrl(shipment) ? (
-                          <a
-                            href={getTrackingUrl(shipment)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer inline-block"
-                          >
-                            <span className="hidden sm:inline">{shipment.trackingId}</span>
-                            <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
-                          </a>
-                        ) : (
-                          <button
-                            onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                            className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                          >
-                            <span className="hidden sm:inline">{shipment.trackingId}</span>
-                            <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
-                          </button>
-                        )}
-                      </td>
-                      {deliveryStatusFilter === "All" && (
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <div className="min-w-0">
+                          {getTrackingUrl(shipment) ? (
+                            <a
+                              href={getTrackingUrl(shipment)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer inline-block"
+                            >
+                              <span className="hidden sm:inline">{shipment.trackingId}</span>
+                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                            </a>
+                          ) : (
+                            <button
+                              onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                              className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                            >
+                              <span className="hidden sm:inline">{shipment.trackingId}</span>
+                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                            </button>
+                          )}
                           <span
-                            className={`px-1 sm:px-2 py-1 rounded text-xs font-medium ${getDeliveryStatusColor(
+                            className={`mt-1 inline-block rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getDeliveryStatusColor(
                               shipment.deliveryStatus
                             )}`}
                           >
                             {shipment.deliveryStatus || "N/A"}
                           </span>
-                        </td>
-                      )}
+                        </div>
+                      </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <div className="min-w-0">
                           <div className="font-semibold text-gray-900 dark:text-gray-100">
                             {Number(shipment.totalCost || 0).toLocaleString()}
                           </div>
-                          {(() => {
-                            const status =
+                          <span
+                            className={`mt-1 inline-block rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getInvoiceColor(
                               shipment.invoices?.[0]?.status ||
-                              shipment.invoiceStatus ||
-                              "N/A";
-                            const dotColor =
-                              status === "Paid"
-                                ? "bg-green-500"
-                                : status === "Unpaid"
-                                  ? "bg-red-500"
-                                  : status === "Overdue"
-                                    ? "bg-orange-500"
-                                    : "bg-gray-400";
-                            return (
-                              <span
-                                className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${getInvoiceColor(status)}`}
-                              >
-                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
-                                <span className="hidden sm:inline">{status}</span>
-                                <span className="sm:hidden">{status.substring(0, 3)}</span>
-                              </span>
-                            );
-                          })()}
+                                shipment.invoiceStatus ||
+                                "N/A"
+                            )}`}
+                          >
+                            <span className="hidden sm:inline">
+                              {shipment.invoices?.[0]?.status ||
+                                shipment.invoiceStatus ||
+                                "N/A"}
+                            </span>
+                            <span className="sm:hidden">
+                              {(shipment.invoices?.[0]?.status ||
+                                shipment.invoiceStatus ||
+                                "N/A").substring(0, 3)}
+                            </span>
+                          </span>
                         </div>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
@@ -1575,37 +1540,15 @@ export default function ShipmentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Pagination and Total Count */}
-      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
-        <div className="text-center sm:text-left">
-          {pageSize === 'all' 
-            ? `Showing all ${total} shipments`
-            : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} shipments`
-          }
-        </div>
-        
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <Button
-              disabled={page <= 1}
-              onClick={() => setPage((prev) => prev - 1)}
-              className="hover:scale-105 transition-transform w-full sm:w-auto"
-            >
-              ← Prev
-            </Button>
-            <span>
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              disabled={page >= totalPages}
-              onClick={() => setPage((prev) => prev + 1)}
-              className="hover:scale-105 transition-transform w-full sm:w-auto"
-            >
-              Next →
-            </Button>
-          </div>
-        )}
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        entityName="shipments"
+      />
     </div>
   );
 }

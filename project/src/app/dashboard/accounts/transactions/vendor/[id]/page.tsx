@@ -30,6 +30,7 @@ import {
   type AccountsPeriodType,
 } from "@/lib/accounts/periodDateRange";
 import { isVendorDebitNoteReference } from "@/lib/noteFormats";
+import { TablePagination } from "@/components/TablePagination";
 
 type Vendor = {
   id: number;
@@ -1236,30 +1237,8 @@ export default function VendorTransactionsPage() {
           </div>
         </div>
 
-        {/* Right side - Show, Export, Recalculate and Date Range */}
+        {/* Right side - Export, Recalculate and Date Range */}
         <div className="flex gap-4 items-end">
-          {/* Show Entries Dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">Show:</span>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(value: string) => {
-                setPageSize(value === 'all' ? 'all' : parseInt(value));
-              }}
-            >
-              <SelectTrigger className="w-20 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <input
             ref={bulkFileInputRef}
             type="file"
@@ -1562,41 +1541,15 @@ export default function VendorTransactionsPage() {
         </CardContent>
       </Card>
 
-      {/* Pagination and Total Count */}
-      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
-        <div className="text-center sm:text-left">
-          {pageSize === 'all' 
-            ? `Showing all ${total} transactions`
-            : `Showing ${((page - 1) * (pageSize as number)) + 1} to ${Math.min(page * (pageSize as number), total)} of ${total} transactions`
-          }
-        </div>
-        
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <Button
-              disabled={page <= 1}
-              onClick={() => {
-                setPage((prev) => prev - 1);
-              }}
-              className="hover:scale-105 transition-transform w-full sm:w-auto"
-            >
-              ← Prev
-            </Button>
-            <span>
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              disabled={page >= totalPages}
-              onClick={() => {
-                setPage((prev) => prev + 1);
-              }}
-              className="hover:scale-105 transition-transform w-full sm:w-auto"
-            >
-              Next →
-            </Button>
-          </div>
-        )}
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        entityName="transactions"
+      />
     </div>
   );
 }

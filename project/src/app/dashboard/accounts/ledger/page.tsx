@@ -35,6 +35,7 @@ import {
   isSameDay,
   isWithinInterval,
 } from "date-fns";
+import { TablePagination } from "@/components/TablePagination";
 
 type Customer = {
   id: number;
@@ -455,26 +456,6 @@ export default function LedgerPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-4 items-end">
-                  <Select
-                    value={String(limit)}
-                    onValueChange={(value) => {
-                      setLimit(parseInt(value));
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               {/* Transactions Table */}
@@ -593,28 +574,17 @@ export default function LedgerPage() {
                 </div>
               )}
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
-                  <Button
-                    disabled={page <= 1}
-                    onClick={() => setPage((prev) => prev - 1)}
-                    className="hover:scale-105 transition-transform"
-                  >
-                    ← Prev
-                  </Button>
-                  <span>
-                    Page {page} of {totalPages}
-                  </span>
-                  <Button
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((prev) => prev + 1)}
-                    className="hover:scale-105 transition-transform"
-                  >
-                    Next →
-                  </Button>
-                </div>
-              )}
+              <TablePagination
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                pageSize={limit}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => typeof s === "number" && setLimit(s)}
+                entityName="transactions"
+                showAllOption={false}
+                pageSizeOptions={[5, 10, 25, 50, 100]}
+              />
             </CardContent>
           </Card>
         ) : (

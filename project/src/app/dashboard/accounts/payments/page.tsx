@@ -23,6 +23,7 @@ import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowU
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { TablePagination } from "@/components/TablePagination";
 import {
   format,
   parseISO,
@@ -507,30 +508,6 @@ export default function PaymentsPage() {
 
       {/* Filters */}
       <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 flex-wrap">
-        {/* Show Entries Dropdown */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Show:</span>
-          <Select
-            value={pageSize.toString()}
-            onValueChange={(value) => {
-              setPageSize(value === "all" ? "all" : parseInt(value));
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[80px] h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="5">5</SelectItem>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-              <SelectItem value="all">All</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Search field */}
         <div className="flex flex-1 min-w-[200px] max-w-sm">
           <Input
@@ -831,27 +808,15 @@ export default function PaymentsPage() {
         </CardContent>
       </Card>
 
-      {totalPages > 1 && (
-        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 text-sm text-gray-600 dark:text-gray-300">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform w-full sm:w-auto"
-          >
-            ← Prev
-          </Button>
-          <span>
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform w-full sm:w-auto"
-          >
-            Next →
-          </Button>
-        </div>
-      )}
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        entityName="payments"
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>

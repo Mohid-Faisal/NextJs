@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { TablePagination } from "@/components/TablePagination";
 import {
   format,
   parseISO,
@@ -426,28 +427,6 @@ export default function InvoicesPage() {
 
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4 w-full max-w-xl">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Show:</span>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(value) => {
-                setPageSize(value === "all" ? "all" : parseInt(value));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-24 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="flex w-full">
             <Input
               placeholder="Search by invoice #, tracking #, customer..."
@@ -896,27 +875,15 @@ export default function InvoicesPage() {
         </CardContent>
       </Card>
 
-      {totalPages > 1 && (
-        <div className="mt-6 flex justify-between items-center text-sm text-gray-600 dark:text-gray-300">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => prev - 1)}
-            className="hover:scale-105 transition-transform"
-          >
-            ← Prev
-          </Button>
-          <span>
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => prev + 1)}
-            className="hover:scale-105 transition-transform"
-          >
-            Next →
-          </Button>
-        </div>
-      )}
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        entityName="invoices"
+      />
 
       {/* Delete Dialog */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>

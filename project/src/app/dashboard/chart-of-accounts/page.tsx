@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { TablePagination } from "@/components/TablePagination";
 
 interface ChartOfAccount {
   id: number;
@@ -491,32 +492,16 @@ const ChartOfAccountsPage = () => {
             </div>
           )}
 
-          {/* Pagination */}
-          {total > limit && (
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 mt-4 sm:mt-6">
-              <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
-                Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} accounts
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setPage(page - 1)}
-                  disabled={page === 1}
-                  className="w-full sm:w-auto"
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setPage(page + 1)}
-                  disabled={page >= Math.ceil(total / limit)}
-                  className="w-full sm:w-auto"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <TablePagination
+            page={page}
+            totalPages={Math.max(1, Math.ceil(total / limit))}
+            total={total}
+            pageSize={limit}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => typeof s === "number" && setLimit(s)}
+            entityName="accounts"
+            showAllOption={false}
+          />
         </CardContent>
       </Card>
 
