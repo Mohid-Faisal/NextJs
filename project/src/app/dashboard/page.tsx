@@ -17,6 +17,7 @@ import {
   Activity,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowRight,
   Maximize2,
   X,
 } from "lucide-react";
@@ -51,6 +52,11 @@ import { Country } from "country-state-city";
 import { getCountryNameFromCode } from "@/lib/utils";
 import { getTrackingUrl } from "@/lib/tracking-links";
 import CountryRevenueMap from "@/components/CountryRevenueMap";
+
+function truncateName(name: string | null | undefined, maxLen: number): string {
+  if (!name) return "N/A";
+  return name.length > maxLen ? `${name.slice(0, maxLen)}…` : name;
+}
 
 /** Compact Y-axis for large currency-style values (e.g. 80M, 1.2B). */
 function formatAccountsTrendAxis(value: number): string {
@@ -654,22 +660,19 @@ const DashboardPage = () => {
                   <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Date</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Booking#</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Sender</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Receiver</th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[180px]">Sender / Recipient</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Country</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Type</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Pcs</th>
                     <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Weight</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Tracking</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Status</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Total Cost</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Invoice Status</th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[140px]">Tracking</th>
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Total</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
                   {data.recentShipments.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="px-2 sm:px-3 lg:px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={9} className="px-2 sm:px-3 lg:px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                         No recent shipments found.
                       </td>
                     </tr>
@@ -695,72 +698,72 @@ const DashboardPage = () => {
                           </button>
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{shipment.senderName}</span>
-                          <span className="sm:hidden">{shipment.senderName?.substring(0, 10)}...</span>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                              <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
+                              <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                              <ArrowRight className="h-3 w-3 shrink-0" />
+                              <span className="truncate">
+                                <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
+                                <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
+                              </span>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{shipment.recipientName}</span>
-                          <span className="sm:hidden">{shipment.recipientName?.substring(0, 10)}...</span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{shipment.destination}</span>
-                          <span className="sm:hidden">{shipment.destination?.substring(0, 8)}...</span>
+                          <span className="hidden sm:inline">{getCountryNameFromCode(shipment.destination)}</span>
+                          <span className="sm:hidden">{getCountryNameFromCode(shipment.destination)?.substring(0, 8)}...</span>
                         </td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.packaging || "N/A"}</td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || 0}</td>
                         <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          {getTrackingUrl(shipment) ? (
-                            <a
-                              href={getTrackingUrl(shipment)!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer inline-block"
+                          <div className="flex min-w-0 flex-col items-start gap-1">
+                            {getTrackingUrl(shipment) ? (
+                              <a
+                                href={getTrackingUrl(shipment)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block max-w-full truncate font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              >
+                                <span className="hidden sm:inline">{shipment.trackingId}</span>
+                                <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                              </a>
+                            ) : (
+                              <button
+                                onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                                className="block max-w-full truncate text-left font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              >
+                                <span className="hidden sm:inline">{shipment.trackingId}</span>
+                                <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                              </button>
+                            )}
+                            <span
+                              className={`rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getDeliveryStatusColor(
+                                shipment.status
+                              )}`}
                             >
-                              <span className="hidden sm:inline">{shipment.trackingId}</span>
-                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
-                            </a>
-                          ) : (
-                            <button
-                              onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                              className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              <span className="hidden sm:inline">{shipment.status || "N/A"}</span>
+                              <span className="sm:hidden">{shipment.status?.substring(0, 3) || "N/A"}</span>
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">
+                              {shipment.totalCost.toLocaleString()}
+                            </div>
+                            <span
+                              className={`mt-1 inline-block rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getInvoiceColor(
+                                shipment.invoiceStatus
+                              )}`}
                             >
-                              <span className="hidden sm:inline">{shipment.trackingId}</span>
-                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
-                            </button>
-                          )}
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span
-                            className={`px-1 sm:px-2 py-1 rounded text-xs font-medium ${getDeliveryStatusColor(
-                              shipment.status
-                            )}`}
-                          >
-                            <span className="hidden sm:inline">
-                              {shipment.status || "N/A"}
+                              <span className="hidden sm:inline">{shipment.invoiceStatus || "N/A"}</span>
+                              <span className="sm:hidden">{shipment.invoiceStatus?.substring(0, 3) || "N/A"}</span>
                             </span>
-                            <span className="sm:hidden">
-                              {shipment.status?.substring(0, 3) || "N/A"}
-                            </span>
-                          </span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{shipment.totalCost.toLocaleString()}</span>
-                          <span className="sm:hidden">{shipment.totalCost.toLocaleString()}</span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span
-                            className={`px-1 sm:px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(
-                              shipment.invoiceStatus
-                            )}`}
-                          >
-                            <span className="hidden sm:inline">
-                              {shipment.invoiceStatus || "N/A"}
-                            </span>
-                            <span className="sm:hidden">
-                              {shipment.invoiceStatus?.substring(0, 3) || "N/A"}
-                            </span>
-                          </span>
+                          </div>
                         </td>
                       </motion.tr>
                     ))

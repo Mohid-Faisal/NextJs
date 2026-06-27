@@ -1150,13 +1150,13 @@ export default function ShipmentsPage() {
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || shipment.weight || 0}</td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="min-w-0">
+                        <div className="flex min-w-0 flex-col items-start gap-1">
                           {getTrackingUrl(shipment) ? (
                             <a
                               href={getTrackingUrl(shipment)!}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer inline-block"
+                              className="block max-w-full truncate font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
                             >
                               <span className="hidden sm:inline">{shipment.trackingId}</span>
                               <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
@@ -1164,19 +1164,21 @@ export default function ShipmentsPage() {
                           ) : (
                             <button
                               onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                              className="font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              className="block max-w-full truncate text-left font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
                             >
                               <span className="hidden sm:inline">{shipment.trackingId}</span>
                               <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
                             </button>
                           )}
-                          <span
-                            className={`mt-1 inline-block rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getDeliveryStatusColor(
-                              shipment.deliveryStatus
-                            )}`}
-                          >
-                            {shipment.deliveryStatus || "N/A"}
-                          </span>
+                          {deliveryStatusFilter === "All" && (
+                            <span
+                              className={`rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getDeliveryStatusColor(
+                                shipment.deliveryStatus
+                              )}`}
+                            >
+                              {shipment.deliveryStatus || "N/A"}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
