@@ -49,13 +49,6 @@ import { Textarea } from "@/components/ui/textarea";
 import DeleteDialog from "@/components/DeleteDialog";
 import { getTrackingUrl } from "@/lib/tracking-links";
 
-function nameInitials(name?: string | null): string {
-  if (!name?.trim()) return "?";
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 function truncateName(name: string | null | undefined, maxLen: number): string {
   if (!name) return "N/A";
   return name.length > maxLen ? `${name.slice(0, maxLen)}…` : name;
@@ -1129,19 +1122,9 @@ export default function ShipmentsPage() {
                       onClick={() => handleSort("totalCost")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Total Cost</span>
-                      <span className="sm:hidden">C</span>
+                      <span className="hidden sm:inline">Total</span>
+                      <span className="sm:hidden">T</span>
                       {getSortIcon("totalCost")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("invoiceStatus")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Invoice Status</span>
-                      <span className="sm:hidden">I</span>
-                      {getSortIcon("invoiceStatus")}
                     </button>
                   </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
@@ -1173,22 +1156,17 @@ export default function ShipmentsPage() {
                         </button>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                          <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300 text-xs font-semibold">
-                            {nameInitials(shipment.senderName)}
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                            <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
+                            <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
                           </div>
-                          <div className="min-w-0">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                              <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
-                              <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
-                            </div>
-                            <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
-                              <ArrowRight className="h-3 w-3 shrink-0" />
-                              <span className="truncate">
-                                <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
-                                <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
-                              </span>
-                            </div>
+                          <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                            <ArrowRight className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
+                              <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -1232,27 +1210,34 @@ export default function ShipmentsPage() {
                         </td>
                       )}
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{Number(shipment.totalCost || 0).toLocaleString()}</span>
-                        <span className="sm:hidden">{Number(shipment.totalCost || 0).toLocaleString()}</span>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span
-                          className={`px-1 sm:px-2 py-1 rounded text-xs font-medium ${getInvoiceColor(
-                            shipment.invoices?.[0]?.status ||
-                              shipment.invoiceStatus
-                          )}`}
-                        >
-                          <span className="hidden sm:inline">
-                            {shipment.invoices?.[0]?.status ||
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 dark:text-gray-100">
+                            {Number(shipment.totalCost || 0).toLocaleString()}
+                          </div>
+                          {(() => {
+                            const status =
+                              shipment.invoices?.[0]?.status ||
                               shipment.invoiceStatus ||
-                              "N/A"}
-                          </span>
-                          <span className="sm:hidden">
-                            {shipment.invoices?.[0]?.status?.substring(0, 3) ||
-                              shipment.invoiceStatus?.substring(0, 3) ||
-                              "N/A"}
-                          </span>
-                        </span>
+                              "N/A";
+                            const dotColor =
+                              status === "Paid"
+                                ? "bg-green-500"
+                                : status === "Unpaid"
+                                  ? "bg-red-500"
+                                  : status === "Overdue"
+                                    ? "bg-orange-500"
+                                    : "bg-gray-400";
+                            return (
+                              <span
+                                className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${getInvoiceColor(status)}`}
+                              >
+                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                                <span className="hidden sm:inline">{status}</span>
+                                <span className="sm:hidden">{status.substring(0, 3)}</span>
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <DropdownMenu>
