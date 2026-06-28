@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireApiSession(request);

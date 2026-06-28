@@ -18,11 +18,10 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query'] : [],
-    datasources: {
-      db: {
-        url: datasourceUrl,
-      },
-    },
+    ...(datasourceUrl
+      ? { datasources: { db: { url: datasourceUrl } } }
+      : {}),
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
