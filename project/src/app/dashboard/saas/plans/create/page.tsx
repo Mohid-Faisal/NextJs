@@ -60,7 +60,10 @@ export default function CreatePlanPage() {
   const [newLimitKey, setNewLimitKey] = useState("");
   const [newLimitValue, setNewLimitValue] = useState("");
 
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     const token = Cookies.get("token");
     if (token) {
       try {
@@ -176,6 +179,14 @@ export default function CreatePlanPage() {
       setLoading(false);
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[300px]">
+        <p className="text-muted-foreground animate-pulse font-medium">Loading form...</p>
+      </div>
+    );
+  }
 
   if (!isSuperAdmin) {
     return (
