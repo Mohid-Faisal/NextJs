@@ -36,6 +36,8 @@ import {
   ArrowUpCircle,
   ShieldCheck,
   UserCheck,
+  Crown,
+  Layers,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -81,6 +83,9 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [reportsOpen, setReportsOpen] = useState(
     pathname.startsWith("/dashboard/reports") || pathname.startsWith("/dashboard/accounts/ledger")
   );
+  const [saasOpen, setSaasOpen] = useState(
+    pathname.startsWith("/dashboard/saas") && !pathname.startsWith("/dashboard/saas/pending-approvals")
+  );
 
   useEffect(() => {
     const token = Cookies.get("token");
@@ -123,6 +128,13 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       label: "Rate Calculator",
       icon: DollarSign,
     },
+  ];
+  const subLinksSaaS = [
+    { href: "/dashboard/saas/organizations", label: "SaaS Dashboard", icon: Crown },
+    { href: "/dashboard/saas/plans", label: "Plans", icon: Layers },
+    { href: "/dashboard/saas/wallets", label: "Wallets", icon: Wallet },
+    { href: "/dashboard/saas/subscriptions", label: "Subscriptions", icon: FileText },
+    { href: "/dashboard/saas/invoices", label: "Invoices", icon: Receipt },
   ];
   const subLinksSettings = [
     {
@@ -282,25 +294,71 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </span>
           </Link>
 
-          {/* SaaS Admin (super admin only) */}
+          {/* SAAS ADMIN Section Heading */}
+          {isSuperAdmin && shouldExpand && (
+            <div className="px-3 pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              SAAS ADMIN
+            </div>
+          )}
+
+          {/* SaaS Admin Collapsible */}
           {isSuperAdmin && (
-            <Link
-              href="/dashboard/saas/organizations"
-              className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
-                pathname.startsWith("/dashboard/saas/organizations")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
-            >
-              <ShieldCheck className="w-5 h-5 shrink-0" />
-              <span
-                className={`whitespace-nowrap transition-all duration-200 ${
-                  shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+            <div>
+              <button
+                onClick={() => setSaasOpen(!saasOpen)}
+                className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                  pathname.startsWith("/dashboard/saas") &&
+                  !pathname.startsWith("/dashboard/saas/pending-approvals")
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
-                SaaS Admin
-              </span>
-            </Link>
+                <div className="flex items-center gap-4">
+                  <Crown className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand
+                        ? "opacity-100"
+                        : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    SaaS Admin
+                  </span>
+                </div>
+                {shouldExpand &&
+                  (saasOpen ? (
+                    <ChevronUp className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
+                  ))}
+              </button>
+
+              <AnimatePresence>
+                {saasOpen && shouldExpand && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="pl-10 mt-2 space-y-1 border-l border-slate-200 dark:border-slate-800 ml-5"
+                  >
+                    {subLinksSaaS.map(({ href, label, icon: Icon }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                          pathname === href
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {label}
+                      </Link>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
 
           {/* Pending Approvals (super admin only) */}
