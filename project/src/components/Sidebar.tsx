@@ -148,11 +148,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       icon: Users,
     },
     {
-      href: "/dashboard/settings/billing",
-      label: "Billing & Plan",
-      icon: Wallet,
-    },
-    {
       href: "/dashboard/settings/logistics",
       label: "Logistics Settings",
       icon: Truck,
@@ -461,31 +456,33 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
           </div>
 
           {/* Other Static Links */}
-          {links.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                }`}
-              >
-                <Icon className="w-5 h-5 shrink-0" />
-                <span
-                  className={`whitespace-nowrap transition-all duration-200 ${
-                    shouldExpand
-                      ? "opacity-100"
-                      : "opacity-0 w-0 overflow-hidden"
+          {links
+            .filter((link) => link.href !== "/dashboard/users" || isSuperAdmin)
+            .map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   }`}
                 >
-                  {label}
-                </span>
-              </Link>
-            );
-          })}
+                  <Icon className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand
+                        ? "opacity-100"
+                        : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </Link>
+              );
+            })}
 
           {/* Income Collapsible */}
           <div>
