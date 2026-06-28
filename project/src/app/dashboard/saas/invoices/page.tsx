@@ -29,8 +29,10 @@ export default function SaasInvoicesPage() {
   const [invoices, setInvoices] = useState<SaaSInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const token = Cookies.get("token");
     if (token) {
       try {
@@ -82,6 +84,14 @@ export default function SaasInvoicesPage() {
       loadInvoices();
     }
   }, [isSuperAdmin]);
+
+  if (!mounted) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[300px]">
+        <p className="text-muted-foreground animate-pulse font-medium">Loading invoices...</p>
+      </div>
+    );
+  }
 
   if (!isSuperAdmin) {
     return (
