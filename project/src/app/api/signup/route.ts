@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       where: { email },
     });
 
-    if (existingUser) {
+    if (existingUser && !existingUser.status.startsWith("INVITED")) {
       return NextResponse.json(
         { success: false, message: "User with this email already exists" },
         { status: 400 }
@@ -29,16 +29,31 @@ export async function POST(request: NextRequest) {
 
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedPassword = await bcrypt.hash(password, 12);
+    const verificationStatus = `PENDING_VERIFICATION_${verificationCode}_${Date.now() + 10 * 60 * 1000}`;
 
-    const user = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password: hashedPassword,
-        status: `PENDING_VERIFICATION_${verificationCode}_${Date.now() + 10 * 60 * 1000}`,
-        isApproved: false,
-      },
-    });
+    let user;
+    if (existingUser && existingUser.status.startsWith("INVITED")) {
+      // Update the pre-created invited user record
+      user = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name: name.trim(),
+          password: hashedPassword,
+          status: verificationStatus,
+        },
+      });
+    } else {
+      // Standard new user sign up
+      user = await prisma.user.create({
+        data: {
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          password: hashedPassword,
+          status: verificationStatus,
+          isApproved: false,
+        },
+      });
+    }
 
     let organization: { id: number; slug: string } | null = null;
     if (companyName?.trim()) {

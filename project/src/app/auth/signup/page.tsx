@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useTheme } from "next-themes";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,6 +40,7 @@ const getPasswordStrength = (password: string) => {
 
 const SignupPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<"user" | "org">("user");
   const [form, setForm] = useState({ companyName: "", name: "", email: "", password: "" });
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -55,6 +56,14 @@ const SignupPage = () => {
   useEffect(() => setMounted(true), []);
 
   const isDark = mounted && resolvedTheme === "dark";
+
+  // Pre-fill email from query parameter if present (from team invitation link)
+  useEffect(() => {
+    const emailParam = searchParams.get("email");
+    if (emailParam) {
+      setForm((prev) => ({ ...prev, email: emailParam }));
+    }
+  }, [searchParams]);
 
   // Fetch plans for organization signup
   useEffect(() => {
@@ -542,5 +551,17 @@ const SignupPage = () => {
   );
 };
 
-export default SignupPage;
+export default function UnifiedSignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#030014] text-white">
+        <div className="text-center space-y-2">
+          <p className="text-lg font-medium animate-pulse">Loading signup...</p>
+        </div>
+      </div>
+    }>
+      <SignupPage />
+    </Suspense>
+  );
+}
 
