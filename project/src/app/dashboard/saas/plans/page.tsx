@@ -91,10 +91,12 @@ export default function SaasPlansPage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button size="sm" onClick={() => toast.info("Plan creation is configured via seed files.")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Plan
-          </Button>
+          <Link href="/dashboard/saas/plans/create">
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Plan
+            </Button>
+          </Link>
         </div>
       </div>
 
