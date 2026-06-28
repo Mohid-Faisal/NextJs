@@ -3,12 +3,18 @@ import { prisma } from "@/lib/prisma";
 import fs from 'fs';
 import path from 'path';
 import { Country } from 'country-state-city';
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const invID = searchParams.get('invID');
@@ -37,17 +43,12 @@ export async function GET(
       }
     } else {
       // Fetch invoice data from database
-      invoice = await prisma.invoice.findFirst({
-      where: {
-        id: parseInt(invID),
-        shipmentId: parseInt(shipmentId)
-      },
-      include: {
-        shipment: true,
-        customer: true,
-        vendor: true
-      }
-    });
+      invoice = await findOrgInvoice(
+        session,
+        parseInt(invID),
+        { shipmentId: parseInt(shipmentId) },
+        { shipment: true, customer: true, vendor: true }
+      );
 
     if (!invoice) {
       console.log('No invoice found for:', { shipmentId, invID });

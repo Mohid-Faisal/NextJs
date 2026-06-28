@@ -5,6 +5,8 @@ import fs from "fs";
 import path from "path";
 import { Readable } from "stream";
 import { PrismaClient } from "@prisma/client";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 const prisma = new PrismaClient();
 
@@ -85,6 +87,10 @@ async function getNextCustomerId(): Promise<number> {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { fields, files } = await parseForm(req);
     const uploadedFile = files.file?.[0];
     const filename = uploadedFile?.newFilename;
@@ -128,10 +134,10 @@ export async function POST(req: NextRequest) {
     // console.log(customerData);
     
 
-    const existingCustomer = await prisma.customers.findUnique({
-      where: {
+    const existingCustomer = await prisma.customers.findFirst({
+      where: orgWhere(session, {
         CompanyName: customerData.CompanyName,
-      },
+      }),
     });
     
     if (existingCustomer) {
@@ -143,7 +149,7 @@ export async function POST(req: NextRequest) {
     
     // console.log(customerData);
     const newCustomer = await prisma.customers.create({
-      data: customerData,
+      data: orgData(session, customerData),
     });
 
     return NextResponse.json({

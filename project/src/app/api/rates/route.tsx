@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const vendor = formData.get("vendor") as string;
@@ -170,26 +176,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Delete existing rates for this vendor-service combination
     await prisma.rate.deleteMany({
-      where: {
+      where: orgWhere(session, {
         vendor: vendor,
         service: service,
-      },
+      }),
     });
 
-    // Create new rates
     await prisma.rate.createMany({
-      data: parsedRates,
+      data: parsedRates.map((r) => ({
+        ...r,
+        organizationId: session.organizationId,
+      })),
       skipDuplicates: true,
     });
 
-    // Store filename in database using raw SQL
     try {
       await prisma.$executeRaw`
-        INSERT INTO "filename" ("filename", "vendor", "service", "fileType", "uploadedAt")
-        VALUES (${file.name}, ${vendor}, ${service}, 'rate', ${new Date()})
-        ON CONFLICT ("service", "fileType")
+        INSERT INTO "filename" ("organizationId", "filename", "vendor", "service", "fileType", "uploadedAt")
+        VALUES (${session.organizationId}, ${file.name}, ${vendor}, ${service}, 'rate', ${new Date()})
+        ON CONFLICT ("organizationId", "service", "fileType")
         DO UPDATE SET "filename" = ${file.name}, "uploadedAt" = ${new Date()}
       `;
     } catch (error) {
@@ -219,6 +225,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const { searchParams } = new URL(req.url);
   const vendor = searchParams.get("vendor");
   const service = searchParams.get("service");
@@ -238,7 +248,7 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const where: any = {};
+  const where: any = { ...orgWhere(session) };
 
   if (vendor) {
     // Search for specific vendor and service combination
@@ -298,6 +308,10 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { vendor, service } = body;
 
@@ -308,22 +322,20 @@ export async function DELETE(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Delete all rates for the specified vendor and service
     const deleteResult = await prisma.rate.deleteMany({
-      where: {
+      where: orgWhere(session, {
         vendor: vendor,
         service: service,
-      },
+      }),
     });
 
-    // Also delete the filename record for this vendor-service combination
     try {
       await prisma.filename.deleteMany({
-        where: {
+        where: orgWhere(session, {
           vendor: vendor,
           service: service,
           fileType: "rate",
-        },
+        }),
       });
       console.log(`🗑️ Deleted filename record for vendor: ${vendor}, service: ${service}`);
     } catch (filenameError) {

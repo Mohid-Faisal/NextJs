@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
-const prisma = new PrismaClient();
-
-// PUT /api/agencies/[id] - Update agency
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
-    const idNum = parseInt(id);
+    const idNum = parseInt(id, 10);
     const body = await request.json();
     const { code, name } = body;
 
@@ -18,30 +21,48 @@ export async function PUT(
       return NextResponse.json({ error: "Code and name are required" }, { status: 400 });
     }
 
+    const existing = await prisma.agency.findFirst({
+      where: orgWhere(session, { id: idNum }),
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Agency not found" }, { status: 404 });
+    }
+
     const agency = await prisma.agency.update({
       where: { id: idNum },
-      data: { code, name }
+      data: { code, name },
     });
 
     return NextResponse.json(agency);
   } catch (error: any) {
-    if (error.code === 'P2002') {
+    if (error.code === "P2002") {
       return NextResponse.json({ error: "Agency code already exists" }, { status: 400 });
     }
     return NextResponse.json({ error: "Failed to update agency" }, { status: 500 });
   }
 }
 
-// DELETE /api/agencies/[id] - Delete agency
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
-    const idNum = parseInt(id);
+    const idNum = parseInt(id, 10);
+
+    const existing = await prisma.agency.findFirst({
+      where: orgWhere(session, { id: idNum }),
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Agency not found" }, { status: 404 });
+    }
+
     await prisma.agency.delete({
-      where: { id: idNum }
+      where: { id: idNum },
     });
 
     return NextResponse.json({ message: "Agency deleted successfully" });

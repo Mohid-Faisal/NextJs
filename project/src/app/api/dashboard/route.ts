@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { getCountryNameFromCode } from "@/lib/utils";
 import { computeMonthlyPartyNetsUsingVoucherDates } from "@/lib/accounts/dashboardVoucherBalances";
-
-const prisma = new PrismaClient();
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import type { PrismaClient } from "@prisma/client";
 
 /**
  * For a calendar period: gross of customer invoices created in that period,
@@ -12,11 +13,13 @@ const prisma = new PrismaClient();
  */
 async function netCustomerInvoicedReceivableForPeriod(
   prismaClient: PrismaClient,
+  organizationId: number,
   rangeStart: Date,
   rangeEndExclusive: Date
 ): Promise<number> {
   const monthInvoices = await prismaClient.invoice.findMany({
     where: {
+      organizationId,
       customerId: { not: null },
       status: { not: "Cancelled" },
       createdAt: {
@@ -36,6 +39,7 @@ async function netCustomerInvoicedReceivableForPeriod(
 
   const paymentsReceived = await prismaClient.payment.aggregate({
     where: {
+      organizationId,
       transactionType: "INCOME",
       fromCustomerId: { not: null },
       date: {
@@ -54,16 +58,21 @@ async function netCustomerInvoicedReceivableForPeriod(
   return Math.round(Math.max(0, net) * 100) / 100;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+    const org = (extra: Record<string, unknown> = {}) => orgWhere(session, extra);
+
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
     
     // Test basic database connectivity and data
     console.log('=== TESTING DATABASE CONNECTIVITY ===');
-    const testShipment = await prisma.shipment.findFirst();
-    const testCustomer = await prisma.customers.findFirst();
-    const testInvoice = await prisma.invoice.findFirst();
+    const testShipment = await prisma.shipment.findFirst({ where: org() });
+    const testCustomer = await prisma.customers.findFirst({ where: org() });
+    const testInvoice = await prisma.invoice.findFirst({ where: org() });
     
     console.log('Test Data:', {
       hasShipments: !!testShipment,
@@ -76,26 +85,22 @@ export async function GET() {
     console.log('=== END TESTING ===');
     
     // Get total shipments
-    const totalShipments = await prisma.shipment.count();
+    const totalShipments = await prisma.shipment.count({ where: org() });
     
     // Get total users
     const totalUsers = await prisma.user.count();
     
     // Get total customers
-    const totalCustomers = await prisma.customers.count();
+    const totalCustomers = await prisma.customers.count({ where: org() });
     
     // Get active customers (customers with ActiveStatus = "Active")
     const activeCustomers = await prisma.customers.count({
-      where: {
-        ActiveStatus: "Active"
-      }
+      where: org({ ActiveStatus: "Active" }),
     });
     
     // Get inactive customers (customers with ActiveStatus = "Inactive")
     const inactiveCustomers = await prisma.customers.count({
-      where: {
-        ActiveStatus: "Inactive"
-      }
+      where: org({ ActiveStatus: "Inactive" }),
     });
     
     // Get currently active users (users active in the last 30 minutes)
@@ -152,10 +157,10 @@ export async function GET() {
     
     // Get total revenue from customer invoices
     const totalRevenueResult = await prisma.invoice.aggregate({
-      where: {
-        customerId: { not: null }, // Only customer invoices
-        status: { not: "Cancelled" }
-      },
+      where: org({
+        customerId: { not: null },
+        status: { not: "Cancelled" },
+      }),
       _sum: {
         totalAmount: true
       }
@@ -164,12 +169,12 @@ export async function GET() {
     
     // Get new orders (shipments with shipment date this month)
     const newOrders = await prisma.shipment.count({
-      where: {
+      where: org({
         shipmentDate: {
           gte: new Date(currentYear, currentMonth, 1),
-          lt: new Date(currentYear, currentMonth + 1, 1)
-        }
-      }
+          lt: new Date(currentYear, currentMonth + 1, 1),
+        },
+      }),
     });
     
     // Get monthly earnings for the current year (using shipmentDate from related shipments)
@@ -180,7 +185,7 @@ export async function GET() {
       
       // Get invoices with their related shipments, then filter by shipmentDate
       const invoices = await prisma.invoice.findMany({
-        where: {
+        where: org({
           customerId: { not: null },
           status: { not: "Cancelled" },
           shipment: {
@@ -189,7 +194,7 @@ export async function GET() {
               lt: endDate
             }
           }
-        },
+        }),
         select: {
           totalAmount: true
         }
@@ -206,6 +211,7 @@ export async function GET() {
     
     // Get recent shipments with real data (ordered by shipmentDate)
     const recentShipments = await prisma.shipment.findMany({
+      where: org(),
       take: 10,
       orderBy: {
         shipmentDate: 'desc'
@@ -235,11 +241,11 @@ export async function GET() {
       .map((s) => s.invoiceNumber)
       .filter((n): n is string => typeof n === "string" && n.length > 0);
     const invoices = await prisma.invoice.findMany({
-      where: {
+      where: org({
         invoiceNumber: {
-          in: invoiceNumbers
-        }
-      },
+          in: invoiceNumbers,
+        },
+      }),
       select: {
         invoiceNumber: true,
         status: true
@@ -286,6 +292,7 @@ export async function GET() {
     
     // Get recent payments from the main Payment table
     const recentPayments = await prisma.payment.findMany({
+      where: org(),
       take: 10,
       orderBy: {
         date: 'desc'
@@ -347,6 +354,7 @@ export async function GET() {
     // Get shipment status distribution
     const shipmentStatuses = await prisma.shipment.groupBy({
       by: ['deliveryStatus'],
+      where: org(),
       _count: {
         id: true
       }
@@ -361,6 +369,7 @@ export async function GET() {
     // Get revenue by destination with shipments - all countries
     const allDestinationsForRevenue = await prisma.shipment.groupBy({
       by: ['destination'],
+      where: org(),
       _count: {
         id: true
       }
@@ -375,9 +384,9 @@ export async function GET() {
       topDestinationsForRevenue.map(async (dest) => {
         // Get shipments with this destination
         const shipmentsWithDestination = await prisma.shipment.findMany({
-          where: {
-            destination: dest.destination
-          },
+          where: org({
+            destination: dest.destination,
+          }),
           select: {
             id: true,
             invoiceNumber: true
@@ -390,13 +399,13 @@ export async function GET() {
         let destinationRevenue = 0;
         if (shipmentIds.length > 0) {
           const revenueResult = await prisma.invoice.aggregate({
-            where: {
+            where: org({
               shipmentId: {
                 in: shipmentIds
               },
               customerId: { not: null },
               status: { not: "Cancelled" }
-            },
+            }),
             _sum: {
               totalAmount: true
             }
@@ -427,17 +436,17 @@ export async function GET() {
       const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 1);
       
       const monthShipments = await prisma.shipment.count({
-        where: {
+        where: org({
           shipmentDate: {
             gte: startDate,
             lt: endDate
           }
-        }
+        }),
       });
       
       // Get revenue for invoices with shipments in this month (using shipmentDate)
       const invoices = await prisma.invoice.findMany({
-        where: {
+        where: org({
           customerId: { not: null },
           status: { not: "Cancelled" },
           shipment: {
@@ -446,7 +455,7 @@ export async function GET() {
               lt: endDate
             }
           }
-        },
+        }),
         select: {
           totalAmount: true
         }
@@ -464,6 +473,7 @@ export async function GET() {
     // Get top destinations with revenue - filter out null/empty destinations
     const allDestinations = await prisma.shipment.groupBy({
       by: ['destination'],
+      where: org(),
       _count: {
         id: true
       }
@@ -480,9 +490,9 @@ export async function GET() {
       topDestinations.map(async (dest) => {
         // Get revenue from invoices linked to shipments with this destination via shipmentId
         const shipmentsWithDestination = await prisma.shipment.findMany({
-          where: {
-            destination: dest.destination
-          },
+          where: org({
+            destination: dest.destination,
+          }),
           select: {
             id: true,
             invoiceNumber: true
@@ -495,13 +505,13 @@ export async function GET() {
         let destinationRevenue = 0;
         if (shipmentIds.length > 0) {
           const revenueResult = await prisma.invoice.aggregate({
-            where: {
+            where: org({
               shipmentId: {
                 in: shipmentIds
               },
               customerId: { not: null },
               status: { not: "Cancelled" }
-            },
+            }),
             _sum: {
               totalAmount: true
             }
@@ -521,6 +531,7 @@ export async function GET() {
     
     // Get customer-destination relationship - show top customers and their preferred destinations
     const customerDestinationMap = await prisma.customers.findMany({
+      where: org(),
       select: {
         CompanyName: true,
         invoices: {
@@ -559,6 +570,7 @@ export async function GET() {
     
     // Get all customers with their invoices to calculate shipment counts
     const allCustomers = await prisma.customers.findMany({
+      where: org(),
       select: {
         CompanyName: true,
         currentBalance: true,
@@ -627,9 +639,7 @@ export async function GET() {
     
     // Calculate performance metrics
     const totalDelivered = await prisma.shipment.count({
-      where: {
-        deliveryStatus: "Delivered"
-      }
+      where: org({ deliveryStatus: "Delivered" }),
     });
     
     const deliveryRate = totalShipments > 0 ? (totalDelivered / totalShipments) * 100 : 0;
@@ -638,9 +648,7 @@ export async function GET() {
     let avgDeliveryTime = 0;
     if (totalDelivered > 0) {
       const deliveredShipments = await prisma.shipment.findMany({
-        where: {
-          deliveryStatus: "Delivered"
-        },
+        where: org({ deliveryStatus: "Delivered" }),
         select: {
           createdAt: true,
           shipmentDate: true
@@ -662,9 +670,7 @@ export async function GET() {
     let customerSatisfaction = 0;
     if (totalShipments > 0) {
       const failedShipments = await prisma.shipment.count({
-        where: {
-          deliveryStatus: "Failed"
-        }
+        where: org({ deliveryStatus: "Failed" }),
       });
       
       const successRate = ((totalShipments - failedShipments) / totalShipments) * 100;
@@ -679,7 +685,7 @@ export async function GET() {
     
     // Calculate revenue growth (comparing current month with previous month using shipmentDate)
     const currentMonthInvoices = await prisma.invoice.findMany({
-      where: {
+      where: org({
         customerId: { not: null },
         status: { not: "Cancelled" },
         shipment: {
@@ -688,14 +694,14 @@ export async function GET() {
             lt: new Date(currentYear, currentMonth + 1, 1)
           }
         }
-      },
+      }),
       select: {
         totalAmount: true
       }
     });
     
     const previousMonthInvoices = await prisma.invoice.findMany({
-      where: {
+      where: org({
         customerId: { not: null },
         status: { not: "Cancelled" },
         shipment: {
@@ -704,7 +710,7 @@ export async function GET() {
             lt: new Date(currentYear, currentMonth, 1)
           }
         }
-      },
+      }),
       select: {
         totalAmount: true
       }
@@ -716,42 +722,42 @@ export async function GET() {
     
     // Calculate shipment growth rate (comparing current month with previous month using shipmentDate)
     const currentMonthShipments = await prisma.shipment.count({
-      where: {
+      where: org({
         shipmentDate: {
           gte: new Date(currentYear, currentMonth, 1),
           lt: new Date(currentYear, currentMonth + 1, 1)
         }
-      }
+      }),
     });
     
     const previousMonthShipments = await prisma.shipment.count({
-      where: {
+      where: org({
         shipmentDate: {
           gte: new Date(currentYear, currentMonth - 1, 1),
           lt: new Date(currentYear, currentMonth, 1)
         }
-      }
+      }),
     });
     
     const shipmentGrowth = previousMonthShipments > 0 ? ((currentMonthShipments - previousMonthShipments) / previousMonthShipments) * 100 : 0;
     
     // Calculate customer growth rate
     const currentMonthCustomers = await prisma.customers.count({
-      where: {
+      where: org({
         createdAt: {
           gte: new Date(currentYear, currentMonth, 1),
           lt: new Date(currentYear, currentMonth + 1, 1)
         }
-      }
+      }),
     });
     
     const previousMonthCustomers = await prisma.customers.count({
-      where: {
+      where: org({
         createdAt: {
           gte: new Date(currentYear, currentMonth - 1, 1),
           lt: new Date(currentYear, currentMonth, 1)
         }
-      }
+      }),
     });
     
     const customerGrowth = previousMonthCustomers > 0 ? ((currentMonthCustomers - previousMonthCustomers) / previousMonthCustomers) * 100 : 0;
@@ -760,11 +766,11 @@ export async function GET() {
     // Note: Customer balances are negative when they owe us money (accounts receivable)
     // Vendor balances are positive when we owe them money (accounts payable)
     const accountsReceivableResult = await prisma.customers.aggregate({
-      where: {
+      where: org({
         currentBalance: {
           lt: 0
         }
-      },
+      }),
       _sum: {
         currentBalance: true
       }
@@ -772,11 +778,11 @@ export async function GET() {
     const totalReceivable = Math.abs(accountsReceivableResult._sum.currentBalance || 0);
     
     const accountsPayableResult = await prisma.vendors.aggregate({
-      where: {
+      where: org({
         currentBalance: {
           gt: 0
         }
-      },
+      }),
       _sum: {
         currentBalance: true
       }
@@ -791,11 +797,13 @@ export async function GET() {
 
     const currentMonthReceivableAmount = await netCustomerInvoicedReceivableForPeriod(
       prisma,
+      session.organizationId,
       curMonthStart,
       curMonthEnd
     );
     const previousMonthReceivableAmount = await netCustomerInvoicedReceivableForPeriod(
       prisma,
+      session.organizationId,
       prevMonthStart,
       prevMonthEnd
     );
@@ -855,9 +863,7 @@ export async function GET() {
     // Get deliveries by country (only delivered shipments)
     const deliveriesByCountry = await prisma.shipment.groupBy({
       by: ['destination'],
-      where: {
-        deliveryStatus: 'Delivered'
-      },
+      where: org({ deliveryStatus: 'Delivered' }),
       _count: {
         id: true
       }

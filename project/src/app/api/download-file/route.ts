@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const filename = searchParams.get("filename");
     const service = searchParams.get("service");
@@ -15,12 +20,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get file information from database
     const fileRecord = await prisma.filename.findFirst({
-      where: {
+      where: orgWhere(session, {
         filename: filename,
         service: service.toLowerCase(),
-      },
+      }),
     });
 
     if (!fileRecord) {
@@ -30,15 +34,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // For now, we'll return a placeholder response since we don't have the actual file stored
-    // In a real implementation, you would store the file in a file system or cloud storage
-    // and return the actual file content here
-    
-    // Create a simple Excel file with the zone data as a fallback
     const zoneData = await prisma.zone.findMany({
-      where: {
+      where: orgWhere(session, {
         service: service.toLowerCase(),
-      },
+      }),
     });
 
     if (zoneData.length === 0) {
@@ -48,7 +47,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Create a simple CSV content as a fallback
     const csvContent = [
       "Code,Country,Zone,Phone Code",
       ...zoneData.map(zone => 
@@ -56,7 +54,6 @@ export async function GET(req: NextRequest) {
       )
     ].join("\n");
 
-    // Return the CSV content as a downloadable file
     return new NextResponse(csvContent, {
       headers: {
         "Content-Type": "text/csv",
@@ -75,4 +72,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

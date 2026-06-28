@@ -1,22 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addCustomerTransaction, addVendorTransaction, calculateInvoicePaymentStatus, processPaymentWithAllocation } from "@/lib/utils";
+import {
+  addCustomerTransaction,
+  addVendorTransaction,
+  calculateInvoicePaymentStatus,
+  processPaymentWithAllocation,
+} from "@/lib/utils";
 import { createJournalEntryForPaymentProcess } from "@/lib/accounts/createJournalEntryForPaymentProcess";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
-    const { 
-      invoiceNumber, 
-      paymentAmount, 
-      paymentType, // "CUSTOMER_PAYMENT" or "VENDOR_PAYMENT"
+    const {
+      invoiceNumber,
+      paymentAmount,
+      paymentType,
       paymentMethod,
       reference,
       description,
       paymentDate,
       debitAccountId,
       creditAccountId,
-      enableAllocation = true // New parameter to enable/disable automatic allocation
+      enableAllocation = true,
     } = body;
 
     if (!invoiceNumber || !paymentAmount || !paymentType || !reference) {
@@ -26,7 +38,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate chart of accounts
     if (!debitAccountId || !creditAccountId) {
       return NextResponse.json(
         { error: "Both debit and credit accounts are required" },
@@ -34,7 +45,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use the new payment processing with allocation if enabled
+    const invoiceCheck = await findOrgInvoiceByNumber(session, invoiceNumber);
+    if (!invoiceCheck) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
     if (enableAllocation) {
       const result = await processPaymentWithAllocation(
         prisma,
@@ -46,42 +61,25 @@ export async function POST(req: NextRequest) {
         description,
         paymentDate,
         debitAccountId,
-        creditAccountId
+        creditAccountId,
+        session.organizationId
       );
 
-      // Create journal entry for the main payment
-      await createJournalEntryForPaymentProcess(result.payment, body, result.invoice);
+      await createJournalEntryForPaymentProcess(result.payment, body, result.invoice, session.organizationId);
 
       return NextResponse.json({
         success: true,
         message: "Payment processed successfully with automatic allocation",
         payment: result.payment,
         invoice: result.invoice,
-        allocation: result.allocation
+        allocation: result.allocation,
       });
     }
 
-    // Fallback to original logic if allocation is disabled
-    // Find the invoice
-    const invoice = await prisma.invoice.findUnique({
-      where: { invoiceNumber },
-      include: {
-        customer: true,
-        vendor: true
-      }
-    });
-
-    if (!invoice) {
-      return NextResponse.json(
-        { error: "Invoice not found" },
-        { status: 404 }
-      );
-    }
-
+    const invoice = invoiceCheck;
     const paymentAmountNum = parseFloat(paymentAmount);
 
     if (paymentType === "CUSTOMER_PAYMENT") {
-      // Customer is paying their invoice
       if (!invoice.customerId) {
         return NextResponse.json(
           { error: "This invoice is not associated with a customer" },
@@ -89,65 +87,45 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Calculate how much is still owed on this invoice
       const totalPaidSoFar = await prisma.payment.aggregate({
-        where: {
+        where: orgWhere(session, {
           invoice: invoiceNumber,
-          transactionType: "INCOME"
-        },
-        _sum: {
-          amount: true
-        }
+          transactionType: "INCOME",
+        }),
+        _sum: { amount: true },
       });
 
       const alreadyPaid = totalPaidSoFar._sum.amount || 0;
       const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
-      
-      // Determine how much goes to the invoice and how much becomes credit
       const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
       const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
 
-      console.log(`Customer payment calculation for invoice ${invoiceNumber}:`, {
-        invoiceAmount: invoice.totalAmount,
-        alreadyPaid,
-        remainingAmount,
-        paymentAmount: paymentAmountNum,
-        amountForInvoice,
-        overpaymentAmount
-      });
-
-      // Create CREDIT transaction for customer for the invoice payment portion
       await addCustomerTransaction(
         prisma,
         invoice.customerId,
-        'CREDIT',
+        "CREDIT",
         amountForInvoice,
         description || `Payment for invoice ${invoiceNumber}`,
         reference,
         invoiceNumber,
-        paymentDate
+        paymentDate,
+        session.organizationId
       );
 
-      // Journal entry will be created by createJournalEntryForPaymentProcess
-
-      // If there's an overpayment, create a separate credit transaction for the customer
       if (overpaymentAmount > 0) {
         await addCustomerTransaction(
           prisma,
           invoice.customerId,
-          'CREDIT',
+          "CREDIT",
           overpaymentAmount,
           `Overpayment credit for invoice ${invoiceNumber}`,
           `CREDIT-${invoiceNumber}`,
           invoiceNumber,
-          paymentDate
+          paymentDate,
+          session.organizationId
         );
-
-        // Journal entry will be created by createJournalEntryForPaymentProcess
       }
-
     } else if (paymentType === "VENDOR_PAYMENT") {
-      // We are paying the vendor
       if (!invoice.vendorId) {
         return NextResponse.json(
           { error: "This invoice is not associated with a vendor" },
@@ -155,57 +133,50 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Create CREDIT transaction for vendor (reduces our debt to them)
       await addVendorTransaction(
         prisma,
         invoice.vendorId,
-        'CREDIT',
+        "CREDIT",
         paymentAmountNum,
         description || `Payment for invoice ${invoiceNumber}`,
         reference,
         invoiceNumber,
-        paymentDate
+        paymentDate,
+        session.organizationId
       );
-
-      // Journal entry will be created by createJournalEntryForPaymentProcess
     }
 
-    // Create payment record
     const payment = await prisma.payment.create({
-      data: {
+      data: orgData(session, {
         transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
         category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
         date: paymentDate ? new Date(paymentDate) : new Date(),
         amount: paymentAmountNum,
         fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
         fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,
-        fromCustomer: paymentType === "CUSTOMER_PAYMENT" ? invoice.customer?.CompanyName || "" : "",
+        fromCustomer:
+          paymentType === "CUSTOMER_PAYMENT" ? invoice.customer?.CompanyName || "" : "",
         toPartyType: paymentType === "CUSTOMER_PAYMENT" ? "US" : "VENDOR",
         toVendorId: paymentType === "VENDOR_PAYMENT" ? invoice.vendorId : null,
         toVendor: paymentType === "VENDOR_PAYMENT" ? invoice.vendor?.CompanyName || "" : "",
         mode: paymentMethod || "CASH",
-        reference: reference,
+        reference,
         invoice: invoiceNumber,
-        description: description || `Payment for invoice ${invoiceNumber}`
-      }
+        description: description || `Payment for invoice ${invoiceNumber}`,
+      }),
     });
 
-    // Create journal entry for the payment
-    await createJournalEntryForPaymentProcess(payment, body, invoice);
+    await createJournalEntryForPaymentProcess(payment, body, invoice, session.organizationId);
 
-    // Calculate invoice payment status and update
     const paymentStatus = await calculateInvoicePaymentStatus(
       prisma,
       invoiceNumber,
       invoice.totalAmount
     );
 
-    // Update invoice status based on total payments
     await prisma.invoice.update({
       where: { invoiceNumber },
-      data: { 
-        status: paymentStatus.status
-      }
+      data: { status: paymentStatus.status },
     });
 
     return NextResponse.json({
@@ -217,10 +188,9 @@ export async function POST(req: NextRequest) {
         status: paymentStatus.status,
         totalPaid: paymentStatus.totalPaid,
         remainingAmount: paymentStatus.remainingAmount,
-        totalAmount: paymentStatus.totalAmount
-      }
+        totalAmount: paymentStatus.totalAmount,
+      },
     });
-
   } catch (error) {
     console.error("Error processing payment:", error);
     return NextResponse.json(

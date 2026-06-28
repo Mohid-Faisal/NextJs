@@ -4,6 +4,8 @@ import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 import { Country } from "country-state-city";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 /** Build a set of uppercase country names for matching DHL-style PDF lines */
 const COUNTRY_NAMES_UPPER = new Set(
@@ -383,6 +385,10 @@ function extractCompanyName(filename: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const filename = file.name;
@@ -526,16 +532,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Delete existing remote areas for this company
     await prisma.remoteArea.deleteMany({
-      where: {
-        company: company,
-      },
+      where: orgWhere(session, { company }),
     });
 
-    // Create new remote areas
     await prisma.remoteArea.createMany({
-      data: parsedAreas,
+      data: parsedAreas.map((area) => ({
+        ...area,
+        organizationId: session.organizationId,
+      })),
       skipDuplicates: true,
     });
 
@@ -559,10 +564,17 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const company = searchParams.get("company");
 
-    const where = company ? { company: company } : {};
+    const where: any = { ...orgWhere(session) };
+    if (company) {
+      where.company = company;
+    }
 
     const remoteAreas = await prisma.remoteArea.findMany({
       where,
@@ -589,10 +601,17 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const company = searchParams.get("company");
 
-    const where = company ? { company: company } : {};
+    const where: any = { ...orgWhere(session) };
+    if (company) {
+      where.company = company;
+    }
 
     await prisma.remoteArea.deleteMany({
       where,
@@ -600,7 +619,7 @@ export async function DELETE(req: NextRequest) {
 
     const message = company
       ? `Remote area data for "${company}" has been deleted successfully.`
-      : "All remote area data has been deleted successfully.";
+      : "All remote area data for your organization has been deleted successfully.";
 
     return NextResponse.json({
       success: true,

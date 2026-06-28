@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { prisma } from "@/lib/prisma"; // adjust import path based on your setup
+import { prisma } from "@/lib/prisma";
 import { Country } from "country-state-city";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const service = formData.get("service") as string;
@@ -97,23 +103,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Optional: delete existing data for the company
     await prisma.zone.deleteMany({
-      where: { service: service.toLowerCase() },
+      where: orgWhere(session, { service: service.toLowerCase() }),
     });
 
     await prisma.zone.createMany({
-      data: parsedZones,
+      data: parsedZones.map((z) => ({
+        ...z,
+        organizationId: session.organizationId,
+      })),
       skipDuplicates: true,
     });
 
-    // Track upload time for this service using raw SQL
     const uploadTime = new Date();
     try {
       await prisma.$executeRaw`
-        INSERT INTO "ZoneUpload" ("service", "uploadedAt") 
-        VALUES (${service.toLowerCase()}, ${uploadTime})
-        ON CONFLICT ("service") 
+        INSERT INTO "ZoneUpload" ("organizationId", "service", "uploadedAt") 
+        VALUES (${session.organizationId}, ${service.toLowerCase()}, ${uploadTime})
+        ON CONFLICT ("organizationId", "service") 
         DO UPDATE SET "uploadedAt" = ${uploadTime}
       `;
     } catch (error) {
@@ -123,9 +130,9 @@ export async function POST(req: NextRequest) {
     // Store filename information using raw SQL
     try {
       await prisma.$executeRaw`
-        INSERT INTO "filename" ("filename", "vendor", "service", "fileType", "uploadedAt")
-        VALUES (${filename}, '', ${service.toLowerCase()}, 'zone', ${uploadTime})
-        ON CONFLICT ("service", "fileType")
+        INSERT INTO "filename" ("organizationId", "filename", "vendor", "service", "fileType", "uploadedAt")
+        VALUES (${session.organizationId}, ${filename}, '', ${service.toLowerCase()}, 'zone', ${uploadTime})
+        ON CONFLICT ("organizationId", "service", "fileType")
         DO UPDATE SET "filename" = ${filename}, "uploadedAt" = ${uploadTime}
       `;
     } catch (error) {
@@ -151,6 +158,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const { searchParams } = new URL(req.url);
   const service = searchParams.get("service");
 
@@ -162,18 +173,16 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Get zones with vendor information from rates table
   const zonesWithVendors = await prisma.zone.findMany({
-    where: {
+    where: orgWhere(session, {
       service: service.toLowerCase(),
-    },
+    }),
   });
 
-  // Get unique vendors for this service from rates table
   const vendorsForService = await prisma.rate.findMany({
-    where: {
+    where: orgWhere(session, {
       service: service.toLowerCase(),
-    },
+    }),
     select: {
       vendor: true,
     },
@@ -185,7 +194,8 @@ export async function GET(req: NextRequest) {
   let filename = null;
   try {
     const uploadResult = await prisma.$queryRaw`
-      SELECT "uploadedAt" FROM "ZoneUpload" WHERE "service" = ${service.toLowerCase()}
+      SELECT "uploadedAt" FROM "ZoneUpload"
+      WHERE "organizationId" = ${session.organizationId} AND "service" = ${service.toLowerCase()}
     `;
     if (uploadResult && Array.isArray(uploadResult) && uploadResult.length > 0) {
       uploadTime = uploadResult[0].uploadedAt;
@@ -197,7 +207,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const filenameResult = await prisma.$queryRaw`
-      SELECT "filename", "uploadedAt" FROM "filename" WHERE "service" = ${service.toLowerCase()} AND "fileType" = 'zone'
+      SELECT "filename", "uploadedAt" FROM "filename"
+      WHERE "organizationId" = ${session.organizationId}
+        AND "service" = ${service.toLowerCase()} AND "fileType" = 'zone'
     `;
     if (filenameResult && Array.isArray(filenameResult) && filenameResult.length > 0) {
       filename = filenameResult[0].filename;
@@ -235,6 +247,10 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const service = searchParams.get("service");
 
@@ -249,15 +265,15 @@ export async function DELETE(req: NextRequest) {
 
     // Delete all zones for the service
     const deletedZones = await prisma.zone.deleteMany({
-      where: {
+      where: orgWhere(session, {
         service: service.toLowerCase(),
-      },
+      }),
     });
 
-    // Delete upload time record
     try {
       await prisma.$executeRaw`
-        DELETE FROM "ZoneUpload" WHERE "service" = ${service.toLowerCase()}
+        DELETE FROM "ZoneUpload"
+        WHERE "organizationId" = ${session.organizationId} AND "service" = ${service.toLowerCase()}
       `;
     } catch (error) {
       console.log("Failed to delete upload time record:", error);
@@ -266,7 +282,9 @@ export async function DELETE(req: NextRequest) {
     // Delete filename record
     try {
       await prisma.$executeRaw`
-        DELETE FROM "filename" WHERE "service" = ${service.toLowerCase()} AND "fileType" = 'zone'
+        DELETE FROM "filename"
+        WHERE "organizationId" = ${session.organizationId}
+          AND "service" = ${service.toLowerCase()} AND "fileType" = 'zone'
       `;
     } catch (error) {
       console.log("Failed to delete filename record:", error);

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { filename, vendor, service } = body;
 
@@ -15,20 +21,20 @@ export async function POST(req: NextRequest) {
 
     // Delete existing filename record for this vendor-service combination
     await prisma.filename.deleteMany({
-      where: {
+      where: orgWhere(session, {
         vendor: vendor,
         service: service,
-      },
+      }),
     });
 
     // Store new filename
     await prisma.filename.create({
-      data: {
+      data: orgData(session, {
         filename: filename,
         vendor: vendor,
         service: service,
         fileType: "rate",
-      },
+      }),
     });
 
     return NextResponse.json({
@@ -50,6 +56,10 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const vendor = searchParams.get("vendor");
     const service = searchParams.get("service");
@@ -57,9 +67,9 @@ export async function GET(req: NextRequest) {
     // If no vendor and service provided, return all filenames
     if (!vendor && !service) {
       const allFilenames = await prisma.filename.findMany({
-        where: {
+        where: orgWhere(session, {
           fileType: "rate"
-        },
+        }),
         orderBy: {
           vendor: 'asc'
         }
@@ -81,11 +91,11 @@ export async function GET(req: NextRequest) {
     }
 
     const filenameRecord = await prisma.filename.findFirst({
-      where: {
+      where: orgWhere(session, {
         vendor: vendor,
         service: service,
         fileType: "rate"
-      },
+      }),
     });
 
     return NextResponse.json({

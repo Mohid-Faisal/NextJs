@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { allocateExcessPayment } from "@/lib/utils";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
 
 /**
  * POST /api/accounts/payments/allocate
  * Manually allocate excess payments to other outstanding invoices
- * 
- * This endpoint allows manual allocation of excess payments when automatic
- * allocation is disabled or when you want to reallocate existing credits.
  */
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
-    const { 
+    const {
       customerId,
       vendorId,
       excessAmount,
       originalInvoiceNumber,
       paymentReference,
-      paymentType, // "CUSTOMER_PAYMENT" or "VENDOR_PAYMENT"
-      paymentDate, // Optional: payment date for allocation transactions
-      specificInvoices = [] // Optional: specific invoices to allocate to
+      paymentType,
+      paymentDate,
     } = body;
 
     if (!excessAmount || !originalInvoiceNumber || !paymentReference || !paymentType) {
@@ -44,6 +47,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const originalInvoice = await findOrgInvoiceByNumber(session, originalInvoiceNumber);
+    if (!originalInvoice) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    if (paymentType === "CUSTOMER_PAYMENT") {
+      const customer = await prisma.customers.findFirst({
+        where: orgWhere(session, { id: parseInt(String(customerId), 10) }),
+      });
+      if (!customer) {
+        return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+      }
+    } else {
+      const vendor = await prisma.vendors.findFirst({
+        where: orgWhere(session, { id: parseInt(String(vendorId), 10) }),
+      });
+      if (!vendor) {
+        return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+      }
+    }
+
     const excessAmountNum = parseFloat(excessAmount.toString());
 
     if (excessAmountNum <= 0) {
@@ -53,24 +77,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Perform the allocation
     const allocationResult = await allocateExcessPayment(
       prisma,
-      customerId,
-      vendorId,
+      customerId ? parseInt(String(customerId), 10) : null,
+      vendorId ? parseInt(String(vendorId), 10) : null,
       excessAmountNum,
       originalInvoiceNumber,
       paymentReference,
       paymentType,
-      paymentDate
+      paymentDate,
+      session.organizationId
     );
 
     return NextResponse.json({
       success: true,
       message: "Payment allocation completed successfully",
-      allocation: allocationResult
+      allocation: allocationResult,
     });
-
   } catch (error) {
     console.error("Error allocating payment:", error);
     return NextResponse.json(
@@ -86,6 +109,10 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const customerId = searchParams.get("customerId");
     const vendorId = searchParams.get("vendorId");
@@ -101,76 +128,83 @@ export async function GET(req: NextRequest) {
     let outstandingInvoices: any[] = [];
 
     if (paymentType === "CUSTOMER_PAYMENT" && customerId) {
-      const customerInvoices = await prisma.invoice.findMany({
-        where: {
-          customerId: parseInt(customerId),
-          status: { in: ['Unpaid', 'Partial'] }
-        },
-        orderBy: { invoiceDate: 'asc' },
-        include: {
-          customer: true
-        }
+      const customer = await prisma.customers.findFirst({
+        where: orgWhere(session, { id: parseInt(customerId, 10) }),
       });
-
-      // Calculate remaining amounts for each invoice
-      for (const invoice of customerInvoices) {
-        const totalPaid = await prisma.payment.aggregate({
-          where: {
-            invoice: invoice.invoiceNumber,
-            transactionType: 'INCOME'
-          },
-          _sum: { amount: true }
-        });
-
-        const alreadyPaid = totalPaid._sum.amount || 0;
-        const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
-        
-        outstandingInvoices.push({
-          ...invoice,
-          remainingAmount
-        });
+      if (!customer) {
+        return NextResponse.json({ error: "Customer not found" }, { status: 404 });
       }
 
-    } else if (paymentType === "VENDOR_PAYMENT" && vendorId) {
-      const vendorInvoices = await prisma.invoice.findMany({
-        where: {
-          vendorId: parseInt(vendorId),
-          status: { in: ['Unpaid', 'Partial'] }
-        },
-        orderBy: { invoiceDate: 'asc' },
-        include: {
-          vendor: true
-        }
+      const customerInvoices = await prisma.invoice.findMany({
+        where: orgWhere(session, {
+          customerId: parseInt(customerId, 10),
+          status: { in: ["Unpaid", "Partial"] },
+        }),
+        orderBy: { invoiceDate: "asc" },
+        include: { customer: true },
       });
 
-      // Calculate remaining amounts for each invoice
-      for (const invoice of vendorInvoices) {
+      for (const invoice of customerInvoices) {
         const totalPaid = await prisma.payment.aggregate({
-          where: {
+          where: orgWhere(session, {
             invoice: invoice.invoiceNumber,
-            transactionType: 'EXPENSE'
-          },
-          _sum: { amount: true }
+            transactionType: "INCOME",
+          }),
+          _sum: { amount: true },
         });
 
         const alreadyPaid = totalPaid._sum.amount || 0;
         const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
-        
+
         outstandingInvoices.push({
           ...invoice,
-          remainingAmount
+          remainingAmount,
+        });
+      }
+    } else if (paymentType === "VENDOR_PAYMENT" && vendorId) {
+      const vendor = await prisma.vendors.findFirst({
+        where: orgWhere(session, { id: parseInt(vendorId, 10) }),
+      });
+      if (!vendor) {
+        return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+      }
+
+      const vendorInvoices = await prisma.invoice.findMany({
+        where: orgWhere(session, {
+          vendorId: parseInt(vendorId, 10),
+          status: { in: ["Unpaid", "Partial"] },
+        }),
+        orderBy: { invoiceDate: "asc" },
+        include: { vendor: true },
+      });
+
+      for (const invoice of vendorInvoices) {
+        const totalPaid = await prisma.payment.aggregate({
+          where: orgWhere(session, {
+            invoice: invoice.invoiceNumber,
+            transactionType: "EXPENSE",
+          }),
+          _sum: { amount: true },
+        });
+
+        const alreadyPaid = totalPaid._sum.amount || 0;
+        const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
+
+        outstandingInvoices.push({
+          ...invoice,
+          remainingAmount,
         });
       }
     }
 
-    // Filter out invoices with no remaining amount
-    outstandingInvoices = outstandingInvoices.filter(invoice => invoice.remainingAmount > 0);
+    outstandingInvoices = outstandingInvoices.filter(
+      (invoice) => invoice.remainingAmount > 0
+    );
 
     return NextResponse.json({
       success: true,
-      outstandingInvoices
+      outstandingInvoices,
     });
-
   } catch (error) {
     console.error("Error fetching outstanding invoices:", error);
     return NextResponse.json(

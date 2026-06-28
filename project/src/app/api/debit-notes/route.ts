@@ -1,55 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { addVendorTransaction } from "@/lib/utils";
 import {
   formatDebitNoteReference,
   normalizeNoteLineDescription,
   parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { debitNoteOrgFilter } from "@/lib/tenant/findOrgDebitNote";
+import { findOrgChartAccount, findOrgChartAccountByFilter } from "@/lib/tenant/findOrgChartAccount";
+import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
+import type { SessionPayload } from "@/lib/auth/session";
 
-const prisma = new PrismaClient();
-
-// Helper function to get account IDs
-async function getAccountIds() {
+async function getAccountIds(session: SessionPayload) {
   try {
-    // Get Vendor Expense account (usually in Expense category)
-    const vendorExpenseAccount = await prisma.chartOfAccount.findFirst({
-      where: {
-        category: "Expense",
-        accountName: { contains: "Vendor", mode: "insensitive" }
-      }
+    const vendorExpenseAccount = await findOrgChartAccountByFilter(session, {
+      category: "Expense",
+      accountName: { contains: "Vendor", mode: "insensitive" },
     });
 
-    // Get Cash account (usually in Asset category)
-    const cashAccount = await prisma.chartOfAccount.findFirst({
-      where: {
-        category: "Asset",
-        accountName: { contains: "Cash", mode: "insensitive" }
-      }
+    const cashAccount = await findOrgChartAccountByFilter(session, {
+      category: "Asset",
+      accountName: { contains: "Cash", mode: "insensitive" },
     });
 
-    // Get Other Income account (usually in Revenue category)
-    const otherIncomeAccount = await prisma.chartOfAccount.findFirst({
-      where: {
-        category: "Revenue",
-        accountName: { contains: "Other Revenue", mode: "insensitive" }
-      }
+    const otherIncomeAccount = await findOrgChartAccountByFilter(session, {
+      category: "Revenue",
+      accountName: { contains: "Other Revenue", mode: "insensitive" },
     });
 
     return {
-      vendorExpenseId: vendorExpenseAccount?.id || 1, // Fallback to ID 1
-      cashId: cashAccount?.id || 2, // Fallback to ID 2
-      otherIncomeId: otherIncomeAccount?.id || 5 // Fallback to ID 5
+      vendorExpenseId: vendorExpenseAccount?.id || 1,
+      cashId: cashAccount?.id || 2,
+      otherIncomeId: otherIncomeAccount?.id || 5,
     };
   } catch (error) {
     console.error("Error getting account IDs:", error);
-    return { vendorExpenseId: 1, cashId: 2, otherIncomeId: 5 }; // Default fallback
+    return { vendorExpenseId: 1, cashId: 2, otherIncomeId: 5 };
   }
 }
 
 // GET /api/debit-notes - Get all debit notes with pagination and filtering
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = searchParams.get("limit") || "10";
@@ -63,7 +61,7 @@ export async function GET(request: NextRequest) {
     const skip = pageSize ? (page - 1) * pageSize : 0;
 
     // Build where clause
-    const where: any = {};
+    const where: any = { ...debitNoteOrgFilter(session) };
     
     if (search) {
       where.OR = [
@@ -75,7 +73,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (vendorId) {
-      where.vendorId = parseInt(vendorId);
+      const ven = await prisma.vendors.findFirst({
+        where: orgWhere(session, { id: parseInt(vendorId, 10) }),
+      });
+      if (!ven) {
+        return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+      }
+      where.vendorId = parseInt(vendorId, 10);
     }
 
     // Build order by clause
@@ -144,9 +148,28 @@ export async function GET(request: NextRequest) {
 // POST /api/debit-notes - Create a new debit note
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await request.json();
     const { billId, vendorId, amount, date, description, currency = "USD", type, debitAccountId, creditAccountId } = body;
-    console.log(body);
+
+    const vendor = await prisma.vendors.findFirst({
+      where: orgWhere(session, { id: parseInt(String(vendorId), 10) }),
+    });
+    if (!vendor) {
+      return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+    }
+
+    if (billId) {
+      const bill = await prisma.invoice.findFirst({
+        where: orgWhere(session, { id: parseInt(String(billId), 10), profile: "Vendor" }),
+      });
+      if (!bill) {
+        return NextResponse.json({ error: "Bill not found" }, { status: 404 });
+      }
+    }
 
     // Validate required fields
     if (!vendorId || !amount || !date) {
@@ -161,10 +184,9 @@ export async function POST(request: NextRequest) {
     let useProvidedAccounts = false;
     
     if (debitAccountId && creditAccountId) {
-      // Validate accounts exist
       const [debitAccount, creditAccount] = await Promise.all([
-        prisma.chartOfAccount.findUnique({ where: { id: parseInt(debitAccountId) } }),
-        prisma.chartOfAccount.findUnique({ where: { id: parseInt(creditAccountId) } })
+        findOrgChartAccount(session, parseInt(debitAccountId)),
+        findOrgChartAccount(session, parseInt(creditAccountId)),
       ]);
       
       if (!debitAccount || !creditAccount) {
@@ -175,8 +197,7 @@ export async function POST(request: NextRequest) {
       }
       useProvidedAccounts = true;
     } else {
-      // Fall back to default account lookup
-      const ids = await getAccountIds();
+      const ids = await getAccountIds(session);
       vendorExpenseId = ids.vendorExpenseId;
       cashId = ids.cashId;
       otherIncomeId = ids.otherIncomeId;
@@ -189,6 +210,8 @@ export async function POST(request: NextRequest) {
 
     const nextId = (lastDebitNote?.id || 0) + 1;
     const debitNoteNumber = formatDebitNoteReference(nextId);
+
+    const nextEntryNumber = await nextJournalEntryNumber(prisma, session.organizationId);
 
     if (type === "DEBIT") {
       // Use transaction to ensure all operations succeed or fail together
@@ -229,7 +252,7 @@ export async function POST(request: NextRequest) {
 
         // Create payment record
         const payment = await tx.payment.create({
-          data: {
+          data: orgData(session, {
             transactionType: "EXPENSE",
             category: "Vendor Payment",
             date: parseDateInputAsLocalDate(date),
@@ -243,14 +266,15 @@ export async function POST(request: NextRequest) {
             reference: debitNoteNumber,
             invoice: billId ? `Bill ${billId}` : undefined,
             description: lineDesc,
-          },
+          }),
         });
 
         // Create journal entry
         const journalEntryDate = parseDateInputAsLocalDate(date);
         const journalEntry = await tx.journalEntry.create({
           data: {
-            entryNumber: `JE-${Date.now()}`,
+            organizationId: session.organizationId,
+            entryNumber: nextEntryNumber,
             date: journalEntryDate,
             description: lineDesc,
             reference: debitNoteNumber,
@@ -299,7 +323,8 @@ export async function POST(request: NextRequest) {
           lineDesc,
           debitNoteNumber,
           billId ? `Bill ${billId}` : undefined,
-          parseDateInputAsLocalDate(date)
+          parseDateInputAsLocalDate(date),
+          session.organizationId
         );
 
         return { debitNote, payment, journalEntry };
@@ -345,11 +370,11 @@ export async function POST(request: NextRequest) {
 
         // Create payment record
         const payment = await tx.payment.create({
-          data: {
+          data: orgData(session, {
             transactionType: "INCOME",
             category: "Vendor Credit",
             date: parseDateInputAsLocalDate(date),
-            amount: Math.abs(parseFloat(amount)), // Use absolute value for payment amount
+            amount: Math.abs(parseFloat(amount)),
             fromPartyType: "VENDOR",
             fromCustomer: "Vendor",
             toPartyType: "US",
@@ -358,14 +383,15 @@ export async function POST(request: NextRequest) {
             reference: debitNoteNumber,
             invoice: billId ? `Bill ${billId}` : undefined,
             description: lineDesc,
-          },
+          }),
         });
 
         // Create journal entry
         const journalEntryDate = parseDateInputAsLocalDate(date);
         const journalEntry = await tx.journalEntry.create({
           data: {
-            entryNumber: `JE-${Date.now()}`,
+            organizationId: session.organizationId,
+            entryNumber: nextEntryNumber,
             date: journalEntryDate,
             description: lineDesc,
             reference: debitNoteNumber,
@@ -414,7 +440,8 @@ export async function POST(request: NextRequest) {
           lineDesc,
           debitNoteNumber,
           billId ? `Bill ${billId}` : undefined,
-          parseDateInputAsLocalDate(date)
+          parseDateInputAsLocalDate(date),
+          session.organizationId
         );
 
         return { debitNote, payment, journalEntry };

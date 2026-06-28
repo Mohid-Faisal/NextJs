@@ -1,8 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { Country } from "country-state-city";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(req: Request) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const { searchParams } = new URL(req.url);
 
   const limitParam = searchParams.get("limit") ?? "10";
@@ -39,7 +45,7 @@ export async function GET(req: Request) {
   console.log('Search term trimmed:', search.trim());
   console.log('All search params:', Object.fromEntries(searchParams.entries()));
 
-  const where: any = {};
+  const where: any = { ...orgWhere(session) };
 
   if (status) where.deliveryStatus = status;
   if (invoiceStatus) where.invoiceStatus = invoiceStatus;

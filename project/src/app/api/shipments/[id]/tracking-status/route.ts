@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 const TRACKING_STATUSES = ["Booked", "Picked Up", "In Transit", "Arrived at Destination", "Out for Delivery", "Delivered"] as const;
 
@@ -30,16 +32,20 @@ function getLatestStatus(history: TrackingHistoryEntry[]): string | null {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const shipmentId = parseInt(id, 10);
     if (isNaN(shipmentId)) {
       return NextResponse.json({ success: false, error: "Invalid shipment ID" }, { status: 400 });
     }
-    const shipment = await prisma.shipment.findUnique({ where: { id: shipmentId } });
+    const shipment = await prisma.shipment.findFirst({ where: orgWhere(session, { id: shipmentId }) });
     if (!shipment) {
       return NextResponse.json({ success: false, error: "Shipment not found" }, { status: 404 });
     }
@@ -60,6 +66,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const shipmentId = parseInt(id, 10);
 
@@ -89,7 +99,7 @@ export async function PATCH(
       );
     }
 
-    const shipment = await prisma.shipment.findUnique({ where: { id: shipmentId } });
+    const shipment = await prisma.shipment.findFirst({ where: orgWhere(session, { id: shipmentId }) });
     if (!shipment) {
       return NextResponse.json({ success: false, error: "Shipment not found" }, { status: 404 });
     }
@@ -131,6 +141,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const shipmentId = parseInt(id, 10);
     if (isNaN(shipmentId)) {
@@ -162,7 +176,7 @@ export async function PUT(
         { status: 400 }
       );
     }
-    const shipment = await prisma.shipment.findUnique({ where: { id: shipmentId } });
+    const shipment = await prisma.shipment.findFirst({ where: orgWhere(session, { id: shipmentId }) });
     if (!shipment) {
       return NextResponse.json({ success: false, error: "Shipment not found" }, { status: 404 });
     }
@@ -204,6 +218,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const shipmentId = parseInt(id, 10);
     if (isNaN(shipmentId)) {
@@ -214,7 +232,7 @@ export async function DELETE(
     if (typeof index !== "number" || index < 0) {
       return NextResponse.json({ success: false, error: "Valid index is required" }, { status: 400 });
     }
-    const shipment = await prisma.shipment.findUnique({ where: { id: shipmentId } });
+    const shipment = await prisma.shipment.findFirst({ where: orgWhere(session, { id: shipmentId }) });
     if (!shipment) {
       return NextResponse.json({ success: false, error: "Shipment not found" }, { status: 404 });
     }

@@ -1,22 +1,26 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/utils";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const invoiceId = parseInt(id);
 
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
-      include: {
-        customer: true,
-        vendor: true,
-        shipment: true,
-      },
+    const invoice = await findOrgInvoice(session, invoiceId, {}, {
+      customer: true,
+      vendor: true,
+      shipment: true,
     });
 
     if (!invoice) {
@@ -39,18 +43,18 @@ export async function GET(
       if (name) {
         recipient =
           (await prisma.recipients.findFirst({
-            where: { CompanyName: { equals: name, mode: "insensitive" } },
+            where: orgWhere(session, { CompanyName: { equals: name, mode: "insensitive" } }),
           })) ||
           (await prisma.recipients.findFirst({
-            where: { PersonName: { equals: name, mode: "insensitive" } },
+            where: orgWhere(session, { PersonName: { equals: name, mode: "insensitive" } }),
           })) ||
           (await prisma.recipients.findFirst({
-            where: {
+            where: orgWhere(session, {
               OR: [
                 { CompanyName: { contains: name, mode: "insensitive" } },
                 { PersonName: { contains: name, mode: "insensitive" } },
               ],
-            },
+            }),
           }));
       }
     }
@@ -70,18 +74,21 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const invoiceId = parseInt(id);
     const body = await req.json();
 
-    // Get the current invoice to check if totalAmount, customerId, or vendorId is being changed
-    const currentInvoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
-      select: { 
+    const currentInvoice = await prisma.invoice.findFirst({
+      where: orgWhere(session, { id: invoiceId }),
+      select: {
         totalAmount: true,
         customerId: true,
-        vendorId: true
-      }
+        vendorId: true,
+      },
     });
 
     if (!currentInvoice) {
@@ -169,7 +176,8 @@ export async function PUT(
           oldVendorId,
           newVendorId,
           body.invoiceNumber || invoice.invoiceNumber,
-          description
+          description,
+          session.organizationId
         );
       } catch (journalError) {
         console.error("Error updating journal entries:", journalError);
@@ -223,8 +231,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const invoiceId = parseInt(id);
+
+    const existing = await findOrgInvoice(session, invoiceId);
+    if (!existing) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
 
     await prisma.invoice.delete({
       where: { id: invoiceId },

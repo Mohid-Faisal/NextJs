@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
-const prisma = new PrismaClient();
-
-// GET /api/agencies - Get all agencies
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const agencies = await prisma.agency.findMany({
-      orderBy: { code: 'asc' }
+      where: orgWhere(session),
+      orderBy: { code: "asc" },
     });
     return NextResponse.json(agencies);
   } catch (error) {
@@ -15,9 +19,12 @@ export async function GET() {
   }
 }
 
-// POST /api/agencies - Create new agency
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await request.json();
     const { code, name } = body;
 
@@ -26,12 +33,12 @@ export async function POST(request: NextRequest) {
     }
 
     const agency = await prisma.agency.create({
-      data: { code, name }
+      data: orgData(session, { code, name }),
     });
 
     return NextResponse.json(agency);
   } catch (error: any) {
-    if (error.code === 'P2002') {
+    if (error.code === "P2002") {
       return NextResponse.json({ error: "Agency code already exists" }, { status: 400 });
     }
     return NextResponse.json({ error: "Failed to create agency" }, { status: 500 });

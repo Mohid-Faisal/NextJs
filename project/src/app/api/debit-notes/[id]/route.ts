@@ -1,34 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import {
   extractNoteDetailDescription,
   normalizeNoteLineDescription,
   parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgDebitNote } from "@/lib/tenant/findOrgDebitNote";
+import { findOrgChartAccount } from "@/lib/tenant/findOrgChartAccount";
 
-const prisma = new PrismaClient();
-
-// GET /api/debit-notes/[id] — load one note for editing
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id, 10);
     if (Number.isNaN(idNum)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const note = await prisma.debitNote.findUnique({
-      where: { id: idNum },
-      include: {
-        vendor: {
-          select: { id: true, PersonName: true, CompanyName: true },
-        },
-        bill: {
-          select: { id: true, invoiceNumber: true, totalAmount: true },
-        },
+    const note = await findOrgDebitNote(session, idNum, {
+      vendor: {
+        select: { id: true, PersonName: true, CompanyName: true },
+      },
+      bill: {
+        select: { id: true, invoiceNumber: true, totalAmount: true },
       },
     });
 
@@ -37,12 +39,12 @@ export async function GET(
     }
 
     const journalEntry = await prisma.journalEntry.findFirst({
-      where: {
+      where: orgWhere(session, {
         OR: [
           { reference: note.debitNoteNumber },
           { description: { contains: note.debitNoteNumber } },
         ],
-      },
+      }),
       include: { lines: true },
     });
 
@@ -90,12 +92,15 @@ export async function GET(
   }
 }
 
-// PUT /api/debit-notes/[id] — update note and linked ledger rows
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id, 10);
     if (Number.isNaN(idNum)) {
@@ -111,11 +116,8 @@ export async function PUT(
       creditAccountId: creditAccRaw,
     } = body;
 
-    const note = await prisma.debitNote.findUnique({
-      where: { id: idNum },
-      include: {
-        bill: { select: { invoiceNumber: true } },
-      },
+    const note = await findOrgDebitNote(session, idNum, {
+      bill: { select: { invoiceNumber: true } },
     });
 
     if (!note) {
@@ -169,8 +171,8 @@ export async function PUT(
 
     if (debitAccountId !== null && creditAccountId !== null) {
       const [da, ca] = await Promise.all([
-        prisma.chartOfAccount.findUnique({ where: { id: debitAccountId } }),
-        prisma.chartOfAccount.findUnique({ where: { id: creditAccountId } }),
+        findOrgChartAccount(session, debitAccountId),
+        findOrgChartAccount(session, creditAccountId),
       ]);
       if (!da || !ca) {
         return NextResponse.json({ error: "Invalid account IDs" }, { status: 400 });
@@ -181,15 +183,15 @@ export async function PUT(
 
     await prisma.$transaction(async (tx) => {
       const txn = await tx.vendorTransaction.findFirst({
-        where: {
+        where: orgWhere(session, {
           reference: note.debitNoteNumber,
           vendorId,
-        },
+        }),
       });
 
       if (amountDelta !== 0) {
-        const ven = await tx.vendors.findUnique({
-          where: { id: vendorId },
+        const ven = await tx.vendors.findFirst({
+          where: orgWhere(session, { id: vendorId }),
         });
         if (ven) {
           if (txn?.type === "DEBIT") {
@@ -216,7 +218,7 @@ export async function PUT(
       });
 
       await tx.payment.updateMany({
-        where: { reference: note.debitNoteNumber },
+        where: orgWhere(session, { reference: note.debitNoteNumber }),
         data: {
           amount: newAmount,
           date: newDate,
@@ -225,12 +227,12 @@ export async function PUT(
       });
 
       const journalEntry = await tx.journalEntry.findFirst({
-        where: {
+        where: orgWhere(session, {
           OR: [
             { reference: note.debitNoteNumber },
             { description: { contains: note.debitNoteNumber } },
           ],
-        },
+        }),
         include: { lines: true },
       });
 
@@ -273,15 +275,12 @@ export async function PUT(
       }
     });
 
-    const updated = await prisma.debitNote.findUnique({
-      where: { id: idNum },
-      include: {
-        vendor: {
-          select: { id: true, PersonName: true, CompanyName: true },
-        },
-        bill: {
-          select: { id: true, invoiceNumber: true, totalAmount: true },
-        },
+    const updated = await findOrgDebitNote(session, idNum, {
+      vendor: {
+        select: { id: true, PersonName: true, CompanyName: true },
+      },
+      bill: {
+        select: { id: true, invoiceNumber: true, totalAmount: true },
       },
     });
 
@@ -295,19 +294,19 @@ export async function PUT(
   }
 }
 
-// DELETE /api/debit-notes/[id] - Delete a debit note
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id);
 
-    // Find the debit note to get its reference number
-    const debitNote = await prisma.debitNote.findUnique({
-      where: { id: idNum },
-    });
+    const debitNote = await findOrgDebitNote(session, idNum);
 
     if (!debitNote) {
       return NextResponse.json(
@@ -316,48 +315,41 @@ export async function DELETE(
       );
     }
 
-    // Use transaction to delete debit note and related records
     await prisma.$transaction(async (tx) => {
-      // Find and delete related journal entries
       const journalEntries = await tx.journalEntry.findMany({
-        where: {
+        where: orgWhere(session, {
           OR: [
             { reference: debitNote.debitNoteNumber },
-            { description: { contains: debitNote.debitNoteNumber } }
-          ]
-        },
-        include: { lines: true }
+            { description: { contains: debitNote.debitNoteNumber } },
+          ],
+        }),
+        include: { lines: true },
       });
 
-      // Delete journal entry lines first (due to foreign key constraints)
       for (const entry of journalEntries) {
         if (entry.lines.length > 0) {
           await tx.journalEntryLine.deleteMany({
-            where: { journalEntryId: entry.id }
+            where: { journalEntryId: entry.id },
           });
         }
       }
 
-      // Delete journal entries
       if (journalEntries.length > 0) {
         await tx.journalEntry.deleteMany({
           where: {
-            id: { in: journalEntries.map(e => e.id) }
-          }
+            id: { in: journalEntries.map((e) => e.id) },
+          },
         });
       }
 
-      // Delete related payments
       await tx.payment.deleteMany({
-        where: { reference: debitNote.debitNoteNumber }
+        where: orgWhere(session, { reference: debitNote.debitNoteNumber }),
       });
 
-      // Delete vendor transactions
       await tx.vendorTransaction.deleteMany({
-        where: { reference: debitNote.debitNoteNumber }
+        where: orgWhere(session, { reference: debitNote.debitNoteNumber }),
       });
 
-      // Finally, delete the debit note
       await tx.debitNote.delete({
         where: { id: idNum },
       });

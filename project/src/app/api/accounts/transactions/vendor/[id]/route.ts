@@ -6,6 +6,9 @@ import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPay
 import { computeVendorLedgerVoucherDate } from "@/lib/accounts/vendorLedgerVoucherDate";
 import type { InvoiceFieldsForDebitVoucher } from "@/lib/accounts/invoiceDebitVoucherDate";
 import { isVendorDebitNoteReference } from "@/lib/noteFormats";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { debitNoteOrgFilter } from "@/lib/tenant/findOrgDebitNote";
 
 export async function GET(
   req: NextRequest,
@@ -19,6 +22,20 @@ export async function GET(
       return NextResponse.json(
         { error: "Invalid vendor ID" },
         { status: 400 }
+      );
+    }
+
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const { session } = auth;
+
+    const vendorExists = await prisma.vendors.findFirst({
+      where: orgWhere(session, { id: vendorId }),
+    });
+    if (!vendorExists) {
+      return NextResponse.json(
+        { error: "Vendor not found" },
+        { status: 404 }
       );
     }
 
@@ -39,9 +56,9 @@ export async function GET(
     const skip = isAllLimit || !limit ? 0 : (page - 1) * limit;
 
     // Build where clause for filtering
-    const whereClause: any = {
+    const whereClause: any = orgWhere(session, {
       vendorId: vendorId
-    };
+    });
 
     // Add search filter
     if (search) {
@@ -80,7 +97,7 @@ export async function GET(
         }
         
         const matchingInvoices = await prisma.invoice.findMany({
-          where: invoiceSearchConditions,
+          where: { ...orgWhere(session), ...invoiceSearchConditions },
           select: { invoiceNumber: true }
         });
         matchingInvoiceNumbers = matchingInvoices.map(inv => inv.invoiceNumber);
@@ -121,8 +138,8 @@ export async function GET(
     const validSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
 
     // Get vendor info
-    const vendor = await prisma.vendors.findUnique({
-      where: { id: vendorId },
+    const vendor = await prisma.vendors.findFirst({
+      where: orgWhere(session, { id: vendorId }),
       select: {
         id: true,
         CompanyName: true,
@@ -178,7 +195,7 @@ export async function GET(
       const debitNotesMapList = new Map<string, Date>();
       if (debitNoteRefsList.length > 0) {
         const debitNotesList = await prisma.debitNote.findMany({
-          where: { debitNoteNumber: { in: debitNoteRefsList } },
+          where: { ...debitNoteOrgFilter(session), debitNoteNumber: { in: debitNoteRefsList } },
           select: { debitNoteNumber: true, date: true },
         });
         debitNotesList.forEach((dn) => {
@@ -194,7 +211,7 @@ export async function GET(
       const invoicesMapList = new Map<string, InvoiceFieldsForDebitVoucher>();
       if (invoiceNumbersList.length > 0) {
         const invoicesList = await prisma.invoice.findMany({
-          where: { invoiceNumber: { in: invoiceNumbersList } },
+          where: { ...orgWhere(session), invoiceNumber: { in: invoiceNumbersList } },
           include: {
             shipment: { select: { shipmentDate: true } },
           },
@@ -226,7 +243,7 @@ export async function GET(
         const uniqueInvList = [...new Set(creditInvoicesList)];
         const uniqueRefList = [...new Set(creditRefsList)];
         paymentsListForVoucher = await prisma.payment.findMany({
-          where: {
+          where: orgWhere(session, {
             toVendorId: vendorId,
             transactionType: "EXPENSE",
             OR: [
@@ -237,7 +254,7 @@ export async function GET(
                 ? [{ invoice: { in: uniqueInvList } }]
                 : []),
             ],
-          },
+          }),
           select: {
             id: true,
             invoice: true,
@@ -370,7 +387,7 @@ export async function GET(
       const paginatedInvoicesMap = new Map<string, any>();
       if (paginatedInvoiceNumbers.length > 0) {
         const paginatedInvoices = await prisma.invoice.findMany({
-          where: { invoiceNumber: { in: paginatedInvoiceNumbers } },
+          where: { ...orgWhere(session), invoiceNumber: { in: paginatedInvoiceNumbers } },
           include: {
             shipment: {
               select: {
@@ -402,7 +419,7 @@ export async function GET(
       const paginatedDebitNotesMap = new Map<string, Date>();
       if (paginatedDebitNoteRefs.length > 0) {
         const paginatedDebitNotes = await prisma.debitNote.findMany({
-          where: { debitNoteNumber: { in: paginatedDebitNoteRefs } },
+          where: { ...debitNoteOrgFilter(session), debitNoteNumber: { in: paginatedDebitNoteRefs } },
           select: { debitNoteNumber: true, date: true },
         });
         paginatedDebitNotes.forEach((dn) => {
@@ -438,7 +455,7 @@ export async function GET(
         const uniquePaginatedInvoices = [...new Set(paginatedCreditInvoices)];
         const uniquePaginatedReferences = [...new Set(paginatedCreditReferences)];
         paginatedPaymentsList = await prisma.payment.findMany({
-          where: {
+          where: orgWhere(session, {
             toVendorId: vendorId,
             transactionType: "EXPENSE",
             OR: [
@@ -449,7 +466,7 @@ export async function GET(
                 ? [{ invoice: { in: uniquePaginatedInvoices } }]
                 : []),
             ],
-          },
+          }),
           select: {
             id: true,
             invoice: true,
@@ -562,7 +579,7 @@ export async function GET(
 
     // Heavy path: full-history recalculation, only when explicitly requested
     const allTransactions = await prisma.vendorTransaction.findMany({
-      where: { vendorId: vendorId },
+      where: orgWhere(session, { vendorId: vendorId }),
       orderBy: { createdAt: 'asc' }, // Sort chronologically by createdAt first
       select: {
         id: true,
@@ -584,7 +601,7 @@ export async function GET(
     const debitNoteInvoiceByRefHeavy = new Map<string, string>();
     if (debitNoteRefs.length > 0) {
       const debitNotes = await prisma.debitNote.findMany({
-        where: { debitNoteNumber: { in: debitNoteRefs } },
+        where: { ...debitNoteOrgFilter(session), debitNoteNumber: { in: debitNoteRefs } },
         select: {
           debitNoteNumber: true,
           date: true,
@@ -607,7 +624,7 @@ export async function GET(
     const invoicesMap = new Map<string, InvoiceFieldsForDebitVoucher>();
     if (invoiceNumbers.length > 0) {
       const invoices = await prisma.invoice.findMany({
-        where: { invoiceNumber: { in: invoiceNumbers } },
+        where: { ...orgWhere(session), invoiceNumber: { in: invoiceNumbers } },
         include: {
           shipment: {
             select: { shipmentDate: true }
@@ -643,7 +660,7 @@ export async function GET(
       const uniqueInvoices = [...new Set(creditTransactionInvoices)];
       const uniqueReferences = [...new Set(creditTransactionReferences)];
       paymentsForVoucherHeavy = await prisma.payment.findMany({
-        where: {
+        where: orgWhere(session, {
           toVendorId: vendorId,
           transactionType: "EXPENSE",
           OR: [
@@ -652,7 +669,7 @@ export async function GET(
               : []),
             ...(uniqueInvoices.length > 0 ? [{ invoice: { in: uniqueInvoices } }] : []),
           ],
-        },
+        }),
         select: {
           id: true,
           invoice: true,
@@ -797,9 +814,9 @@ export async function GET(
     // Apply search filter if provided
     let matchingTransactionIds: number[] = [];
     if (search) {
-      const searchWhereClause: any = {
+      const searchWhereClause: any = orgWhere(session, {
         vendorId: vendorId
-      };
+      });
       
       // Try to parse as number for price search
       const searchAsNumber = parseFloat(search);
@@ -836,7 +853,7 @@ export async function GET(
         }
         
         const matchingInvoices = await prisma.invoice.findMany({
-          where: invoiceSearchConditions,
+          where: { ...orgWhere(session), ...invoiceSearchConditions },
           select: { invoiceNumber: true }
         });
         matchingInvoiceNumbers = matchingInvoices.map(inv => inv.invoiceNumber);
@@ -957,7 +974,7 @@ export async function GET(
     const paginatedInvoicesMap = new Map<string, any>();
     if (paginatedInvoiceNumbers.length > 0) {
       const paginatedInvoices = await prisma.invoice.findMany({
-        where: { invoiceNumber: { in: paginatedInvoiceNumbers } },
+        where: { ...orgWhere(session), invoiceNumber: { in: paginatedInvoiceNumbers } },
         include: {
           shipment: {
             select: {
@@ -989,7 +1006,7 @@ export async function GET(
     const paginatedDebitNotesMap = new Map<string, Date>();
     if (paginatedDebitNoteRefs.length > 0) {
       const paginatedDebitNotes = await prisma.debitNote.findMany({
-        where: { debitNoteNumber: { in: paginatedDebitNoteRefs } },
+        where: { ...debitNoteOrgFilter(session), debitNoteNumber: { in: paginatedDebitNoteRefs } },
         select: { debitNoteNumber: true, date: true }
       });
       paginatedDebitNotes.forEach(dn => {
@@ -1020,7 +1037,7 @@ export async function GET(
       const uniquePaginatedInvoices = [...new Set(paginatedCreditInvoices)];
       const uniquePaginatedReferences = [...new Set(paginatedCreditReferences)];
       paginatedPaymentsListRecalc = await prisma.payment.findMany({
-        where: {
+        where: orgWhere(session, {
           toVendorId: vendorId,
           transactionType: "EXPENSE",
           OR: [
@@ -1031,7 +1048,7 @@ export async function GET(
               ? [{ invoice: { in: uniquePaginatedInvoices } }]
               : []),
           ],
-        },
+        }),
         select: {
           id: true,
           invoice: true,
@@ -1163,6 +1180,20 @@ export async function POST(
       );
     }
 
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const { session } = auth;
+
+    const vendorExists = await prisma.vendors.findFirst({
+      where: orgWhere(session, { id: vendorId }),
+    });
+    if (!vendorExists) {
+      return NextResponse.json(
+        { error: "Vendor not found" },
+        { status: 404 }
+      );
+    }
+
     const body = await req.json();
     const { type, amount, description, reference, date } = body;
 
@@ -1186,10 +1217,10 @@ export async function POST(
     if (isStartingBalance) {
       // Find existing starting balance transaction
       const existingStartingBalance = await prisma.vendorTransaction.findFirst({
-        where: {
+        where: orgWhere(session, {
           vendorId: vendorId,
           reference: { startsWith: "STARTING-BALANCE" }
-        }
+        })
       });
 
       if (existingStartingBalance) {
@@ -1199,11 +1230,11 @@ export async function POST(
         // Find and delete existing journal entries for this starting balance
         // Use the existing transaction's reference to find matching journal entries
         const existingJournalEntries = await prisma.journalEntry.findMany({
-          where: {
+          where: orgWhere(session, {
             reference: existingStartingBalance.reference 
               ? existingStartingBalance.reference 
               : { startsWith: "STARTING-BALANCE" }
-          }
+          })
         });
         
         // Delete journal entry lines first, then the journal entries
@@ -1240,14 +1271,15 @@ export async function POST(
             description,
             reference,
             undefined,
-            transactionDate
+            transactionDate,
+            session.organizationId
           );
         }
 
         // Trigger balance recalculation by calling GET endpoint logic
         // We'll need to recalculate all balances
         const allTransactions = await prisma.vendorTransaction.findMany({
-          where: { vendorId: vendorId }
+          where: orgWhere(session, { vendorId: vendorId })
         });
 
         // Recalculate balances (this will be done on next GET request)
@@ -1269,16 +1301,17 @@ export async function POST(
       description,
       reference,
       undefined,
-      date ? new Date(date) : undefined
+      date ? new Date(date) : undefined,
+      session.organizationId
     );
 
     // For starting balance, find the transaction we just created and update it
     if (isStartingBalance) {
       const createdTransaction = await prisma.vendorTransaction.findFirst({
-        where: {
+        where: orgWhere(session, {
           vendorId: vendorId,
           reference: reference
-        },
+        }),
         orderBy: { createdAt: 'desc' }
       });
 
@@ -1305,7 +1338,8 @@ export async function POST(
             description,
             reference,
             undefined,
-            transactionDate
+            transactionDate,
+            session.organizationId
           );
         }
       }
@@ -1322,7 +1356,8 @@ export async function POST(
         description,
         reference,
         undefined,
-        transactionDate
+        transactionDate,
+        session.organizationId
       );
     }
 

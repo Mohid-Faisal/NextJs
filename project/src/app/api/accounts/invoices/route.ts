@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { Country } from "country-state-city";
-import { getCountryNameFromCode } from "@/lib/utils";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = searchParams.get("limit");
@@ -20,7 +25,7 @@ export async function GET(req: NextRequest) {
     const skip = pageSize ? (page - 1) * pageSize : 0;
 
     // Build where clause
-    const where: any = {};
+    const where: any = { ...orgWhere(session) };
     
     // Add profile filter - this must come first and not be overridden
     if (profile) {
@@ -181,10 +186,10 @@ export async function GET(req: NextRequest) {
         if (invoice.profile === "Customer") {
           // Calculate total payments for this invoice (direct payments)
           const totalPayments = await prisma.payment.aggregate({
-            where: {
+            where: orgWhere(session, {
               invoice: invoice.invoiceNumber,
-              transactionType: "INCOME"
-            },
+              transactionType: "INCOME",
+            }),
             _sum: {
               amount: true
             }
@@ -192,10 +197,10 @@ export async function GET(req: NextRequest) {
 
           // Also check for allocations from other payments (stored in payment descriptions)
           const allPayments = await prisma.payment.findMany({
-            where: {
+            where: orgWhere(session, {
               transactionType: "INCOME",
-              description: { contains: "ALLOCATIONS:" }
-            },
+              description: { contains: "ALLOCATIONS:" },
+            }),
             select: {
               description: true
             }
@@ -226,10 +231,10 @@ export async function GET(req: NextRequest) {
         } else if (invoice.profile === "Vendor") {
           // Calculate total payments for vendor invoice (direct payments)
           const totalPayments = await prisma.payment.aggregate({
-            where: {
+            where: orgWhere(session, {
               invoice: invoice.invoiceNumber,
-              transactionType: "EXPENSE"
-            },
+              transactionType: "EXPENSE",
+            }),
             _sum: {
               amount: true
             }
@@ -237,10 +242,10 @@ export async function GET(req: NextRequest) {
 
           // Also check for allocations from other payments (stored in payment descriptions)
           const allPayments = await prisma.payment.findMany({
-            where: {
+            where: orgWhere(session, {
               transactionType: "EXPENSE",
-              description: { contains: "ALLOCATIONS:" }
-            },
+              description: { contains: "ALLOCATIONS:" },
+            }),
             select: {
               description: true
             }
@@ -293,6 +298,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const {
       invoiceNumber,
@@ -315,8 +324,37 @@ export async function POST(req: NextRequest) {
       status,
     } = body;
 
+    const parsedCustomerId = customerId ? parseInt(customerId) : null;
+    const parsedVendorId = vendorId ? parseInt(vendorId) : null;
+    const parsedShipmentId = shipmentId ? parseInt(shipmentId) : null;
+
+    if (parsedCustomerId) {
+      const customer = await prisma.customers.findFirst({
+        where: orgWhere(session, { id: parsedCustomerId }),
+      });
+      if (!customer) {
+        return NextResponse.json({ error: "Customer not found" }, { status: 400 });
+      }
+    }
+    if (parsedVendorId) {
+      const vendor = await prisma.vendors.findFirst({
+        where: orgWhere(session, { id: parsedVendorId }),
+      });
+      if (!vendor) {
+        return NextResponse.json({ error: "Vendor not found" }, { status: 400 });
+      }
+    }
+    if (parsedShipmentId) {
+      const shipment = await prisma.shipment.findFirst({
+        where: orgWhere(session, { id: parsedShipmentId }),
+      });
+      if (!shipment) {
+        return NextResponse.json({ error: "Shipment not found" }, { status: 400 });
+      }
+    }
+
     const invoice = await prisma.invoice.create({
-      data: {
+      data: orgData(session, {
         invoiceNumber,
         invoiceDate: new Date(invoiceDate),
         receiptNumber,
@@ -328,14 +366,14 @@ export async function POST(req: NextRequest) {
         fscCharges: parseFloat(fscCharges || 0),
         discount: parseFloat(discount || 0),
         lineItems,
-        customerId: customerId ? parseInt(customerId) : null,
-        vendorId: vendorId ? parseInt(vendorId) : null,
-        shipmentId: shipmentId ? parseInt(shipmentId) : null,
+        customerId: parsedCustomerId,
+        vendorId: parsedVendorId,
+        shipmentId: parsedShipmentId,
         disclaimer,
         totalAmount: parseFloat(totalAmount),
         currency,
         status: status || "Unpaid",
-      },
+      }),
       include: {
         customer: true,
         vendor: true,

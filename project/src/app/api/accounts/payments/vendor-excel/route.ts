@@ -5,6 +5,8 @@ import { enUS } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { processPaymentWithAllocation } from "@/lib/utils";
 import { createJournalEntryForPaymentProcess } from "@/lib/accounts/createJournalEntryForPaymentProcess";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 import {
   ChartAccountRow,
   findLatestVendorInvoiceBeforePaymentDate,
@@ -141,6 +143,10 @@ function rowToParsed(
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const formData = await req.formData();
     const file = formData.get("file");
     const vendorIdRaw = formData.get("vendorId");
@@ -154,7 +160,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Valid vendorId is required" }, { status: 400 });
     }
 
-    const vendor = await prisma.vendors.findUnique({ where: { id: vendorId } });
+    const vendor = await prisma.vendors.findFirst({
+      where: orgWhere(session, { id: vendorId }),
+    });
     if (!vendor) {
       return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
     }
@@ -183,10 +191,10 @@ export async function POST(req: NextRequest) {
     }));
 
     const existingExpenseToVendor = await prisma.payment.findMany({
-      where: {
+      where: orgWhere(session, {
         toVendorId: vendorId,
         transactionType: "EXPENSE",
-      },
+      }),
       select: { date: true, amount: true },
     });
 
@@ -243,7 +251,7 @@ export async function POST(req: NextRequest) {
         paymentDate
       );
 
-      if (!invoice || invoice.vendorId !== vendorId) {
+      if (!invoice || invoice.vendorId !== vendorId || invoice.organizationId !== session.organizationId) {
         results.push({
           row: excelRowIndex,
           success: false,
@@ -294,13 +302,15 @@ export async function POST(req: NextRequest) {
           description || undefined,
           paymentDateStr,
           accountIds.debitAccountId,
-          accountIds.creditAccountId
+          accountIds.creditAccountId,
+          session.organizationId
         );
 
         await createJournalEntryForPaymentProcess(
           result.payment,
           body,
-          result.invoice
+          result.invoice,
+          session.organizationId
         );
 
         recordedFingerprints.add(fp);

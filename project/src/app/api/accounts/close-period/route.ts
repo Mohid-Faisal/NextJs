@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { startDate, endDate } = body;
 
@@ -13,16 +20,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if closing entry already exists for this period
     const existingClosing = await prisma.journalEntry.findFirst({
-      where: {
+      where: orgWhere(session, {
         description: {
           contains: `Closing Entry`
         },
         reference: {
           contains: `CLOSE-${startDate}-${endDate}`
         }
-      }
+      })
     });
 
     if (existingClosing) {
@@ -33,31 +39,28 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Get all revenue and expense accounts
     const revenueAccounts = await prisma.chartOfAccount.findMany({
-      where: { category: "Revenue" }
+      where: orgWhere(session, { category: "Revenue" })
     });
 
     const expenseAccounts = await prisma.chartOfAccount.findMany({
-      where: { category: "Expense" }
+      where: orgWhere(session, { category: "Expense" })
     });
 
-    // Get Current Year Earnings account
     let currentYearEarnings = await prisma.chartOfAccount.findFirst({
-      where: {
+      where: orgWhere(session, {
         category: "Equity",
         OR: [
           { accountName: { contains: "Current year earnings", mode: "insensitive" } },
           { accountName: { contains: "Current Year Earnings", mode: "insensitive" } },
           { accountName: { contains: "Retained Earnings", mode: "insensitive" } }
         ]
-      }
+      })
     });
 
-    // If not found, try to find any equity account
     if (!currentYearEarnings) {
       currentYearEarnings = await prisma.chartOfAccount.findFirst({
-        where: { category: "Equity" }
+        where: orgWhere(session, { category: "Equity" })
       });
     }
 
@@ -70,12 +73,12 @@ export async function POST(req: NextRequest) {
 
     // Fetch all journal entry lines up to endDate to calculate cumulative balances
     const journalEntries = await prisma.journalEntry.findMany({
-      where: {
+      where: orgWhere(session, {
         date: {
           lte: new Date(endDate + 'T23:59:59.999Z')
         },
         isPosted: true
-      },
+      }),
       include: {
         lines: {
           include: {
@@ -134,22 +137,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Generate journal entry number
-    const lastEntry = await prisma.journalEntry.findFirst({
-      orderBy: { entryNumber: "desc" }
-    });
+    const entryNumber = await nextJournalEntryNumber(prisma, session.organizationId);
 
-    let entryNumber = "JE-0001";
-    if (lastEntry) {
-      const lastNumber = parseInt(lastEntry.entryNumber.split("-")[1]);
-      entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
-    }
-
-    // Create closing entry
     const closingEntry = await prisma.$transaction(async (tx) => {
-      // Create the journal entry
       const entry = await tx.journalEntry.create({
         data: {
+          organizationId: session.organizationId,
           entryNumber,
           date: new Date(endDate),
           description: `Closing Entry: Transfer Net Income to Equity for period ${startDate} to ${endDate}`,

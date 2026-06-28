@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { send2FACodeEmail } from "@/lib/email";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 // Helper function to decode JWT token
 function decodeToken(token: string) {
@@ -19,6 +21,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const shipmentId = parseInt(id);
     
@@ -82,8 +88,8 @@ export async function POST(
     }
 
     // Check if shipment exists
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
+    const shipment = await prisma.shipment.findFirst({
+      where: orgWhere(session, { id: shipmentId }),
     });
 
     if (!shipment) {

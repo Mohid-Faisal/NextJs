@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 type TrackingHistoryEntry = {
   status: string;
@@ -28,18 +30,22 @@ function parseHistory(raw: unknown): TrackingHistoryEntry[] {
  * Returns the updated shipment (with invoices) for use in the tracking dialog.
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const shipmentId = parseInt(id, 10);
     if (isNaN(shipmentId)) {
       return NextResponse.json({ success: false, error: "Invalid shipment ID" }, { status: 400 });
     }
 
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
+    const shipment = await prisma.shipment.findFirst({
+      where: orgWhere(session, { id: shipmentId }),
       include: {
         invoices: {
           where: { profile: "Customer" },

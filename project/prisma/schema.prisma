@@ -5,25 +5,78 @@ generator client {
 datasource db {
   provider     = "postgresql"
   url          = env("DATABASE_URL")
+  directUrl    = env("DIRECT_URL")
   relationMode = "prisma"
 }
 
 model User {
-  id         Int       @id @default(autoincrement())
-  name       String
-  email      String    @unique
-  password   String
-  role       String    @default("USER")
-  status     String    @default("PENDING")
-  isApproved Boolean   @default(false)
-  approvedAt DateTime?
-  approvedBy Int?
-  createdAt  DateTime  @default(now())
+  id           Int                  @id @default(autoincrement())
+  name         String
+  email        String               @unique
+  password     String
+  role         String               @default("USER")
+  platformRole String?
+  status       String               @default("PENDING")
+  isApproved   Boolean              @default(false)
+  approvedAt   DateTime?
+  approvedBy   Int?
+  createdAt    DateTime             @default(now())
+  memberships  OrganizationMember[]
+}
+
+model Organization {
+  id            Int      @id @default(autoincrement())
+  name          String
+  slug          String   @unique
+  status        String   @default("active")
+  logoUrl       String?
+  currency      String   @default("PKR")
+  invoicePrefix String?
+  createdAt     DateTime @default(now())
+  members       OrganizationMember[]
+  subscription  Subscription?
+}
+
+model OrganizationMember {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  userId         Int
+  role           String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Plan {
+  id                   Int            @id @default(autoincrement())
+  code                 String         @unique
+  name                 String
+  priceMonthlyUsd      Float
+  maxUsers             Int
+  maxShipmentsPerMonth Int
+  features             Json
+  subscriptions        Subscription[]
+}
+
+model Subscription {
+  id                   Int          @id @default(autoincrement())
+  organizationId       Int          @unique
+  planId               Int
+  status               String
+  trialEndsAt          DateTime?
+  currentPeriodEnd     DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                 Plan         @relation(fields: [planId], references: [id], onDelete: Restrict)
 }
 
 model Shipment {
   id                Int       @id @default(autoincrement())
-  trackingId        String?   @unique
+  organizationId    Int       @default(1)
+  trackingId        String?
   invoiceNumber     String?   @unique
   referenceNumber   String
   agency            String?
@@ -73,11 +126,15 @@ model Shipment {
   calculatedValues  Json?
   createdAt         DateTime  @default(now())
   invoices          Invoice[]
+
+  @@unique([organizationId, trackingId])
+  @@index([organizationId])
 }
 
 model Customers {
   id              Int       @id @default(autoincrement())
-  CompanyName     String    @unique
+  organizationId  Int       @default(1)
+  CompanyName     String
   PersonName      String
   Email           String
   Phone           String
@@ -97,11 +154,15 @@ model Customers {
   invoices        Invoice[]
   transactions    CustomerTransaction[]
   creditNotes     CreditNote[]
+
+  @@unique([organizationId, CompanyName])
+  @@index([organizationId])
 }
 
 model Vendors {
   id             Int       @id @default(autoincrement())
-  CompanyName    String    @unique
+  organizationId Int       @default(1)
+  CompanyName    String
   PersonName     String
   Email          String
   Phone          String
@@ -116,11 +177,15 @@ model Vendors {
   invoices       Invoice[]
   transactions   VendorTransaction[]
   debitNotes     DebitNote[]
+
+  @@unique([organizationId, CompanyName])
+  @@index([organizationId])
 }
 
 model Recipients {
   id                  Int       @id @default(autoincrement())
-  CompanyName         String    @unique
+  organizationId      Int       @default(1)
+  CompanyName         String
   PersonName          String
   Email               String
   Phone               String
@@ -132,26 +197,41 @@ model Recipients {
   isRemoteArea        Boolean   @default(false)
   remoteAreaCompanies Json?
   createdAt           DateTime  @default(now())
+
+  @@unique([organizationId, CompanyName])
+  @@index([organizationId])
 }
 
 model DeliveryTime {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  name           String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 model Agency {
-  id        Int      @id @default(autoincrement())
-  code      String   @unique
-  name      String
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  code           String
+  name           String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
 }
 
 model Office {
-  id        Int      @id @default(autoincrement())
-  code      String   @unique
-  name      String
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  code           String
+  name           String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
 }
 
 model InvoiceStatus {
@@ -161,79 +241,114 @@ model InvoiceStatus {
 }
 
 model DeliveryStatus {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  name           String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 model ShippingMode {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  name           String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 model PackagingType {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  name           String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 model ServiceMode {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  name           String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 model Zone {
-  id        Int     @id @default(autoincrement())
-  code      String
-  country   String
-  zone      String
-  service   String
-  phoneCode String?
+  id             Int     @id @default(autoincrement())
+  organizationId Int     @default(1)
+  code           String
+  country        String
+  zone           String
+  service        String
+  phoneCode      String?
+
+  @@index([organizationId])
+  @@index([organizationId, service])
 }
 
 model ZoneUpload {
-  id         Int      @id @default(autoincrement())
-  service    String   @unique
-  uploadedAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  service        String
+  uploadedAt     DateTime @default(now())
+
+  @@unique([organizationId, service])
+  @@index([organizationId])
 }
 
 model RemoteArea {
-  id         Int      @id @default(autoincrement())
-  company    String
-  country    String
-  iataCode   String
-  low        String
-  high       String
-  city       String?
-  filename   String?
-  uploadedAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  company        String
+  country        String
+  iataCode       String
+  low            String
+  high           String
+  city           String?
+  filename       String?
+  uploadedAt     DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([organizationId, company])
 }
 
 model Rate {
-  id      Int    @id @default(autoincrement())
-  weight  Float
-  vendor  String
-  service String
-  zone    String
-  price   Int
-  docType String
+  id             Int    @id @default(autoincrement())
+  organizationId Int    @default(1)
+  weight         Float
+  vendor         String
+  service        String
+  zone           String
+  price          Int
+  docType        String
+
+  @@index([organizationId])
+  @@index([organizationId, vendor, service])
 }
 
 model filename {
-  id         Int      @id @default(autoincrement())
-  filename   String
-  vendor     String
-  service    String
-  fileType   String
-  uploadedAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  filename       String
+  vendor         String
+  service        String
+  fileType       String
+  uploadedAt     DateTime @default(now())
 
-  @@unique([service, fileType])
+  @@unique([organizationId, service, fileType])
+  @@index([organizationId])
 }
 
 model CustomerTransaction {
   id              Int       @id @default(autoincrement())
+  organizationId  Int       @default(1)
   customerId      Int
   customer        Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
   type            String
@@ -247,10 +362,12 @@ model CustomerTransaction {
 
   @@index([customerId])
   @@index([createdAt])
+  @@index([organizationId])
 }
 
 model VendorTransaction {
   id              Int     @id @default(autoincrement())
+  organizationId  Int     @default(1)
   vendorId        Int
   vendor          Vendors @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   type            String
@@ -264,12 +381,17 @@ model VendorTransaction {
 
   @@index([vendorId])
   @@index([createdAt])
+  @@index([organizationId])
 }
 
 model vendorservice {
-  id      Int    @id @default(autoincrement())
-  vendor  String
-  service String
+  id             Int    @id @default(autoincrement())
+  organizationId Int    @default(1)
+  vendor         String
+  service        String
+
+  @@unique([organizationId, vendor, service])
+  @@index([organizationId])
 }
 
 /// Accounts module: Payments
@@ -296,6 +418,7 @@ enum PaymentMode {
 
 model Payment {
   id              Int             @id @default(autoincrement())
+  organizationId  Int             @default(1)
   transactionType TransactionType
   category        String
   date            DateTime
@@ -312,10 +435,13 @@ model Payment {
   description     String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+
+  @@index([organizationId])
 }
 
 model Invoice {
   id              Int       @id @default(autoincrement())
+  organizationId  Int       @default(1)
   invoiceNumber   String    @unique
   invoiceDate     DateTime
   receiptNumber   String?
@@ -341,6 +467,8 @@ model Invoice {
   updatedAt       DateTime  @updatedAt
   debitNotes      DebitNote[]
   creditNotes     CreditNote[]
+
+  @@index([organizationId])
 }
 
 model DebitNote {
@@ -374,33 +502,41 @@ model CreditNote {
 }
 
 model ChartOfAccount {
-  id          Int                @id @default(autoincrement())
-  code        String             @unique
-  accountName String
-  category    String
-  type        String
-  debitRule   String
-  creditRule  String
-  description String?
-  isActive    Boolean            @default(true)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  journalLines JournalEntryLine[]
+  id             Int                @id @default(autoincrement())
+  organizationId Int                @default(1)
+  code           String
+  accountName    String
+  category       String
+  type           String
+  debitRule      String
+  creditRule     String
+  description    String?
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  journalLines   JournalEntryLine[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
 }
 
 model JournalEntry {
-  id          Int                @id @default(autoincrement())
-  entryNumber String             @unique
-  date        DateTime
-  description String
-  reference   String?
-  totalDebit  Float
-  totalCredit Float
-  isPosted    Boolean            @default(false)
-  postedAt    DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  lines       JournalEntryLine[]
+  id             Int                @id @default(autoincrement())
+  organizationId Int                @default(1)
+  entryNumber    String
+  date           DateTime
+  description    String
+  reference      String?
+  totalDebit     Float
+  totalCredit    Float
+  isPosted       Boolean            @default(false)
+  postedAt       DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  lines          JournalEntryLine[]
+
+  @@unique([organizationId, entryNumber])
+  @@index([organizationId])
 }
 
 model JournalEntryLine {
@@ -417,10 +553,13 @@ model JournalEntryLine {
 }
 
 model FixedCharge {
-  id          Int      @id @default(autoincrement())
-  weight      Float
-  fixedCharge Float
-  createdAt   DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @default(1)
+  weight         Float
+  fixedCharge    Float
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
 }
 
 model AppSetting {

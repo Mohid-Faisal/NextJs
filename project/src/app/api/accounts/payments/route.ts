@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 // UI-to-enum mapping
 const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Adjustment: "ADJUSTMENT", Equity: "EQUITY" };
 const modeMap: Record<string, any> = { "Cash": "CASH", "Bank Transfer": "BANK_TRANSFER", "Card": "CARD", "Cheque": "CHEQUE" };
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await requireApiSession(request);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const url = new URL(request.url);
 
   const page = Number(url.searchParams.get("page") || 1);
@@ -22,7 +28,7 @@ export async function GET(request: Request) {
   const validSortFields = ["id", "date", "amount", "category", "mode", "reference", "invoice"];
   const finalSortField = validSortFields.includes(sortField) ? sortField : "date";
 
-  const where: any = {};
+  const where: any = { ...orgWhere(session) };
   if (type !== "All") where.transactionType = typeMap[type] ?? type;
   if (mode !== "All") where.mode = modeMap[mode] ?? mode;
   if (search) {
@@ -95,9 +101,9 @@ export async function GET(request: Request) {
     const paymentsWithJournalEntries = await Promise.all(
       payments.map(async (payment) => {
         const journalEntry = await prisma.journalEntry.findFirst({
-          where: {
+          where: orgWhere(session, {
             reference: payment.reference || `Payment-${payment.id}`
-          },
+          }),
           select: {
             entryNumber: true
           }
@@ -139,9 +145,9 @@ export async function GET(request: Request) {
       const paymentsWithJournalEntries = await Promise.all(
         payments.map(async (payment) => {
           const journalEntry = await prisma.journalEntry.findFirst({
-            where: {
+            where: orgWhere(session, {
               reference: payment.reference || `Payment-${payment.id}`
-            },
+            }),
             select: {
               entryNumber: true
             }
@@ -180,6 +186,10 @@ export async function GET(request: Request) {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
 
     // Basic validation
@@ -231,10 +241,10 @@ export async function POST(req: NextRequest) {
     // All internal transactions - no external party relationships
 
     try {
-      const payment = await prisma.payment.create({ data });
+      const payment = await prisma.payment.create({ data: orgData(session, data) });
       
       // Create journal entry for the payment
-      await createJournalEntryForPayment(payment, body);
+      await createJournalEntryForPayment(payment, body, session.organizationId);
       
       return NextResponse.json({ success: true, message: "Payment added successfully.", payment });
     } catch (e) {
@@ -255,10 +265,10 @@ export async function POST(req: NextRequest) {
         toVendor: "Us",
       };
 
-      const payment = await prisma.payment.create({ data: fallbackData });
+      const payment = await prisma.payment.create({ data: orgData(session, fallbackData) });
       
       // Create journal entry for the fallback payment
-      await createJournalEntryForPayment(payment, body);
+      await createJournalEntryForPayment(payment, body, session.organizationId);
       
       return NextResponse.json({ success: true, message: "Payment added successfully.", payment });
     }
@@ -271,10 +281,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function createJournalEntryForPayment(payment: any, body: any) {
+async function createJournalEntryForPayment(payment: any, body: any, organizationId: number) {
   try {
-    // Generate journal entry number
     const lastEntry = await prisma.journalEntry.findFirst({
+      where: { organizationId },
       orderBy: { entryNumber: "desc" }
     });
 
@@ -284,16 +294,14 @@ async function createJournalEntryForPayment(payment: any, body: any) {
       entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
     }
 
-    // Create journal entry with lines
     const journalEntry = await prisma.$transaction(async (tx) => {
-      // Use payment date from body or payment record, fallback to current date
       const journalEntryDate = body.date 
         ? new Date(body.date) 
         : (payment.date ? new Date(payment.date) : new Date());
       
-      // Create the journal entry
       const entry = await tx.journalEntry.create({
         data: {
+          organizationId,
           entryNumber,
           date: journalEntryDate,
           description: `Payment: ${body.category} - ${body.description || 'No description'}`,

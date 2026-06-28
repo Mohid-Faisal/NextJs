@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 
 /**
  * Creates a balanced journal entry for a payment processed via /api/accounts/payments/process
- * (same behavior as before extraction from the route handler).
  */
 export async function createJournalEntryForPaymentProcess(
   payment: { id: number; date?: Date | null },
@@ -15,17 +15,10 @@ export async function createJournalEntryForPaymentProcess(
     creditAccountId: number;
     reference?: string;
   },
-  invoice: { invoiceNumber: string }
+  invoice: { invoiceNumber: string },
+  organizationId: number
 ) {
-  const lastEntry = await prisma.journalEntry.findFirst({
-    orderBy: { entryNumber: "desc" },
-  });
-
-  let entryNumber = "JE-0001";
-  if (lastEntry) {
-    const lastNumber = parseInt(lastEntry.entryNumber.split("-")[1], 10);
-    entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
-  }
+  const entryNumber = await nextJournalEntryNumber(prisma, organizationId);
 
   const journalEntry = await prisma.$transaction(async (tx) => {
     const journalEntryDate = body.paymentDate
@@ -36,6 +29,7 @@ export async function createJournalEntryForPaymentProcess(
 
     const entry = await tx.journalEntry.create({
       data: {
+        organizationId,
         entryNumber,
         date: journalEntryDate,
         description: `Invoice Payment: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment for ${invoice.invoiceNumber} - ${body.description || "No description"}`,

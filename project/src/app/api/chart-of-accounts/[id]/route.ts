@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgChartAccount } from "@/lib/tenant/findOrgChartAccount";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id);
-    
+
     if (isNaN(idNum)) {
       return NextResponse.json(
         { success: false, error: "Invalid account ID" },
@@ -16,9 +23,7 @@ export async function GET(
       );
     }
 
-    const account = await prisma.chartOfAccount.findUnique({
-      where: { id: idNum }
-    });
+    const account = await findOrgChartAccount(session, idNum);
 
     if (!account) {
       return NextResponse.json(
@@ -29,7 +34,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: account
+      data: account,
     });
   } catch (error) {
     console.error("Error fetching account:", error);
@@ -45,9 +50,13 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id);
-    
+
     if (isNaN(idNum)) {
       return NextResponse.json(
         { success: false, error: "Invalid account ID" },
@@ -58,10 +67,7 @@ export async function PUT(
     const body = await req.json();
     const { accountName, category, type, debitRule, creditRule, description, isActive } = body;
 
-    // Check if account exists
-    const existingAccount = await prisma.chartOfAccount.findUnique({
-      where: { id: idNum }
-    });
+    const existingAccount = await findOrgChartAccount(session, idNum);
 
     if (!existingAccount) {
       return NextResponse.json(
@@ -70,7 +76,6 @@ export async function PUT(
       );
     }
 
-    // Update account
     const updatedAccount = await prisma.chartOfAccount.update({
       where: { id: idNum },
       data: {
@@ -80,14 +85,14 @@ export async function PUT(
         debitRule: debitRule !== undefined ? debitRule : existingAccount.debitRule,
         creditRule: creditRule !== undefined ? creditRule : existingAccount.creditRule,
         description: description !== undefined ? description : existingAccount.description,
-        isActive: isActive !== undefined ? isActive : existingAccount.isActive
-      }
+        isActive: isActive !== undefined ? isActive : existingAccount.isActive,
+      },
     });
 
     return NextResponse.json({
       success: true,
       data: updatedAccount,
-      message: "Account updated successfully"
+      message: "Account updated successfully",
     });
   } catch (error) {
     console.error("Error updating account:", error);
@@ -103,9 +108,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id);
-    
+
     if (isNaN(idNum)) {
       return NextResponse.json(
         { success: false, error: "Invalid account ID" },
@@ -113,10 +122,7 @@ export async function DELETE(
       );
     }
 
-    // Check if account exists
-    const existingAccount = await prisma.chartOfAccount.findUnique({
-      where: { id: idNum }
-    });
+    const existingAccount = await findOrgChartAccount(session, idNum);
 
     if (!existingAccount) {
       return NextResponse.json(
@@ -125,9 +131,11 @@ export async function DELETE(
       );
     }
 
-    // Check if account has any journal entries
     const journalEntries = await prisma.journalEntryLine.count({
-      where: { accountId: idNum }
+      where: {
+        accountId: idNum,
+        journalEntry: orgWhere(session),
+      },
     });
 
     if (journalEntries > 0) {
@@ -137,14 +145,13 @@ export async function DELETE(
       );
     }
 
-    // Delete account
     await prisma.chartOfAccount.delete({
-      where: { id: idNum }
+      where: { id: idNum },
     });
 
     return NextResponse.json({
       success: true,
-      message: "Account deleted successfully"
+      message: "Account deleted successfully",
     });
   } catch (error) {
     console.error("Error deleting account:", error);

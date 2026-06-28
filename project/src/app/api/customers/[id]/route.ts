@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { decodeToken } from "@/lib/utils";
 import bcrypt from "bcrypt";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 // Define proper types for the request body
 interface CustomerUpdateData {
@@ -43,8 +45,12 @@ export async function GET(
       );
     }
 
-    const customer = await prisma.customers.findUnique({
-      where: { id: customerId },
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    const customer = await prisma.customers.findFirst({
+      where: orgWhere(session, { id: customerId }),
     });
 
     if (!customer) {
@@ -77,6 +83,17 @@ export async function PUT(
         { error: "Invalid customer ID" },
         { status: 400 }
       );
+    }
+
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    const existingCustomer = await prisma.customers.findFirst({
+      where: orgWhere(session, { id: customerId }),
+    });
+    if (!existingCustomer) {
+      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     }
 
     // Handle FormData
@@ -140,6 +157,10 @@ export async function DELETE(
       );
     }
 
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     // Get the authorization header
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -192,9 +213,9 @@ export async function DELETE(
       );
     }
 
-    // Check if customer exists
-    const customer = await prisma.customers.findUnique({
-      where: { id: customerId },
+    // Check if customer exists within this org
+    const customer = await prisma.customers.findFirst({
+      where: orgWhere(session, { id: customerId }),
     });
 
     if (!customer) {
@@ -229,6 +250,21 @@ export async function PATCH(
   try {
     const { id } = await params;
     const idNum = parseInt(id);
+
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    const existing = await prisma.customers.findFirst({
+      where: orgWhere(session, { id: idNum }),
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, message: "Customer not found" },
+        { status: 404 }
+      );
+    }
+
     const body: AddressUpdateData = await req.json();
 
     const updatedCustomer = await prisma.customers.update({

@@ -3,6 +3,9 @@ import * as XLSX from "xlsx";
 import { parse, isValid } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 
 export const runtime = "nodejs";
 
@@ -286,6 +289,10 @@ function parseRow(
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const formData = await req.formData();
     const file = formData.get("file");
     if (!file || !(file instanceof Blob)) {
@@ -310,7 +317,7 @@ export async function POST(req: NextRequest) {
     });
 
     const accountRows = await prisma.chartOfAccount.findMany({
-      where: { isActive: true },
+      where: orgWhere(session, { isActive: true }),
     });
     const accounts: ChartAccount[] = accountRows.map((a) => ({
       id: a.id,
@@ -318,7 +325,9 @@ export async function POST(req: NextRequest) {
       category: a.category,
     }));
 
-    let nextSeq = await getNextJournalEntrySeq();
+    let nextSeq = Number(
+      (await nextJournalEntryNumber(prisma, session.organizationId)).split("-")[1]
+    );
 
     const results: {
       row: number;
@@ -369,7 +378,7 @@ export async function POST(req: NextRequest) {
           await prisma.$transaction(
             async (tx) => {
               const payment = await tx.payment.create({
-                data: {
+                data: orgData(session, {
                   transactionType: parsed.transactionType as any,
                   category: parsed.category,
                   date: parsed.date,
@@ -382,11 +391,12 @@ export async function POST(req: NextRequest) {
                   description: parsed.description || null,
                   fromCustomer: "Us",
                   toVendor: "Us",
-                },
+                }),
               });
 
               const entry = await tx.journalEntry.create({
                 data: {
+                  organizationId: session.organizationId,
                   entryNumber,
                   date: parsed.date,
                   description: `Payment: ${parsed.category} - ${

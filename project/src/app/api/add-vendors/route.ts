@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const {
       companyname,
       personname,
@@ -18,10 +24,10 @@ export async function POST(req: NextRequest) {
     // Basic validation
     const requiredFields = ["companyname", "country"];
 
-    const existingVendor = await prisma.vendors.findUnique({
-      where: {
+    const existingVendor = await prisma.vendors.findFirst({
+      where: orgWhere(session, {
         CompanyName: companyname,
-      },
+      }),
     });
 
     if (existingVendor) {
@@ -42,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Store shipment in the database
     const vendor = await prisma.vendors.create({
-      data: {
+      data: orgData(session, {
         CompanyName: companyname,
         PersonName: personname,
         Email: email,
@@ -52,7 +58,7 @@ export async function POST(req: NextRequest) {
         City: city,
         Zip: zip,
         Address: address,
-      },
+      }),
     });
 
     return NextResponse.json({

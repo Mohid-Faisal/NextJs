@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { weight, vendor, serviceMode, destination, fuelSurcharge = 0, discount = 0, packaging, profitPercentage} = body;
 
@@ -61,13 +67,13 @@ export async function POST(req: NextRequest) {
 
     // Step 1: Find all zones for the destination country
     const zoneInfos = await prisma.zone.findMany({
-      where: {
+      where: orgWhere(session, {
         code: {
           contains: finalDestination,
           mode: "insensitive",
         },
-        service: serviceMode.toLowerCase()
-      },
+        service: serviceMode.toLowerCase(),
+      }),
       select: {
         zone: true,
         country: true,
@@ -130,11 +136,11 @@ export async function POST(req: NextRequest) {
       console.log(`Processing zone ${zoneNumber}...`);
       
       // Build the where clause for rates query
-      const rateWhereClause: any = {
+      const rateWhereClause: any = orgWhere(session, {
         zone: zoneNumber as number,
         docType: docType,
-        weight: weightNumber
-      };
+        weight: weightNumber,
+      });
 
       // Filter by vendor if provided
       if (vendor && vendor.trim() !== '') {
@@ -234,9 +240,9 @@ export async function POST(req: NextRequest) {
 
     // Find the fixed charge based on weight
     const fixedCharge = await prisma.fixedCharge.findFirst({
-      where: {
-        weight: weightNumber
-      }
+      where: orgWhere(session, {
+        weight: weightNumber,
+      }),
     });
 
     if (!fixedCharge) {

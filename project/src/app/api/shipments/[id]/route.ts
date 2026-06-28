@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { createJournalEntryForTransaction } from "@/lib/utils";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 // Helper function to decode JWT token
 function decodeToken(token: string) {
@@ -19,6 +21,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const shipmentId = parseInt(id);
 
@@ -29,8 +35,8 @@ export async function GET(
       );
     }
 
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
+    const shipment = await prisma.shipment.findFirst({
+      where: orgWhere(session, { id: shipmentId }),
       include: {
         invoices: {
           where: { profile: "Customer" },
@@ -56,18 +62,18 @@ export async function GET(
       if (name) {
         recipient =
           (await prisma.recipients.findFirst({
-            where: { CompanyName: { equals: name, mode: "insensitive" } },
+            where: orgWhere(session, { CompanyName: { equals: name, mode: "insensitive" } }),
           })) ||
           (await prisma.recipients.findFirst({
-            where: { PersonName: { equals: name, mode: "insensitive" } },
+            where: orgWhere(session, { PersonName: { equals: name, mode: "insensitive" } }),
           })) ||
           (await prisma.recipients.findFirst({
-            where: {
+            where: orgWhere(session, {
               OR: [
                 { CompanyName: { contains: name, mode: "insensitive" } },
                 { PersonName: { contains: name, mode: "insensitive" } },
               ],
-            },
+            }),
           }));
       }
     }
@@ -148,6 +154,10 @@ export async function DELETE(
 ) {
   try {
     console.log("🚀 DELETE shipment request started");
+
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
 
     const { id } = await params;
     const shipmentId = parseInt(id);
@@ -297,8 +307,8 @@ export async function DELETE(
     console.log("🔍 Starting to retrieve shipment and related data...");
 
     // Check if shipment exists and get related invoices
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
+    const shipment = await prisma.shipment.findFirst({
+      where: orgWhere(session, { id: shipmentId }),
       include: {
         // Include invoices to handle financial transactions
       },
@@ -333,7 +343,7 @@ export async function DELETE(
     if (invoiceNumber) invoiceOr.push({ invoiceNumber: invoiceNumber });
 
     const relatedInvoices = await prisma.invoice.findMany({
-      where: { OR: invoiceOr },
+      where: orgWhere(session, { OR: invoiceOr }),
       include: {
         customer: true,
         vendor: true,
@@ -370,7 +380,7 @@ export async function DELETE(
 
     const relatedJournalEntries = journalEntryOr.length
       ? await prisma.journalEntry.findMany({
-          where: { OR: journalEntryOr },
+          where: orgWhere(session, { OR: journalEntryOr }),
           include: { lines: true },
         })
       : [];
@@ -441,7 +451,7 @@ export async function DELETE(
 
     const relatedCustomerTransactions = customerTxnOr.length
       ? await prisma.customerTransaction.findMany({
-          where: { OR: customerTxnOr },
+          where: orgWhere(session, { OR: customerTxnOr }),
         })
       : [];
 
@@ -469,7 +479,7 @@ export async function DELETE(
 
     const relatedVendorTransactions = vendorTxnOr.length
       ? await prisma.vendorTransaction.findMany({
-          where: { OR: vendorTxnOr },
+          where: orgWhere(session, { OR: vendorTxnOr }),
         })
       : [];
 
@@ -526,8 +536,8 @@ export async function DELETE(
             console.log(
               `🔍 Looking up customer ${invoice.customerId} for refund processing`
             );
-            const customer = await prisma.customers.findUnique({
-              where: { id: invoice.customerId },
+            const customer = await prisma.customers.findFirst({
+              where: orgWhere(session, { id: invoice.customerId }),
             });
 
             if (!customer) {
@@ -551,7 +561,7 @@ export async function DELETE(
             // 1. Add customer credit transaction (reduces what they owe us)
             console.log(`📝 Creating customer credit transaction for refund`);
             await prisma.customerTransaction.create({
-              data: {
+              data: orgData(session, {
                 customerId: invoice.customerId,
                 type: "CREDIT",
                 amount: invoice.totalAmount,
@@ -561,7 +571,7 @@ export async function DELETE(
                 previousBalance,
                 newBalance,
                 createdAt: new Date(),
-              },
+              }),
             });
 
             // 2. Update customer balance
@@ -712,8 +722,8 @@ export async function DELETE(
 
           try {
             // Get current vendor balance
-            const vendor = await prisma.vendors.findUnique({
-              where: { id: invoice.vendorId },
+            const vendor = await prisma.vendors.findFirst({
+              where: orgWhere(session, { id: invoice.vendorId }),
             });
 
             if (!vendor) {
@@ -728,7 +738,7 @@ export async function DELETE(
 
             // 1. Add vendor credit transaction (reduces what we owe them - they owe us money now)
             await prisma.vendorTransaction.create({
-              data: {
+              data: orgData(session, {
                 vendorId: invoice.vendorId,
                 type: "CREDIT",
                 amount: invoice.totalAmount,
@@ -738,7 +748,7 @@ export async function DELETE(
                 previousBalance,
                 newBalance,
                 createdAt: new Date(),
-              },
+              }),
             });
 
             // 2. Update vendor balance
@@ -938,7 +948,7 @@ export async function DELETE(
           // Get all remaining transactions for this customer
           const remainingTransactions =
             await prisma.customerTransaction.findMany({
-              where: { customerId },
+              where: orgWhere(session, { customerId }),
               orderBy: { createdAt: "asc" },
             });
 
@@ -1013,7 +1023,7 @@ export async function DELETE(
           // Get all remaining transactions for this vendor
           const remainingTransactions = await prisma.vendorTransaction.findMany(
             {
-              where: { vendorId },
+              where: orgWhere(session, { vendorId }),
               orderBy: { createdAt: "asc" },
             }
           );
@@ -1055,7 +1065,7 @@ export async function DELETE(
     if (relatedInvoices.length > 0) {
       console.log(`🗑️ Deleting ${relatedInvoices.length} related invoices...`);
       await prisma.invoice.deleteMany({
-        where: { OR: invoiceOr },
+        where: orgWhere(session, { OR: invoiceOr }),
       });
       console.log(
         `✅ Successfully deleted ${relatedInvoices.length} related invoices`

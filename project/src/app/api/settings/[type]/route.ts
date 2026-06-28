@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 const modelMap: Record<string, any> = {
   deliveryTime: prisma.deliveryTime,
@@ -10,25 +12,40 @@ const modelMap: Record<string, any> = {
 };
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json([], { status: 400 });
 
-  const data = await model.findMany({ orderBy: { name: "asc" } });
+  const data = await model.findMany({
+    where: orgWhere(session),
+    orderBy: { name: "asc" },
+  });
   return NextResponse.json(data);
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
   const { name }: { name: string } = await req.json();
-  const created = await model.create({ data: { name } });
+  const created = await model.create({ data: orgData(session, { name }) });
   return NextResponse.json(created);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
@@ -41,8 +58,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ type
       return NextResponse.json({ error: "Missing ID or name" }, { status: 400 });
     }
 
+    const existing = await model.findFirst({
+      where: orgWhere(session, { id: typeof id === 'string' ? parseInt(id) : id }),
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const updated = await model.update({
-      where: { id: typeof id === 'string' ? parseInt(id) : id },
+      where: { id: existing.id },
       data: { name }
     });
     
@@ -54,6 +78,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ type
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
@@ -62,30 +90,50 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ t
   if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
 
   try {
-    // For serviceMode, cascade-delete zones, rates, and related records
-    if (type === "serviceMode") {
-      const record = await prisma.serviceMode.findUnique({ where: { id: parseInt(id) } });
-      if (record) {
-        const svc = record.name.toLowerCase();
-        const [deletedZones, deletedRates] = await Promise.all([
-          prisma.zone.deleteMany({ where: { service: { equals: svc, mode: "insensitive" } } }),
-          prisma.rate.deleteMany({ where: { service: { equals: svc, mode: "insensitive" } } }),
-        ]);
-
-        // Clean up upload tracking and filename records
-        await Promise.all([
-          prisma.$executeRaw`DELETE FROM "ZoneUpload" WHERE LOWER("service") = ${svc}`.catch(() => {}),
-          prisma.$executeRaw`DELETE FROM "filename" WHERE LOWER("service") = ${svc}`.catch(() => {}),
-          prisma.vendorservice.deleteMany({ where: { service: { equals: svc, mode: "insensitive" } } }),
-        ]);
-
-        console.log(
-          `Cascade delete for serviceMode "${record.name}": ${deletedZones.count} zones, ${deletedRates.count} rates removed`
-        );
-      }
+    const recordId = parseInt(id);
+    const existing = await model.findFirst({
+      where: orgWhere(session, { id: recordId }),
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    await model.delete({ where: { id: parseInt(id) } });
+    // For serviceMode, cascade-delete zones, rates, and related records
+    if (type === "serviceMode") {
+      const svc = existing.name.toLowerCase();
+      const orgId = session.organizationId;
+      const [deletedZones, deletedRates] = await Promise.all([
+        prisma.zone.deleteMany({
+          where: {
+            organizationId: orgId,
+            service: { equals: svc, mode: "insensitive" },
+          },
+        }),
+        prisma.rate.deleteMany({
+          where: {
+            organizationId: orgId,
+            service: { equals: svc, mode: "insensitive" },
+          },
+        }),
+      ]);
+
+      await Promise.all([
+        prisma.$executeRaw`DELETE FROM "ZoneUpload" WHERE "organizationId" = ${orgId} AND LOWER("service") = ${svc}`.catch(() => {}),
+        prisma.$executeRaw`DELETE FROM "filename" WHERE "organizationId" = ${orgId} AND LOWER("service") = ${svc}`.catch(() => {}),
+        prisma.vendorservice.deleteMany({
+          where: {
+            organizationId: orgId,
+            service: { equals: svc, mode: "insensitive" },
+          },
+        }),
+      ]);
+
+      console.log(
+        `Cascade delete for serviceMode "${existing.name}": ${deletedZones.count} zones, ${deletedRates.count} rates removed`
+      );
+    }
+
+    await model.delete({ where: { id: recordId } });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(`Error deleting ${type} with id ${id}:`, error);

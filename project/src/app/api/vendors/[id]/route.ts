@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { decodeToken } from "@/lib/utils";
 import bcrypt from "bcrypt";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 // Define proper types for the request body
 interface VendorUpdateData {
@@ -31,8 +33,12 @@ export async function GET(
       );
     }
 
-    const vendor = await prisma.vendors.findUnique({
-      where: { id: vendorId },
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    const vendor = await prisma.vendors.findFirst({
+      where: orgWhere(session, { id: vendorId }),
     });
 
     if (!vendor) {
@@ -65,6 +71,17 @@ export async function PUT(
         { error: "Invalid vendor ID" },
         { status: 400 }
       );
+    }
+
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    const existingVendor = await prisma.vendors.findFirst({
+      where: orgWhere(session, { id: vendorId }),
+    });
+    if (!existingVendor) {
+      return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
     }
 
     const body: VendorUpdateData = await req.json();
@@ -112,6 +129,10 @@ export async function DELETE(
         { status: 400 }
       );
     }
+
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
 
     // Get the authorization header
     const authHeader = req.headers.get("authorization");
@@ -165,9 +186,9 @@ export async function DELETE(
       );
     }
 
-    // Check if vendor exists
-    const vendor = await prisma.vendors.findUnique({
-      where: { id: vendorId },
+    // Check if vendor exists within this org
+    const vendor = await prisma.vendors.findFirst({
+      where: orgWhere(session, { id: vendorId }),
     });
 
     if (!vendor) {

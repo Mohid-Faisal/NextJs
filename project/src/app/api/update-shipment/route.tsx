@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 import {
   buildShipmentDebitTransactionLineDescription,
   createJournalEntryForTransaction,
@@ -15,15 +17,16 @@ async function updateJournalEntryForTransaction(
   amount: number,
   description: string,
   reference?: string,
-  invoice?: string
+  invoice?: string,
+  organizationId?: number
 ) {
   try {
-    // Find existing journal entry for this invoice - search more broadly
+    const orgFilter = organizationId != null ? { organizationId } : {};
     console.log(`Searching for journal entry with reference: ${reference}, invoice: ${invoice}`);
     
-    // First try to find by exact reference match
     let existingJournalEntry = await tx.journalEntry.findFirst({
       where: {
+        ...orgFilter,
         reference: reference
       },
       include: {
@@ -36,6 +39,7 @@ async function updateJournalEntryForTransaction(
       console.log(`No journal entry found by reference ${reference}, trying by invoice number...`);
       existingJournalEntry = await tx.journalEntry.findFirst({
         where: {
+          ...orgFilter,
           description: { contains: invoice }
         },
         include: {
@@ -49,6 +53,7 @@ async function updateJournalEntryForTransaction(
       console.log(`No journal entry found by description, trying by invoice number as reference...`);
       existingJournalEntry = await tx.journalEntry.findFirst({
         where: {
+          ...orgFilter,
           reference: invoice
         },
         include: {
@@ -62,6 +67,7 @@ async function updateJournalEntryForTransaction(
       console.log(`No journal entry found by any method, trying broader search...`);
       const broaderSearch = await tx.journalEntry.findMany({
         where: {
+          ...orgFilter,
           OR: [
             { description: { contains: invoice } },
             { description: { contains: reference } }
@@ -138,7 +144,9 @@ async function updateJournalEntryForTransaction(
         amount,
         description,
         reference,
-        invoice
+        invoice,
+        undefined,
+        organizationId
       );
     }
   } catch (error) {
@@ -225,6 +233,10 @@ export async function PATCH(req: Request) {
 
 async function handleShipmentUpdate(req: Request) {
   try {
+    const auth = await requireApiSession(req as import("next/server").NextRequest);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     
     // Console log the received data for debugging
@@ -290,8 +302,8 @@ async function handleShipmentUpdate(req: Request) {
     }
 
     // Fetch existing shipment to use current values when new values aren't provided
-    const existingShipment = await prisma.shipment.findUnique({
-      where: { id },
+    const existingShipment = await prisma.shipment.findFirst({
+      where: orgWhere(session, { id }),
       include: { invoices: true },
     });
 
@@ -461,9 +473,9 @@ async function handleShipmentUpdate(req: Request) {
           // Find all journal entries related to this shipment
           if (searchConditions.length > 0) {
             const relatedJournalEntries = await tx.journalEntry.findMany({
-              where: {
+              where: orgWhere(session, {
                 OR: searchConditions
-              }
+              })
             });
             
             console.log(`Found ${relatedJournalEntries.length} journal entries to update dates for`);
@@ -588,7 +600,8 @@ async function handleShipmentUpdate(req: Request) {
                 invoice.vendorId,
                 invoice.vendorId,
                 invoice.invoiceNumber,
-                description
+                description,
+                session.organizationId
               );
               
               console.log(`Successfully updated balances and journal entries for invoice ${invoice.invoiceNumber}`);

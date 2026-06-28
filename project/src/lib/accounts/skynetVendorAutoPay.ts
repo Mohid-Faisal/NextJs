@@ -103,6 +103,7 @@ export type VendorBulkAutoPayResult = {
 export type VendorBulkAutoPayOptions = {
   /** Optional hook for CLI / logs (one line per call). */
   onProgress?: (line: string) => void;
+  organizationId?: number;
 };
 
 /** Payment methods supported by the bulk vendor auto-pay (subset of Prisma PaymentMode). */
@@ -128,11 +129,17 @@ export async function runVendorBulkAutoPay(
   | { ok: false; status: number; error: string }
 > {
   const log = options?.onProgress;
+  const organizationId = options?.organizationId;
   if (!Number.isFinite(vendorId)) {
     return { ok: false, status: 400, error: "Valid vendorId is required" };
   }
 
-  const vendor = await prisma.vendors.findUnique({ where: { id: vendorId } });
+  const vendor = await prisma.vendors.findFirst({
+    where: {
+      id: vendorId,
+      ...(organizationId != null ? { organizationId } : {}),
+    },
+  });
   if (!vendor) {
     return { ok: false, status: 404, error: "Vendor not found" };
   }
@@ -171,6 +178,7 @@ export async function runVendorBulkAutoPay(
     where: {
       vendorId,
       profile: "Vendor",
+      ...(organizationId != null ? { organizationId } : {}),
     },
     include: {
       shipment: { select: { shipmentDate: true } },
@@ -241,6 +249,7 @@ export async function runVendorBulkAutoPay(
           async (tx) => {
             await tx.payment.create({
               data: {
+                ...(organizationId != null ? { organizationId } : {}),
                 transactionType: "EXPENSE",
                 category: "Vendor Payment",
                 date: paymentDate,
@@ -260,6 +269,7 @@ export async function runVendorBulkAutoPay(
 
             await tx.vendorTransaction.create({
               data: {
+                ...(organizationId != null ? { organizationId } : {}),
                 vendorId,
                 type: "CREDIT",
                 amount: remaining,
@@ -284,6 +294,7 @@ export async function runVendorBulkAutoPay(
 
             await tx.journalEntry.create({
               data: {
+                ...(organizationId != null ? { organizationId } : {}),
                 entryNumber,
                 date: paymentDate,
                 description: `Invoice Payment: Vendor payment for ${inv.invoiceNumber} - ${DESCRIPTION}`,

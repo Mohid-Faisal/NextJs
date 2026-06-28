@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     // Get date range from query parameters (default to current month)
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get('startDate');
@@ -32,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     // Get cash inflow (CREDIT transactions from payments with CASH mode + transfers TO cash)
     const cashInflow = await prisma.payment.aggregate({
-      where: {
+      where: orgWhere(session, {
         ...dateFilter,
         OR: [
           {
@@ -46,7 +52,7 @@ export async function GET(req: NextRequest) {
             }
           }
         ]
-      },
+      }),
       _sum: {
         amount: true
       }
@@ -54,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     // Get cash outflow (EXPENSE transactions from payments with CASH mode + transfers FROM cash)
     const cashOutflow = await prisma.payment.aggregate({
-      where: {
+      where: orgWhere(session, {
         ...dateFilter,
         OR: [
           {
@@ -72,7 +78,7 @@ export async function GET(req: NextRequest) {
             }
           }
         ]
-      },
+      }),
       _sum: {
         amount: true
       }
@@ -80,7 +86,7 @@ export async function GET(req: NextRequest) {
 
     // Get bank inflow (CREDIT transactions from payments with BANK_TRANSFER mode + transfers TO bank)
     const bankInflow = await prisma.payment.aggregate({
-      where: {
+      where: orgWhere(session, {
         ...dateFilter,
         OR: [
           {
@@ -94,7 +100,7 @@ export async function GET(req: NextRequest) {
             }
           }
         ]
-      },
+      }),
       _sum: {
         amount: true
       }
@@ -102,7 +108,7 @@ export async function GET(req: NextRequest) {
 
     // Get bank outflow (EXPENSE transactions from payments with BANK_TRANSFER mode + transfers FROM bank)
     const bankOutflow = await prisma.payment.aggregate({
-      where: {
+      where: orgWhere(session, {
         ...dateFilter,
         OR: [
           {
@@ -120,7 +126,7 @@ export async function GET(req: NextRequest) {
             }
           }
         ]
-      },
+      }),
       _sum: {
         amount: true
       }

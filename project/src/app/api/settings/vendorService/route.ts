@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const vendorServices = await prisma.vendorservice.findMany({
+      where: orgWhere(session),
       orderBy: [{ vendor: "asc" }, { service: "asc" }],
     });
 
@@ -19,10 +26,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { vendor, service } = body;
-
-    console.log(body);
 
     if (!vendor || !service) {
       return NextResponse.json(
@@ -31,12 +40,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if the vendor-service combination already exists
     const existing = await prisma.vendorservice.findFirst({
-      where: {
-        vendor: vendor,
-        service: service,
-      },
+      where: orgWhere(session, { vendor, service }),
     });
 
     if (existing) {
@@ -47,10 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const vendorService = await prisma.vendorservice.create({
-      data: {
-        vendor: vendor,
-        service: service,
-      },
+      data: orgData(session, { vendor, service }),
     });
 
     return NextResponse.json(vendorService);
@@ -65,18 +67,19 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { error: "ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
     }
 
-    const record = await prisma.vendorservice.findUnique({
-      where: { id: parseInt(id) },
+    const record = await prisma.vendorservice.findFirst({
+      where: orgWhere(session, { id: parseInt(id, 10) }),
     });
 
     if (!record) {
@@ -86,20 +89,19 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Cascade-delete rates and filename records for this vendor+service
     const [deletedRates] = await Promise.all([
       prisma.rate.deleteMany({
-        where: {
+        where: orgWhere(session, {
           vendor: { equals: record.vendor, mode: "insensitive" },
           service: { equals: record.service, mode: "insensitive" },
-        },
+        }),
       }),
       prisma.filename.deleteMany({
-        where: {
+        where: orgWhere(session, {
           vendor: { equals: record.vendor, mode: "insensitive" },
           service: { equals: record.service, mode: "insensitive" },
           fileType: "rate",
-        },
+        }),
       }).catch(() => {}),
     ]);
 
@@ -108,7 +110,7 @@ export async function DELETE(req: NextRequest) {
     );
 
     await prisma.vendorservice.delete({
-      where: { id: parseInt(id) },
+      where: { id: parseInt(id, 10) },
     });
 
     return NextResponse.json({ success: true });
@@ -119,4 +121,4 @@ export async function DELETE(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

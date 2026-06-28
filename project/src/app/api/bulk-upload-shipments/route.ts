@@ -10,9 +10,26 @@ import {
   getCountryNameFromCode 
 } from "@/lib/utils";
 import { Country } from "country-state-city";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { checkShipmentLimit } from "@/lib/billing/usage";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    // Forward the caller's auth to internal invoice API calls so they share
+    // the same org-scoped session (server-side fetch does not carry cookies).
+    const incomingAuth = req.headers.get("authorization");
+    const incomingCookie = req.headers.get("cookie");
+    const forwardHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (incomingAuth) forwardHeaders["authorization"] = incomingAuth;
+    if (incomingCookie) forwardHeaders["cookie"] = incomingCookie;
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
@@ -199,14 +216,53 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Plan limit / billing gate. Block the whole upload if the org is over
+    // quota / trial-expired / past due, or if this batch would exceed the
+    // remaining monthly allowance.
+    const limit = await checkShipmentLimit(session.organizationId);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "limit_exceeded",
+          reason: limit.reason,
+          message: limit.message,
+          limit: limit.limit,
+          used: limit.used,
+          planCode: limit.planCode,
+        },
+        { status: 402 }
+      );
+    }
+    if (limit.limit > 0) {
+      const remaining = Math.max(0, limit.limit - limit.used);
+      if (shipmentsData.length > remaining) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "limit_exceeded",
+            reason: "limit_reached",
+            message: `This file has ${shipmentsData.length} shipments but your plan only allows ${remaining} more this month (limit ${limit.limit}). Upgrade your plan or upload fewer rows.`,
+            limit: limit.limit,
+            used: limit.used,
+            planCode: limit.planCode,
+          },
+          { status: 402 }
+        );
+      }
+    }
+
     // Fetch all existing customers, recipients, and vendors once for efficient lookup
     const allCustomers = await prisma.customers.findMany({
+      where: orgWhere(session),
       select: { id: true, CompanyName: true, currentBalance: true }
     });
     const allRecipients = await prisma.recipients.findMany({
+      where: orgWhere(session),
       select: { id: true, CompanyName: true }
     });
     const allVendors = await prisma.vendors.findMany({
+      where: orgWhere(session),
       select: { id: true, CompanyName: true, currentBalance: true }
     });
 
@@ -246,8 +302,8 @@ export async function POST(req: NextRequest) {
     for (const shipmentData of shipmentsData) {
       try {
         // Check if tracking ID already exists
-        const existingShipment = await prisma.shipment.findUnique({
-          where: { trackingId: shipmentData.trackingId }
+        const existingShipment = await prisma.shipment.findFirst({
+          where: orgWhere(session, { trackingId: shipmentData.trackingId })
         });
 
         if (existingShipment) {
@@ -270,7 +326,7 @@ export async function POST(req: NextRequest) {
 
           try {
             customer = await prisma.customers.create({
-              data: {
+              data: orgData(session, {
                 id: nextCustomerId,
                 CompanyName: normalizedSenderName,
                 PersonName: normalizedSenderName,
@@ -286,13 +342,13 @@ export async function POST(req: NextRequest) {
                 ActiveStatus: "Active",
                 FilePath: "",
                 currentBalance: 0,
-              }
+              })
             });
           } catch (error: any) {
             // If ID conflict, try with auto-increment
             if (error.code === 'P2002') {
               customer = await prisma.customers.create({
-                data: {
+                data: orgData(session, {
                   CompanyName: normalizedSenderName,
                   PersonName: normalizedSenderName,
                   Email: "",
@@ -307,7 +363,7 @@ export async function POST(req: NextRequest) {
                   ActiveStatus: "Active",
                   FilePath: "",
                   currentBalance: 0,
-                }
+                })
               });
             } else {
               throw error;
@@ -324,7 +380,7 @@ export async function POST(req: NextRequest) {
 
         if (!recipient) {
           recipient = await prisma.recipients.create({
-            data: {
+            data: orgData(session, {
               CompanyName: normalizedReceiverName,
               PersonName: normalizedReceiverName,
               Email: "",
@@ -334,7 +390,7 @@ export async function POST(req: NextRequest) {
               City: "",
               Zip: "",
               Address: "",
-            }
+            })
           });
           // Add to map for future lookups
           recipientMap.set(recipientKey, recipient);
@@ -347,7 +403,7 @@ export async function POST(req: NextRequest) {
 
         if (!vendor) {
           vendor = await prisma.vendors.create({
-            data: {
+            data: orgData(session, {
               CompanyName: normalizedVendorName,
               PersonName: normalizedVendorName,
               Email: "",
@@ -358,7 +414,7 @@ export async function POST(req: NextRequest) {
               Zip: "",
               Address: "",
               currentBalance: 0,
-            }
+            })
           });
           // Add to map for future lookups
           vendorMap.set(vendorKey, vendor);
@@ -400,7 +456,7 @@ export async function POST(req: NextRequest) {
 
         // Create shipment
         const shipment = await prisma.shipment.create({
-          data: {
+          data: orgData(session, {
             trackingId: shipmentData.trackingId,
             invoiceNumber,
             referenceNumber: shipmentData.referenceNumber || "", // Use reference from Excel or empty string
@@ -432,7 +488,7 @@ export async function POST(req: NextRequest) {
             manualRate: shipmentData.cos > 0,
             packages: JSON.stringify(packagesArray),
             packageTotals: JSON.stringify(packageTotalsObj),
-          }
+          })
         });
 
         // Auto-add initial tracking status: Booked (shipment date - 2.5h) and Picked Up (shipment date), Lahore, Pakistan
@@ -478,7 +534,7 @@ export async function POST(req: NextRequest) {
         // Create customer invoice
         const customerInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: forwardHeaders,
           body: JSON.stringify({
             invoiceNumber,
             invoiceDate: shipmentData.shipmentDate.toISOString(),
@@ -502,7 +558,7 @@ export async function POST(req: NextRequest) {
         // Create vendor invoice
         const vendorInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: forwardHeaders,
           body: JSON.stringify({
             invoiceNumber: vendorInvoiceNumber,
             invoiceDate: shipmentData.shipmentDate.toISOString(),
@@ -533,7 +589,8 @@ export async function POST(req: NextRequest) {
             `Tracking: ${shipmentData.trackingId} | Country: ${shipmentData.countryCode} | Type: ${shipmentData.type} | Weight: ${shipmentData.weight}Kg`,
             invoiceNumber,
             invoiceNumber,
-            shipmentData.shipmentDate
+            shipmentData.shipmentDate,
+            session.organizationId
           );
 
           await createJournalEntryForTransaction(
@@ -543,7 +600,8 @@ export async function POST(req: NextRequest) {
             `Customer invoice for shipment ${shipmentData.trackingId}`,
             invoiceNumber,
             invoiceNumber,
-            shipmentData.shipmentDate
+            shipmentData.shipmentDate,
+            session.organizationId
           );
         }
 
@@ -557,7 +615,8 @@ export async function POST(req: NextRequest) {
             `Tracking: ${shipmentData.trackingId} | Country: ${shipmentData.countryCode} | Type: ${shipmentData.type} | Weight: ${shipmentData.weight}Kg`,
             vendorInvoiceNumber,
             vendorInvoiceNumber,
-            shipmentData.shipmentDate
+            shipmentData.shipmentDate,
+            session.organizationId
           );
 
           await createJournalEntryForTransaction(
@@ -567,14 +626,15 @@ export async function POST(req: NextRequest) {
             `Vendor invoice for shipment ${shipmentData.trackingId}`,
             vendorInvoiceNumber,
             vendorInvoiceNumber,
-            shipmentData.shipmentDate
+            shipmentData.shipmentDate,
+            session.organizationId
           );
         }
 
         // Handle balance application for customer
         if (customerAppliedBalance > 0) {
           await prisma.payment.create({
-            data: {
+            data: orgData(session, {
               transactionType: "INCOME",
               category: "Balance Applied",
               date: shipmentData.shipmentDate,
@@ -589,7 +649,7 @@ export async function POST(req: NextRequest) {
               reference: invoiceNumber,
               invoice: invoiceNumber,
               description: `Credit applied for invoice ${invoiceNumber}`
-            }
+            })
           });
 
           await addCustomerTransaction(
@@ -600,7 +660,8 @@ export async function POST(req: NextRequest) {
             `Credit applied for invoice ${invoiceNumber}`,
             `CREDIT-${invoiceNumber}`,
             invoiceNumber,
-            shipmentData.shipmentDate
+            shipmentData.shipmentDate,
+            session.organizationId
           );
 
           await createJournalEntryForTransaction(
@@ -610,14 +671,15 @@ export async function POST(req: NextRequest) {
             `Customer credit applied for invoice ${invoiceNumber}`,
             `CREDIT-${invoiceNumber}`,
             invoiceNumber,
-            shipmentData.shipmentDate
+            shipmentData.shipmentDate,
+            session.organizationId
           );
         }
 
         // Handle balance application for vendor
         if (vendorAppliedBalance > 0) {
           await prisma.payment.create({
-            data: {
+            data: orgData(session, {
               transactionType: "EXPENSE",
               category: "Balance Applied",
               date: shipmentData.shipmentDate,
@@ -632,7 +694,7 @@ export async function POST(req: NextRequest) {
               reference: vendorInvoiceNumber,
               invoice: vendorInvoiceNumber,
               description: `Credit applied for vendor invoice ${vendorInvoiceNumber}`
-            }
+            })
           });
 
           await addVendorTransaction(
@@ -643,7 +705,8 @@ export async function POST(req: NextRequest) {
             `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
             `CREDIT-${vendorInvoiceNumber}`,
             vendorInvoiceNumber,
-            shipmentData.shipmentDate
+            shipmentData.shipmentDate,
+            session.organizationId
           );
 
           await createJournalEntryForTransaction(
@@ -653,7 +716,8 @@ export async function POST(req: NextRequest) {
             `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
             `CREDIT-${vendorInvoiceNumber}`,
             vendorInvoiceNumber,
-            shipmentData.shipmentDate
+            shipmentData.shipmentDate,
+            session.organizationId
           );
         }
 

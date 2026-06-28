@@ -1,34 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import {
   extractNoteDetailDescription,
   normalizeNoteLineDescription,
   parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
-
-const prisma = new PrismaClient();
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgCreditNote } from "@/lib/tenant/findOrgCreditNote";
+import { findOrgChartAccount } from "@/lib/tenant/findOrgChartAccount";
 
 // GET /api/credit-notes/[id] — load one note for editing
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id, 10);
     if (Number.isNaN(idNum)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const note = await prisma.creditNote.findUnique({
-      where: { id: idNum },
-      include: {
-        customer: {
-          select: { id: true, PersonName: true, CompanyName: true },
-        },
-        invoice: {
-          select: { id: true, invoiceNumber: true, totalAmount: true },
-        },
+    const note = await findOrgCreditNote(session, idNum, {
+      customer: {
+        select: { id: true, PersonName: true, CompanyName: true },
+      },
+      invoice: {
+        select: { id: true, invoiceNumber: true, totalAmount: true },
       },
     });
 
@@ -37,12 +40,12 @@ export async function GET(
     }
 
     const journalEntry = await prisma.journalEntry.findFirst({
-      where: {
+      where: orgWhere(session, {
         OR: [
           { reference: note.creditNoteNumber },
           { description: { contains: note.creditNoteNumber } },
         ],
-      },
+      }),
       include: { lines: true },
     });
 
@@ -96,6 +99,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id, 10);
     if (Number.isNaN(idNum)) {
@@ -111,11 +118,8 @@ export async function PUT(
       creditAccountId: creditAccRaw,
     } = body;
 
-    const note = await prisma.creditNote.findUnique({
-      where: { id: idNum },
-      include: {
-        invoice: { select: { invoiceNumber: true } },
-      },
+    const note = await findOrgCreditNote(session, idNum, {
+      invoice: { select: { invoiceNumber: true } },
     });
 
     if (!note) {
@@ -169,8 +173,8 @@ export async function PUT(
 
     if (debitAccountId !== null && creditAccountId !== null) {
       const [da, ca] = await Promise.all([
-        prisma.chartOfAccount.findUnique({ where: { id: debitAccountId } }),
-        prisma.chartOfAccount.findUnique({ where: { id: creditAccountId } }),
+        findOrgChartAccount(session, debitAccountId),
+        findOrgChartAccount(session, creditAccountId),
       ]);
       if (!da || !ca) {
         return NextResponse.json({ error: "Invalid account IDs" }, { status: 400 });
@@ -181,15 +185,15 @@ export async function PUT(
 
     await prisma.$transaction(async (tx) => {
       const txn = await tx.customerTransaction.findFirst({
-        where: {
+        where: orgWhere(session, {
           reference: note.creditNoteNumber,
           customerId,
-        },
+        }),
       });
 
       if (amountDelta !== 0) {
-        const cust = await tx.customers.findUnique({
-          where: { id: customerId },
+        const cust = await tx.customers.findFirst({
+          where: orgWhere(session, { id: customerId }),
         });
         if (cust) {
           if (txn?.type === "CREDIT") {
@@ -216,7 +220,7 @@ export async function PUT(
       });
 
       await tx.payment.updateMany({
-        where: { reference: note.creditNoteNumber },
+        where: orgWhere(session, { reference: note.creditNoteNumber }),
         data: {
           amount: newAmount,
           date: newDate,
@@ -225,12 +229,12 @@ export async function PUT(
       });
 
       const journalEntry = await tx.journalEntry.findFirst({
-        where: {
+        where: orgWhere(session, {
           OR: [
             { reference: note.creditNoteNumber },
             { description: { contains: note.creditNoteNumber } },
           ],
-        },
+        }),
         include: { lines: true },
       });
 
@@ -273,15 +277,12 @@ export async function PUT(
       }
     });
 
-    const updated = await prisma.creditNote.findUnique({
-      where: { id: idNum },
-      include: {
-        customer: {
-          select: { id: true, PersonName: true, CompanyName: true },
-        },
-        invoice: {
-          select: { id: true, invoiceNumber: true, totalAmount: true },
-        },
+    const updated = await findOrgCreditNote(session, idNum, {
+      customer: {
+        select: { id: true, PersonName: true, CompanyName: true },
+      },
+      invoice: {
+        select: { id: true, invoiceNumber: true, totalAmount: true },
       },
     });
 
@@ -301,13 +302,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const idNum = parseInt(id);
 
-    // Find the credit note to get its reference number
-    const creditNote = await prisma.creditNote.findUnique({
-      where: { id: idNum },
-    });
+    const creditNote = await findOrgCreditNote(session, idNum);
 
     if (!creditNote) {
       return NextResponse.json(
@@ -320,12 +322,12 @@ export async function DELETE(
     await prisma.$transaction(async (tx) => {
       // Find and delete related journal entries
       const journalEntries = await tx.journalEntry.findMany({
-        where: {
+        where: orgWhere(session, {
           OR: [
             { reference: creditNote.creditNoteNumber },
             { description: { contains: creditNote.creditNoteNumber } }
           ]
-        },
+        }),
         include: { lines: true }
       });
 
@@ -349,12 +351,11 @@ export async function DELETE(
 
       // Delete related payments
       await tx.payment.deleteMany({
-        where: { reference: creditNote.creditNoteNumber }
+        where: orgWhere(session, { reference: creditNote.creditNoteNumber }),
       });
 
-      // Delete customer transactions
       await tx.customerTransaction.deleteMany({
-        where: { reference: creditNote.creditNoteNumber }
+        where: orgWhere(session, { reference: creditNote.creditNoteNumber }),
       });
 
       // Finally, delete the credit note

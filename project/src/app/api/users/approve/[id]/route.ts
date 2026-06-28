@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { sendUserApprovedEmail } from '@/lib/email';
+import { requireSuperAdmin } from '@/lib/auth/requireSuperAdmin';
 
 const prisma = new PrismaClient();
 
@@ -8,6 +9,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Only platform super admins may approve new accounts across orgs.
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) return auth.error;
+  const approver = auth.session;
+
   try {
     const { id } = await params;
     const userId = parseInt(id);
@@ -38,7 +44,7 @@ export async function POST(
         isApproved: true,
         status: 'ACTIVE',
         approvedAt: new Date(),
-        approvedBy: 1, // TODO: Get actual admin user ID from session
+        approvedBy: approver.userId,
       },
       select: {
         id: true,

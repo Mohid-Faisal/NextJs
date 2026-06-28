@@ -1,28 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma-vercel";
+import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgChartAccountByCode } from "@/lib/tenant/findOrgChartAccount";
 
-// Default Chart of Accounts data based on the image
 const defaultAccounts = [
-  // Assets
   { code: "1101", accountName: "Cash", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Physical cash" },
   { code: "1102", accountName: "Bank", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Bank Account" },
   { code: "1103", accountName: "Accounts Receivable", category: "Asset", type: "Current Asset", debitRule: "Increases", creditRule: "Decreases", description: "Money owed by customers for transportation or logistics services" },
   { code: "1104", accountName: "Warehousing Facilities", category: "Asset", type: "Fixed Asset", debitRule: "Increases", creditRule: "Decreases", description: "Storage warehouses used in logistics operations" },
   { code: "1105", accountName: "Office Equipment", category: "Asset", type: "Fixed Asset", debitRule: "Increases", creditRule: "Decreases", description: "Office furniture, computers, and administrative equipment" },
-  
-  // Liabilities
   { code: "2101", accountName: "Accounts Payable", category: "Liability", type: "Current Liability", debitRule: "Decreases", creditRule: "Increases", description: "Money owed to suppliers, contractors, or vendors" },
   { code: "2102", accountName: "Taxes Payable", category: "Liability", type: "Current Liability", debitRule: "Decreases", creditRule: "Increases", description: "Taxes owed to government authorities" },
   { code: "2103", accountName: "Wages Payable", category: "Liability", type: "Current Liability", debitRule: "Decreases", creditRule: "Increases", description: "Unpaid salaries and wages owed to drivers and staff" },
   { code: "2201", accountName: "Vehicle Loan Payable", category: "Liability", type: "Non-Current Liability", debitRule: "Decreases", creditRule: "Increases", description: "Long-term loans for purchasing fleet vehicles" },
   { code: "2202", accountName: "Warehouse Mortgage Payable", category: "Liability", type: "Non-Current Liability", debitRule: "Decreases", creditRule: "Increases", description: "Mortgage loans for warehousing facilities" },
-  
-  // Equity
   { code: "3101", accountName: "Owner's Equity", category: "Equity", type: "Equity", debitRule: "Decreases", creditRule: "Increases", description: "Owner's initial and additional investments in the business" },
   { code: "3102", accountName: "Retained Earnings", category: "Equity", type: "Equity", debitRule: "Decreases", creditRule: "Increases", description: "Cumulative profits retained in the business for reinvestment" },
   { code: "3103", accountName: "Current Year Earnings", category: "Equity", type: "Equity", debitRule: "Decreases", creditRule: "Increases", description: "Current year's net income or loss" },
-  
-  // Expenses
   { code: "4101", accountName: "Vendor Expense", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Expenses paid to vendors for transportation and logistics services" },
   { code: "4102", accountName: "Bank Charges", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Bank charges for the bank account" },
   { code: "4103", accountName: "Equipments", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Equipment Costs" },
@@ -42,15 +37,17 @@ const defaultAccounts = [
   { code: "4117", accountName: "Tools", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Tools" },
   { code: "4118", accountName: "Transportation", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Transportation" },
   { code: "4119", accountName: "Utilities", category: "Expense", type: "Direct Costs", debitRule: "Increases", creditRule: "Decreases", description: "Utlities" },
-  
-  // Revenue
   { code: "5101", accountName: "Logistics Services Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from logistics services" },
   { code: "5102", accountName: "Packaging Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from Packaging" },
-  { code: "5103", accountName: "Other Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from third parties" }
+  { code: "5103", accountName: "Other Revenue", category: "Revenue", type: "Revenue", debitRule: "Decreases", creditRule: "Increases", description: "Revenue earned from third parties" },
 ];
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
@@ -61,41 +58,36 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where: any = {};
-    
+    const where: any = { ...orgWhere(session) };
+
     if (search) {
       where.OR = [
         { code: { contains: search, mode: "insensitive" } },
         { accountName: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } }
+        { description: { contains: search, mode: "insensitive" } },
       ];
     }
-    
+
     if (category) {
       where.category = category;
     }
-    
+
     if (type) {
       where.type = type;
     }
-    
+
     if (isActive !== null && isActive !== undefined) {
       where.isActive = isActive === "true";
     }
 
-    // Fetch accounts with pagination
     const [accounts, total] = await Promise.all([
       prisma.chartOfAccount.findMany({
         where,
-        orderBy: [
-          { category: "asc" },
-          { code: "asc" }
-        ],
+        orderBy: [{ category: "asc" }, { code: "asc" }],
         skip,
         take: limit,
       }),
-      prisma.chartOfAccount.count({ where })
+      prisma.chartOfAccount.count({ where }),
     ]);
 
     return NextResponse.json({
@@ -116,10 +108,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { code, accountName, category, type, debitRule, creditRule, description } = body;
 
-    // Validate required fields
     if (!code || !accountName || !category || !type) {
       return NextResponse.json(
         { success: false, error: "Code, account name, category, and type are required" },
@@ -127,10 +122,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if account code already exists
-    const existingAccount = await prisma.chartOfAccount.findUnique({
-      where: { code }
-    });
+    const existingAccount = await findOrgChartAccountByCode(session, code);
 
     if (existingAccount) {
       return NextResponse.json(
@@ -139,9 +131,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create new account
     const account = await prisma.chartOfAccount.create({
-      data: {
+      data: orgData(session, {
         code,
         accountName,
         category,
@@ -149,14 +140,14 @@ export async function POST(req: NextRequest) {
         debitRule: debitRule || "",
         creditRule: creditRule || "",
         description,
-        isActive: true
-      }
+        isActive: true,
+      }),
     });
 
     return NextResponse.json({
       success: true,
       data: account,
-      message: "Account created successfully"
+      message: "Account created successfully",
     });
   } catch (error) {
     console.error("Error creating account:", error);
@@ -167,39 +158,50 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Initialize default accounts
 export async function PUT(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { action } = body;
 
     if (action === "initialize") {
-      // Check if accounts already exist
-      const existingCount = await prisma.chartOfAccount.count();
-      
+      const existingCount = await prisma.chartOfAccount.count({
+        where: orgWhere(session),
+      });
+
       if (existingCount > 0) {
-        return NextResponse.json({
-          success: false,
-          error: "Chart of accounts already initialized"
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Chart of accounts already initialized",
+          },
+          { status: 400 }
+        );
       }
 
-      // Create all default accounts
       const createdAccounts = await prisma.chartOfAccount.createMany({
-        data: defaultAccounts
+        data: defaultAccounts.map((account) =>
+          orgData(session, account)
+        ),
       });
 
       return NextResponse.json({
         success: true,
         message: `Successfully initialized ${createdAccounts.count} default accounts`,
-        count: createdAccounts.count
+        count: createdAccounts.count,
       });
     }
 
-    return NextResponse.json({
-      success: false,
-      error: "Invalid action"
-    }, { status: 400 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Invalid action",
+      },
+      { status: 400 }
+    );
   } catch (error) {
     console.error("Error initializing accounts:", error);
     return NextResponse.json(

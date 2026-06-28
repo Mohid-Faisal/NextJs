@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Country } from "country-state-city";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(req: Request) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("query");
 
@@ -12,12 +18,12 @@ export async function GET(req: Request) {
 
   try {
     const customers = await prisma.customers.findMany({
-      where: {
+      where: orgWhere(session, {
         CompanyName: {
           contains: query,
           mode: "insensitive",
         },
-      },
+      }),
       take: 10,
       select: {
         id: true,

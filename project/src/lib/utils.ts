@@ -75,7 +75,8 @@ export async function addCustomerTransaction(
   description: string,
   reference?: string,
   invoice?: string,
-  date?: Date | string
+  date?: Date | string,
+  organizationId?: number
 ) {
   const customer = await prisma.customers.findUnique({
     where: { id: customerId }
@@ -110,7 +111,8 @@ export async function addCustomerTransaction(
       invoice,
       previousBalance,
       newBalance,
-      createdAt: transactionDate
+      createdAt: transactionDate,
+      ...(organizationId != null ? { organizationId } : {}),
     }
   });
 
@@ -125,7 +127,8 @@ export async function addVendorTransaction(
   description: string,
   reference?: string,
   invoice?: string,
-  date?: Date | string
+  date?: Date | string,
+  organizationId?: number
 ) {
   const vendor = await prisma.vendors.findUnique({
     where: { id: vendorId }
@@ -164,7 +167,8 @@ export async function addVendorTransaction(
       invoice,
       previousBalance,
       newBalance,
-      createdAt: transactionDate
+      createdAt: transactionDate,
+      ...(organizationId != null ? { organizationId } : {}),
     }
   });
 
@@ -591,7 +595,8 @@ export async function allocateExcessPayment(
   originalInvoiceNumber: string,
   paymentReference: string,
   paymentType: 'CUSTOMER_PAYMENT' | 'VENDOR_PAYMENT',
-  paymentDate?: string | Date
+  paymentDate?: string | Date,
+  organizationId?: number
 ) {
   const allocations: Array<{
     invoiceNumber: string;
@@ -605,9 +610,10 @@ export async function allocateExcessPayment(
     // Find outstanding customer invoices
     const outstandingInvoices = await prisma.invoice.findMany({
       where: {
+        ...(organizationId != null ? { organizationId } : {}),
         customerId: customerId,
         status: { in: ['Unpaid', 'Partial'] },
-        invoiceNumber: { not: originalInvoiceNumber } // Exclude the original invoice
+        invoiceNumber: { not: originalInvoiceNumber }
       },
       include: {
         customer: true,
@@ -667,9 +673,10 @@ export async function allocateExcessPayment(
     // Find outstanding vendor invoices
     const outstandingInvoices = await prisma.invoice.findMany({
       where: {
+        ...(organizationId != null ? { organizationId } : {}),
         vendorId: vendorId,
         status: { in: ['Unpaid', 'Partial'] },
-        invoiceNumber: { not: originalInvoiceNumber } // Exclude the original invoice
+        invoiceNumber: { not: originalInvoiceNumber }
       },
       include: {
         vendor: true,
@@ -742,11 +749,14 @@ export async function processPaymentWithAllocation(
   description?: string,
   paymentDate?: string,
   debitAccountId?: number,
-  creditAccountId?: number
+  creditAccountId?: number,
+  organizationId?: number
 ) {
-  // Find the invoice
-  const invoice = await prisma.invoice.findUnique({
-    where: { invoiceNumber },
+  const invoice = await prisma.invoice.findFirst({
+    where: {
+      invoiceNumber,
+      ...(organizationId != null ? { organizationId } : {}),
+    },
     include: {
       customer: true,
       vendor: true
@@ -769,7 +779,8 @@ export async function processPaymentWithAllocation(
     const totalPaidSoFar = await prisma.payment.aggregate({
       where: {
         invoice: invoiceNumber,
-        transactionType: "INCOME"
+        transactionType: "INCOME",
+        ...(organizationId != null ? { organizationId } : {}),
       },
       _sum: { amount: true }
     });
@@ -793,7 +804,8 @@ export async function processPaymentWithAllocation(
         invoiceNumber,
         reference,
         'CUSTOMER_PAYMENT',
-        paymentDate
+        paymentDate,
+        organizationId
       );
     }
 
@@ -817,7 +829,8 @@ export async function processPaymentWithAllocation(
         transactionDescription,
         reference,
         invoiceNumber,
-        paymentDate
+        paymentDate,
+        organizationId
       );
     }
 
@@ -830,7 +843,8 @@ export async function processPaymentWithAllocation(
     const totalPaidSoFar = await prisma.payment.aggregate({
       where: {
         invoice: invoiceNumber,
-        transactionType: "EXPENSE"
+        transactionType: "EXPENSE",
+        ...(organizationId != null ? { organizationId } : {}),
       },
       _sum: { amount: true }
     });
@@ -852,7 +866,8 @@ export async function processPaymentWithAllocation(
         invoiceNumber,
         reference,
         'VENDOR_PAYMENT',
-        paymentDate
+        paymentDate,
+        organizationId
       );
     }
 
@@ -876,7 +891,8 @@ export async function processPaymentWithAllocation(
         transactionDescription,
         reference,
         invoiceNumber,
-        paymentDate
+        paymentDate,
+        organizationId
       );
     }
   }
@@ -894,6 +910,7 @@ export async function processPaymentWithAllocation(
   // Create main payment record
   const payment = await prisma.payment.create({
     data: {
+      ...(organizationId != null ? { organizationId } : {}),
       transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
       category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
       date: paymentDate ? new Date(paymentDate) : new Date(),
@@ -982,11 +999,14 @@ export async function createJournalEntryForTransaction(
   description: string,
   reference?: string,
   invoice?: string,
-  date?: Date | string
+  date?: Date | string,
+  organizationId?: number
 ) {
   try {
-    // Generate journal entry number
+    const orgFilter = organizationId != null ? { organizationId } : {};
+
     const lastEntry = await prisma.journalEntry.findFirst({
+      where: orgFilter,
       orderBy: { entryNumber: "desc" }
     });
 
@@ -996,41 +1016,41 @@ export async function createJournalEntryForTransaction(
       entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
     }
 
-    // Get chart of accounts
+    const chartWhere = (extra: Record<string, unknown>) =>
+      organizationId != null ? { organizationId, ...extra } : extra;
+
     const cashAccount = await prisma.chartOfAccount.findFirst({
-      where: { accountName: "Cash" }
+      where: chartWhere({ accountName: "Cash" })
     });
 
     const accountsReceivable = await prisma.chartOfAccount.findFirst({
-      where: { accountName: "Accounts Receivable" }
+      where: chartWhere({ accountName: "Accounts Receivable" })
     });
 
     const accountsPayable = await prisma.chartOfAccount.findFirst({
-      where: { accountName: "Accounts Payable" }
+      where: chartWhere({ accountName: "Accounts Payable" })
     });
 
     const revenueAccount = await prisma.chartOfAccount.findFirst({
-      where: { 
+      where: chartWhere({
         category: "Revenue",
         accountName: "Logistics Services Revenue"
-      }
+      })
     });
 
     const expenseAccount = await prisma.chartOfAccount.findFirst({
-      where: { 
+      where: chartWhere({
         category: "Expense",
         accountName: "Vendor Expense"
-      }
+      })
     });
 
-    // Create journal entry with lines
     const journalEntry = await prisma.$transaction(async (tx: any) => {
-      // Use provided date or default to current date
       const entryDate = date ? new Date(date) : new Date();
-      
-      // Create the journal entry
+
       const entry = await tx.journalEntry.create({
         data: {
+          ...orgFilter,
           entryNumber,
           date: entryDate,
           description: description,
@@ -1235,7 +1255,8 @@ export async function updateJournalEntriesForInvoice(
   oldVendorId: number | null,
   newVendorId: number | null,
   invoiceNumber: string,
-  description: string
+  description: string,
+  organizationId?: number
 ) {
   try {
     console.log(`Updating journal entries for invoice ${invoiceNumber}:`, {
@@ -1267,18 +1288,20 @@ export async function updateJournalEntriesForInvoice(
           oldAmount,
           newAmount,
           invoiceNumber,
-          description
+          description,
+          organizationId
         ));
       }
       if (newCustomerId && newCustomerId !== oldCustomerId) {
-        // Create new customer journal entry
         updates.push(createJournalEntryForTransaction(
           prisma,
           'CUSTOMER_DEBIT',
           newAmount,
           description,
           invoiceNumber,
-          invoiceNumber
+          invoiceNumber,
+          undefined,
+          organizationId
         ));
       }
     }
@@ -1293,18 +1316,20 @@ export async function updateJournalEntriesForInvoice(
           oldAmount,
           newAmount,
           invoiceNumber,
-          description
+          description,
+          organizationId
         ));
       }
       if (newVendorId && newVendorId !== oldVendorId) {
-        // Create new vendor journal entry
         updates.push(createJournalEntryForTransaction(
           prisma,
           'VENDOR_DEBIT',
           newAmount,
           description,
           invoiceNumber,
-          invoiceNumber
+          invoiceNumber,
+          undefined,
+          organizationId
         ));
       }
     }
@@ -1332,12 +1357,14 @@ export async function updateCustomerJournalEntry(
   oldAmount: number,
   newAmount: number,
   invoiceNumber: string,
-  description: string
+  description: string,
+  organizationId?: number
 ) {
   try {
-    // Find existing journal entry for this customer invoice
+    const orgFilter = organizationId != null ? { organizationId } : {};
     const existingEntry = await prisma.journalEntry.findFirst({
       where: {
+        ...orgFilter,
         OR: [
           { reference: invoiceNumber },
           { description: { contains: invoiceNumber } }
@@ -1387,13 +1414,15 @@ export async function updateVendorJournalEntry(
   oldAmount: number,
   newAmount: number,
   invoiceNumber: string,
-  description: string
+  description: string,
+  organizationId?: number
 ) {
   try {
     console.log(invoiceNumber);
-    // Find existing journal entry for this vendor invoice
+    const orgFilter = organizationId != null ? { organizationId } : {};
     const existingEntry = await prisma.journalEntry.findFirst({
       where: {
+        ...orgFilter,
         OR: [
           { reference: invoiceNumber },
           { description: { contains: invoiceNumber } }
@@ -1443,13 +1472,15 @@ export async function checkRemoteArea(
   prisma: any,
   country: string,
   city?: string,
-  zip?: string
+  zip?: string,
+  organizationId?: number
 ): Promise<{ isRemote: boolean; companies: string[] }> {
   try {
     if (!country) return { isRemote: false, companies: [] };
 
-    // Fetch all remote areas
+    // Fetch all remote areas (scoped to org when provided)
     const remoteAreas = await prisma.remoteArea.findMany({
+      where: organizationId != null ? { organizationId } : undefined,
       orderBy: {
         uploadedAt: 'desc',
       },

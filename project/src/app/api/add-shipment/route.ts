@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransaction, addVendorTransaction, createJournalEntryForTransaction } from "@/lib/utils";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { checkShipmentLimit } from "@/lib/billing/usage";
 
 /**
  * POST /api/add-shipment
@@ -15,6 +18,28 @@ import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransact
  */
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    // Plan limit / billing gate: block new shipments when the org is over its
+    // monthly quota, trial-expired, or past due.
+    const limit = await checkShipmentLimit(session.organizationId);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "limit_exceeded",
+          reason: limit.reason,
+          message: limit.message,
+          limit: limit.limit,
+          used: limit.used,
+          planCode: limit.planCode,
+        },
+        { status: 402 }
+      );
+    }
+
     // ============================================================================
     // SECTION 1: REQUEST DATA EXTRACTION
     // ============================================================================
@@ -96,8 +121,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if tracking ID already exists
-    const existingTrackingId = await prisma.shipment.findUnique({
-      where: { trackingId }
+    const existingTrackingId = await prisma.shipment.findFirst({
+      where: orgWhere(session, { trackingId }),
     });
     if (existingTrackingId) {
       return NextResponse.json(
@@ -109,7 +134,7 @@ export async function POST(req: NextRequest) {
     // Check if reference number already exists (only if provided)
     if (referenceNumber && referenceNumber.trim() !== '') {
       const existingReferenceNumber = await prisma.shipment.findFirst({
-        where: { referenceNumber }
+        where: orgWhere(session, { referenceNumber }),
       });
       if (existingReferenceNumber) {
         return NextResponse.json(
@@ -280,7 +305,7 @@ export async function POST(req: NextRequest) {
 
     // Create shipment record in database with all fields
     const shipment = await prisma.shipment.create({
-      data: {
+      data: orgData(session, {
         trackingId,
         referenceNumber: referenceNumber,
         invoiceNumber,
@@ -327,7 +352,7 @@ export async function POST(req: NextRequest) {
         packages: packages ? JSON.stringify(packages) : undefined,
         packageTotals: packageTotals ? JSON.stringify(packageTotals) : undefined,
         calculatedValues: calculatedValues ? JSON.stringify(calculatedValues) : undefined,
-      },
+      }),
     });
     
     console.log('Shipment saved to database:', {
@@ -354,7 +379,7 @@ export async function POST(req: NextRequest) {
       { status: "Picked Up", timestamp: shipmentDateTime.toISOString(), location: "Lahore, Pakistan" },
     ];
     await prisma.shipment.update({
-      where: { id: shipment.id },
+      where: orgWhere(session, { id: shipment.id }),
       data: {
         trackingStatusHistory: initialTrackingHistory as unknown as object,
         trackingStatus: "Picked Up",
@@ -392,7 +417,7 @@ export async function POST(req: NextRequest) {
       // Find customer by name
       if (finalSenderName) {
         const customer = await prisma.customers.findFirst({
-          where: { CompanyName: finalSenderName }
+          where: orgWhere(session, { CompanyName: finalSenderName }),
         });
         customerId = customer?.id || null;
         customerBalance = customer?.currentBalance || 0;
@@ -401,7 +426,7 @@ export async function POST(req: NextRequest) {
       // Find vendor by name
       if (vendor) {
         const vendorRecord = await prisma.vendors.findFirst({
-          where: { CompanyName: vendor }
+          where: orgWhere(session, { CompanyName: vendor }),
         });
         vendorId = vendorRecord?.id || null;
         vendorBalance = vendorRecord?.currentBalance || 0;
@@ -533,7 +558,7 @@ export async function POST(req: NextRequest) {
 
       // Update shipment invoiceStatus to match calculated status
       await prisma.shipment.update({
-        where: { id: shipment.id },
+        where: orgWhere(session, { id: shipment.id }),
         data: { invoiceStatus: calculatedInvoiceStatus }
       });
 
@@ -633,7 +658,8 @@ export async function POST(req: NextRequest) {
             `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
             invoiceNumber,
             invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
           if (appliedBalance > 0) {
           // Create journal entry for customer debit transaction
@@ -644,7 +670,8 @@ export async function POST(req: NextRequest) {
             `Customer invoice for shipment ${trackingId}`,
             invoiceNumber,
             invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
           }
           else {
@@ -656,7 +683,8 @@ export async function POST(req: NextRequest) {
             `Customer invoice for shipment ${trackingId}`,
             invoiceNumber,
             invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
           }
           
@@ -666,7 +694,7 @@ export async function POST(req: NextRequest) {
         if (customerId && appliedBalance > 0) {
           // Create payment record for balance application
           await prisma.payment.create({
-            data: {
+            data: orgData(session, {
               transactionType: "INCOME",
               category: "Balance Applied",
               date: new Date(),
@@ -680,8 +708,8 @@ export async function POST(req: NextRequest) {
               mode: "CASH",
               reference: invoiceNumber,
               invoice: invoiceNumber,
-              description: `Credit applied for invoice ${invoiceNumber}`
-            }
+              description: `Credit applied for invoice ${invoiceNumber}`,
+            }),
           });
           
           // Create CREDIT transaction for customer (reduces their balance)
@@ -693,7 +721,8 @@ export async function POST(req: NextRequest) {
             `Credit applied for invoice ${invoiceNumber}`,
             `CREDIT-${invoiceNumber}`,
             invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
 
           // Create journal entry for customer credit transaction
@@ -704,7 +733,8 @@ export async function POST(req: NextRequest) {
             `Customer credit applied for invoice ${invoiceNumber}`,
             `CREDIT-${invoiceNumber}`,
             invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
 
           // // Create journal entry for company debit transaction
@@ -731,7 +761,8 @@ export async function POST(req: NextRequest) {
             `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
             vendorInvoiceNumber,
             vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
           if (vendorAppliedBalance > 0) {
           // Create journal entry for vendor debit transaction
@@ -742,7 +773,8 @@ export async function POST(req: NextRequest) {
             `Vendor invoice for shipment ${trackingId}`,
             vendorInvoiceNumber,
             vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
           }
           else {
@@ -754,7 +786,8 @@ export async function POST(req: NextRequest) {
             `Vendor invoice for shipment ${trackingId}`,
             vendorInvoiceNumber,
             vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );}
         }
 
@@ -762,7 +795,7 @@ export async function POST(req: NextRequest) {
         if (vendorId && vendorAppliedBalance > 0) {
           // Create payment record for vendor balance application
           await prisma.payment.create({
-            data: {
+            data: orgData(session, {
               transactionType: "EXPENSE",
               category: "Balance Applied",
               date: new Date(),
@@ -776,8 +809,8 @@ export async function POST(req: NextRequest) {
               mode: "CASH",
               reference: vendorInvoiceNumber,
               invoice: vendorInvoiceNumber,
-              description: `Credit applied for vendor invoice ${vendorInvoiceNumber}`
-            }
+              description: `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
+            }),
           });
 
           // Create CREDIT transaction for vendor (reduces what we owe them)
@@ -789,7 +822,8 @@ export async function POST(req: NextRequest) {
             `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
             `CREDIT-${vendorInvoiceNumber}`,
             vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
 
           // Create journal entry for vendor credit transaction
@@ -800,7 +834,8 @@ export async function POST(req: NextRequest) {
             `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
             `CREDIT-${vendorInvoiceNumber}`,
             vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date()
+            shipmentDate ? new Date(shipmentDate) : new Date(),
+            session.organizationId
           );
 
           // // Create journal entry for company credit transaction

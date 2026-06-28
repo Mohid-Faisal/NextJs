@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { decodeToken, checkRemoteArea } from "@/lib/utils";
 import bcrypt from "bcrypt";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 // Define proper types for the request body
 interface RecipientUpdateData {
@@ -39,8 +41,12 @@ export async function GET(
       );
     }
 
-    const recipient = await prisma.recipients.findUnique({
-      where: { id: recipientId },
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    const recipient = await prisma.recipients.findFirst({
+      where: orgWhere(session, { id: recipientId }),
     });
 
     if (!recipient) {
@@ -75,18 +81,26 @@ export async function PUT(
       );
     }
 
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body: RecipientUpdateData = await req.json();
     
     // Check if location is a remote area (use existing values if not provided in update)
-    const recipient = await prisma.recipients.findUnique({
-      where: { id: recipientId },
+    const recipient = await prisma.recipients.findFirst({
+      where: orgWhere(session, { id: recipientId }),
     });
-    
+
+    if (!recipient) {
+      return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
+    }
+
     const country = body.country || recipient?.Country || "";
     const city = body.city !== undefined ? body.city : recipient?.City;
     const zip = body.zip !== undefined ? body.zip : recipient?.Zip;
     
-    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip);
+    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip, session.organizationId);
     
     const updatedRecipient = await prisma.recipients.update({
       where: { id: recipientId },
@@ -135,6 +149,10 @@ export async function DELETE(
         { status: 400 }
       );
     }
+
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
 
     // Get the authorization header
     const authHeader = req.headers.get("authorization");
@@ -188,9 +206,9 @@ export async function DELETE(
       );
     }
 
-    // Check if recipient exists
-    const recipient = await prisma.recipients.findUnique({
-      where: { id: recipientId },
+    // Check if recipient exists within this org
+    const recipient = await prisma.recipients.findFirst({
+      where: orgWhere(session, { id: recipientId }),
     });
 
     if (!recipient) {
@@ -225,18 +243,30 @@ export async function PATCH(
   try {
     const { id } = await params;
     const idNum = parseInt(id);
+
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body: AddressUpdateData = await req.json();
 
     // Check if location is a remote area (use existing values if not provided in update)
-    const recipient = await prisma.recipients.findUnique({
-      where: { id: idNum },
+    const recipient = await prisma.recipients.findFirst({
+      where: orgWhere(session, { id: idNum }),
     });
+
+    if (!recipient) {
+      return NextResponse.json(
+        { success: false, message: "Recipient not found" },
+        { status: 404 }
+      );
+    }
     
     const country = body.Country || recipient?.Country || "";
     const city = body.City !== undefined ? body.City : recipient?.City;
     const zip = body.Zip !== undefined ? body.Zip : recipient?.Zip;
     
-    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip);
+    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip, session.organizationId);
 
     const updatedRecipient = await prisma.recipients.update({
       where: { id: idNum },

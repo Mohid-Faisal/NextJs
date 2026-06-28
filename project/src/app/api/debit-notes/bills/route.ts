@@ -1,23 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
-const prisma = new PrismaClient();
-
-// GET /api/debit-notes/bills - Get available bills for debit note creation
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(request.url);
     const vendorId = searchParams.get("vendorId") || "";
     const search = searchParams.get("search") || "";
 
-    // Build where clause
-    const where: any = {
-      profile: "Vendor", // Only vendor invoices
-      // Removed status filter to show all vendor invoices
-    };
+    const where: any = orgWhere(session, {
+      profile: "Vendor",
+    });
 
     if (vendorId) {
-      where.vendorId = parseInt(vendorId);
+      const ven = await prisma.vendors.findFirst({
+        where: orgWhere(session, { id: parseInt(vendorId, 10) }),
+      });
+      if (!ven) {
+        return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+      }
+      where.vendorId = parseInt(vendorId, 10);
     }
 
     const searchTrimmed = search.trim();
@@ -28,7 +35,6 @@ export async function GET(request: NextRequest) {
         { vendor: { CompanyName: { contains: searchTrimmed, mode: "insensitive" } } },
       ];
     } else {
-      // Only fetch when search is provided – search across all bills by invoice no
       return NextResponse.json({ bills: [] });
     }
 

@@ -1,29 +1,32 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    // Get all zone files from the filename table
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const zoneFiles = await prisma.filename.findMany({
-      where: {
-        fileType: "zone"
-      },
+      where: orgWhere(session, {
+        fileType: "zone",
+      }),
       select: {
         id: true,
         filename: true,
         service: true,
-        uploadedAt: true
+        uploadedAt: true,
       },
       orderBy: {
-        service: "asc"
-      }
+        service: "asc",
+      },
     });
-
-    console.log("Available zones from database:", zoneFiles);
 
     return NextResponse.json({
       success: true,
-      data: zoneFiles
+      data: zoneFiles,
     });
   } catch (error) {
     console.error("Failed to fetch available zones:", error);

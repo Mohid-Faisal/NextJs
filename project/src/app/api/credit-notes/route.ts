@@ -1,48 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { addCustomerTransaction } from "@/lib/utils";
 import {
   formatCreditNoteReference,
   normalizeNoteLineDescription,
   parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { creditNoteOrgFilter } from "@/lib/tenant/findOrgCreditNote";
+import { findOrgChartAccount, findOrgChartAccountByFilter } from "@/lib/tenant/findOrgChartAccount";
+import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
+import type { SessionPayload } from "@/lib/auth/session";
 
-const prisma = new PrismaClient();
-
-// Helper function to get account IDs
-async function getAccountIds() {
+async function getAccountIds(session: SessionPayload) {
   try {
-    // Get Cash account (usually in Asset category)
-    let cashAccount = await prisma.chartOfAccount.findFirst({
-      where: {
-        category: "Asset",
-        accountName: { contains: "Cash", mode: "insensitive" }
-      }
+    let cashAccount = await findOrgChartAccountByFilter(session, {
+      category: "Asset",
+      accountName: { contains: "Cash", mode: "insensitive" },
     });
     if (!cashAccount) {
-      cashAccount = await prisma.chartOfAccount.findFirst({ where: { category: "Asset" } });
+      cashAccount = await findOrgChartAccountByFilter(session, { category: "Asset" });
     }
 
-    // Get Logistic Service Revenue account (usually in Revenue category)
-    let revenueAccount = await prisma.chartOfAccount.findFirst({
-      where: {
-        category: "Revenue",
-        accountName: { contains: "Logistic", mode: "insensitive" }
-      }
+    let revenueAccount = await findOrgChartAccountByFilter(session, {
+      category: "Revenue",
+      accountName: { contains: "Logistic", mode: "insensitive" },
     });
     if (!revenueAccount) {
-      revenueAccount = await prisma.chartOfAccount.findFirst({ where: { category: "Revenue" } });
+      revenueAccount = await findOrgChartAccountByFilter(session, { category: "Revenue" });
     }
 
-    // Get Other Expense account (usually in Expense category)
-    let expenseAccount = await prisma.chartOfAccount.findFirst({
-      where: {
-        category: "Expense",
-        accountName: { contains: "Other Expense", mode: "insensitive" }
-      }
+    let expenseAccount = await findOrgChartAccountByFilter(session, {
+      category: "Expense",
+      accountName: { contains: "Other Expense", mode: "insensitive" },
     });
     if (!expenseAccount) {
-      expenseAccount = await prisma.chartOfAccount.findFirst({ where: { category: "Expense" } });
+      expenseAccount = await findOrgChartAccountByFilter(session, { category: "Expense" });
     }
 
     if (!cashAccount || !revenueAccount || !expenseAccount) {
@@ -54,7 +48,7 @@ async function getAccountIds() {
     return {
       cashId: cashAccount.id,
       revenueId: revenueAccount.id,
-      expenseId: expenseAccount.id
+      expenseId: expenseAccount.id,
     };
   } catch (error) {
     console.error("Error getting account IDs:", error);
@@ -65,6 +59,10 @@ async function getAccountIds() {
 // GET /api/credit-notes - Get all credit notes with pagination and filtering
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = searchParams.get("limit") || "10";
@@ -78,7 +76,7 @@ export async function GET(request: NextRequest) {
     const skip = pageSize ? (page - 1) * pageSize : 0;
 
     // Build where clause
-    const where: any = {};
+    const where: any = { ...creditNoteOrgFilter(session) };
     
     if (search) {
       where.OR = [
@@ -90,7 +88,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (customerId) {
-      where.customerId = parseInt(customerId);
+      const cust = await prisma.customers.findFirst({
+        where: orgWhere(session, { id: parseInt(customerId, 10) }),
+      });
+      if (!cust) {
+        return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+      }
+      where.customerId = parseInt(customerId, 10);
     }
 
     // Build order by clause
@@ -160,14 +164,24 @@ export async function GET(request: NextRequest) {
 // POST /api/credit-notes - Create a new credit note
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await request.json();
     const { invoiceNumber, customerId, amount, date, description, currency = "PKR", type, debitAccountId, creditAccountId } = body;
 
-    // Resolve invoiceNumber to invoiceId (nullable)
+    const customer = await prisma.customers.findFirst({
+      where: orgWhere(session, { id: parseInt(String(customerId), 10) }),
+    });
+    if (!customer) {
+      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    }
+
     let resolvedInvoiceId: number | null = null;
     if (invoiceNumber) {
       const found = await prisma.invoice.findFirst({
-        where: { invoiceNumber: String(invoiceNumber) },
+        where: orgWhere(session, { invoiceNumber: String(invoiceNumber) }),
         select: { id: true },
       });
       resolvedInvoiceId = found ? found.id : null;
@@ -186,10 +200,9 @@ export async function POST(request: NextRequest) {
     let useProvidedAccounts = false;
     
     if (debitAccountId && creditAccountId) {
-      // Validate accounts exist
       const [debitAccount, creditAccount] = await Promise.all([
-        prisma.chartOfAccount.findUnique({ where: { id: parseInt(debitAccountId) } }),
-        prisma.chartOfAccount.findUnique({ where: { id: parseInt(creditAccountId) } })
+        findOrgChartAccount(session, parseInt(debitAccountId)),
+        findOrgChartAccount(session, parseInt(creditAccountId)),
       ]);
       
       if (!debitAccount || !creditAccount) {
@@ -200,9 +213,8 @@ export async function POST(request: NextRequest) {
       }
       useProvidedAccounts = true;
     } else {
-      // Fall back to default account lookup
       try {
-        const ids = await getAccountIds();
+        const ids = await getAccountIds(session);
         cashId = ids.cashId; revenueId = ids.revenueId; expenseId = ids.expenseId;
       } catch (e: any) {
         return NextResponse.json(
@@ -219,6 +231,8 @@ export async function POST(request: NextRequest) {
 
     const nextId = (lastCreditNote?.id || 0) + 1;
     const creditNoteNumber = formatCreditNoteReference(nextId);
+
+    const nextEntryNumber = await nextJournalEntryNumber(prisma, session.organizationId);
 
     // Must match UI: type CREDIT = credit note (customer CREDIT); type DEBIT = debit note (customer DEBIT)
     if (type === "CREDIT") {
@@ -261,7 +275,7 @@ export async function POST(request: NextRequest) {
 
       // Create payment record
       const payment = await tx.payment.create({
-        data: {
+        data: orgData(session, {
           transactionType: "INCOME",
           category: "Customer Credit",
           date: parseDateInputAsLocalDate(date),
@@ -274,14 +288,15 @@ export async function POST(request: NextRequest) {
           reference: creditNoteNumber,
           invoice: invoiceNumber ? `Invoice ${invoiceNumber}` : undefined,
           description: lineDesc,
-        },
+        }),
       });
 
       // Create journal entry
       const journalEntryDate = parseDateInputAsLocalDate(date);
       const journalEntry = await tx.journalEntry.create({
         data: {
-          entryNumber: `JE-${Date.now()}`,
+          organizationId: session.organizationId,
+          entryNumber: nextEntryNumber,
           date: journalEntryDate,
           description: lineDesc,
           reference: creditNoteNumber,
@@ -330,7 +345,8 @@ export async function POST(request: NextRequest) {
         lineDesc,
         creditNoteNumber,
         invoiceNumber ? invoiceNumber : undefined,
-        parseDateInputAsLocalDate(date)
+        parseDateInputAsLocalDate(date),
+        session.organizationId
       );
 
       return { creditNote, payment, journalEntry };
@@ -378,11 +394,11 @@ export async function POST(request: NextRequest) {
 
       // Create payment record
       const payment = await tx.payment.create({
-        data: {
+        data: orgData(session, {
           transactionType: "EXPENSE",
           category: "Customer Credit",
           date: parseDateInputAsLocalDate(date),
-          amount: Math.abs(parseFloat(amount)), // Use absolute value for payment amount
+          amount: Math.abs(parseFloat(amount)),
           fromPartyType: "CUSTOMER",
           fromCustomer: "Customer",
           toPartyType: "US",
@@ -391,14 +407,15 @@ export async function POST(request: NextRequest) {
           reference: creditNoteNumber,
           invoice: invoiceNumber ? `Invoice ${invoiceNumber}` : undefined,
           description: lineDesc,
-        },
+        }),
       });
 
       // Create journal entry
       const journalEntryDate = parseDateInputAsLocalDate(date);
       const journalEntry = await tx.journalEntry.create({
         data: {
-          entryNumber: `JE-${Date.now()}`,
+          organizationId: session.organizationId,
+          entryNumber: nextEntryNumber,
           date: journalEntryDate,
           description: lineDesc,
           reference: creditNoteNumber,
@@ -447,7 +464,8 @@ export async function POST(request: NextRequest) {
         lineDesc,
         creditNoteNumber,
         invoiceNumber ? invoiceNumber : undefined,
-        parseDateInputAsLocalDate(date)
+        parseDateInputAsLocalDate(date),
+        session.organizationId
       );
 
       return { creditNote, payment, journalEntry };

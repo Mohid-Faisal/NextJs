@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"; // use a secure key in production
+import { resolveMembership } from "@/lib/auth/membership";
+import { signSessionToken } from "@/lib/auth/session";
 
 export async function POST(req: Request) {
   try {
@@ -26,24 +25,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user is approved
     if (!user.isApproved) {
       return NextResponse.json(
-        { success: false, message: "Your account is pending approval. Please wait for an administrator to approve your account." },
+        {
+          success: false,
+          message:
+            "Your account is pending approval. Please wait for an administrator to approve your account.",
+        },
         { status: 403 }
       );
     }
 
-    // Check if user is active
     if (user.status !== "ACTIVE") {
       return NextResponse.json(
-        { success: false, message: "Your account is not active. Please contact an administrator." },
+        {
+          success: false,
+          message: "Your account is not active. Please contact an administrator.",
+        },
         { status: 403 }
       );
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
-
     if (!passwordMatch) {
       return NextResponse.json(
         { success: false, message: "Invalid credentials." },
@@ -51,21 +54,48 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create JWT payload
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-      JWT_SECRET,
-      { expiresIn: "1w" }
-    );
+    const membership = await resolveMembership(user.id);
+    if (!membership) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "No organization linked to this account. Contact support.",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (membership.orgStatus === "suspended") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Your organization has been suspended. Contact support.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const token = signSessionToken({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      organizationId: membership.organizationId,
+      orgRole: membership.orgRole,
+      orgStatus: membership.orgStatus,
+      platformRole: user.platformRole,
+    });
 
     return NextResponse.json({
       success: true,
       message: "Login successful!",
       token,
+      organization: {
+        id: membership.organizationId,
+        name: membership.orgName,
+        slug: membership.orgSlug,
+        role: membership.orgRole,
+        status: membership.orgStatus,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);

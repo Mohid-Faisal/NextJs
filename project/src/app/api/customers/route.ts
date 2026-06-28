@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { Country } from "country-state-city";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(req: Request) {
-    // console.log("working");
-    
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   const { searchParams } = new URL(req.url);
 
   const page = parseInt(searchParams.get("page") || "1");
@@ -19,7 +23,7 @@ export async function GET(req: Request) {
   const sortOrder = searchParams.get("sortOrder") || "desc";
   const onlyWithBalance = searchParams.get("onlyWithBalance") === "true";
 
-  const where: any = {};
+  const where: any = { ...orgWhere(session) };
 
   if (status) where.ActiveStatus = status;
   if (onlyWithBalance) where.currentBalance = { not: 0 };
@@ -81,9 +85,9 @@ export async function GET(req: Request) {
     customers.map(async (customer) => {
       // Get shipments where this customer is the sender
       const shipments = await prisma.shipment.findMany({
-        where: {
-          senderName: customer.CompanyName
-        },
+        where: orgWhere(session, {
+          senderName: customer.CompanyName,
+        }),
         select: {
           id: true,
           trackingId: true,

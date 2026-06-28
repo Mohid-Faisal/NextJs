@@ -1,23 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
-const prisma = new PrismaClient();
-
-// GET /api/credit-notes/invoices - Get available customer invoices for credit note creation
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get("customerId") || "";
     const search = searchParams.get("search") || "";
 
-    // Build where clause
-    const where: any = {
-      profile: "Customer", // Only customer invoices
-      // Removed status filter to show all customer invoices
-    };
+    const where: any = orgWhere(session, {
+      profile: "Customer",
+    });
 
     if (customerId) {
-      where.customerId = parseInt(customerId);
+      const cust = await prisma.customers.findFirst({
+        where: orgWhere(session, { id: parseInt(customerId, 10) }),
+      });
+      if (!cust) {
+        return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+      }
+      where.customerId = parseInt(customerId, 10);
     }
 
     const searchTrimmed = search.trim();
@@ -28,7 +35,6 @@ export async function GET(request: NextRequest) {
         { customer: { CompanyName: { contains: searchTrimmed, mode: "insensitive" } } },
       ];
     } else {
-      // Only fetch when search is provided – search across all invoices by invoice no
       return NextResponse.json({ invoices: [] });
     }
 

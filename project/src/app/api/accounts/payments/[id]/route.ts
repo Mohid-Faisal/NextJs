@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { calculateInvoicePaymentStatus } from "@/lib/utils";
-
-// Helper function to decode JWT token
-function decodeToken(token: string) {
-  try {
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    return jwt.verify(token, secret) as { id: string; [key: string]: unknown };
-  } catch (error) {
-    return null;
-  }
-}
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgPayment } from "@/lib/tenant/findOrgPayment";
+import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const paymentId = parseInt(id);
 
@@ -29,10 +26,7 @@ export async function GET(
       );
     }
 
-    // Get the payment
-    const payment = await prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
+    const payment = await findOrgPayment(session, paymentId);
 
     if (!payment) {
       return NextResponse.json(
@@ -75,14 +69,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const paymentId = parseInt(id);
     const body = await request.json();
 
-    // Get the payment to verify it exists
-    const existingPayment = await prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
+    const existingPayment = await findOrgPayment(session, paymentId);
 
     if (!existingPayment) {
       return NextResponse.json(
@@ -129,18 +124,18 @@ export async function PUT(
         // Customer paying us (INCOME): ledger line is CREDIT (not the shipment DEBIT)
         if (existingPayment.fromCustomerId && existingPayment.transactionType === "INCOME") {
           const customerTransaction = await prisma.customerTransaction.findFirst({
-            where: {
+            where: orgWhere(session, {
               customerId: existingPayment.fromCustomerId,
               invoice: existingPayment.invoice,
               reference: paymentReference,
               type: "CREDIT",
-            },
+            }),
           });
 
           if (customerTransaction) {
             if (amountDelta !== 0) {
-              const cust = await prisma.customers.findUnique({
-                where: { id: existingPayment.fromCustomerId },
+              const cust = await prisma.customers.findFirst({
+                where: orgWhere(session, { id: existingPayment.fromCustomerId }),
               });
               if (cust) {
                 await prisma.customers.update({
@@ -165,18 +160,18 @@ export async function PUT(
         // We pay vendor (EXPENSE): payment line is CREDIT (not the shipment/vendor DEBIT)
         if (existingPayment.toVendorId && existingPayment.transactionType === "EXPENSE") {
           const vendorTransaction = await prisma.vendorTransaction.findFirst({
-            where: {
+            where: orgWhere(session, {
               vendorId: existingPayment.toVendorId,
               invoice: existingPayment.invoice,
               reference: paymentReference,
               type: "CREDIT",
-            },
+            }),
           });
 
           if (vendorTransaction) {
             if (amountDelta !== 0) {
-              const ven = await prisma.vendors.findUnique({
-                where: { id: existingPayment.toVendorId },
+              const ven = await prisma.vendors.findFirst({
+                where: orgWhere(session, { id: existingPayment.toVendorId }),
               });
               if (ven) {
                 await prisma.vendors.update({
@@ -210,12 +205,12 @@ export async function PUT(
         
         // Find the journal entry for this payment
         const journalEntry = await prisma.journalEntry.findFirst({
-          where: {
+          where: orgWhere(session, {
             OR: [
               { reference: existingPayment.reference },
               { reference: `Payment-${existingPayment.id}` }
             ]
-          },
+          }),
         });
 
         if (journalEntry) {
@@ -293,6 +288,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const paymentId = parseInt(id);
     
@@ -303,26 +302,6 @@ export async function DELETE(
       );
     }
 
-    // Get the authorization header
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Authorization token required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = decodeToken(token);
-    
-    if (!decoded) {
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      );
-    }
-
-    // Get the request body for password verification
     const body: { password: string } = await request.json();
     const { password } = body;
 
@@ -333,9 +312,8 @@ export async function DELETE(
       );
     }
 
-    // Get the current user
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(decoded.id) },
+      where: { id: session.userId },
     });
 
     if (!user) {
@@ -345,7 +323,6 @@ export async function DELETE(
       );
     }
 
-    // Verify the password
     const passwordMatch = await bcrypt.compare(password, user.password);
     
     if (!passwordMatch) {
@@ -355,10 +332,7 @@ export async function DELETE(
       );
     }
 
-    // Check if payment exists
-    const payment = await prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
+    const payment = await findOrgPayment(session, paymentId);
 
     if (!payment) {
       return NextResponse.json(
@@ -371,12 +345,12 @@ export async function DELETE(
     try {
       if (payment.fromCustomerId && payment.transactionType === "INCOME") {
         const customerTransactions = await prisma.customerTransaction.findMany({
-          where: {
+          where: orgWhere(session, {
             customerId: payment.fromCustomerId,
             reference: payment.reference || `Payment-${payment.id}`,
             invoice: payment.invoice || undefined,
             type: "CREDIT",
-          },
+          }),
         });
 
         for (const transaction of customerTransactions) {
@@ -389,12 +363,12 @@ export async function DELETE(
         // Also delete allocation transactions (excess payments allocated to other invoices)
         if (payment.invoice) {
           const allocationTransactions = await prisma.customerTransaction.findMany({
-            where: {
+            where: orgWhere(session, {
               customerId: payment.fromCustomerId,
               reference: {
                 startsWith: `CREDIT-${payment.invoice}`
               }
-            }
+            }),
           });
 
           for (const transaction of allocationTransactions) {
@@ -408,12 +382,12 @@ export async function DELETE(
 
       if (payment.toVendorId && payment.transactionType === "EXPENSE") {
         const vendorTransactions = await prisma.vendorTransaction.findMany({
-          where: {
+          where: orgWhere(session, {
             vendorId: payment.toVendorId,
             reference: payment.reference || `Payment-${payment.id}`,
             invoice: payment.invoice || undefined,
             type: "CREDIT",
-          },
+          }),
         });
 
         for (const transaction of vendorTransactions) {
@@ -426,12 +400,12 @@ export async function DELETE(
         // Also delete allocation transactions (excess payments allocated to other invoices)
         if (payment.invoice) {
           const allocationTransactions = await prisma.vendorTransaction.findMany({
-            where: {
+            where: orgWhere(session, {
               vendorId: payment.toVendorId,
               reference: {
                 startsWith: `CREDIT-${payment.invoice}`
               }
-            }
+            }),
           });
 
           for (const transaction of allocationTransactions) {
@@ -450,9 +424,7 @@ export async function DELETE(
     // Recalculate and update invoice status
     if (payment.invoice) {
       try {
-        const invoice = await prisma.invoice.findUnique({
-          where: { invoiceNumber: payment.invoice }
-        });
+        const invoice = await findOrgInvoiceByNumber(session, payment.invoice);
 
         if (invoice) {
           const paymentStatus = await calculateInvoicePaymentStatus(
@@ -477,12 +449,12 @@ export async function DELETE(
     // Find and delete the corresponding journal entry
     try {
       const journalEntry = await prisma.journalEntry.findFirst({
-        where: {
+        where: orgWhere(session, {
           OR: [
             { reference: payment.reference },
             { reference: `Payment-${payment.id}` }
           ]
-        },
+        }),
       });
 
       if (journalEntry) {
@@ -530,6 +502,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const paymentId = parseInt(id);
     const body = await request.json();
@@ -541,10 +517,7 @@ export async function PATCH(
       );
     }
 
-    // Get the payment to verify it exists
-    const existingPayment = await prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
+    const existingPayment = await findOrgPayment(session, paymentId);
 
     if (!existingPayment) {
       return NextResponse.json(
@@ -580,12 +553,12 @@ export async function PATCH(
         // Journal entries are linked to payments through the reference field
         // The reference can be either the payment's reference or "Payment-{paymentId}"
         const journalEntry = await prisma.journalEntry.findFirst({
-          where: {
+          where: orgWhere(session, {
             OR: [
               { reference: existingPayment.reference },
               { reference: `Payment-${existingPayment.id}` }
             ]
-          },
+          }),
         });
 
         if (journalEntry) {
@@ -633,6 +606,7 @@ export async function PATCH(
           
           // Let's also check what journal entries exist to help debug
           const allJournalEntries = await prisma.journalEntry.findMany({
+            where: orgWhere(session),
             take: 10,
             orderBy: { createdAt: 'desc' }
           });

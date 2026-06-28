@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import type { SessionPayload } from "@/lib/auth/session";
 
-// GET - Retrieve all fixed charges
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const weight = searchParams.get("weight");
 
-    let whereClause: any = {};
+    const whereClause: any = { ...orgWhere(session) };
 
     if (weight) {
       whereClause.weight = parseFloat(weight);
@@ -36,15 +42,16 @@ export async function GET(req: NextRequest) {
 // POST - Create new fixed charge entries or upload from Excel
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const contentType = req.headers.get("content-type");
 
     if (contentType?.includes("multipart/form-data")) {
-      // Handle Excel file upload
-      return await handleExcelUpload(req);
-    } else {
-      // Handle JSON data
-      return await handleJsonData(req);
+      return await handleExcelUpload(req, session);
     }
+    return await handleJsonData(req, session);
   } catch (error) {
     console.error("Error creating fixed charge:", error);
     return NextResponse.json(
@@ -57,6 +64,10 @@ export async function POST(req: NextRequest) {
 // PUT - Update fixed charge entry
 export async function PUT(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { id, weight, fixedCharge } = body;
 
@@ -64,6 +75,16 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json(
         { success: false, message: "ID is required for update" },
         { status: 400 }
+      );
+    }
+
+    const existing = await prisma.fixedCharge.findFirst({
+      where: orgWhere(session, { id: parseInt(String(id), 10) }),
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, message: "Fixed charge not found" },
+        { status: 404 }
       );
     }
 
@@ -92,6 +113,10 @@ export async function PUT(req: NextRequest) {
 // DELETE - Delete fixed charge entry
 export async function DELETE(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
@@ -99,6 +124,16 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json(
         { success: false, message: "ID is required for deletion" },
         { status: 400 }
+      );
+    }
+
+    const existing = await prisma.fixedCharge.findFirst({
+      where: orgWhere(session, { id: parseInt(id, 10) }),
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, message: "Fixed charge not found" },
+        { status: 404 }
       );
     }
 
@@ -120,7 +155,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 // Helper function to handle Excel file upload
-async function handleExcelUpload(req: NextRequest) {
+async function handleExcelUpload(req: NextRequest, session: SessionPayload) {
   const formData = await req.formData();
   const file = formData.get("file") as File;
 
@@ -203,10 +238,10 @@ async function handleExcelUpload(req: NextRequest) {
   for (const data of fixedChargeData) {
     try {
       const result = await prisma.fixedCharge.create({
-        data: {
+        data: orgData(session, {
           weight: data.weight,
           fixedCharge: data.fixedCharge,
-        },
+        }),
       });
       results.push(result);
     } catch (error) {
@@ -223,7 +258,7 @@ async function handleExcelUpload(req: NextRequest) {
 }
 
 // Helper function to handle JSON data
-async function handleJsonData(req: NextRequest) {
+async function handleJsonData(req: NextRequest, session: SessionPayload) {
   const body = await req.json();
   const { weight, fixedCharge } = body;
 
@@ -235,10 +270,10 @@ async function handleJsonData(req: NextRequest) {
   }
 
   const newCharge = await prisma.fixedCharge.create({
-    data: {
+    data: orgData(session, {
       weight: parseFloat(weight),
       fixedCharge: parseFloat(fixedCharge),
-    },
+    }),
   });
 
   return NextResponse.json({

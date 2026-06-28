@@ -34,6 +34,8 @@ import {
   TrendingDown,
   ArrowDownCircle,
   ArrowUpCircle,
+  ShieldCheck,
+  UserCheck,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -49,12 +51,14 @@ const links = [
 interface DecodedToken {
   name: string;
   email?: string;
+  platformRole?: string | null;
 }
 
 const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [userName, setUserName] = useState("User");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [shipmentOpen, setShipmentOpen] = useState(
     pathname.startsWith("/dashboard/shipments") ||
@@ -84,6 +88,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       try {
         const decoded = jwtDecode<DecodedToken>(token);
         setUserName(decoded.name || "User");
+        setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
       } catch (err) {
         console.error("Failed to decode token:", err);
       }
@@ -120,6 +125,21 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     },
   ];
   const subLinksSettings = [
+    {
+      href: "/dashboard/settings/organization",
+      label: "Organization",
+      icon: Building2,
+    },
+    {
+      href: "/dashboard/settings/team",
+      label: "Team",
+      icon: Users,
+    },
+    {
+      href: "/dashboard/settings/billing",
+      label: "Billing & Plan",
+      icon: Wallet,
+    },
     {
       href: "/dashboard/settings/logistics",
       label: "Logistics Settings",
@@ -261,6 +281,48 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               Dashboard
             </span>
           </Link>
+
+          {/* SaaS Admin (super admin only) */}
+          {isSuperAdmin && (
+            <Link
+              href="/dashboard/saas/organizations"
+              className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+                pathname.startsWith("/dashboard/saas/organizations")
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+            >
+              <ShieldCheck className="w-5 h-5 shrink-0" />
+              <span
+                className={`whitespace-nowrap transition-all duration-200 ${
+                  shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                }`}
+              >
+                SaaS Admin
+              </span>
+            </Link>
+          )}
+
+          {/* Pending Approvals (super admin only) */}
+          {isSuperAdmin && (
+            <Link
+              href="/dashboard/saas/pending-approvals"
+              className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+                pathname.startsWith("/dashboard/saas/pending-approvals")
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+            >
+              <UserCheck className="w-5 h-5 shrink-0" />
+              <span
+                className={`whitespace-nowrap transition-all duration-200 ${
+                  shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                }`}
+              >
+                Approvals
+              </span>
+            </Link>
+          )}
 
           {/* Email Management */}
           <Link

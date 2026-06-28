@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
+import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const invID = searchParams.get('invID');
@@ -18,17 +25,12 @@ export async function GET(
     }
 
     // Fetch invoice data for editing
-    const invoice = await prisma.invoice.findFirst({
-      where: {
-        id: parseInt(invID),
-        shipmentId: parseInt(shipmentId)
-      },
-      include: {
-        shipment: true,
-        customer: true,
-        vendor: true
-      }
-    });
+    const invoice = await findOrgInvoice(
+      session,
+      parseInt(invID),
+      { shipmentId: parseInt(shipmentId) },
+      { shipment: true, customer: true, vendor: true }
+    );
 
     if (!invoice) {
       console.log('No invoice found for:', { shipmentId, invID });
@@ -64,6 +66,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const invID = searchParams.get('invID');
@@ -79,13 +85,10 @@ export async function PUT(
     console.log('Updating invoice:', { invoiceId, shipmentId, body });
 
     // Get current invoice to check old amount
-    const currentInvoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
-      include: {
-        customer: true,
-        vendor: true,
-        shipment: true
-      }
+    const currentInvoice = await findOrgInvoice(session, invoiceId, {}, {
+      customer: true,
+      vendor: true,
+      shipment: true,
     });
 
     if (!currentInvoice) {
@@ -165,7 +168,8 @@ export async function PUT(
           currentInvoice.vendorId,
           currentInvoice.vendorId,
           updatedInvoice.invoiceNumber,
-          description
+          description,
+          session.organizationId
         );
       } catch (balanceError) {
         console.error("Error updating balances and journal entries:", balanceError);

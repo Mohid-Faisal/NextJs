@@ -1,15 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     console.log("🕐 Cron job: Starting inactive customer check...");
-    
-    // Verify this is a legitimate cron request (optional security check)
-    const authHeader = process.env.CRON_SECRET;
-    if (authHeader) {
-      const requestAuth = process.env.CRON_SECRET;
-      if (!requestAuth || requestAuth !== authHeader) {
+
+    // Verify this is a legitimate cron request. When CRON_SECRET is set, the
+    // incoming request must present it (Vercel cron sends `Authorization:
+    // Bearer <CRON_SECRET>`). The previous check compared the env var to
+    // itself, so it never actually authenticated the caller.
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      const requestAuth = request.headers.get("authorization") ?? "";
+      const isAuthorized =
+        requestAuth === `Bearer ${cronSecret}` || requestAuth === cronSecret;
+      if (!isAuthorized) {
         return NextResponse.json(
           { success: false, message: "Unauthorized" },
           { status: 401 }

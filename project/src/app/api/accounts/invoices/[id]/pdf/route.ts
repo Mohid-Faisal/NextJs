@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireApiSession(request);
+    if (auth.error) return auth.error;
+
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const invID = searchParams.get('invID');

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
 function normalizeZoneKey(raw: string): string {
   if (typeof raw !== "string") return String(raw);
@@ -10,6 +12,10 @@ function normalizeZoneKey(raw: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const body = await req.json();
     const { origin, destination, originZip, destinationZip, weight, docType, height, width, length, profitPercentage } =
       body;
@@ -49,15 +55,15 @@ export async function POST(req: NextRequest) {
 
     // ── Step 1: Fixed charge ──────────────────────────────────────────────
     const fixedCharge = await prisma.fixedCharge.findFirst({
-      where: { weight: weightNumber },
+      where: orgWhere(session, { weight: weightNumber }),
       orderBy: { weight: "asc" },
     });
 
     // ── Step 2: Find zones for destination country ────────────────────────
     const zoneRows = await prisma.zone.findMany({
-      where: {
+      where: orgWhere(session, {
         country: { contains: destination, mode: "insensitive" },
-      },
+      }),
       select: { zone: true, country: true, service: true },
     });
 
@@ -79,7 +85,9 @@ export async function POST(req: NextRequest) {
     log("zones.normalized", normalizedZones.slice(0, 20));
 
     // ── Step 3: Get vendor-service pairs (one service → many vendors) ─────
-    const vendorServices = await prisma.vendorservice.findMany();
+    const vendorServices = await prisma.vendorservice.findMany({
+      where: orgWhere(session),
+    });
     const vsMultiMap = new Map<string, string[]>();
     vendorServices.forEach((vs) => {
       const key = vs.service.toLowerCase();
@@ -91,10 +99,10 @@ export async function POST(req: NextRequest) {
 
     // ── Step 4: Fetch all rates for this docType in one query ─────────────
     const allDbRates = await prisma.rate.findMany({
-      where: {
+      where: orgWhere(session, {
         docType,
         weight: { gte: weightNumber },
-      },
+      }),
       orderBy: { weight: "asc" },
     });
 

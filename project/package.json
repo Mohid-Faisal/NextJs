@@ -70,6 +70,7 @@
     "recharts": "^3.1.0",
     "resend": "^6.0.1",
     "sonner": "^2.0.6",
+    "stripe": "^22.3.0",
     "tailwind-merge": "^3.3.1",
     "topojson-client": "^3.1.0",
     "xlsx": "^0.18.5",

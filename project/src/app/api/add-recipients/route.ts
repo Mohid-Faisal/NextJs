@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRemoteArea } from "@/lib/utils";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     // Robust body parsing to support JSON, form-urlencoded and multipart
     const contentType = req.headers.get("content-type") || "";
     let body: any = {};
@@ -63,10 +69,10 @@ export async function POST(req: NextRequest) {
     // Basic validation
     const requiredFields = ["companyname", "country"] as const;
 
-    const existingRecipient = await prisma.recipients.findUnique({
-      where: {
+    const existingRecipient = await prisma.recipients.findFirst({
+      where: orgWhere(session, {
         CompanyName: companyname,
-      },
+      }),
     });
     
     if (existingRecipient) {
@@ -86,11 +92,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if location is a remote area
-    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip);
+    const remoteAreaCheck = await checkRemoteArea(prisma, country, city, zip, session.organizationId);
 
     // Store shipment in the database
     const recipient = await prisma.recipients.create({
-      data: {
+      data: orgData(session, {
         CompanyName: companyname,
         PersonName: personname,
         Email: email,
@@ -104,7 +110,7 @@ export async function POST(req: NextRequest) {
         remoteAreaCompanies: remoteAreaCheck.companies.length > 0 
           ? JSON.stringify(remoteAreaCheck.companies) 
           : null,
-      },
+      }),
     });
 
     return NextResponse.json({

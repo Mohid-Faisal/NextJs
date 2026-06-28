@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
 import Link from "next/link";
@@ -25,11 +25,18 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { resolvedTheme } = useTheme();
 
   useEffect(() => setMounted(true), []);
 
   const isDark = mounted && resolvedTheme === "dark";
+
+  useEffect(() => {
+    if (searchParams.get("error") === "org-suspended") {
+      toast.error("Your organization has been suspended. Contact support.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const token = Cookies.get("token");
