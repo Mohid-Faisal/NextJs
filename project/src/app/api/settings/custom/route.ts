@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     if (key === "settings_role_permissions") {
       const defaultPermissions = {
         "Customer": ["view_activity", "view_map", "view_dashboard", "view_shipments"],
-        "Driver": ["view_activity", "view_dashboard", "view_shipments", "update_status"],
+        "Vendor": ["view_activity", "view_dashboard", "view_shipments", "update_status"],
         "Employee": ["view_activity", "view_analytics", "view_dashboard", "view_shipments", "create_shipment", "edit_shipment", "update_status", "view_customers", "view_vendors"],
         "Admin": ["view_activity", "view_analytics", "view_kpis", "view_map", "view_revenue", "view_dashboard", "view_shipments", "create_shipment", "edit_shipment", "delete_shipment", "bulk_delete", "export_shipments", "update_status", "view_customers", "manage_customers", "view_vendors", "manage_vendors", "view_config", "manage_statuses", "manage_services", "manage_hscodes", "manage_billing"],
         "Super Admin": ["view_activity", "view_analytics", "view_kpis", "view_map", "view_revenue", "view_dashboard", "view_shipments", "create_shipment", "edit_shipment", "delete_shipment", "bulk_delete", "export_shipments", "update_status", "view_customers", "manage_customers", "view_vendors", "manage_vendors", "view_config", "manage_statuses", "manage_services", "manage_hscodes", "manage_billing"]

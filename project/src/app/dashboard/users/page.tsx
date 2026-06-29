@@ -16,9 +16,9 @@ import {
   Lock,
   UserCheck,
   Shield,
-  Truck,
   Briefcase,
   User,
+  Building,
   MoreVertical,
   ChevronDown,
   ChevronRight,
@@ -48,7 +48,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 // Role interfaces
-type RoleName = "Customer" | "Driver" | "Employee" | "Admin" | "Super Admin";
+type RoleName = "Customer" | "Vendor" | "Employee" | "Admin" | "Super Admin";
 
 interface PermissionItem {
   name: string;
@@ -123,7 +123,7 @@ export default function UsersAndTeamsPage() {
   // Role permissions mapping state
   const [rolePermissions, setRolePermissions] = useState<Record<RoleName, string[]>>({
     "Customer": [],
-    "Driver": [],
+    "Vendor": [],
     "Employee": [],
     "Admin": [],
     "Super Admin": []
@@ -280,7 +280,7 @@ export default function UsersAndTeamsPage() {
   const getRoleCardClass = (role: RoleName) => {
     switch (role) {
       case "Customer": return { bg: "bg-pink-50/50 dark:bg-pink-950/10 border-pink-100 dark:border-pink-900/30", iconBg: "bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300", progressBg: "bg-pink-500", text: "text-pink-900 dark:text-pink-200" };
-      case "Driver": return { bg: "bg-amber-50/50 dark:bg-amber-950/10 border-amber-100 dark:border-amber-900/30", iconBg: "bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-300", progressBg: "bg-amber-500", text: "text-amber-900 dark:text-amber-200" };
+      case "Vendor": return { bg: "bg-amber-50/50 dark:bg-amber-950/10 border-amber-100 dark:border-amber-900/30", iconBg: "bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-300", progressBg: "bg-amber-500", text: "text-amber-900 dark:text-amber-200" };
       case "Employee": return { bg: "bg-emerald-50/50 dark:bg-emerald-950/10 border-emerald-100 dark:border-emerald-900/30", iconBg: "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300", progressBg: "bg-emerald-500", text: "text-emerald-900 dark:text-emerald-200" };
       case "Admin": return { bg: "bg-blue-50/50 dark:bg-blue-950/10 border-blue-100 dark:border-blue-900/30", iconBg: "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300", progressBg: "bg-blue-500", text: "text-blue-900 dark:text-blue-200" };
       case "Super Admin": return { bg: "bg-indigo-50/50 dark:bg-indigo-950/10 border-indigo-100 dark:border-indigo-900/30", iconBg: "bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300", progressBg: "bg-indigo-500", text: "text-indigo-900 dark:text-indigo-200" };
@@ -290,7 +290,7 @@ export default function UsersAndTeamsPage() {
   const getRoleIcon = (role: RoleName) => {
     switch (role) {
       case "Customer": return User;
-      case "Driver": return Truck;
+      case "Vendor": return Building;
       case "Employee": return Briefcase;
       case "Admin": return ShieldCheck;
       case "Super Admin": return Shield;
@@ -300,7 +300,7 @@ export default function UsersAndTeamsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px] w-full text-sm text-gray-500">
-        Loading Users & Permissions...
+        Loading Users & Teams...
       </div>
     );
   }
@@ -318,7 +318,7 @@ export default function UsersAndTeamsPage() {
               : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white"
           }`}
         >
-          Users & Permissions
+          Users & Teams
         </button>
         <button 
           onClick={() => setActiveTab("permissions")}
@@ -341,12 +341,12 @@ export default function UsersAndTeamsPage() {
           transition={{ duration: 0.2 }}
         >
           
-          {/* TAB 1: Users & Permissions */}
+          {/* TAB 1: Users & Teams */}
           {activeTab === "users" && (
             <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
               <div className="p-6 border-b border-gray-100 dark:border-zinc-800/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Users & Permissions</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Users & Teams</h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Manage your organization's users and their access permissions.</p>
                 </div>
                 <Button 
@@ -385,8 +385,6 @@ export default function UsersAndTeamsPage() {
                         <th className="px-5 py-4">Role</th>
                         <th className="px-5 py-4">2FA</th>
                         <th className="px-5 py-4">Status</th>
-                        <th className="px-5 py-4">Branch</th>
-                        <th className="px-5 py-4">Department</th>
                         <th className="px-5 py-4">Last Login</th>
                         <th className="px-5 py-4 text-right">Actions</th>
                       </tr>
@@ -407,8 +405,6 @@ export default function UsersAndTeamsPage() {
                               {u.status === 'PENDING' ? 'Pending' : (u.status || 'Active')}
                             </span>
                           </td>
-                          <td className="px-5 py-4 text-gray-500">HQ</td>
-                          <td className="px-5 py-4 text-gray-400">—</td>
                           <td className="px-5 py-4 text-gray-400">Never</td>
                           <td className="px-5 py-4 text-right">
                             <DropdownMenu>
@@ -465,7 +461,7 @@ export default function UsersAndTeamsPage() {
               
               {/* Role Indicator Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                {(["Customer", "Driver", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => {
+                {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => {
                   const styles = getRoleCardClass(r);
                   const Icon = getRoleIcon(r);
                   const permList = rolePermissions[r] || [];
@@ -528,7 +524,7 @@ export default function UsersAndTeamsPage() {
                     <thead>
                       <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-150 dark:border-zinc-800">
                         <th className="px-5 py-4 w-1/3">FEATURE</th>
-                        {(["Customer", "Driver", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => (
+                        {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => (
                           <th key={r} className="px-5 py-4 text-center">
                             <div className="flex flex-col items-center gap-1">
                               <span className="font-bold text-gray-900 dark:text-white">{r}</span>
@@ -567,7 +563,7 @@ export default function UsersAndTeamsPage() {
                               <tr key={perm.code} className="hover:bg-gray-50/50 dark:hover:bg-zinc-850/20 text-xs text-gray-700 dark:text-zinc-300">
                                 <td className="px-5 py-3 font-medium text-gray-800 dark:text-gray-200 pl-8">{perm.name}</td>
                                 
-                                {(["Customer", "Driver", "Employee", "Admin", "Super Admin"] as RoleName[]).map((role) => {
+                                {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((role) => {
                                   const isChecked = role === "Super Admin" || (rolePermissions[role] || []).includes(perm.code);
                                   const isDisabled = role === "Super Admin";
 
@@ -655,7 +651,7 @@ export default function UsersAndTeamsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Customer">Customer</SelectItem>
-                  <SelectItem value="Driver">Driver</SelectItem>
+                  <SelectItem value="Vendor">Vendor</SelectItem>
                   <SelectItem value="Employee">Employee</SelectItem>
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Super Admin">Super Admin</SelectItem>
