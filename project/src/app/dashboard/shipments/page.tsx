@@ -69,9 +69,11 @@ export default function ShipmentsPage() {
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("In Transit");
   const isFromDashboardRef = useRef(false);
   const [grandTotal, setGrandTotal] = useState(0);
+  const [bookedCount, setBookedCount] = useState(0);
   const [inTransitCount, setInTransitCount] = useState(0);
   const [deliveredCount, setDeliveredCount] = useState(0);
   const [cancelledCount, setCancelledCount] = useState(0);
+  const [totalValue, setTotalValue] = useState(0);
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
@@ -241,9 +243,11 @@ export default function ShipmentsPage() {
       setShipments(data.shipments);
       setTotal(data.total);
       if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
+      if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
       if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
       if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
       if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
+      if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
     };
 
     fetchShipments();
@@ -289,7 +293,9 @@ export default function ShipmentsPage() {
       case "delivered":
         return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
       case "in transit":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200";
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200";
+      case "booked":
+        return "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200";
       case "cancelled":
       case "canceled":
         return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200";
@@ -363,9 +369,11 @@ export default function ShipmentsPage() {
     setShipments(data.shipments);
     setTotal(data.total);
     if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
+    if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
     if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
     if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
     if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
+    if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -919,9 +927,18 @@ export default function ShipmentsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0 min-h-[calc(100vh-64px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">
-          Shipments
-        </h2>
+        <div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <Truck className="w-8 sm:w-10 h-8 sm:h-10 text-blue-600" />
+            Shipments
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Manage your shipments and track delivery status
+          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium">
+            {deliveryStatusFilter === "All" ? "Showing all shipments" : `Showing only ${deliveryStatusFilter} shipments`}
+          </p>
+        </div>
         <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
           <button
             type="button"
@@ -934,6 +951,18 @@ export default function ShipmentsPage() {
           >
             <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">{grandTotal}</span>
             <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Total</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setDeliveryStatusFilter("Booked"); setPage(1); }}
+            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
+              deliveryStatusFilter === "Booked"
+                ? "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 shadow-sm"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-purple-50/60 dark:hover:bg-purple-900/20"
+            }`}
+          >
+            <span className="text-lg sm:text-xl font-bold text-purple-600 dark:text-purple-300">{bookedCount}</span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Booked</span>
           </button>
           <button
             type="button"
@@ -971,6 +1000,14 @@ export default function ShipmentsPage() {
             <span className="text-lg sm:text-xl font-bold text-red-600 dark:text-red-300">{cancelledCount}</span>
             <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Cancelled</span>
           </button>
+          <div
+            className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[120px] bg-slate-200/50 dark:bg-slate-700/50 border border-slate-300/30 text-gray-700 dark:text-gray-200 select-none"
+          >
+            <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white font-mono">
+              {Number(totalValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Value</span>
+          </div>
         </div>
       </div>
 

@@ -119,7 +119,7 @@ export async function GET(req: Request) {
     // Build a base where without the status filter so we can count per-status
     const { deliveryStatus: _ds, ...baseWhereNoStatus } = where;
 
-    const [shipments, total, grandTotal, inTransitCount, deliveredCount, cancelledCount] = await Promise.all([
+    const [shipments, total, grandTotal, bookedCount, inTransitCount, deliveredCount, cancelledCount] = await Promise.all([
       prisma.shipment.findMany({
         ...(fetchAll ? {} : { skip, take: limitNum }),
         where,
@@ -138,12 +138,13 @@ export async function GET(req: Request) {
       }),
       prisma.shipment.count({ where }),
       prisma.shipment.count({ where: baseWhereNoStatus }),
+      prisma.shipment.count({ where: { ...baseWhereNoStatus, deliveryStatus: "Booked" } }),
       prisma.shipment.count({ where: { ...baseWhereNoStatus, deliveryStatus: "In Transit" } }),
       prisma.shipment.count({ where: { ...baseWhereNoStatus, deliveryStatus: "Delivered" } }),
       prisma.shipment.count({ where: { ...baseWhereNoStatus, deliveryStatus: "Cancelled" } }),
     ]);
 
-    return NextResponse.json({ shipments, total, grandTotal, inTransitCount, deliveredCount, cancelledCount });
+    return NextResponse.json({ shipments, total, grandTotal, bookedCount, inTransitCount, deliveredCount, cancelledCount });
   } catch (error) {
     console.error('Error in shipments API:', error);
     console.error('Search term was:', search);
