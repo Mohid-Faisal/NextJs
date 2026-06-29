@@ -284,13 +284,10 @@ export async function DELETE(
 
       console.log("✅ 2FA verification successful");
 
-      // Reset user status after successful verification
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { status: "ACTIVE" },
-      });
-
-      console.log("👤 User status reset to ACTIVE");
+      // NOTE: We intentionally do NOT reset user status to ACTIVE here.
+      // During bulk delete, multiple requests share the same 2FA code.
+      // The code will naturally expire after 10 minutes, and login/session
+      // handlers already allow PENDING_2FA_ status.
     } else {
       console.log(
         `❌ No pending verification found. User status: ${user.status}`

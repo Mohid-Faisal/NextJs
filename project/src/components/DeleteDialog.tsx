@@ -134,6 +134,19 @@ const DeleteDialog = ({
         }
       }
 
+      // Reset user 2FA status back to ACTIVE after all deletions
+      try {
+        await fetch("/api/auth/reset-2fa", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } catch {
+        // Non-critical, status will expire naturally
+      }
+
       if (successCount > 0) {
         toast.success(
           isBulk
