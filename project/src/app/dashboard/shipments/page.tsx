@@ -1017,10 +1017,10 @@ export default function ShipmentsPage() {
         {/* Left side - Page size and Search field */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:max-w-2xl min-w-0">
           {/* Search field */}
-          <div className="relative w-full max-w-md">
+          <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
-              placeholder="Search by invoice #, sender, receiver, destination, type, tracking..."
+              placeholder="Search by invoice #, sender, receiver..."
               value={searchTerm}
               onChange={(e) => {
                 setPage(1);
@@ -1113,11 +1113,11 @@ export default function ShipmentsPage() {
 
           {/* Add Shipment Button */}
           <Button
-            onClick={() => router.push('/dashboard/shipments/add')}
+            onClick={() => router.push('/dashboard/add-shipment')}
             className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Add Shipment
+            Shipment
           </Button>
         </div>
       </div>
