@@ -229,7 +229,7 @@ export default function SaasOrganizationsPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         
         {/* Revenue This Month */}
-        <Card className="border-l-4 border-l-emerald-500 bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600">
               <DollarSign className="w-5 h-5" />
@@ -242,7 +242,7 @@ export default function SaasOrganizationsPage() {
         </Card>
 
         {/* Revenue This Year */}
-        <Card className="border-l-4 border-l-blue-500 bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600">
               <TrendingUp className="w-5 h-5" />
@@ -255,7 +255,7 @@ export default function SaasOrganizationsPage() {
         </Card>
 
         {/* Active Subscriptions */}
-        <Card className="border-l-4 border-l-teal-500 bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center text-teal-600">
               <CheckCircle2 className="w-5 h-5" />
@@ -268,7 +268,7 @@ export default function SaasOrganizationsPage() {
         </Card>
 
         {/* In Grace Period */}
-        <Card className="border-l-4 border-l-amber-500 bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-600">
               <AlertTriangle className="w-5 h-5" />
@@ -281,7 +281,7 @@ export default function SaasOrganizationsPage() {
         </Card>
 
         {/* Read Only */}
-        <Card className="border-l-4 border-l-rose-500 bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-600">
               <Lock className="w-5 h-5" />
@@ -294,7 +294,7 @@ export default function SaasOrganizationsPage() {
         </Card>
 
         {/* No Subscription */}
-        <Card className="border-l-4 border-l-slate-400 bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
           <CardContent className="p-4 flex flex-col justify-between h-full">
             <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-500">
               <HelpCircle className="w-5 h-5" />
