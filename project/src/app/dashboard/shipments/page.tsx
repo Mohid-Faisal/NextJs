@@ -326,6 +326,16 @@ export default function ShipmentsPage() {
     }
   };
 
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "?";
+    const clean = name.trim().replace(/\s+/g, " ");
+    const parts = clean.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
   const refreshShipmentsList = async () => {
     const params = new URLSearchParams({
       page: String(page),
@@ -1202,17 +1212,23 @@ export default function ShipmentsPage() {
                         </button>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="min-w-0">
-                          <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                            <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
-                            <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
+                        <div className="flex items-center gap-3">
+                          {/* Initials Circle */}
+                          <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-300 shrink-0">
+                            {getInitials(shipment.senderName)}
                           </div>
-                          <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
-                            <ArrowRight className="h-3 w-3 shrink-0" />
-                            <span className="truncate">
-                              <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
-                              <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
-                            </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                              <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
+                              <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                              <ArrowRight className="h-3 w-3 shrink-0 text-slate-400 animate-pulse" />
+                              <span className="truncate">
+                                <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
+                                <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </td>
