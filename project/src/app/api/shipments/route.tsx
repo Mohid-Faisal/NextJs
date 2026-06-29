@@ -119,8 +119,11 @@ export async function GET(req: Request) {
   } else if (type === "international") {
     andConditions.push({
       AND: [
-        { destination: { not: { equals: "PK", mode: "insensitive" } } },
-        { destination: { not: { equals: "Pakistan", mode: "insensitive" } } }
+        { destination: { not: "PK" } },
+        { destination: { not: "Pakistan" } },
+        { destination: { not: "pk" } },
+        { destination: { not: "pakistan" } },
+        { destination: { not: "PAKISTAN" } }
       ]
     });
   }

@@ -244,14 +244,18 @@ export default function ShipmentsPage() {
 
       const res = await fetch(`/api/shipments?${params}`);
       const data = await res.json();
-      setShipments(data.shipments);
-      setTotal(data.total);
-      if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
-      if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
-      if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
-      if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
-      if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
-      if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
+      if (res.ok) {
+        setShipments(data.shipments || []);
+        setTotal(data.total || 0);
+        if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
+        if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
+        if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
+        if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
+        if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
+        if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
+      } else {
+        toast.error(data.error || "Failed to fetch shipments");
+      }
     };
 
     fetchShipments();
@@ -375,14 +379,18 @@ export default function ShipmentsPage() {
     });
     const refreshRes = await fetch(`/api/shipments?${params}`);
     const data = await refreshRes.json();
-    setShipments(data.shipments);
-    setTotal(data.total);
-    if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
-    if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
-    if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
-    if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
-    if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
-    if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
+    if (refreshRes.ok) {
+      setShipments(data.shipments || []);
+      setTotal(data.total || 0);
+      if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
+      if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
+      if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
+      if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
+      if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
+      if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
+    } else {
+      toast.error(data.error || "Failed to refresh shipments");
+    }
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
