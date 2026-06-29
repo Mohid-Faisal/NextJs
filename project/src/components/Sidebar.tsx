@@ -184,6 +184,11 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       label: "General Settings",
       icon: Plus,
     },
+    ...(isSuperAdmin ? [{
+      href: "/dashboard/email",
+      label: "Email",
+      icon: Mail,
+    }] : []),
   ];
 
   const subLinksAccounts = [
@@ -372,24 +377,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </Link>
           )}
 
-          {/* Email Management */}
-          <Link
-            href="/dashboard/email"
-            className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
-              pathname === "/dashboard/email"
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            }`}
-          >
-            <Mail className="w-5 h-5 shrink-0" />
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-              }`}
-            >
-              Email
-            </span>
-          </Link>
 
           {/* Shipments Collapsible */}
           <div>
