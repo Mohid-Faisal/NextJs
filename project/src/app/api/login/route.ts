@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (user.status !== "ACTIVE") {
+    if (user.status !== "ACTIVE" && !user.status.startsWith("PENDING_2FA_")) {
       return NextResponse.json(
         {
           success: false,
