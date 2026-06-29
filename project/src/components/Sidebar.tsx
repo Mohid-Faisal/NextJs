@@ -162,11 +162,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   ];
   const subLinksSettings = [
     {
-      href: "/dashboard/settings/organization",
-      label: "Organization",
-      icon: Building2,
-    },
-    {
       href: "/dashboard/settings/manage-zones",
       label: "Manage Zones",
       icon: Plus,
@@ -180,11 +175,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       href: "/dashboard/settings/remote-area-lookup",
       label: "Remote Area",
       icon: Search,
-    },
-    {
-      href: "/dashboard/settings",
-      label: "General Settings",
-      icon: Plus,
     },
     ...(isSuperAdmin ? [{
       href: "/dashboard/email",
