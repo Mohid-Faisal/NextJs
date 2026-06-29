@@ -42,25 +42,19 @@ import {
   Edit3,
   Search,
   Bell,
-  FileCode,
   CreditCard,
-  Globe,
   Check,
   MoreVertical,
-  CheckCircle2,
   Sliders,
-  DollarSign,
   Building,
   Package,
   Layers,
   Clock,
-  Briefcase,
-  SlidersHorizontal,
-  ChevronDown
+  Briefcase
 } from "lucide-react";
 
 // Left Menu Navigation Tabs
-type TabId = "statuses" | "services" | "notifications" | "hscodes" | "billing";
+type TabId = "statuses" | "services" | "notifications" | "billing";
 
 interface TabItem {
   id: TabId;
@@ -73,7 +67,6 @@ const tabsList: TabItem[] = [
   { id: "statuses", label: "Shipment Statuses", description: "Manage shipment statuses, icons and colors", icon: Sliders },
   { id: "services", label: "Services", description: "Manage air, land, sea and custom services", icon: Truck },
   { id: "notifications", label: "Notifications", description: "Manage notification rules and templates", icon: Bell },
-  { id: "hscodes", label: "HS Codes", description: "Manage international shipment HS codes", icon: FileCode },
   { id: "billing", label: "Billing", description: "Manage currency, tax, invoice design", icon: CreditCard },
 ];
 
@@ -84,12 +77,10 @@ export default function RedesignedSettingsPage() {
   // Search filter states
   const [statusSearch, setStatusSearch] = useState("");
   const [servicesSearch, setServicesSearch] = useState("");
-  const [hsSearch, setHsSearch] = useState("");
 
   // Data lists
   const [statuses, setStatuses] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
-  const [hscodes, setHscodes] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [billing, setBilling] = useState<any>({
     currency: "USD - United States Dollar ($)",
@@ -113,13 +104,12 @@ export default function RedesignedSettingsPage() {
   const [offices, setOffices] = useState<any[]>([]);
 
   // Modals / Add new item states
-  const [openModal, setOpenModal] = useState<"status" | "service" | "hscode" | "shippingMode" | "deliveryTime" | "packagingType" | "vendorService" | "agency" | "office" | null>(null);
+  const [openModal, setOpenModal] = useState<"status" | "service" | "shippingMode" | "deliveryTime" | "packagingType" | "vendorService" | "agency" | "office" | null>(null);
   const [editingId, setEditingId] = useState<number | string | null>(null);
 
   // Form Fields
   const [statusForm, setStatusForm] = useState({ name: "", code: "", color: "#4F46E5", order: 0, status: "Active" });
   const [serviceForm, setServiceForm] = useState({ name: "", code: "", mode: "Air", currency: "USD", status: "Active" });
-  const [hsForm, setHsForm] = useState({ code: "", description: "", category: "General", active: true });
   const [genericForm, setGenericForm] = useState({ name: "", code: "" });
   const [vendorSvcForm, setVendorSvcForm] = useState({ vendor: "", service: "" });
 
@@ -134,25 +124,21 @@ export default function RedesignedSettingsPage() {
       const servicesRes = await fetch("/api/settings/serviceMode");
       if (servicesRes.ok) setServices(await servicesRes.json());
 
-      // 3. Load HS Codes
-      const hsRes = await fetch("/api/settings/hscodes");
-      if (hsRes.ok) setHscodes(await hsRes.json());
-
-      // 4. Load Notifications
+      // 3. Load Notifications
       const notifRes = await fetch("/api/settings/custom?key=settings_notifications");
       if (notifRes.ok) {
         const d = await notifRes.json();
         if (d.value) setNotifications(JSON.parse(d.value));
       }
 
-      // 5. Load Billing Settings
+      // 4. Load Billing Settings
       const billRes = await fetch("/api/settings/custom?key=settings_billing");
       if (billRes.ok) {
         const d = await billRes.json();
         if (d.value) setBilling(JSON.parse(d.value));
       }
 
-      // 6. Load Other Settings (Sub-tabs)
+      // 5. Load Other Settings (Sub-tabs)
       const smRes = await fetch("/api/settings/shippingMode");
       if (smRes.ok) setShippingModes(await smRes.json());
 
@@ -231,32 +217,6 @@ export default function RedesignedSettingsPage() {
       });
       if (res.ok) {
         toast.success(editingId ? "Service updated" : "Service created");
-        setOpenModal(null);
-        setEditingId(null);
-        loadAllSettings();
-      } else {
-        toast.error("Operation failed");
-      }
-    } catch {
-      toast.error("Something went wrong");
-    }
-  };
-
-  const handleSaveHsCode = async () => {
-    if (!hsForm.code.trim() || !hsForm.description.trim()) {
-      toast.error("Please fill in HS Code and Description");
-      return;
-    }
-    try {
-      const url = "/api/settings/hscodes";
-      const method = editingId ? "PUT" : "POST";
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingId ? { id: editingId, ...hsForm } : hsForm),
-      });
-      if (res.ok) {
-        toast.success(editingId ? "HS Code updated" : "HS Code created");
         setOpenModal(null);
         setEditingId(null);
         loadAllSettings();
@@ -392,7 +352,7 @@ export default function RedesignedSettingsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-gray-50 dark:bg-zinc-950 transition-all duration-300 ml-0 min-h-[calc(100vh-64px)]">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-gray-50 dark:bg-zinc-950 transition-all duration-300 ml-0 min-h-[calc(100vh-64px)] text-sm">
       
       {/* Header section */}
       <div className="mb-8">
@@ -422,7 +382,7 @@ export default function RedesignedSettingsPage() {
                 <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-[#4F46E5]" : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white"}`} />
                 <div className="min-w-0">
                   <span className="block text-sm leading-tight">{tab.label}</span>
-                  <span className="block text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5 font-normal truncate">{tab.description}</span>
+                  <span className="block text-xs text-gray-400 dark:text-zinc-500 mt-0.5 font-normal truncate">{tab.description}</span>
                 </div>
               </button>
             );
@@ -447,7 +407,7 @@ export default function RedesignedSettingsPage() {
                   <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 dark:border-zinc-800/60 pb-5 gap-4">
                     <div>
                       <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">Shipment Statuses</CardTitle>
-                      <CardDescription className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Manage shipment statuses with custom icons and colors.
                       </CardDescription>
                     </div>
@@ -457,7 +417,7 @@ export default function RedesignedSettingsPage() {
                         setStatusForm({ name: "", code: "", color: "#4F46E5", order: statuses.length, status: "Active" });
                         setOpenModal("status");
                       }}
-                      className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                      className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                     >
                       <Plus className="w-4 h-4" />
                       Add Status
@@ -473,7 +433,7 @@ export default function RedesignedSettingsPage() {
                           placeholder="Search statuses..." 
                           value={statusSearch}
                           onChange={(e) => setStatusSearch(e.target.value)}
-                          className="pl-9 text-xs rounded-lg border-gray-200 dark:border-zinc-800"
+                          className="pl-9 text-sm rounded-lg border-gray-200 dark:border-zinc-800"
                         />
                       </div>
                     </div>
@@ -482,39 +442,39 @@ export default function RedesignedSettingsPage() {
                     <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                            <th className="px-5 py-3">Status Name</th>
-                            <th className="px-5 py-3">Code</th>
-                            <th className="px-5 py-3">Icon</th>
-                            <th className="px-5 py-3">Color</th>
-                            <th className="px-5 py-3">Order</th>
-                            <th className="px-5 py-3">Status</th>
-                            <th className="px-5 py-3 text-right">Actions</th>
+                          <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                            <th className="px-5 py-3.5">Status Name</th>
+                            <th className="px-5 py-3.5">Code</th>
+                            <th className="px-5 py-3.5">Icon</th>
+                            <th className="px-5 py-3.5">Color</th>
+                            <th className="px-5 py-3.5">Order</th>
+                            <th className="px-5 py-3.5">Status</th>
+                            <th className="px-5 py-3.5 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                           {statuses
                             .filter(s => s.name.toLowerCase().includes(statusSearch.toLowerCase()) || (s.code || "").toLowerCase().includes(statusSearch.toLowerCase()))
                             .map((s) => (
                             <tr key={s.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                               <td className="px-5 py-4 font-medium">
-                                <span className="px-2.5 py-1 rounded-full text-xs font-semibold" style={getBadgeColor(s.color || "#4F46E5")}>
+                                <span className="px-3 py-1.5 rounded-full text-xs font-semibold" style={getBadgeColor(s.color || "#4F46E5")}>
                                   {s.name}
                                 </span>
                               </td>
                               <td className="px-5 py-4">
-                                <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">{s.code || s.name.toLowerCase().replace(/ /g, "_")}</code>
+                                <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs text-gray-650 dark:text-zinc-400 font-mono">{s.code || s.name.toLowerCase().replace(/ /g, "_")}</code>
                               </td>
-                              <td className="px-5 py-4 text-gray-400 font-mono text-[10px]">
+                              <td className="px-5 py-4 text-gray-550 font-mono text-xs">
                                 {s.icon || "Clock"}
                               </td>
                               <td className="px-5 py-4 flex items-center gap-2">
-                                <div className="w-3.5 h-3.5 rounded-md border border-gray-200 dark:border-zinc-700" style={{ backgroundColor: s.color || "#4F46E5" }} />
-                                <span className="text-[10px] text-gray-400 font-mono">{s.color || "#4F46E5"}</span>
+                                <div className="w-4 h-4 rounded-md border border-gray-200 dark:border-zinc-700" style={{ backgroundColor: s.color || "#4F46E5" }} />
+                                <span className="text-xs text-gray-500 font-mono">{s.color || "#4F46E5"}</span>
                               </td>
                               <td className="px-5 py-4 font-mono">{s.order ?? 0}</td>
                               <td className="px-5 py-4">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${s.status === 'Active' || !s.status ? 'bg-green-50 text-green-700 border border-green-200/50' : 'bg-red-50 text-red-700 border border-red-200/50'}`}>
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${s.status === 'Active' || !s.status ? 'bg-green-50 text-green-700 border border-green-200/50' : 'bg-red-50 text-red-700 border border-red-200/50'}`}>
                                   {s.status || "Active"}
                                 </span>
                               </td>
@@ -569,13 +529,13 @@ export default function RedesignedSettingsPage() {
                         <button
                           key={subTab.id}
                           onClick={() => setServiceSubTab(subTab.id as ServiceSubTab)}
-                          className={`flex items-center gap-1.5 px-4 py-2.5 border-b-2 text-xs font-semibold transition-all ${
+                          className={`flex items-center gap-1.5 px-4 py-3 border-b-2 text-sm font-semibold transition-all ${
                             serviceSubTab === subTab.id
                               ? "border-[#4F46E5] text-[#4F46E5]"
-                              : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white"
+                              : "border-transparent text-gray-550 hover:text-gray-800 dark:hover:text-white"
                           }`}
                         >
-                          <subTab.icon className="w-3.5 h-3.5" />
+                          <subTab.icon className="w-4 h-4" />
                           {subTab.label}
                         </button>
                       ))}
@@ -589,8 +549,8 @@ export default function RedesignedSettingsPage() {
                       <div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                           <div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Services Configuration</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage shipping services by mode: air, sea, land.</p>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Services Configuration</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage shipping services by mode: air, sea, land.</p>
                           </div>
                           <Button 
                             onClick={() => {
@@ -598,7 +558,7 @@ export default function RedesignedSettingsPage() {
                               setServiceForm({ name: "", code: "", mode: "Air", currency: "USD", status: "Active" });
                               setOpenModal("service");
                             }}
-                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                           >
                             <Plus className="w-4 h-4" />
                             Add Service
@@ -611,33 +571,33 @@ export default function RedesignedSettingsPage() {
                             placeholder="Search services..." 
                             value={servicesSearch}
                             onChange={(e) => setServicesSearch(e.target.value)}
-                            className="pl-9 text-xs rounded-lg border-gray-200 dark:border-zinc-800"
+                            className="pl-9 text-sm rounded-lg border-gray-200 dark:border-zinc-800"
                           />
                         </div>
 
                         <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                                <th className="px-5 py-3">Service Name</th>
-                                <th className="px-5 py-3">Code</th>
-                                <th className="px-5 py-3">Mode</th>
-                                <th className="px-5 py-3">Currency</th>
-                                <th className="px-5 py-3">Status</th>
-                                <th className="px-5 py-3 text-right">Actions</th>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3.5">Service Name</th>
+                                <th className="px-5 py-3.5">Code</th>
+                                <th className="px-5 py-3.5">Mode</th>
+                                <th className="px-5 py-3.5">Currency</th>
+                                <th className="px-5 py-3.5">Status</th>
+                                <th className="px-5 py-3.5 text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                               {services
                                 .filter(s => s.name.toLowerCase().includes(servicesSearch.toLowerCase()))
                                 .map((s) => (
                                 <tr key={s.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                                   <td className="px-5 py-4 font-semibold text-blue-600 dark:text-blue-400">{s.name}</td>
-                                  <td className="px-5 py-4 font-mono text-[11px] text-gray-500">{s.code || s.name.toLowerCase().replace(/ /g, "_")}</td>
+                                  <td className="px-5 py-4 font-mono text-xs text-gray-550">{s.code || s.name.toLowerCase().replace(/ /g, "_")}</td>
                                   <td className="px-5 py-4 font-medium">{s.mode || "Air"}</td>
-                                  <td className="px-5 py-4 font-mono font-bold text-gray-500">{s.currency || "USD"}</td>
+                                  <td className="px-5 py-4 font-mono font-bold text-gray-555">{s.currency || "USD"}</td>
                                   <td className="px-5 py-4">
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${s.status === 'Active' || !s.status ? 'bg-green-50 text-green-700 border border-green-200/50' : 'bg-red-50 text-red-700 border border-red-200/50'}`}>
+                                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${s.status === 'Active' || !s.status ? 'bg-green-50 text-green-700 border border-green-200/50' : 'bg-red-50 text-red-700 border border-red-200/50'}`}>
                                       {s.status || "Active"}
                                     </span>
                                   </td>
@@ -677,33 +637,33 @@ export default function RedesignedSettingsPage() {
                       <div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                           <div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Shipping Modes</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage shipping modes for your shipments.</p>
+                            <h3 className="text-xl font-bold text-gray-905 dark:text-white">Shipping Modes</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage shipping modes for your shipments.</p>
                           </div>
                           <Button 
                             onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("shippingMode"); }}
-                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                           >
                             <Plus className="w-4 h-4" />
                             Add Shipping Mode
                           </Button>
                         </div>
 
-                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-855 rounded-xl">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                                <th className="px-5 py-3">Mode Name</th>
-                                <th className="px-5 py-3">Code</th>
-                                <th className="px-5 py-3 text-right">Actions</th>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3.5">Mode Name</th>
+                                <th className="px-5 py-3.5">Code</th>
+                                <th className="px-5 py-3.5 text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                               {shippingModes.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                                   <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
                                   <td className="px-5 py-4">
-                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs text-gray-650 dark:text-zinc-400 font-mono">
                                       {item.name.toLowerCase().replace(/ /g, "_")}
                                     </code>
                                   </td>
@@ -739,33 +699,33 @@ export default function RedesignedSettingsPage() {
                       <div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                           <div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delivery Times</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage delivery transit time frames.</p>
+                            <h3 className="text-xl font-bold text-gray-905 dark:text-white">Delivery Times</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage delivery transit time frames.</p>
                           </div>
                           <Button 
                             onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("deliveryTime"); }}
-                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                           >
                             <Plus className="w-4 h-4" />
                             Add Delivery Time
                           </Button>
                         </div>
 
-                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-855 rounded-xl">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                                <th className="px-5 py-3">Time Frame</th>
-                                <th className="px-5 py-3">Code</th>
-                                <th className="px-5 py-3 text-right">Actions</th>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3.5">Time Frame</th>
+                                <th className="px-5 py-3.5">Code</th>
+                                <th className="px-5 py-3.5 text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                               {deliveryTimes.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                                   <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
                                   <td className="px-5 py-4">
-                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs text-gray-650 dark:text-zinc-400 font-mono">
                                       {item.name.toLowerCase().replace(/ /g, "_")}
                                     </code>
                                   </td>
@@ -801,33 +761,33 @@ export default function RedesignedSettingsPage() {
                       <div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                           <div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Packaging Types</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage packaging options (e.g., box, envelope).</p>
+                            <h3 className="text-xl font-bold text-gray-905 dark:text-white">Packaging Types</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage packaging options (e.g., box, envelope).</p>
                           </div>
                           <Button 
                             onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("packagingType"); }}
-                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                           >
                             <Plus className="w-4 h-4" />
                             Add Packaging Type
                           </Button>
                         </div>
 
-                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-855 rounded-xl">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                                <th className="px-5 py-3">Packaging Name</th>
-                                <th className="px-5 py-3">Code</th>
-                                <th className="px-5 py-3 text-right">Actions</th>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3.5">Packaging Name</th>
+                                <th className="px-5 py-3.5">Code</th>
+                                <th className="px-5 py-3.5 text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                               {packagingTypes.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                                   <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
                                   <td className="px-5 py-4">
-                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs text-gray-650 dark:text-zinc-400 font-mono">
                                       {item.name.toLowerCase().replace(/ /g, "_")}
                                     </code>
                                   </td>
@@ -863,27 +823,27 @@ export default function RedesignedSettingsPage() {
                       <div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                           <div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Vendor Services</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Map services to specific vendors.</p>
+                            <h3 className="text-xl font-bold text-gray-905 dark:text-white">Vendor Services</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Map services to specific vendors.</p>
                           </div>
                           <Button 
                             onClick={() => { setVendorSvcForm({ vendor: "", service: "" }); setOpenModal("vendorService"); }}
-                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                           >
                             <Plus className="w-4 h-4" />
                             Add Vendor Service
                           </Button>
                         </div>
 
-                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-855 rounded-xl">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                                <th className="px-5 py-3">Vendor Name</th>
-                                <th className="px-5 py-3">Mapped Services</th>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3.5">Vendor Name</th>
+                                <th className="px-5 py-3.5">Mapped Services</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                               {(() => {
                                 const grouped: Record<string, any[]> = {};
                                 vendorServices.forEach((item: any) => {
@@ -897,9 +857,9 @@ export default function RedesignedSettingsPage() {
                                     <td className="px-5 py-4">
                                       <div className="flex flex-wrap gap-2">
                                         {svcList.map((svc) => (
-                                          <span key={svc.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full border border-indigo-200/40">
+                                          <span key={svc.id} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full border border-indigo-200/40 animate-fade-in">
                                             {svc.service}
-                                            <button onClick={() => handleDeleteItem("vendorService", svc.id)} className="text-red-500 hover:text-red-700 ml-1.5 font-bold">
+                                            <button onClick={() => handleDeleteItem("vendorService", svc.id)} className="text-red-500 hover:text-red-700 ml-2 font-bold text-sm">
                                               ×
                                             </button>
                                           </span>
@@ -920,33 +880,33 @@ export default function RedesignedSettingsPage() {
                       <div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                           <div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Agencies</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage regional offices or agent branches.</p>
+                            <h3 className="text-xl font-bold text-gray-905 dark:text-white">Agencies</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage regional offices or agent branches.</p>
                           </div>
                           <Button 
                             onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("agency"); }}
-                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                           >
                             <Plus className="w-4 h-4" />
                             Add Agency
                           </Button>
                         </div>
 
-                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-855 rounded-xl">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                                <th className="px-5 py-3">Agency Name</th>
-                                <th className="px-5 py-3">Short Code</th>
-                                <th className="px-5 py-3 text-right">Actions</th>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3.5">Agency Name</th>
+                                <th className="px-5 py-3.5">Short Code</th>
+                                <th className="px-5 py-3.5 text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                               {agencies.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                                   <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
                                   <td className="px-5 py-4">
-                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs text-gray-650 dark:text-zinc-400 font-mono">
                                       {item.code}
                                     </code>
                                   </td>
@@ -982,33 +942,33 @@ export default function RedesignedSettingsPage() {
                       <div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                           <div>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Offices</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage localized drop-off and pickup centers.</p>
+                            <h3 className="text-xl font-bold text-gray-905 dark:text-white">Offices</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage localized drop-off and pickup centers.</p>
                           </div>
                           <Button 
                             onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("office"); }}
-                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                           >
                             <Plus className="w-4 h-4" />
                             Add Office
                           </Button>
                         </div>
 
-                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-855 rounded-xl">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                                <th className="px-5 py-3">Office Name</th>
-                                <th className="px-5 py-3">Short Code</th>
-                                <th className="px-5 py-3 text-right">Actions</th>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3.5">Office Name</th>
+                                <th className="px-5 py-3.5">Short Code</th>
+                                <th className="px-5 py-3.5 text-right">Actions</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                               {offices.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                                   <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
                                   <td className="px-5 py-4">
-                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded text-xs text-gray-650 dark:text-zinc-400 font-mono">
                                       {item.code}
                                     </code>
                                   </td>
@@ -1048,7 +1008,7 @@ export default function RedesignedSettingsPage() {
                 <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
                   <CardHeader className="border-b border-gray-100 dark:border-zinc-800 pb-5">
                     <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">Notification Rules</CardTitle>
-                    <CardDescription className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       Manage how and when notifications are sent.
                     </CardDescription>
                   </CardHeader>
@@ -1056,13 +1016,13 @@ export default function RedesignedSettingsPage() {
                     
                     {/* Inner tab list */}
                     <div className="flex border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 rounded-lg p-1 max-w-sm mb-6">
-                      <button className="flex-1 py-1.5 text-xs font-semibold bg-white dark:bg-zinc-700 shadow-sm border border-gray-100 dark:border-zinc-600 rounded text-[#4F46E5] text-center">
+                      <button className="flex-1 py-2 text-sm font-semibold bg-white dark:bg-zinc-700 shadow-sm border border-gray-100 dark:border-zinc-600 rounded text-[#4F46E5] text-center">
                         Rules
                       </button>
-                      <button className="flex-1 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white text-center">
+                      <button className="flex-1 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white text-center">
                         Templates
                       </button>
-                      <button className="flex-1 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white text-center">
+                      <button className="flex-1 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white text-center">
                         Channels
                       </button>
                     </div>
@@ -1070,14 +1030,14 @@ export default function RedesignedSettingsPage() {
                     <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                          <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
                             <th className="px-5 py-4 w-1/3">Event</th>
                             <th className="px-5 py-4">Email</th>
                             <th className="px-5 py-4">WhatsApp</th>
                             <th className="px-5 py-4">Webhook</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
                           {notifications.map((row, index) => (
                             <tr key={index} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                               <td className="px-5 py-5 font-semibold text-gray-900 dark:text-white">{row.event}</td>
@@ -1111,102 +1071,7 @@ export default function RedesignedSettingsPage() {
                 </Card>
               )}
 
-              {/* Tab 4: HS Codes */}
-              {activeTab === "hscodes" && (
-                <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
-                  <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 dark:border-zinc-800 pb-5 gap-4">
-                    <div>
-                      <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">HS Codes</CardTitle>
-                      <CardDescription className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Manage HS codes for international shipments.
-                      </CardDescription>
-                    </div>
-                    <Button 
-                      onClick={() => {
-                        setEditingId(null);
-                        setHsForm({ code: "", description: "", category: "Food & Beverage", active: true });
-                        setOpenModal("hscode");
-                      }}
-                      className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add HS Code
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-
-                    <div className="relative w-full max-w-sm mb-6">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input 
-                        placeholder="Search codes..." 
-                        value={hsSearch}
-                        onChange={(e) => setHsSearch(e.target.value)}
-                        className="pl-9 text-xs rounded-lg border-gray-200 dark:border-zinc-800"
-                      />
-                    </div>
-
-                    <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                            <th className="px-5 py-4 w-1/4">HS Code</th>
-                            <th className="px-5 py-4 w-1/2">Description</th>
-                            <th className="px-5 py-4">Category</th>
-                            <th className="px-5 py-4">Active</th>
-                            <th className="px-5 py-4 text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
-                          {hscodes
-                            .filter(h => h.code.toLowerCase().includes(hsSearch.toLowerCase()) || h.description.toLowerCase().includes(hsSearch.toLowerCase()))
-                            .map((h) => (
-                            <tr key={h.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
-                              <td className="px-5 py-4 font-mono font-bold text-gray-900 dark:text-white">{h.code}</td>
-                              <td className="px-5 py-4 text-gray-600 dark:text-zinc-400">{h.description}</td>
-                              <td className="px-5 py-4 font-medium">{h.category}</td>
-                              <td className="px-5 py-4">
-                                {h.active ? (
-                                  <span className="flex items-center gap-1 text-green-600 font-semibold">
-                                    <Check className="w-4 h-4" />
-                                    Yes
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">No</span>
-                                )}
-                              </td>
-                              <td className="px-5 py-4 text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
-                                      <MoreVertical className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => {
-                                      setEditingId(h.id);
-                                      setHsForm({ code: h.code, description: h.description, category: h.category, active: h.active });
-                                      setOpenModal("hscode");
-                                    }} className="flex items-center gap-2">
-                                      <Edit3 className="w-3.5 h-3.5" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleDeleteItem("hscodes", h.id)} className="flex items-center gap-2 text-red-600">
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Tab 5: Billing */}
+              {/* Tab 4: Billing */}
               {activeTab === "billing" && (
                 <div className="space-y-6">
                   
@@ -1214,7 +1079,7 @@ export default function RedesignedSettingsPage() {
                   <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
                     <CardHeader className="border-b border-gray-100 dark:border-zinc-800 pb-5">
                       <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">Currency & Invoicing</CardTitle>
-                      <CardDescription className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Default currency, payment terms, and invoice footer text.
                       </CardDescription>
                     </CardHeader>
@@ -1227,7 +1092,7 @@ export default function RedesignedSettingsPage() {
                             value={billing.currency} 
                             onValueChange={(val) => setBilling((prev: any) => ({ ...prev, currency: val }))}
                           >
-                            <SelectTrigger className="w-full text-xs">
+                            <SelectTrigger className="w-full text-sm">
                               <SelectValue placeholder="Select currency" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1239,22 +1104,22 @@ export default function RedesignedSettingsPage() {
                               <SelectItem value="INR - Indian Rupee (₹)">INR - Indian Rupee (₹)</SelectItem>
                             </SelectContent>
                           </Select>
-                          <p className="text-[10px] text-gray-400 mt-1">Used as default for new shipments and invoices.</p>
+                          <p className="text-xs text-gray-400 mt-1">Used as default for new shipments and invoices.</p>
                         </div>
 
                         <div className="space-y-2">
                           <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">TAX (MANAGED IN SHIPPING CONFIG)</Label>
-                          <div className="flex items-center gap-3 border border-gray-200 dark:border-zinc-850 rounded-lg px-3.5 py-2 bg-gray-50/50 dark:bg-zinc-850">
-                            <span className="text-xs font-mono text-gray-700 dark:text-gray-300">Tax</span>
-                            <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded text-[11px] border border-blue-200/50">{billing.tax || "0%"}</span>
+                          <div className="flex items-center gap-3 border border-gray-200 dark:border-zinc-850 rounded-lg px-3.5 py-2.5 bg-gray-50/50 dark:bg-zinc-850">
+                            <span className="text-sm font-mono text-gray-700 dark:text-gray-300">Tax</span>
+                            <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded text-xs border border-blue-200/50">{billing.tax || "0%"}</span>
                             <button onClick={() => {
                               const newTax = prompt("Enter Tax Percentage (e.g. 5%):", billing.tax);
                               if (newTax !== null) setBilling((p: any) => ({ ...p, tax: newTax }));
-                            }} className="text-xs text-indigo-600 hover:text-indigo-800 font-bold ml-auto">
+                            }} className="text-sm text-indigo-600 hover:text-indigo-800 font-bold ml-auto">
                               Edit →
                             </button>
                           </div>
-                          <p className="text-[10px] text-gray-400 mt-1">Tax name and rate are configured in Shipping Configuration and applied to all invoices.</p>
+                          <p className="text-xs text-gray-400 mt-1">Tax name and rate are configured in Shipping Configuration and applied to all invoices.</p>
                         </div>
                       </div>
 
@@ -1264,9 +1129,9 @@ export default function RedesignedSettingsPage() {
                           value={billing.paymentTerms} 
                           onChange={(e) => setBilling((p: any) => ({ ...p, paymentTerms: e.target.value }))}
                           placeholder="e.g. Payment is due upon receipt."
-                          className="text-xs rounded-lg"
+                          className="text-sm rounded-lg"
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">Printed in the "Terms" section of every invoice.</p>
+                        <p className="text-xs text-gray-400 mt-1">Printed in the "Terms" section of every invoice.</p>
                       </div>
 
                       <div className="space-y-2">
@@ -1275,9 +1140,9 @@ export default function RedesignedSettingsPage() {
                           value={billing.invoiceFooter} 
                           onChange={(e) => setBilling((p: any) => ({ ...p, invoiceFooter: e.target.value }))}
                           placeholder="e.g. Thank you for your business."
-                          className="text-xs rounded-lg"
+                          className="text-sm rounded-lg"
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">Appears at the bottom of every invoice.</p>
+                        <p className="text-xs text-gray-400 mt-1">Appears at the bottom of every invoice.</p>
                       </div>
 
                     </CardContent>
@@ -1287,7 +1152,7 @@ export default function RedesignedSettingsPage() {
                   <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
                     <CardHeader className="border-b border-gray-100 dark:border-zinc-800 pb-5">
                       <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">Invoice Design</CardTitle>
-                      <CardDescription className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Choose the visual style for your documents.
                       </CardDescription>
                     </CardHeader>
@@ -1304,21 +1169,21 @@ export default function RedesignedSettingsPage() {
                               : "border-gray-200 dark:border-zinc-800 hover:border-gray-400"
                           }`}
                         >
-                          <div className="bg-[#4F46E5] text-white px-3 py-1 text-[10px] font-bold rounded-md inline-block uppercase tracking-wider">
+                          <div className="bg-[#4F46E5] text-white px-3 py-1 text-xs font-bold rounded-md inline-block uppercase tracking-wider">
                             Modern Purple
                           </div>
                           <div className="mt-4 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 aspect-[4/3] bg-indigo-950/90 flex flex-col justify-between">
                             <div className="flex justify-between items-start">
-                              <span className="text-[10px] font-bold text-white">PSS INVOICE</span>
-                              <span className="text-[9px] text-gray-300">#INV-00123</span>
+                              <span className="text-xs font-bold text-white">PSS INVOICE</span>
+                              <span className="text-[10px] text-gray-300">#INV-00123</span>
                             </div>
                             <div className="space-y-1">
                               <div className="w-1/2 h-1.5 bg-gray-400/50 rounded" />
                               <div className="w-1/3 h-1 bg-gray-400/50 rounded" />
                             </div>
                             <div className="flex justify-between items-end border-t border-gray-700/50 pt-2">
-                              <span className="text-[9px] text-gray-300">Total</span>
-                              <span className="text-[11px] font-bold text-[#A5B4FC]">$2,500.00</span>
+                              <span className="text-[10px] text-gray-300">Total</span>
+                              <span className="text-sm font-bold text-[#A5B4FC]">$2,500.00</span>
                             </div>
                           </div>
                           {billing.invoiceDesign === "MODERN PURPLE" && (
@@ -1337,21 +1202,21 @@ export default function RedesignedSettingsPage() {
                               : "border-gray-200 dark:border-zinc-800 hover:border-gray-400"
                           }`}
                         >
-                          <div className="bg-red-500 text-white px-3 py-1 text-[10px] font-bold rounded-md inline-block uppercase tracking-wider">
+                          <div className="bg-red-500 text-white px-3 py-1 text-xs font-bold rounded-md inline-block uppercase tracking-wider">
                             Express Red
                           </div>
                           <div className="mt-4 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 aspect-[4/3] bg-red-950/90 flex flex-col justify-between">
                             <div className="flex justify-between items-start">
-                              <span className="text-[10px] font-bold text-white">PSS EXPRESS</span>
-                              <span className="text-[9px] text-gray-300">#INV-00123</span>
+                              <span className="text-xs font-bold text-white">PSS EXPRESS</span>
+                              <span className="text-[10px] text-gray-300">#INV-00123</span>
                             </div>
                             <div className="space-y-1">
                               <div className="w-1/2 h-1.5 bg-gray-400/50 rounded" />
                               <div className="w-1/3 h-1 bg-gray-400/50 rounded" />
                             </div>
                             <div className="flex justify-between items-end border-t border-red-900/50 pt-2">
-                              <span className="text-[9px] text-gray-300">Total</span>
-                              <span className="text-[11px] font-bold text-[#FCA5A5]">$2,500.00</span>
+                              <span className="text-[10px] text-gray-300">Total</span>
+                              <span className="text-sm font-bold text-[#FCA5A5]">$2,500.00</span>
                             </div>
                           </div>
                           {billing.invoiceDesign === "EXPRESS RED" && (
@@ -1367,7 +1232,7 @@ export default function RedesignedSettingsPage() {
                       <div className="mt-8 flex justify-end">
                         <Button 
                           onClick={handleSaveBilling}
-                          className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 font-semibold rounded-lg"
+                          className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-2.5 font-semibold rounded-lg text-sm"
                         >
                           Save Changes
                         </Button>
@@ -1395,14 +1260,14 @@ export default function RedesignedSettingsPage() {
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Status" : "Add Status"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 text-sm">
             <div className="space-y-2">
               <Label className="text-xs">Status Name</Label>
               <Input 
                 value={statusForm.name} 
                 onChange={(e) => setStatusForm(prev => ({ ...prev, name: e.target.value, code: e.target.value.toLowerCase().replace(/ /g, "_") }))}
                 placeholder="e.g. Pending"
-                className="text-xs rounded-lg"
+                className="text-sm rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -1411,7 +1276,7 @@ export default function RedesignedSettingsPage() {
                 value={statusForm.code} 
                 onChange={(e) => setStatusForm(prev => ({ ...prev, code: e.target.value }))}
                 placeholder="e.g. pending"
-                className="text-xs font-mono rounded-lg"
+                className="text-sm font-mono rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -1427,7 +1292,7 @@ export default function RedesignedSettingsPage() {
                   value={statusForm.color} 
                   onChange={(e) => setStatusForm(prev => ({ ...prev, color: e.target.value }))}
                   placeholder="#4F46E5"
-                  className="text-xs font-mono rounded-lg"
+                  className="text-sm font-mono rounded-lg"
                 />
               </div>
             </div>
@@ -1437,7 +1302,7 @@ export default function RedesignedSettingsPage() {
                 type="number"
                 value={statusForm.order} 
                 onChange={(e) => setStatusForm(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
-                className="text-xs rounded-lg"
+                className="text-sm rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -1446,7 +1311,7 @@ export default function RedesignedSettingsPage() {
                 value={statusForm.status} 
                 onValueChange={(val) => setStatusForm(prev => ({ ...prev, status: val }))}
               >
-                <SelectTrigger className="w-full text-xs">
+                <SelectTrigger className="w-full text-sm">
                   <SelectValue placeholder="Select Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1469,14 +1334,14 @@ export default function RedesignedSettingsPage() {
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Service" : "Add Service"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 text-sm">
             <div className="space-y-2">
               <Label className="text-xs">Service Name</Label>
               <Input 
                 value={serviceForm.name} 
                 onChange={(e) => setServiceForm(prev => ({ ...prev, name: e.target.value, code: e.target.value.toLowerCase().replace(/ /g, "_") }))}
                 placeholder="e.g. Express Air"
-                className="text-xs rounded-lg"
+                className="text-sm rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -1485,7 +1350,7 @@ export default function RedesignedSettingsPage() {
                 value={serviceForm.code} 
                 onChange={(e) => setServiceForm(prev => ({ ...prev, code: e.target.value }))}
                 placeholder="e.g. express_air"
-                className="text-xs font-mono rounded-lg"
+                className="text-sm font-mono rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -1494,7 +1359,7 @@ export default function RedesignedSettingsPage() {
                 value={serviceForm.mode} 
                 onValueChange={(val) => setServiceForm(prev => ({ ...prev, mode: val }))}
               >
-                <SelectTrigger className="w-full text-xs">
+                <SelectTrigger className="w-full text-sm">
                   <SelectValue placeholder="Select Mode" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1510,7 +1375,7 @@ export default function RedesignedSettingsPage() {
                 value={serviceForm.currency} 
                 onChange={(e) => setServiceForm(prev => ({ ...prev, currency: e.target.value }))}
                 placeholder="USD"
-                className="text-xs rounded-lg"
+                className="text-sm rounded-lg"
               />
             </div>
             <div className="space-y-2">
@@ -1519,7 +1384,7 @@ export default function RedesignedSettingsPage() {
                 value={serviceForm.status} 
                 onValueChange={(val) => setServiceForm(prev => ({ ...prev, status: val }))}
               >
-                <SelectTrigger className="w-full text-xs">
+                <SelectTrigger className="w-full text-sm">
                   <SelectValue placeholder="Select Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1532,66 +1397,6 @@ export default function RedesignedSettingsPage() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
             <Button onClick={handleSaveService} className="bg-[#4F46E5] text-white">Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal 3: HS Code Add/Edit */}
-      <Dialog open={openModal === "hscode"} onOpenChange={(open) => !open && setOpenModal(null)}>
-        <DialogContent className="max-w-md w-full">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit HS Code" : "Add HS Code"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className="text-xs">HS Code</Label>
-              <Input 
-                value={hsForm.code} 
-                onChange={(e) => setHsForm(prev => ({ ...prev, code: e.target.value }))}
-                placeholder="e.g. 0901.21"
-                className="text-xs rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Description</Label>
-              <Input 
-                value={hsForm.description} 
-                onChange={(e) => setHsForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="e.g. Roasted coffee"
-                className="text-xs rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Category</Label>
-              <Select 
-                value={hsForm.category} 
-                onValueChange={(val) => setHsForm(prev => ({ ...prev, category: val }))}
-              >
-                <SelectTrigger className="w-full text-xs">
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Food & Beverage">Food & Beverage</SelectItem>
-                  <SelectItem value="Pharmaceuticals">Pharmaceuticals</SelectItem>
-                  <SelectItem value="Cosmetics">Cosmetics</SelectItem>
-                  <SelectItem value="Packaging">Packaging</SelectItem>
-                  <SelectItem value="Apparel">Apparel</SelectItem>
-                  <SelectItem value="General">General</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between pt-2">
-              <Label className="text-xs">Active Status</Label>
-              <Switch 
-                checked={hsForm.active} 
-                onCheckedChange={(val) => setHsForm(prev => ({ ...prev, active: val }))}
-                className="data-[state=checked]:bg-[#4F46E5]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
-            <Button onClick={handleSaveHsCode} className="bg-[#4F46E5] text-white">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1615,7 +1420,7 @@ export default function RedesignedSettingsPage() {
               }
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 text-sm">
             {(openModal === "agency" || openModal === "office") && (
               <div className="space-y-2">
                 <Label className="text-xs">Code / Short Code</Label>
@@ -1623,7 +1428,7 @@ export default function RedesignedSettingsPage() {
                   value={genericForm.code} 
                   onChange={(e) => setGenericForm(prev => ({ ...prev, code: e.target.value }))}
                   placeholder="e.g. KHI"
-                  className="text-xs rounded-lg font-mono"
+                  className="text-sm rounded-lg font-mono"
                 />
               </div>
             )}
@@ -1633,7 +1438,7 @@ export default function RedesignedSettingsPage() {
                 value={genericForm.name} 
                 onChange={(e) => setGenericForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g. Standard"
-                className="text-xs rounded-lg"
+                className="text-sm rounded-lg"
               />
             </div>
           </div>
@@ -1650,14 +1455,14 @@ export default function RedesignedSettingsPage() {
           <DialogHeader>
             <DialogTitle>Add Vendor Service Mapping</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 text-sm">
             <div className="space-y-2">
               <Label className="text-xs">Vendor</Label>
               <Select 
                 value={vendorSvcForm.vendor} 
                 onValueChange={(val) => setVendorSvcForm(prev => ({ ...prev, vendor: val }))}
               >
-                <SelectTrigger className="w-full text-xs">
+                <SelectTrigger className="w-full text-sm">
                   <SelectValue placeholder="Select Vendor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1673,7 +1478,7 @@ export default function RedesignedSettingsPage() {
                 value={vendorSvcForm.service} 
                 onValueChange={(val) => setVendorSvcForm(prev => ({ ...prev, service: val }))}
               >
-                <SelectTrigger className="w-full text-xs">
+                <SelectTrigger className="w-full text-sm">
                   <SelectValue placeholder="Select Service" />
                 </SelectTrigger>
                 <SelectContent>

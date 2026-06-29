@@ -22,6 +22,7 @@ import {
   Building2,
   Search,
   FileText,
+  FileCode,
   CreditCard,
   Book,
   BookOpen,
@@ -175,6 +176,11 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       href: "/dashboard/settings/remote-area-lookup",
       label: "Remote Area",
       icon: Search,
+    },
+    {
+      href: "/dashboard/settings/hscodes",
+      label: "HS Codes",
+      icon: FileCode,
     },
     ...(isSuperAdmin ? [{
       href: "/dashboard/email",
