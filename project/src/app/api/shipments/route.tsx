@@ -25,6 +25,7 @@ export async function GET(req: Request) {
   const search = searchParams.get("search")?.trim() || "";
   const fromDate = searchParams.get("fromDate");
   const toDate = searchParams.get("toDate");
+  const type = searchParams.get("type") || undefined;
   const sortField = searchParams.get("sortField") as
     | "trackingId"
     | "invoiceNumber"
@@ -43,6 +44,7 @@ export async function GET(req: Request) {
   console.log('Search term:', search);
   console.log('Search term length:', search.length);
   console.log('Search term trimmed:', search.trim());
+  console.log('Type filter:', type);
   console.log('All search params:', Object.fromEntries(searchParams.entries()));
 
   const where: any = { ...orgWhere(session) };
@@ -61,6 +63,8 @@ export async function GET(req: Request) {
     }
   }
 
+  const andConditions: any[] = [];
+
   // Fuzzy search across all relevant columns
   if (search && search.length > 0) {
     console.log('Building search query for term:', `"${search}"`);
@@ -75,7 +79,7 @@ export async function GET(req: Request) {
     console.log('Matching countries found:', matchingCountries.map(c => ({ name: c.name, code: c.isoCode })));
     console.log('Country codes for search:', countryCodes);
     
-    where.OR = [
+    const searchOr: any[] = [
       { trackingId: { contains: search, mode: "insensitive" } },
       { referenceNumber: { contains: search, mode: "insensitive" } },
       { invoiceNumber: { contains: search, mode: "insensitive" } },
@@ -98,12 +102,31 @@ export async function GET(req: Request) {
     
     // If we found matching country codes, also search for those in destination
     if (countryCodes.length > 0) {
-      where.OR.push({ destination: { in: countryCodes } });
+      searchOr.push({ destination: { in: countryCodes } });
     }
     
-    console.log('Search WHERE clause:', JSON.stringify(where.OR, null, 2));
-  } else {
-    console.log('No search term provided or search term is empty');
+    andConditions.push({ OR: searchOr });
+  }
+
+  // Type filtering: domestic vs international
+  if (type === "domestic") {
+    andConditions.push({
+      OR: [
+        { destination: { equals: "PK", mode: "insensitive" } },
+        { destination: { equals: "Pakistan", mode: "insensitive" } }
+      ]
+    });
+  } else if (type === "international") {
+    andConditions.push({
+      AND: [
+        { destination: { not: { equals: "PK", mode: "insensitive" } } },
+        { destination: { not: { equals: "Pakistan", mode: "insensitive" } } }
+      ]
+    });
+  }
+
+  if (andConditions.length > 0) {
+    where.AND = andConditions;
   }
 
   // Sorting

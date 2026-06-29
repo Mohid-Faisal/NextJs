@@ -59,6 +59,7 @@ function truncateName(name: string | null | undefined, maxLen: number): string {
 export default function ShipmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const typeParam = searchParams.get("type") || "";
   const [shipments, setShipments] = useState<
     (Shipment & { invoices: { id: number; status: string }[] })[]
   >([]);
@@ -238,6 +239,7 @@ export default function ShipmentsPage() {
         ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
         sortField,
         sortOrder,
+        ...(typeParam && { type: typeParam }),
       });
 
       const res = await fetch(`/api/shipments?${params}`);
@@ -253,7 +255,11 @@ export default function ShipmentsPage() {
     };
 
     fetchShipments();
-  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate]);
+  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate, typeParam]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [typeParam]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -365,6 +371,7 @@ export default function ShipmentsPage() {
       ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
       sortField,
       sortOrder,
+      ...(typeParam && { type: typeParam }),
     });
     const refreshRes = await fetch(`/api/shipments?${params}`);
     const data = await refreshRes.json();
@@ -919,13 +926,19 @@ export default function ShipmentsPage() {
         <div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
             <Truck className="w-8 sm:w-10 h-8 sm:h-10 text-blue-600" />
-            Shipments
+            {typeParam === "domestic" ? "Domestic Shipments" : typeParam === "international" ? "International Shipments" : "Shipments"}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Manage your shipments and track delivery status
+            {typeParam === "domestic"
+              ? "Manage your domestic shipments and track delivery status"
+              : typeParam === "international"
+              ? "Manage your international shipments and track delivery status"
+              : "Manage your shipments and track delivery status"}
           </p>
-          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium">
-            {deliveryStatusFilter === "All" ? "Showing all shipments" : `Showing only ${deliveryStatusFilter} shipments`}
+          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium text-capitalize">
+            {deliveryStatusFilter === "All"
+              ? `Showing all ${typeParam ? typeParam + " " : ""}shipments`
+              : `Showing only ${typeParam ? typeParam + " " : ""}${deliveryStatusFilter} shipments`}
           </p>
         </div>
         <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">

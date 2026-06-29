@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Users,
   Package,
@@ -60,6 +60,7 @@ interface DecodedToken {
 const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [userName, setUserName] = useState("User");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -87,6 +88,25 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [saasOpen, setSaasOpen] = useState(
     pathname.startsWith("/dashboard/saas") && !pathname.startsWith("/dashboard/saas/pending-approvals")
   );
+
+  const isLinkActive = (href: string) => {
+    if (href.includes("?")) {
+      const [path, queryStr] = href.split("?");
+      if (pathname !== path) return false;
+      const linkParams = new URLSearchParams(queryStr);
+      for (const [key, value] of linkParams.entries()) {
+        if (searchParams.get(key) !== value) return false;
+      }
+      return true;
+    }
+    if (pathname === href) {
+      if (href === "/dashboard/shipments" && searchParams.get("type")) {
+        return false;
+      }
+      return true;
+    }
+    return false;
+  };
 
   useEffect(() => {
     const token = Cookies.get("token");
@@ -123,6 +143,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
 
   const subLinksShipment = [
     { href: "/dashboard/shipments", label: "All Shipments", icon: Package },
+    { href: "/dashboard/shipments?type=domestic", label: "Domestic", icon: Truck },
+    { href: "/dashboard/shipments?type=international", label: "International", icon: Globe },
     { href: "/dashboard/add-shipment", label: "Add Shipment", icon: Plus },
     {
       href: "/dashboard/rate-calculator",
@@ -341,7 +363,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                         key={href}
                         href={href}
                         className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                          pathname === href
+                          isLinkActive(href)
                             ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                             : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                         }`}
@@ -423,7 +445,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       key={href}
                       href={href}
                       className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        pathname === href
+                        isLinkActive(href)
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
@@ -510,7 +532,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       key={href}
                       href={href}
                       className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        pathname === href
+                        isLinkActive(href)
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
@@ -568,7 +590,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       key={href}
                       href={href}
                       className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        pathname === href
+                        isLinkActive(href)
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
@@ -644,7 +666,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       key={href}
                       href={href}
                       className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        pathname === href
+                        isLinkActive(href)
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
@@ -701,7 +723,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       key={href}
                       href={href}
                       className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        pathname === href
+                        isLinkActive(href)
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
@@ -756,7 +778,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       key={href}
                       href={href}
                       className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        pathname === href
+                        isLinkActive(href)
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
