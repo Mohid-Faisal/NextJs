@@ -72,6 +72,7 @@ export default function ShipmentsPage() {
   const [inTransitCount, setInTransitCount] = useState(0);
   const [deliveredCount, setDeliveredCount] = useState(0);
   const [cancelledCount, setCancelledCount] = useState(0);
+  const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
@@ -322,6 +323,59 @@ export default function ShipmentsPage() {
     } catch (error) {
       console.error("Error formatting date:", error);
       return "Invalid Date";
+    }
+  };
+
+  const refreshShipmentsList = async () => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: pageSize === 'all' ? 'all' : String(pageSize),
+      ...(searchTerm && { search: searchTerm }),
+      ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
+      ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+      ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+      sortField,
+      sortOrder,
+    });
+    const refreshRes = await fetch(`/api/shipments?${params}`);
+    const data = await refreshRes.json();
+    setShipments(data.shipments);
+    setTotal(data.total);
+    if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
+    if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
+    if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
+    if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = shipments.map(s => s.id);
+      setSelectedShipmentIds(allIds);
+    } else {
+      setSelectedShipmentIds([]);
+    }
+  };
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedShipmentIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete the ${selectedShipmentIds.length} selected shipment(s)?`)) return;
+    try {
+      await Promise.all(
+        selectedShipmentIds.map(id =>
+          fetch(`/api/shipments/${id}`, { method: "DELETE" })
+        )
+      );
+      toast.success("Selected shipments deleted successfully!");
+      setSelectedShipmentIds([]);
+      await refreshShipmentsList();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete some shipments.");
     }
   };
 
@@ -837,6 +891,10 @@ export default function ShipmentsPage() {
     exportToPDF(data, headers, 'Shipments Report', total);
   };
 
+  const selectedTotal = shipments
+    .filter((s) => selectedShipmentIds.includes(s.id))
+    .reduce((sum, s) => sum + Number(s.totalCost || 0), 0);
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0 min-h-[calc(100vh-64px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
@@ -1009,6 +1067,14 @@ export default function ShipmentsPage() {
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
                 <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
+                  <th className="w-12 px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                      checked={shipments.length > 0 && selectedShipmentIds.length === shipments.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("shipmentDate")}
@@ -1116,6 +1182,14 @@ export default function ShipmentsPage() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3 }}
                     >
+                      <td className="w-12 px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                          checked={selectedShipmentIds.includes(shipment.id)}
+                          onChange={() => handleToggleSelect(shipment.id)}
+                        />
+                      </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         {formatDate(shipment.shipmentDate || shipment.createdAt)}
                       </td>
@@ -1518,20 +1592,7 @@ export default function ShipmentsPage() {
             entityType="shipment"
             entityId={shipmentToDelete?.id || 0}
             onDelete={async () => {
-              const params = new URLSearchParams({
-                page: String(page),
-                limit: pageSize === 'all' ? 'all' : String(pageSize),
-                ...(searchTerm && { search: searchTerm }),
-                ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
-                ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
-                ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
-                sortField,
-                sortOrder,
-              });
-              const refreshRes = await fetch(`/api/shipments?${params}`);
-              const { shipments, total } = await refreshRes.json();
-              setShipments(shipments);
-              setTotal(total);
+              await refreshShipmentsList();
               setShipmentToDelete(null);
             }}
             onClose={() => {
@@ -1551,6 +1612,50 @@ export default function ShipmentsPage() {
         onPageSizeChange={setPageSize}
         entityName="shipments"
       />
+
+      {/* Floating Selected Capsule */}
+      <AnimatePresence>
+        {selectedShipmentIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-zinc-950 text-white rounded-full px-6 py-3.5 shadow-2xl flex items-center gap-6 z-50 border border-slate-800"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-slate-300">
+                {selectedShipmentIds.length} selected
+              </span>
+              <span className="h-4 w-px bg-slate-700" />
+              <span className="text-sm font-extrabold text-emerald-400">
+                ${selectedTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            
+            <div className="h-4 w-px bg-slate-700" />
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 text-sm font-bold text-rose-400 hover:text-rose-300 transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                Delete selected
+              </button>
+              
+              <span className="h-4 w-px bg-slate-700" />
+              
+              <button
+                onClick={() => setSelectedShipmentIds([])}
+                className="flex items-center gap-1.5 text-sm font-bold text-slate-300 hover:text-white transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <span className="text-lg leading-none font-light">×</span>
+                <span>Deselect all</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
