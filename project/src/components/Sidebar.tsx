@@ -620,7 +620,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                     shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
                   }`}
                 >
-                  Accounts
+                  Finance
                 </span>
               </div>
               {shouldExpand &&
