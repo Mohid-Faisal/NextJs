@@ -7,7 +7,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const TEST_EMAIL = "admin@pss.test";
+const TEST_EMAIL = "psswwe@gmail.com";
 const TEST_PASSWORD = "Test@1234";
 
 async function main() {

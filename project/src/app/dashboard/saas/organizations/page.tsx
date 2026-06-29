@@ -226,82 +226,82 @@ export default function SaasOrganizationsPage() {
       </div>
 
       {/* Row of 6 Mini Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         
         {/* Revenue This Month */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600">
-              <DollarSign className="w-5 h-5" />
+          <CardContent className="p-3 flex flex-col justify-between h-full">
+            <div className="w-7 h-7 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600">
+              <DollarSign className="w-4 h-4" />
             </div>
-            <div className="mt-3">
-              <span className="text-xl sm:text-2xl font-bold tracking-tight">$0.00</span>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Revenue This Month</p>
+            <div className="mt-2">
+              <span className="text-lg sm:text-xl font-bold tracking-tight">$0.00</span>
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">Revenue This Month</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Revenue This Year */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600">
-              <TrendingUp className="w-5 h-5" />
+          <CardContent className="p-3 flex flex-col justify-between h-full">
+            <div className="w-7 h-7 rounded-full bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600">
+              <TrendingUp className="w-4 h-4" />
             </div>
-            <div className="mt-3">
-              <span className="text-xl sm:text-2xl font-bold tracking-tight">$91.00</span>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Revenue This Year</p>
+            <div className="mt-2">
+              <span className="text-lg sm:text-xl font-bold tracking-tight">$91.00</span>
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">Revenue This Year</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Active Subscriptions */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center text-teal-600">
-              <CheckCircle2 className="w-5 h-5" />
+          <CardContent className="p-3 flex flex-col justify-between h-full">
+            <div className="w-7 h-7 rounded-full bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center text-teal-600">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
-            <div className="mt-3">
-              <span className="text-xl sm:text-2xl font-bold tracking-tight">{activeSubs}</span>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Active Subscriptions</p>
+            <div className="mt-2">
+              <span className="text-lg sm:text-xl font-bold tracking-tight">{activeSubs}</span>
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">Active Subscriptions</p>
             </div>
           </CardContent>
         </Card>
 
         {/* In Grace Period */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-600">
-              <AlertTriangle className="w-5 h-5" />
+          <CardContent className="p-3 flex flex-col justify-between h-full">
+            <div className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-600">
+              <AlertTriangle className="w-4 h-4" />
             </div>
-            <div className="mt-3">
-              <span className="text-xl sm:text-2xl font-bold tracking-tight">0</span>
-              <p className="text-xs text-muted-foreground font-medium mt-1">In Grace Period</p>
+            <div className="mt-2">
+              <span className="text-lg sm:text-xl font-bold tracking-tight">0</span>
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">In Grace Period</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Read Only */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-600">
-              <Lock className="w-5 h-5" />
+          <CardContent className="p-3 flex flex-col justify-between h-full">
+            <div className="w-7 h-7 rounded-full bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-600">
+              <Lock className="w-4 h-4" />
             </div>
-            <div className="mt-3">
-              <span className="text-xl sm:text-2xl font-bold tracking-tight">{suspendedCount}</span>
-              <p className="text-xs text-muted-foreground font-medium mt-1">Read Only</p>
+            <div className="mt-2">
+              <span className="text-lg sm:text-xl font-bold tracking-tight">{suspendedCount}</span>
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">Read Only</p>
             </div>
           </CardContent>
         </Card>
 
         {/* No Subscription */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-4 flex flex-col justify-between h-full">
-            <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-500">
-              <HelpCircle className="w-5 h-5" />
+          <CardContent className="p-3 flex flex-col justify-between h-full">
+            <div className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-500">
+              <HelpCircle className="w-4 h-4" />
             </div>
-            <div className="mt-3">
-              <span className="text-xl sm:text-2xl font-bold tracking-tight">{noSubs}</span>
-              <p className="text-xs text-muted-foreground font-medium mt-1">No Subscription</p>
+            <div className="mt-2">
+              <span className="text-lg sm:text-xl font-bold tracking-tight">{noSubs}</span>
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">No Subscription</p>
             </div>
           </CardContent>
         </Card>

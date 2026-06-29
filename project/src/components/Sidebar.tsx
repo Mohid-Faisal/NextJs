@@ -291,13 +291,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </span>
           </Link>
 
-          {/* SAAS ADMIN Section Heading */}
-          {isSuperAdmin && shouldExpand && (
-            <div className="px-3 pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              SAAS ADMIN
-            </div>
-          )}
-
           {/* SaaS Admin Collapsible */}
           {isSuperAdmin && (
             <div>
@@ -336,7 +329,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="pl-10 mt-2 space-y-1 border-l border-slate-200 dark:border-slate-800 ml-5"
+                    className="pl-10 mt-2 space-y-1 ml-5"
                   >
                     {subLinksSaaS.map(({ href, label, icon: Icon }) => (
                       <Link
