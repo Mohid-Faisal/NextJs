@@ -788,39 +788,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </AnimatePresence>
           </div>
         </nav>
-
-        {/* User Info + Logout */}
-        <div className="px-3 mt-auto pb-6 space-y-2">
-          <button
-            type="button"
-            className="flex items-center gap-3 w-full text-sm font-medium text-sidebar-foreground rounded-lg px-3 py-2 hover:bg-sidebar-accent transition-all duration-200"
-          >
-            <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-white shrink-0">
-              {shouldExpand ? userName[0]?.toUpperCase() : ""}
-            </div>
-            <span
-              className={`transition-all duration-200 ${
-                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-              }`}
-            >
-              {userName}
-            </span>
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full text-sm font-medium text-red-600 rounded-lg px-3 py-2 hover:bg-red-100 dark:hover:bg-red-900 transition-all duration-200"
-          >
-            <LogOut className="w-5 h-5 shrink-0" />
-            <span
-              className={`transition-all duration-200 ${
-                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-              }`}
-            >
-              Logout
-            </span>
-          </button>
-        </div>
       </div>
     </aside>
   );

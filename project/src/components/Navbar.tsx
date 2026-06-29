@@ -2,16 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
-import { Menu, Bell, Maximize2, Minimize2, Search, Upload, Package } from "lucide-react";
+import { 
+  Menu, Bell, Maximize2, Minimize2, Search, Upload, Package, 
+  User, Settings, LogOut 
+} from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import BulkUploadModal from "./BulkUploadModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 const PUBLIC_TOOLS_ADMIN_EMAIL = "mohidfaisal321@gmail.com";
 
 interface DecodedToken {
+  name?: string;
   email?: string;
 }
 
@@ -23,6 +34,9 @@ const Navbar = ({
   isSidebarOpen: boolean;
 }) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const [userName, setUserName] = useState("User");
+  const [userEmail, setUserEmail] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   // Default true to match server (public tools off until DB says otherwise)
@@ -98,11 +112,18 @@ const Navbar = ({
     try {
       const decoded = jwtDecode<DecodedToken>(token);
       const email = (decoded.email || "").trim().toLowerCase();
+      setUserName(decoded.name || "User");
+      setUserEmail(email);
       setShowPublicToolsToggle(email === PUBLIC_TOOLS_ADMIN_EMAIL.toLowerCase());
     } catch {
       setShowPublicToolsToggle(false);
     }
   }, []);
+
+  const handleLogout = () => {
+    Cookies.remove("token");
+    router.push("/auth/login");
+  };
 
   // Load public tools toggle from server (global for all users)
   useEffect(() => {
@@ -241,6 +262,62 @@ const Navbar = ({
 
         {/* Theme toggle */}
         <ThemeToggle />
+
+        {/* Profile Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="focus:outline-none flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-sm font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors shadow-xs">
+                {userName[0]?.toUpperCase()}
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 mt-2 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg p-1.5 text-foreground">
+            {/* User Profile Header */}
+            <div className="px-3 py-2 text-sm">
+              <div className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                {userName}
+              </div>
+              <div className="text-xs text-muted-foreground truncate mt-0.5">
+                {userEmail}
+              </div>
+            </div>
+            <DropdownMenuSeparator className="bg-slate-100 dark:bg-zinc-800 my-1" />
+            
+            {/* Profile Link */}
+            <DropdownMenuItem asChild>
+              <Link
+                href="/dashboard/settings"
+                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-900 text-sm font-medium transition-colors cursor-pointer text-foreground"
+              >
+                <User className="w-4 h-4 text-slate-500" />
+                Profile
+              </Link>
+            </DropdownMenuItem>
+
+            {/* Settings Link */}
+            <DropdownMenuItem asChild>
+              <Link
+                href="/dashboard/settings"
+                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-900 text-sm font-medium transition-colors cursor-pointer text-foreground"
+              >
+                <Settings className="w-4 h-4 text-slate-500" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator className="bg-slate-100 dark:bg-zinc-800 my-1" />
+
+            {/* Logout Trigger */}
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/20 text-sm font-medium text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Bulk Upload Modal (triggered elsewhere, kept mounted for now) */}
