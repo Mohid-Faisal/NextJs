@@ -180,7 +180,8 @@ async function main() {
   await linkUsersAsOwners(org.id);
 
   console.log("\nSubscription...");
-  await ensureSubscription(org.id);
+  // Super admin owns everything and should not be on any plan/subscription
+  // await ensureSubscription(org.id);
 
   await printCounts(org.id);
   console.log("\nDone.");

@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from "@/lib/prisma";
 import { sendUserApprovalEmail } from '@/lib/email';
+import { requireApiSession } from '@/lib/auth/requireApiSession';
+import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+export async function GET(req: NextRequest) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+  const session = auth.session;
 
-export async function GET() {
   try {
     const users = await prisma.user.findMany({
+      where: {
+        memberships: {
+          some: {
+            organizationId: session.organizationId
+          }
+        }
+      },
       select: {
         id: true,
         name: true,
@@ -29,15 +40,17 @@ export async function GET() {
       { error: 'Failed to fetch users' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireApiSession(request);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   try {
     const body = await request.json();
-    const { name, email, password, role, status } = body;
+    const { name, email, password, role } = body;
 
     // Validate required fields
     if (!name || !email || !password || !role) {
@@ -59,25 +72,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new user with pending approval
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password, // Note: In production, hash the password before saving
-        role,
-        status: 'PENDING',
-        isApproved: false,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        isApproved: true,
-        createdAt: true,
-      }
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create new user and organization membership in a transaction
+    const user = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          name,
+          email: email.trim().toLowerCase(),
+          password: hashedPassword,
+          role,
+          status: 'PENDING',
+          isApproved: false,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          isApproved: true,
+          createdAt: true,
+        }
+      });
+
+      await tx.organizationMember.create({
+        data: {
+          organizationId: session.organizationId,
+          userId: u.id,
+          role: role,
+        }
+      });
+
+      return u;
     });
 
     // Send approval email to admin
@@ -100,7 +128,5 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create user' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

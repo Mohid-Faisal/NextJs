@@ -1,26 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireApiSession(request);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   try {
     const { id } = await params;
     const userId = parseInt(id);
     const body = await request.json();
     const { role, status, name, email } = body;
 
-    // Validate user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id: userId }
+    // Validate user exists and belongs to the same organization
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        memberships: {
+          some: {
+            organizationId: session.organizationId
+          }
+        }
+      }
     });
 
     if (!existingUser) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found or not in your organization' },
         { status: 404 }
       );
     }
@@ -33,7 +43,6 @@ export async function PUT(
         ...(status && { status }),
         ...(name && { name }),
         ...(email && { email }),
-
       },
       select: {
         id: true,
@@ -52,8 +61,6 @@ export async function PUT(
       { error: 'Failed to update user' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -61,18 +68,29 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireApiSession(request);
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
   try {
     const { id } = await params;
     const userId = parseInt(id);
 
-    // Validate user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id: userId }
+    // Validate user exists and belongs to the same organization
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        memberships: {
+          some: {
+            organizationId: session.organizationId
+          }
+        }
+      }
     });
 
     if (!existingUser) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found or not in your organization' },
         { status: 404 }
       );
     }
@@ -89,7 +107,5 @@ export async function DELETE(
       { error: 'Failed to delete user' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

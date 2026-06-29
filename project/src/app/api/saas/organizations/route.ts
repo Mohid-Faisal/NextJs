@@ -13,6 +13,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const organizations = await prisma.organization.findMany({
+      where: {
+        NOT: {
+          id: 1 // Exclude super admin/default organization
+        }
+      },
       orderBy: { createdAt: "asc" },
       select: {
         id: true,
