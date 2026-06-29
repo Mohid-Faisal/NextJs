@@ -172,16 +172,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       icon: Users,
     },
     {
-      href: "/dashboard/settings/logistics",
-      label: "Logistics Settings",
-      icon: Truck,
-    },
-    {
-      href: "/dashboard/settings/payment",
-      label: "Payment Settings",
-      icon: CreditCard,
-    },
-    {
       href: "/dashboard/settings/manage-zones",
       label: "Manage Zones",
       icon: Plus,

@@ -675,158 +675,367 @@ export default function RedesignedSettingsPage() {
                     {/* View 2b: Shipping Modes */}
                     {serviceSubTab === "shippingModes" && (
                       <div>
-                        <div className="flex justify-between items-center mb-6">
-                          <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200">Shipping Modes</h3>
-                          <Button size="sm" onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("shippingMode"); }} className="bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Shipping Modes</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage shipping modes for your shipments.</p>
+                          </div>
+                          <Button 
+                            onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("shippingMode"); }}
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                          >
+                            <Plus className="w-4 h-4" />
                             Add Shipping Mode
                           </Button>
                         </div>
-                        <ul className="space-y-2 max-w-xl">
-                          {shippingModes.map((item) => (
-                            <li key={item.id} className="flex justify-between items-center border border-gray-100 dark:border-zinc-800 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-zinc-800/10">
-                              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{item.name}</span>
-                              <div className="flex gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: "" }); setOpenModal("shippingMode"); }} className="h-8 w-8 p-0 text-blue-600"><Edit3 className="w-3.5 h-3.5" /></Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteItem("shippingMode", item.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-3.5 h-3.5" /></Button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3">Mode Name</th>
+                                <th className="px-5 py-3">Code</th>
+                                <th className="px-5 py-3 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                              {shippingModes.map((item) => (
+                                <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
+                                  <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
+                                  <td className="px-5 py-4">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                      {item.name.toLowerCase().replace(/ /g, "_")}
+                                    </code>
+                                  </td>
+                                  <td className="px-5 py-4 text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: "" }); setOpenModal("shippingMode"); }} className="flex items-center gap-2">
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDeleteItem("shippingMode", item.id)} className="flex items-center gap-2 text-red-600">
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 
                     {/* View 2c: Delivery Times */}
                     {serviceSubTab === "deliveryTimes" && (
                       <div>
-                        <div className="flex justify-between items-center mb-6">
-                          <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200">Delivery Times</h3>
-                          <Button size="sm" onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("deliveryTime"); }} className="bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delivery Times</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage delivery transit time frames.</p>
+                          </div>
+                          <Button 
+                            onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("deliveryTime"); }}
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                          >
+                            <Plus className="w-4 h-4" />
                             Add Delivery Time
                           </Button>
                         </div>
-                        <ul className="space-y-2 max-w-xl">
-                          {deliveryTimes.map((item) => (
-                            <li key={item.id} className="flex justify-between items-center border border-gray-100 dark:border-zinc-800 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-zinc-800/10">
-                              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{item.name}</span>
-                              <div className="flex gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: "" }); setOpenModal("deliveryTime"); }} className="h-8 w-8 p-0 text-blue-600"><Edit3 className="w-3.5 h-3.5" /></Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteItem("deliveryTime", item.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-3.5 h-3.5" /></Button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3">Time Frame</th>
+                                <th className="px-5 py-3">Code</th>
+                                <th className="px-5 py-3 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                              {deliveryTimes.map((item) => (
+                                <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
+                                  <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
+                                  <td className="px-5 py-4">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                      {item.name.toLowerCase().replace(/ /g, "_")}
+                                    </code>
+                                  </td>
+                                  <td className="px-5 py-4 text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: "" }); setOpenModal("deliveryTime"); }} className="flex items-center gap-2">
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDeleteItem("deliveryTime", item.id)} className="flex items-center gap-2 text-red-600">
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 
                     {/* View 2d: Packaging Types */}
                     {serviceSubTab === "packagingTypes" && (
                       <div>
-                        <div className="flex justify-between items-center mb-6">
-                          <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200">Packaging Types</h3>
-                          <Button size="sm" onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("packagingType"); }} className="bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Packaging Types</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage packaging options (e.g., box, envelope).</p>
+                          </div>
+                          <Button 
+                            onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("packagingType"); }}
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                          >
+                            <Plus className="w-4 h-4" />
                             Add Packaging Type
                           </Button>
                         </div>
-                        <ul className="space-y-2 max-w-xl">
-                          {packagingTypes.map((item) => (
-                            <li key={item.id} className="flex justify-between items-center border border-gray-100 dark:border-zinc-800 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-zinc-800/10">
-                              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{item.name}</span>
-                              <div className="flex gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: "" }); setOpenModal("packagingType"); }} className="h-8 w-8 p-0 text-blue-600"><Edit3 className="w-3.5 h-3.5" /></Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteItem("packagingType", item.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-3.5 h-3.5" /></Button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3">Packaging Name</th>
+                                <th className="px-5 py-3">Code</th>
+                                <th className="px-5 py-3 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                              {packagingTypes.map((item) => (
+                                <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
+                                  <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
+                                  <td className="px-5 py-4">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                      {item.name.toLowerCase().replace(/ /g, "_")}
+                                    </code>
+                                  </td>
+                                  <td className="px-5 py-4 text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: "" }); setOpenModal("packagingType"); }} className="flex items-center gap-2">
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDeleteItem("packagingType", item.id)} className="flex items-center gap-2 text-red-600">
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 
                     {/* View 2e: Vendor Services */}
                     {serviceSubTab === "vendorServices" && (
                       <div>
-                        <div className="flex justify-between items-center mb-6">
-                          <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200">Vendor Services</h3>
-                          <Button size="sm" onClick={() => { setVendorSvcForm({ vendor: "", service: "" }); setOpenModal("vendorService"); }} className="bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Vendor Services</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Map services to specific vendors.</p>
+                          </div>
+                          <Button 
+                            onClick={() => { setVendorSvcForm({ vendor: "", service: "" }); setOpenModal("vendorService"); }}
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                          >
+                            <Plus className="w-4 h-4" />
                             Add Vendor Service
                           </Button>
                         </div>
-                        <ul className="space-y-3">
-                          {(() => {
-                            const grouped: Record<string, any[]> = {};
-                            vendorServices.forEach((item: any) => {
-                              if (!grouped[item.vendor]) grouped[item.vendor] = [];
-                              grouped[item.vendor].push(item);
-                            });
 
-                            return Object.entries(grouped).map(([vendorName, svcList]) => (
-                              <li key={vendorName} className="border border-gray-150 dark:border-zinc-800 rounded-xl p-4 bg-white dark:bg-zinc-900/60 shadow-sm">
-                                <span className="font-semibold text-sm text-gray-900 dark:text-white">{vendorName}</span>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {svcList.map((svc) => (
-                                    <span key={svc.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full border border-indigo-200/40">
-                                      {svc.service}
-                                      <button onClick={() => handleDeleteItem("vendorService", svc.id)} className="text-red-500 hover:text-red-700 ml-1.5">
-                                        ×
-                                      </button>
-                                    </span>
-                                  ))}
-                                </div>
-                              </li>
-                            ));
-                          })()}
-                        </ul>
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3">Vendor Name</th>
+                                <th className="px-5 py-3">Mapped Services</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                              {(() => {
+                                const grouped: Record<string, any[]> = {};
+                                vendorServices.forEach((item: any) => {
+                                  if (!grouped[item.vendor]) grouped[item.vendor] = [];
+                                  grouped[item.vendor].push(item);
+                                });
+
+                                return Object.entries(grouped).map(([vendorName, svcList]) => (
+                                  <tr key={vendorName} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
+                                    <td className="px-5 py-4 font-bold text-gray-900 dark:text-white">{vendorName}</td>
+                                    <td className="px-5 py-4">
+                                      <div className="flex flex-wrap gap-2">
+                                        {svcList.map((svc) => (
+                                          <span key={svc.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full border border-indigo-200/40">
+                                            {svc.service}
+                                            <button onClick={() => handleDeleteItem("vendorService", svc.id)} className="text-red-500 hover:text-red-700 ml-1.5 font-bold">
+                                              ×
+                                            </button>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ));
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 
                     {/* View 2f: Agencies */}
                     {serviceSubTab === "agencies" && (
                       <div>
-                        <div className="flex justify-between items-center mb-6">
-                          <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200">Agencies</h3>
-                          <Button size="sm" onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("agency"); }} className="bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Agencies</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage regional offices or agent branches.</p>
+                          </div>
+                          <Button 
+                            onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("agency"); }}
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                          >
+                            <Plus className="w-4 h-4" />
                             Add Agency
                           </Button>
                         </div>
-                        <ul className="space-y-2 max-w-xl">
-                          {agencies.map((item) => (
-                            <li key={item.id} className="flex justify-between items-center border border-gray-100 dark:border-zinc-800 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-zinc-800/10">
-                              <div>
-                                <span className="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 mr-2">{item.code}</span>
-                                <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{item.name}</span>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: item.code }); setOpenModal("agency"); }} className="h-8 w-8 p-0 text-blue-600"><Edit3 className="w-3.5 h-3.5" /></Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteItem("agency", item.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-3.5 h-3.5" /></Button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3">Agency Name</th>
+                                <th className="px-5 py-3">Short Code</th>
+                                <th className="px-5 py-3 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                              {agencies.map((item) => (
+                                <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
+                                  <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
+                                  <td className="px-5 py-4">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                      {item.code}
+                                    </code>
+                                  </td>
+                                  <td className="px-5 py-4 text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: item.code }); setOpenModal("agency"); }} className="flex items-center gap-2">
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDeleteItem("agency", item.id)} className="flex items-center gap-2 text-red-600">
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 
                     {/* View 2g: Offices */}
                     {serviceSubTab === "offices" && (
                       <div>
-                        <div className="flex justify-between items-center mb-6">
-                          <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200">Offices</h3>
-                          <Button size="sm" onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("office"); }} className="bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Offices</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage localized drop-off and pickup centers.</p>
+                          </div>
+                          <Button 
+                            onClick={() => { setEditingId(null); setGenericForm({ name: "", code: "" }); setOpenModal("office"); }}
+                            className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                          >
+                            <Plus className="w-4 h-4" />
                             Add Office
                           </Button>
                         </div>
-                        <ul className="space-y-2 max-w-xl">
-                          {offices.map((item) => (
-                            <li key={item.id} className="flex justify-between items-center border border-gray-100 dark:border-zinc-800 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-zinc-800/10">
-                              <div>
-                                <span className="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 mr-2">{item.code}</span>
-                                <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{item.name}</span>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: item.code }); setOpenModal("office"); }} className="h-8 w-8 p-0 text-blue-600"><Edit3 className="w-3.5 h-3.5" /></Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteItem("office", item.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-3.5 h-3.5" /></Button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+
+                        <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                                <th className="px-5 py-3">Office Name</th>
+                                <th className="px-5 py-3">Short Code</th>
+                                <th className="px-5 py-3 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                              {offices.map((item) => (
+                                <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
+                                  <td className="px-5 py-4 font-semibold text-gray-900 dark:text-white">{item.name}</td>
+                                  <td className="px-5 py-4">
+                                    <code className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[10px] text-gray-600 dark:text-zinc-400 font-mono">
+                                      {item.code}
+                                    </code>
+                                  </td>
+                                  <td className="px-5 py-4 text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => { setEditingId(item.id); setGenericForm({ name: item.name, code: item.code }); setOpenModal("office"); }} className="flex items-center gap-2">
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDeleteItem("office", item.id)} className="flex items-center gap-2 text-red-600">
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 
