@@ -1,7 +1,7 @@
 // components/LayoutContent.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
@@ -38,7 +38,9 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
             sidebarOpen ? "w-64" : "w-20"
           } transition-all duration-300 ease-in-out h-[calc(100vh-64px)] fixed top-[64px] left-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-40`}
         >
-          <Sidebar isOpen={sidebarOpen} />
+          <Suspense fallback={<div className="p-4 text-xs text-gray-400">Loading Menu...</div>}>
+            <Sidebar isOpen={sidebarOpen} />
+          </Suspense>
         </aside>
 
         {/* Page content - min-w-0 so flex child can shrink; overflow-x-hidden to prevent horizontal scroll */}
