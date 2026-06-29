@@ -230,78 +230,78 @@ export default function SaasOrganizationsPage() {
         
         {/* Revenue This Month */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-3 flex flex-col justify-between h-full">
-            <div className="w-7 h-7 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600">
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600 shrink-0">
               <DollarSign className="w-4 h-4" />
             </div>
-            <div className="mt-2">
-              <span className="text-lg sm:text-xl font-bold tracking-tight">$0.00</span>
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">Revenue This Month</p>
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold tracking-tight leading-none">$0.00</span>
+              <span className="text-[10px] text-muted-foreground font-medium truncate mt-1">This Month</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Revenue This Year */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-3 flex flex-col justify-between h-full">
-            <div className="w-7 h-7 rounded-full bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600">
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600 shrink-0">
               <TrendingUp className="w-4 h-4" />
             </div>
-            <div className="mt-2">
-              <span className="text-lg sm:text-xl font-bold tracking-tight">$91.00</span>
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">Revenue This Year</p>
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold tracking-tight leading-none">$91.00</span>
+              <span className="text-[10px] text-muted-foreground font-medium truncate mt-1">This Year</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Active Subscriptions */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-3 flex flex-col justify-between h-full">
-            <div className="w-7 h-7 rounded-full bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center text-teal-600">
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center text-teal-600 shrink-0">
               <CheckCircle2 className="w-4 h-4" />
             </div>
-            <div className="mt-2">
-              <span className="text-lg sm:text-xl font-bold tracking-tight">{activeSubs}</span>
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">Active Subscriptions</p>
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold tracking-tight leading-none">{activeSubs}</span>
+              <span className="text-[10px] text-muted-foreground font-medium truncate mt-1">Active Subs</span>
             </div>
           </CardContent>
         </Card>
 
         {/* In Grace Period */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-3 flex flex-col justify-between h-full">
-            <div className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-600">
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-600 shrink-0">
               <AlertTriangle className="w-4 h-4" />
             </div>
-            <div className="mt-2">
-              <span className="text-lg sm:text-xl font-bold tracking-tight">0</span>
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">In Grace Period</p>
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold tracking-tight leading-none">0</span>
+              <span className="text-[10px] text-muted-foreground font-medium truncate mt-1">Grace Period</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Read Only */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-3 flex flex-col justify-between h-full">
-            <div className="w-7 h-7 rounded-full bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-600">
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-600 shrink-0">
               <Lock className="w-4 h-4" />
             </div>
-            <div className="mt-2">
-              <span className="text-lg sm:text-xl font-bold tracking-tight">{suspendedCount}</span>
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">Read Only</p>
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold tracking-tight leading-none">{suspendedCount}</span>
+              <span className="text-[10px] text-muted-foreground font-medium truncate mt-1">Read Only</span>
             </div>
           </CardContent>
         </Card>
 
         {/* No Subscription */}
         <Card className="bg-white dark:bg-slate-950/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-3 flex flex-col justify-between h-full">
-            <div className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-500">
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-500 shrink-0">
               <HelpCircle className="w-4 h-4" />
             </div>
-            <div className="mt-2">
-              <span className="text-lg sm:text-xl font-bold tracking-tight">{noSubs}</span>
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-0.5">No Subscription</p>
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold tracking-tight leading-none">{noSubs}</span>
+              <span className="text-[10px] text-muted-foreground font-medium truncate mt-1">No Sub</span>
             </div>
           </CardContent>
         </Card>

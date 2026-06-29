@@ -329,7 +329,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="pl-10 mt-2 space-y-1 ml-5"
+                    className="pl-10 mt-2 space-y-1"
                   >
                     {subLinksSaaS.map(({ href, label, icon: Icon }) => (
                       <Link
