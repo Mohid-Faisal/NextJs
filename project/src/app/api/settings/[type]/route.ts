@@ -9,6 +9,7 @@ const modelMap: Record<string, any> = {
   shippingMode: prisma.shippingMode,
   packagingType: prisma.packagingType,
   serviceMode: prisma.serviceMode,
+  hscodes: prisma.hsCode,
 };
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
 
   const data = await model.findMany({
     where: orgWhere(session),
-    orderBy: { name: "asc" },
+    ...(type === "deliveryStatus" ? { orderBy: { order: "asc" } } : { orderBy: { name: "asc" } }),
   });
   return NextResponse.json(data);
 }
@@ -36,8 +37,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
-  const { name }: { name: string } = await req.json();
-  const created = await model.create({ data: orgData(session, { name }) });
+  const body = await req.json();
+  const { id, createdAt, organizationId, ...dataFields } = body;
+  const created = await model.create({ data: orgData(session, dataFields) });
   return NextResponse.json(created);
 }
 
@@ -51,11 +53,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ type
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
   try {
-    const body: { id: string | number; name: string } = await req.json();
-    const { id, name } = body;
+    const body = await req.json();
+    const { id, createdAt, organizationId, ...dataFields } = body;
     
-    if (!id || !name) {
-      return NextResponse.json({ error: "Missing ID or name" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "Missing ID" }, { status: 400 });
     }
 
     const existing = await model.findFirst({
@@ -67,7 +69,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ type
 
     const updated = await model.update({
       where: { id: existing.id },
-      data: { name }
+      data: dataFields
     });
     
     return NextResponse.json(updated);

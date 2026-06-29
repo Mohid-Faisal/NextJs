@@ -182,11 +182,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       icon: CreditCard,
     },
     {
-      href: "/dashboard/settings/shipment-info-settings",
-      label: "Shipment Info Settings",
-      icon: Edit3,
-    },
-    {
       href: "/dashboard/settings/manage-zones",
       label: "Manage Zones",
       icon: Plus,
@@ -754,7 +749,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                     shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
                   }`}
                 >
-                  Settings
+                  Configuration
                 </span>
               </div>
               {shouldExpand &&
