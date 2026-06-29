@@ -2,41 +2,42 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Edit, 
-  Shield, 
-  UserCheck, 
-  UserX,
-  MoreHorizontal,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpDown,
-  Printer,
-  FileText,
-  Table as TableIcon
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Users,
+  Plus,
+  Search,
+  Edit3,
+  Trash2,
+  Lock,
+  UserCheck,
+  Shield,
+  Truck,
+  Briefcase,
+  User,
+  MoreVertical,
+  ChevronDown,
+  ChevronRight,
+  ShieldCheck,
+  Check
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -44,649 +45,649 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
-interface User {
-  id: number;
+// Role interfaces
+type RoleName = "Customer" | "Driver" | "Employee" | "Admin" | "Super Admin";
+
+interface PermissionItem {
   name: string;
-  email: string;
-  password: string;
-  role: string;
-  status: string;
-  isApproved: boolean;
-  createdAt: string;
+  code: string;
 }
 
-type SortField = "id" | "name" | "email" | "role" | "status" | "createdAt";
-type SortOrder = "asc" | "desc";
+interface PermissionCategory {
+  name: string;
+  code: string;
+  permissions: PermissionItem[];
+}
 
-const roleColors = {
-  ADMIN: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  MANAGER: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  SUPERVISOR: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  USER: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-};
+const permissionCategories: PermissionCategory[] = [
+  {
+    name: "Dashboard",
+    code: "dashboard",
+    permissions: [
+      { name: "View activity", code: "view_activity" },
+      { name: "View analytics", code: "view_analytics" },
+      { name: "View KPIs", code: "view_kpis" },
+      { name: "View map", code: "view_map" },
+      { name: "View revenue", code: "view_revenue" },
+      { name: "View dashboard", code: "view_dashboard" }
+    ]
+  },
+  {
+    name: "Shipments",
+    code: "shipments",
+    permissions: [
+      { name: "View shipments", code: "view_shipments" },
+      { name: "Create shipment", code: "create_shipment" },
+      { name: "Edit shipment", code: "edit_shipment" },
+      { name: "Delete shipment", code: "delete_shipment" },
+      { name: "Bulk delete", code: "bulk_delete" },
+      { name: "Export shipments", code: "export_shipments" },
+      { name: "Update status", code: "update_status" }
+    ]
+  },
+  {
+    name: "Customers & Vendors",
+    code: "contacts",
+    permissions: [
+      { name: "View customers", code: "view_customers" },
+      { name: "Manage customers", code: "manage_customers" },
+      { name: "View vendors", code: "view_vendors" },
+      { name: "Manage vendors", code: "manage_vendors" }
+    ]
+  },
+  {
+    name: "Settings & Config",
+    code: "settings",
+    permissions: [
+      { name: "View configuration", code: "view_config" },
+      { name: "Manage statuses", code: "manage_statuses" },
+      { name: "Manage services", code: "manage_services" },
+      { name: "Manage HS codes", code: "manage_hscodes" },
+      { name: "Manage billing", code: "manage_billing" }
+    ]
+  }
+];
 
-const statusColors = {
-  PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  ACTIVE: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  INACTIVE: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-  SUSPENDED: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-};
+const totalPermissionsCount = 22; // 6 + 7 + 4 + 5
 
-export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+export default function UsersAndTeamsPage() {
+  const [activeTab, setActiveTab] = useState<"users" | "permissions">("users");
+  const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("ALL");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [permSearch, setPermSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [sortField, setSortField] = useState<SortField>("id");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
-  // Fetch users from Prisma database
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('/api/users');
-        if (response.ok) {
-          const data = await response.json();
-          setUsers(data);
-          setFilteredUsers(data);
-        } else {
-          console.error('Failed to fetch users');
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error);
-      } finally {
-        setLoading(false);
+  // Role permissions mapping state
+  const [rolePermissions, setRolePermissions] = useState<Record<RoleName, string[]>>({
+    "Customer": [],
+    "Driver": [],
+    "Employee": [],
+    "Admin": [],
+    "Super Admin": []
+  });
+
+  // Collapsed sections in permissions list
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    dashboard: false,
+    shipments: false,
+    contacts: false,
+    settings: false
+  });
+
+  // Modal / Form States
+  const [openModal, setOpenModal] = useState<"invite" | "edit" | null>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "Employee",
+    status: "Active",
+    branch: "HQ",
+    department: "—"
+  });
+
+  const fetchUsersAndPermissions = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch Users
+      const usersRes = await fetch("/api/users");
+      if (usersRes.ok) {
+        const data = await usersRes.json();
+        setUsers(data);
+        setFilteredUsers(data);
       }
-    };
 
-    fetchUsers();
+      // 2. Fetch Role Permissions Settings
+      const permRes = await fetch("/api/settings/custom?key=settings_role_permissions");
+      if (permRes.ok) {
+        const data = await permRes.json();
+        if (data.value) {
+          setRolePermissions(JSON.parse(data.value));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load users data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsersAndPermissions();
   }, []);
 
+  // Filter users
   useEffect(() => {
-    let filtered = users;
-
+    let res = users;
     if (searchTerm) {
-      filtered = filtered.filter(
-        user =>
-          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      const q = searchTerm.toLowerCase();
+      res = res.filter(u => 
+        u.name.toLowerCase().includes(q) || 
+        u.email.toLowerCase().includes(q) ||
+        (u.role || "").toLowerCase().includes(q)
       );
     }
+    setFilteredUsers(res);
+  }, [searchTerm, users]);
 
-    if (roleFilter && roleFilter !== "ALL") {
-      filtered = filtered.filter(user => user.role === roleFilter);
+  // Invite/Save User
+  const handleInviteUser = async () => {
+    if (!form.name.trim() || !form.email.trim() || (!editingUser && !form.password.trim())) {
+      toast.error("Please fill in name, email and password fields");
+      return;
     }
+    try {
+      const isEditing = !!editingUser;
+      const url = isEditing ? `/api/users/${editingUser.id}` : "/api/users";
+      const method = isEditing ? "PUT" : "POST";
+      const payload = isEditing 
+        ? { name: form.name, email: form.email, role: form.role, status: form.status }
+        : { name: form.name, email: form.email, password: form.password, role: form.role };
 
-    if (statusFilter && statusFilter !== "ALL") {
-      filtered = filtered.filter(user => (user.status || "ACTIVE") === statusFilter);
-    }
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
-      
-      if (sortField === "createdAt") {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
-      }
-      
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
+      if (res.ok) {
+        toast.success(isEditing ? "User details updated" : "User invited successfully");
+        setOpenModal(null);
+        setEditingUser(null);
+        fetchUsersAndPermissions();
       } else {
-        return aValue < bValue ? 1 : -1;
+        const errorData = await res.json();
+        toast.error(errorData.error || "Failed to process user registration");
       }
-    });
-
-    setFilteredUsers(filtered);
-  }, [users, searchTerm, roleFilter, statusFilter, sortField, sortOrder]);
-
-  const formatDate = (dateInput: string | Date) => {
-    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    } catch {
+      toast.error("Something went wrong");
+    }
   };
 
-  const getRoleBadge = (role: string) => {
-    const colorClass = roleColors[role as keyof typeof roleColors] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-    return (
-      <Badge className={colorClass}>
-        {role}
-      </Badge>
-    );
+  // Delete User
+  const handleDeleteUser = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("User removed successfully");
+        fetchUsersAndPermissions();
+      } else {
+        toast.error("Failed to delete user");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    }
   };
 
-  const getStatusBadge = (status?: string) => {
-    const statusValue = status || "ACTIVE"; // Default to ACTIVE if no status
-    const colorClass = statusColors[statusValue as keyof typeof statusColors] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-    return (
-      <Badge className={colorClass}>
-        {statusValue}
-      </Badge>
-    );
-  };
+  // Toggle single permission for a role
+  const handleTogglePermission = async (role: RoleName, code: string, checked: boolean) => {
+    if (role === "Super Admin") return; // Super admin has locked access
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    const updatedRoles = { ...rolePermissions };
+    const list = updatedRoles[role] || [];
+    if (checked) {
+      if (!list.includes(code)) {
+        updatedRoles[role] = [...list, code];
+      }
     } else {
-      setSortField(field);
-      setSortOrder("asc");
+      updatedRoles[role] = list.filter(item => item !== code);
     }
-  };
 
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="ml-2 h-4 w-4" />;
-    }
-    return sortOrder === "asc" ? (
-      <ArrowUp className="ml-2 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-2 h-4 w-4" />
-    );
-  };
+    setRolePermissions(updatedRoles);
 
-  const handleEditUser = (userId: number) => {
-    // TODO: Implement edit user dialog/form
-    console.log("Edit user:", userId);
-    // This will open a dialog/form to edit user details
-  };
-
-  const handleChangeRole = async (userId: number, newRole: string) => {
+    // Save configuration immediately to backend
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: newRole }),
+      await fetch("/api/settings/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: "settings_role_permissions",
+          value: JSON.stringify(updatedRoles)
+        })
       });
-
-      if (response.ok) {
-        // Update local state
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId ? { ...user, role: newRole } : user
-          )
-        );
-        setFilteredUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId ? { ...user, role: newRole } : user
-          )
-        );
-      } else {
-        console.error('Failed to update user role');
-      }
-    } catch (error) {
-      console.error('Error updating user role:', error);
+      toast.success(`Permissions updated for role ${role}`);
+    } catch {
+      toast.error("Failed to sync permissions mapping to database");
     }
   };
 
-  const handleChangeStatus = async (userId: number, newStatus: string) => {
-    try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        // Update local state
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId ? { ...user, status: newStatus } : user
-          )
-        );
-        setFilteredUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId ? { ...user, status: newStatus } : user
-          )
-        );
-      } else {
-        console.error('Failed to update user status');
-      }
-    } catch (error) {
-      console.error('Error updating user status:', error);
+  const getRoleCardClass = (role: RoleName) => {
+    switch (role) {
+      case "Customer": return { bg: "bg-pink-50/50 dark:bg-pink-950/10 border-pink-100 dark:border-pink-900/30", iconBg: "bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300", progressBg: "bg-pink-500", text: "text-pink-900 dark:text-pink-200" };
+      case "Driver": return { bg: "bg-amber-50/50 dark:bg-amber-950/10 border-amber-100 dark:border-amber-900/30", iconBg: "bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-300", progressBg: "bg-amber-500", text: "text-amber-900 dark:text-amber-200" };
+      case "Employee": return { bg: "bg-emerald-50/50 dark:bg-emerald-950/10 border-emerald-100 dark:border-emerald-900/30", iconBg: "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300", progressBg: "bg-emerald-500", text: "text-emerald-900 dark:text-emerald-200" };
+      case "Admin": return { bg: "bg-blue-50/50 dark:bg-blue-950/10 border-blue-100 dark:border-blue-900/30", iconBg: "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300", progressBg: "bg-blue-500", text: "text-blue-900 dark:text-blue-200" };
+      case "Super Admin": return { bg: "bg-indigo-50/50 dark:bg-indigo-950/10 border-indigo-100 dark:border-indigo-900/30", iconBg: "bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300", progressBg: "bg-indigo-500", text: "text-indigo-900 dark:text-indigo-200" };
     }
   };
 
-  const handleApproveUser = async (userId: number) => {
-    try {
-      const response = await fetch(`/api/users/approve/${userId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const updatedUser = await response.json();
-        // Update local state
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId ? { ...user, ...updatedUser } : user
-          )
-        );
-        setFilteredUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId ? { ...user, ...updatedUser } : user
-          )
-        );
-      } else {
-        console.error('Failed to approve user');
-      }
-    } catch (error) {
-      console.error('Error approving user:', error);
-    }
-  };
-
-  // Export functions
-  const exportToExcel = () => {
-    const headers = ['ID', 'Name', 'Email', 'Role', 'Status', 'Created At'];
-    const data = filteredUsers.map(user => [
-      user.id,
-      user.name,
-      user.email,
-      user.role,
-      user.status,
-      formatDate(user.createdAt)
-    ]);
-    
-    const csvContent = [headers, ...data]
-      .map(row => row.map((cell: any) => `"${cell}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Users_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const exportToPrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      const tableHTML = `
-        <html>
-          <head>
-            <title>Users Report</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              table { border-collapse: collapse; width: 100%; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-              h1 { color: #333; }
-            </style>
-          </head>
-          <body>
-            <h1>Users Report</h1>
-            <p>Total Users: ${filteredUsers.length}</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${filteredUsers.map(user => `
-                  <tr>
-                    <td>${user.id}</td>
-                    <td>${user.name}</td>
-                    <td>${user.email}</td>
-                    <td>${user.role}</td>
-                    <td>${user.status}</td>
-                    <td>${formatDate(user.createdAt)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `;
-      printWindow.document.write(tableHTML);
-      printWindow.document.close();
-      printWindow.print();
+  const getRoleIcon = (role: RoleName) => {
+    switch (role) {
+      case "Customer": return User;
+      case "Driver": return Truck;
+      case "Employee": return Briefcase;
+      case "Admin": return ShieldCheck;
+      case "Super Admin": return Shield;
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading users...</div>
+      <div className="flex items-center justify-center min-h-[400px] w-full text-sm text-gray-500">
+        Loading Users & Permissions...
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">
-          User Management
-        </h2>
-        <div className="text-right">
-          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{users.length}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total Users</div>
-        </div>
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-gray-50 dark:bg-zinc-950 transition-all duration-300 ml-0 min-h-[calc(100vh-64px)]">
+      
+      {/* Top Tabs navbar */}
+      <div className="flex border-b border-gray-200 dark:border-zinc-800 mb-8">
+        <button 
+          onClick={() => setActiveTab("users")}
+          className={`px-5 py-3.5 text-sm font-bold border-b-2 transition-all ${
+            activeTab === "users" 
+              ? "border-[#4F46E5] text-[#4F46E5]" 
+              : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white"
+          }`}
+        >
+          Users & Permissions
+        </button>
+        <button 
+          onClick={() => setActiveTab("permissions")}
+          className={`px-5 py-3.5 text-sm font-bold border-b-2 transition-all ${
+            activeTab === "permissions" 
+              ? "border-[#4F46E5] text-[#4F46E5]" 
+              : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white"
+          }`}
+        >
+          Roles & Permissions
+        </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <Users className="w-5 h-5 text-blue-600" />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          
+          {/* TAB 1: Users & Permissions */}
+          {activeTab === "users" && (
+            <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
+              <div className="p-6 border-b border-gray-100 dark:border-zinc-800/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Users & Permissions</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Manage your organization's users and their access permissions.</p>
+                </div>
+                <Button 
+                  onClick={() => {
+                    setEditingUser(null);
+                    setForm({ name: "", email: "", password: "", role: "Employee", status: "Active", branch: "HQ", department: "—" });
+                    setOpenModal("invite");
+                  }}
+                  className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Invite User
+                </Button>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-800 dark:text-white">{users.length}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Users</p>
+              <div className="p-6">
+                
+                {/* Search / Filters */}
+                <div className="flex justify-between items-center gap-4 mb-6">
+                  <div className="relative w-full max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input 
+                      placeholder="Search users by name or email..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 text-xs rounded-lg border-gray-200 dark:border-zinc-800"
+                    />
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
+                        <th className="px-5 py-4 w-1/4">Users</th>
+                        <th className="px-5 py-4">Role</th>
+                        <th className="px-5 py-4">2FA</th>
+                        <th className="px-5 py-4">Status</th>
+                        <th className="px-5 py-4">Branch</th>
+                        <th className="px-5 py-4">Department</th>
+                        <th className="px-5 py-4">Last Login</th>
+                        <th className="px-5 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-xs text-gray-700 dark:text-zinc-300">
+                      {filteredUsers.map((u) => (
+                        <tr key={u.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
+                          <td className="px-5 py-4">
+                            <div className="font-semibold text-gray-900 dark:text-white">{u.name}</div>
+                            <div className="text-[10px] text-gray-400 mt-0.5">{u.email}</div>
+                          </td>
+                          <td className="px-5 py-4 capitalize font-semibold">{u.role || "Employee"}</td>
+                          <td className="px-5 py-4">
+                            <Shield className="w-4 h-4 text-gray-300 dark:text-zinc-700" />
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-[#4F46E5] dark:text-[#A5B4FC] rounded-full text-[10px] font-bold border border-indigo-200/20">
+                              {u.status === 'PENDING' ? 'Pending' : (u.status || 'Active')}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-gray-500">HQ</td>
+                          <td className="px-5 py-4 text-gray-400">—</td>
+                          <td className="px-5 py-4 text-gray-400">Never</td>
+                          <td className="px-5 py-4 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {
+                                  setEditingUser(u);
+                                  setForm({
+                                    name: u.name,
+                                    email: u.email,
+                                    password: "",
+                                    role: u.role || "Employee",
+                                    status: u.status || "Active",
+                                    branch: "HQ",
+                                    department: "—"
+                                  });
+                                  setOpenModal("edit");
+                                }} className="flex items-center gap-2">
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDeleteUser(u.id)} className="flex items-center gap-2 text-red-600">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-6 flex justify-between items-center text-xs text-gray-400">
+                  <span>Showing 1 to {filteredUsers.length} of {filteredUsers.length} entries</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="h-8 text-[11px] rounded-lg" disabled>Prev</Button>
+                    <Button variant="outline" size="sm" className="h-8 text-[11px] rounded-lg" disabled>Next</Button>
+                  </div>
+                </div>
+
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                <UserCheck className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                  {users.filter(u => (u.status || "ACTIVE") === "ACTIVE").length}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Active Users</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-                <Shield className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                  {users.filter(u => u.role === "ADMIN").length}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Administrators</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-                <UserX className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                  {users.filter(u => (u.status || "ACTIVE") !== "ACTIVE").length}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Inactive Users</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
-        {/* Left side - Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end">
-          {/* Role filter */}
-          <div>
-            <Select
-              value={roleFilter}
-              onValueChange={(value) => setRoleFilter(value)}
-            >
-              <SelectTrigger id="role" className="w-[160px]">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Roles</SelectItem>
-                <SelectItem value="ADMIN">Admin</SelectItem>
-                <SelectItem value="MANAGER">Manager</SelectItem>
-                <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
-                <SelectItem value="USER">User</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status filter */}
-          <div>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value)}
-            >
-              <SelectTrigger id="status" className="w-[160px]">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Statuses</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="INACTIVE">Inactive</SelectItem>
-                <SelectItem value="SUSPENDED">Suspended</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Right side - Search, Export and Add buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
-          {/* Search bar */}
-          <div className="flex w-full max-w-sm">
-            <Input
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="rounded-r-none"
-            />
-            <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-              <Search className="text-white w-5 h-5" />
-            </div>
-          </div>
-
-          {/* Export and Add buttons */}
-          <div className="flex gap-2">
-            {/* Export Dropdown */}
-            <div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
-                    Export
-                    <ArrowUp className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[120px]">
-                  <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
-                    <TableIcon className="w-4 h-4" />
-                    Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
-                    <Printer className="w-4 h-4" />
-                    Print
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-
-          </div>
-        </div>
-      </div>
-
-      {/* Users Table */}
-      <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
-          {filteredUsers.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
-              No users found.
-            </p>
-          ) : (
-            <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
-              <thead>
-                <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("id")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      ID
-                      {getSortIcon("id")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("name")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      User
-                      {getSortIcon("name")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("role")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      Role
-                      {getSortIcon("role")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("status")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      Status
-                      {getSortIcon("status")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Approved</th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("createdAt")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      Created
-                      {getSortIcon("createdAt")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                    <td className="px-2 sm:px-3 lg:px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                      #{user.id}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-3">
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-white">{user.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
-                      </div>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-3">
-                      {getRoleBadge(user.role)}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-3">
-                      {getStatusBadge(user.status)}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-3">
-                      {user.isApproved ? (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          Approved
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                          Pending
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(user.createdAt)}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-3 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          {!user.isApproved && (
-                            <DropdownMenuItem onClick={() => handleApproveUser(user.id)}>
-                              <UserCheck className="mr-2 h-4 w-4" />
-                              Approve User
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem onClick={() => handleEditUser(user.id)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleChangeRole(user.id, "ADMIN")}>
-                            Make Admin
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleChangeRole(user.id, "MANAGER")}>
-                            Make Manager
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleChangeRole(user.id, "SUPERVISOR")}>
-                            Make Supervisor
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleChangeRole(user.id, "USER")}>
-                            Make User
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleChangeStatus(user.id, "ACTIVE")}>
-                            Activate
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleChangeStatus(user.id, "INACTIVE")}>
-                            Deactivate
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleChangeStatus(user.id, "SUSPENDED")}>
-                            Suspend
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {/* TAB 2: Roles & Permissions */}
+          {activeTab === "permissions" && (
+            <div className="space-y-8">
+              
+              {/* Role Indicator Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                {(["Customer", "Driver", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => {
+                  const styles = getRoleCardClass(r);
+                  const Icon = getRoleIcon(r);
+                  const permList = rolePermissions[r] || [];
+                  const checkedCount = r === "Super Admin" ? totalPermissionsCount : permList.length;
+                  const progressPct = Math.round((checkedCount / totalPermissionsCount) * 100);
+
+                  return (
+                    <Card key={r} className={`shadow-sm border rounded-xl p-4 flex flex-col justify-between relative ${styles?.bg}`}>
+                      
+                      <div className="flex justify-between items-start">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${styles?.iconBg}`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        {r === "Super Admin" && <Lock className="w-3.5 h-3.5 text-indigo-400 absolute top-3.5 right-3.5" />}
+                      </div>
+
+                      <div className="mt-4">
+                        <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider">{r}</h4>
+                        <div className="flex items-baseline gap-1 mt-1">
+                          <span className="text-xl font-extrabold text-gray-900 dark:text-white">
+                            {r === "Super Admin" ? "All" : `${checkedCount} / ${totalPermissionsCount}`}
+                          </span>
+                        </div>
+
+                        {/* Progress line */}
+                        <div className="w-full bg-gray-200 dark:bg-zinc-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                          <div className={`h-full ${styles?.progressBg}`} style={{ width: `${progressPct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1.5 block">{progressPct}% access</span>
+                      </div>
+
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Roles matrix checkbox table */}
+              <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl p-6">
+                
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-950 dark:text-white">Roles & Permissions Matrix</h3>
+                    <p className="text-xs text-gray-400 mt-1">Review and manage access control for each role. Assign permissions to users.</p>
+                  </div>
+                  
+                  {/* Search inside permissions */}
+                  <div className="relative w-64">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    <Input 
+                      placeholder="Search permissions..." 
+                      value={permSearch}
+                      onChange={(e) => setPermSearch(e.target.value)}
+                      className="pl-8 h-8 text-[11px] rounded-lg border-gray-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-150 dark:border-zinc-850 rounded-xl">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-zinc-800/40 text-[11px] font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-150 dark:border-zinc-800">
+                        <th className="px-5 py-4 w-1/3">FEATURE</th>
+                        {(["Customer", "Driver", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => (
+                          <th key={r} className="px-5 py-4 text-center">
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="font-bold text-gray-900 dark:text-white">{r}</span>
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-150 dark:divide-zinc-800 text-xs">
+                      
+                      {permissionCategories.map((category) => {
+                        const isCollapsed = collapsedSections[category.code];
+                        const filteredPerms = category.permissions.filter(p => 
+                          p.name.toLowerCase().includes(permSearch.toLowerCase())
+                        );
+
+                        if (filteredPerms.length === 0) return null;
+
+                        return (
+                          <>
+                            {/* Category Header Row */}
+                            <tr key={category.code} className="bg-gray-100/50 dark:bg-zinc-800/20 font-bold text-gray-600 dark:text-zinc-400">
+                              <td colSpan={6} className="px-4 py-2 text-[10px] uppercase tracking-wider flex items-center gap-2 cursor-pointer select-none" onClick={() => {
+                                setCollapsedSections(prev => ({ ...prev, [category.code]: !prev[category.code] }));
+                              }}>
+                                {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                {category.name}
+                                <span className="bg-[#4F46E5]/10 text-[#4F46E5] text-[9px] px-1.5 py-0.5 rounded ml-2">
+                                  {filteredPerms.length}
+                                </span>
+                              </td>
+                            </tr>
+
+                            {/* Permission Rows */}
+                            {!isCollapsed && filteredPerms.map((perm) => (
+                              <tr key={perm.code} className="hover:bg-gray-50/50 dark:hover:bg-zinc-850/20 text-xs text-gray-700 dark:text-zinc-300">
+                                <td className="px-5 py-3 font-medium text-gray-800 dark:text-gray-200 pl-8">{perm.name}</td>
+                                
+                                {(["Customer", "Driver", "Employee", "Admin", "Super Admin"] as RoleName[]).map((role) => {
+                                  const isChecked = role === "Super Admin" || (rolePermissions[role] || []).includes(perm.code);
+                                  const isDisabled = role === "Super Admin";
+
+                                  return (
+                                    <td key={role} className="px-5 py-3 text-center">
+                                      <div className="flex justify-center items-center">
+                                        {isDisabled ? (
+                                          <div className="w-4 h-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200/50 rounded flex items-center justify-center">
+                                            <Lock className="w-2.5 h-2.5 text-indigo-500" />
+                                          </div>
+                                        ) : (
+                                          <Checkbox
+                                            checked={isChecked}
+                                            onCheckedChange={(checked) => handleTogglePermission(role, perm.code, !!checked)}
+                                            className="h-4 w-4 data-[state=checked]:bg-[#4F46E5] border-gray-300"
+                                          />
+                                        )}
+                                      </div>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </>
+                        );
+                      })}
+
+                    </tbody>
+                  </table>
+                </div>
+
+              </Card>
+
+            </div>
+          )}
+
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Invite/Edit User Dialog */}
+      <Dialog open={openModal !== null} onOpenChange={(open) => !open && setOpenModal(null)}>
+        <DialogContent className="max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? "Edit User Details" : "Invite New User"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-xs">Full Name</Label>
+              <Input 
+                value={form.name} 
+                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g. Maria Transport"
+                className="text-xs rounded-lg"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Email Address</Label>
+              <Input 
+                value={form.email} 
+                onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="e.g. maria.transport@demo.co"
+                className="text-xs rounded-lg"
+              />
+            </div>
+            {!editingUser && (
+              <div className="space-y-2">
+                <Label className="text-xs">Initial Password</Label>
+                <Input 
+                  type="password"
+                  value={form.password} 
+                  onChange={(e) => setForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Password"
+                  className="text-xs rounded-lg"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label className="text-xs">Role</Label>
+              <Select 
+                value={form.role} 
+                onValueChange={(val) => setForm(prev => ({ ...prev, role: val }))}
+              >
+                <SelectTrigger className="w-full text-xs">
+                  <SelectValue placeholder="Select Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Customer">Customer</SelectItem>
+                  <SelectItem value="Driver">Driver</SelectItem>
+                  <SelectItem value="Employee">Employee</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="Super Admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {editingUser && (
+              <div className="space-y-2">
+                <Label className="text-xs">Status</Label>
+                <Select 
+                  value={form.status} 
+                  onValueChange={(val) => setForm(prev => ({ ...prev, status: val }))}
+                >
+                  <SelectTrigger className="w-full text-xs">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="Suspended">Suspended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
+            <Button onClick={handleInviteUser} className="bg-[#4F46E5] text-white">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
