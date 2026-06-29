@@ -1262,18 +1262,18 @@ export default function ShipmentsPage() {
                               href={getTrackingUrl(shipment)!}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="block max-w-full truncate font-bold text-slate-900 dark:text-white hover:underline px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              className="block max-w-full truncate font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
                             >
-                              <span className="hidden sm:inline">{shipment.trackingId}</span>
-                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                              <span className="hidden sm:inline">{shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}</span>
+                              <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
                             </a>
                           ) : (
                             <button
                               onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                              className="block max-w-full truncate text-left font-bold text-slate-900 dark:text-white hover:underline px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              className="block max-w-full truncate text-left font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
                             >
-                              <span className="hidden sm:inline">{shipment.trackingId}</span>
-                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                              <span className="hidden sm:inline">{shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}</span>
+                              <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
                             </button>
                           )}
                           {deliveryStatusFilter === "All" && (
