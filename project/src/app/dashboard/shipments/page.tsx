@@ -319,10 +319,21 @@ export default function ShipmentsPage() {
     try {
       const date =
         typeof dateString === "string" ? parseISO(dateString) : dateString;
-      return format(date, "dd/MM/yy");
+      return format(date, "dd/MM/yyyy");
     } catch (error) {
       console.error("Error formatting date:", error);
       return "Invalid Date";
+    }
+  };
+
+  const formatTime = (dateString: string | Date) => {
+    try {
+      const date =
+        typeof dateString === "string" ? parseISO(dateString) : dateString;
+      return format(date, "hh:mm a");
+    } catch (error) {
+      console.error("Error formatting time:", error);
+      return "";
     }
   };
 
@@ -1200,8 +1211,13 @@ export default function ShipmentsPage() {
                           onChange={() => handleToggleSelect(shipment.id)}
                         />
                       </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        {formatDate(shipment.shipmentDate || shipment.createdAt)}
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-left">
+                        <div className="flex flex-col gap-0.5">
+                          <span>{formatDate(shipment.shipmentDate || shipment.createdAt)}</span>
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono tracking-tight leading-none mt-0.5">
+                            {formatTime(shipment.shipmentDate || shipment.createdAt)}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                         <button
