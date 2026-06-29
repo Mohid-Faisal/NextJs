@@ -20,6 +20,11 @@ export function decodeToken(token: string) {
 export async function generateInvoiceNumber(prisma: any): Promise<string> {
   // Get the highest invoice number from the database
   const lastShipment = await prisma.shipment.findFirst({
+    where: {
+      invoiceNumber: {
+        not: null
+      }
+    },
     orderBy: {
       invoiceNumber: 'desc'
     },

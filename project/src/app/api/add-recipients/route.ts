@@ -66,8 +66,24 @@ export async function POST(req: NextRequest) {
     // console.log(companyname, personname, email, phone, country, state, city, zip, address);
 
     // console.log(Email);
-    // Basic validation
-    const requiredFields = ["companyname", "country"] as const;
+    if (!companyname || String(companyname).trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Company Name is required." },
+        { status: 400 }
+      );
+    }
+    if (!personname || String(personname).trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Person Name is required." },
+        { status: 400 }
+      );
+    }
+    if (!country || String(country).trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Country is required." },
+        { status: 400 }
+      );
+    }
 
     const existingRecipient = await prisma.recipients.findFirst({
       where: orgWhere(session, {
@@ -80,15 +96,6 @@ export async function POST(req: NextRequest) {
         { success: false, message: "Recipient already exists." },
         { status: 400 }
       );
-    }
-
-    for (const field of requiredFields) {
-      if (!body[field] || String(body[field]).trim() === "") {
-        return NextResponse.json(
-          { success: false, message: `${field} is required.` },
-          { status: 400 }
-        );
-      }
     }
 
     // Check if location is a remote area
@@ -107,9 +114,9 @@ export async function POST(req: NextRequest) {
         Zip: zip,
         Address: address,
         isRemoteArea: remoteAreaCheck.isRemote,
-        remoteAreaCompanies: remoteAreaCheck.companies.length > 0 
+        remoteAreaCompanies: (remoteAreaCheck.companies.length > 0 
           ? JSON.stringify(remoteAreaCheck.companies) 
-          : null,
+          : null) as any,
       }),
     });
 

@@ -26,7 +26,7 @@ export async function GET(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const note = await findOrgCreditNote(session, idNum, {
+    const note: any = await findOrgCreditNote(session, idNum, {
       customer: {
         select: { id: true, PersonName: true, CompanyName: true },
       },

@@ -21,8 +21,24 @@ export async function POST(req: NextRequest) {
       address,
     } = await req.json();
     // console.log(Company, Address, City, Country, Contact, Email, ActiveStatus, SpecialInstructions);
-    // Basic validation
-    const requiredFields = ["companyname", "country"];
+    if (!companyname || String(companyname).trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Company Name is required." },
+        { status: 400 }
+      );
+    }
+    if (!personname || String(personname).trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Person Name is required." },
+        { status: 400 }
+      );
+    }
+    if (!country || String(country).trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Country is required." },
+        { status: 400 }
+      );
+    }
 
     const existingVendor = await prisma.vendors.findFirst({
       where: orgWhere(session, {
@@ -35,15 +51,6 @@ export async function POST(req: NextRequest) {
         { success: false, message: "Vendor already exists." },
         { status: 400 }
       );
-    }
-
-    for (const field of requiredFields) {
-      if (!eval(field)) {
-        return NextResponse.json(
-          { success: false, message: `${field} is required.` },
-          { status: 400 }
-        );
-      }
     }
 
     // Store shipment in the database

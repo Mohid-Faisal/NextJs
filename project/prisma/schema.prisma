@@ -35,6 +35,7 @@ model Organization {
   createdAt     DateTime @default(now())
   members       OrganizationMember[]
   subscription  Subscription?
+  paymentProofs PaymentProof[]
 }
 
 model OrganizationMember {
@@ -58,6 +59,7 @@ model Plan {
   maxShipmentsPerMonth Int
   features             Json
   subscriptions        Subscription[]
+  paymentProofs        PaymentProof[]
 }
 
 model Subscription {
@@ -565,4 +567,22 @@ model FixedCharge {
 model AppSetting {
   key   String @id
   value String
+}
+
+model PaymentProof {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  planId         Int
+  amount         Float
+  method         String       // BANK_TRANSFER | EASYPAISA | JAZZCASH | CASH
+  referenceId    String       // Transaction/Reference ID
+  receiptUrl     String?      // Screenshot/Receipt upload URL
+  status         String       @default("pending") // pending | approved | rejected
+  notes          String?      // Optional admin notes
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan           Plan         @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
 }

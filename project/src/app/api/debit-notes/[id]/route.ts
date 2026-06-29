@@ -25,7 +25,7 @@ export async function GET(
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const note = await findOrgDebitNote(session, idNum, {
+    const note: any = await findOrgDebitNote(session, idNum, {
       vendor: {
         select: { id: true, PersonName: true, CompanyName: true },
       },

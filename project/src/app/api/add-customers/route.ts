@@ -131,8 +131,24 @@ export async function POST(req: NextRequest) {
       FilePath: `/uploads/${filename}`,
     };
     
-    // console.log(customerData);
-    
+    if (!customerData.CompanyName || customerData.CompanyName.trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Company Name is required." },
+        { status: 400 }
+      );
+    }
+    if (!customerData.PersonName || customerData.PersonName.trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Person Name is required." },
+        { status: 400 }
+      );
+    }
+    if (!customerData.Country || customerData.Country.trim() === "") {
+      return NextResponse.json(
+        { success: false, message: "Country is required." },
+        { status: 400 }
+      );
+    }
 
     const existingCustomer = await prisma.customers.findFirst({
       where: orgWhere(session, {

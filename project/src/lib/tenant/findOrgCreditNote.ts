@@ -5,7 +5,7 @@ import type { SessionPayload } from "@/lib/auth/session";
 export async function findOrgCreditNote(
   session: SessionPayload,
   creditNoteId: number,
-  include?: Parameters<typeof prisma.creditNote.findFirst>[0]["include"]
+  include?: any
 ) {
   return prisma.creditNote.findFirst({
     where: {

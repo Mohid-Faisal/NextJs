@@ -115,9 +115,9 @@ export async function PUT(
         Zip: body.zip,
         Address: body.address,
         isRemoteArea: remoteAreaCheck.isRemote,
-        remoteAreaCompanies: remoteAreaCheck.companies.length > 0 
+        remoteAreaCompanies: (remoteAreaCheck.companies.length > 0 
           ? JSON.stringify(remoteAreaCheck.companies) 
-          : null,
+          : null) as any,
       },
     });
 
@@ -277,9 +277,9 @@ export async function PATCH(
         Country: body.Country,
         Zip: body.Zip,
         isRemoteArea: remoteAreaCheck.isRemote,
-        remoteAreaCompanies: remoteAreaCheck.companies.length > 0 
+        remoteAreaCompanies: (remoteAreaCheck.companies.length > 0 
           ? JSON.stringify(remoteAreaCheck.companies) 
-          : null,
+          : null) as any,
       },
     });
 

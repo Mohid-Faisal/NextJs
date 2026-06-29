@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
           where: { id: recipient.id },
           data: {
             isRemoteArea: result.isRemote,
-            remoteAreaCompanies: companiesJson,
+            remoteAreaCompanies: companiesJson as any,
           },
         });
         updatedCount += 1;

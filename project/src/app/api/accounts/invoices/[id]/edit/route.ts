@@ -25,7 +25,7 @@ export async function GET(
     }
 
     // Fetch invoice data for editing
-    const invoice = await findOrgInvoice(
+    const invoice: any = await findOrgInvoice(
       session,
       parseInt(invID),
       { shipmentId: parseInt(shipmentId) },
@@ -85,7 +85,7 @@ export async function PUT(
     console.log('Updating invoice:', { invoiceId, shipmentId, body });
 
     // Get current invoice to check old amount
-    const currentInvoice = await findOrgInvoice(session, invoiceId, {}, {
+    const currentInvoice: any = await findOrgInvoice(session, invoiceId, {}, {
       customer: true,
       vendor: true,
       shipment: true,

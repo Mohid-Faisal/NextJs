@@ -823,6 +823,7 @@ export async function GET(req: Request) {
 
     const voucherMonthNets = await computeMonthlyPartyNetsUsingVoucherDates(
       prisma,
+      session.organizationId,
       monthSlices.map((s) => s.endExclusive)
     );
 

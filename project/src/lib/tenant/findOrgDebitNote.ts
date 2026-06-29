@@ -5,7 +5,7 @@ import type { SessionPayload } from "@/lib/auth/session";
 export async function findOrgDebitNote(
   session: SessionPayload,
   debitNoteId: number,
-  include?: Parameters<typeof prisma.debitNote.findFirst>[0]["include"]
+  include?: any
 ) {
   return prisma.debitNote.findFirst({
     where: {

@@ -161,10 +161,12 @@ async function buildInvoicesShipmentMap(
  */
 export async function computeMonthlyPartyNetsUsingVoucherDates(
   prisma: PrismaClient,
+  organizationId: number,
   endExclusiveDates: Date[]
 ): Promise<Array<{ customerNet: number; vendorNet: number }>> {
   const [allCustomerTx, allVendorTx] = await Promise.all([
     prisma.customerTransaction.findMany({
+      where: { organizationId },
       select: {
         customerId: true,
         type: true,
@@ -175,6 +177,7 @@ export async function computeMonthlyPartyNetsUsingVoucherDates(
       },
     }),
     prisma.vendorTransaction.findMany({
+      where: { organizationId },
       select: {
         vendorId: true,
         type: true,
@@ -281,6 +284,7 @@ export async function computeMonthlyPartyNetsUsingVoucherDates(
     customerIds.length > 0 && customerPayOr.length > 0
       ? prisma.payment.findMany({
           where: {
+            organizationId,
             transactionType: "INCOME",
             fromCustomerId: { in: customerIds },
             OR: customerPayOr,
@@ -299,6 +303,7 @@ export async function computeMonthlyPartyNetsUsingVoucherDates(
     vendorIds.length > 0 && vendorPayOr.length > 0
       ? prisma.payment.findMany({
           where: {
+            organizationId,
             transactionType: "EXPENSE",
             toVendorId: { in: vendorIds },
             OR: vendorPayOr,

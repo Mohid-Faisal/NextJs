@@ -22,6 +22,16 @@ export async function POST(req: NextRequest) {
     if (auth.error) return auth.error;
     const session = auth.session;
 
+    // Forward the caller's auth to internal invoice API calls so they share
+    // the same org-scoped session (server-side fetch does not carry cookies).
+    const incomingAuth = req.headers.get("authorization");
+    const incomingCookie = req.headers.get("cookie");
+    const forwardHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (incomingAuth) forwardHeaders["authorization"] = incomingAuth;
+    if (incomingCookie) forwardHeaders["cookie"] = incomingCookie;
+
     // Plan limit / billing gate: block new shipments when the org is over its
     // monthly quota, trial-expired, or past due.
     const limit = await checkShipmentLimit(session.organizationId);
@@ -379,7 +389,7 @@ export async function POST(req: NextRequest) {
       { status: "Picked Up", timestamp: shipmentDateTime.toISOString(), location: "Lahore, Pakistan" },
     ];
     await prisma.shipment.update({
-      where: orgWhere(session, { id: shipment.id }),
+      where: { id: shipment.id },
       data: {
         trackingStatusHistory: initialTrackingHistory as unknown as object,
         trackingStatus: "Picked Up",
@@ -529,9 +539,7 @@ export async function POST(req: NextRequest) {
 
       const customerInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: forwardHeaders,
         body: JSON.stringify({
           invoiceNumber: invoiceNumber,
           invoiceDate: shipmentDate ? new Date(shipmentDate).toISOString() : new Date().toISOString(),
@@ -558,7 +566,7 @@ export async function POST(req: NextRequest) {
 
       // Update shipment invoiceStatus to match calculated status
       await prisma.shipment.update({
-        where: orgWhere(session, { id: shipment.id }),
+        where: { id: shipment.id },
         data: { invoiceStatus: calculatedInvoiceStatus }
       });
 
@@ -609,9 +617,7 @@ export async function POST(req: NextRequest) {
 
       const vendorInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: forwardHeaders,
         body: JSON.stringify({
           invoiceNumber: vendorInvoiceNumber,
           invoiceDate: shipmentDate ? new Date(shipmentDate).toISOString() : new Date().toISOString(),

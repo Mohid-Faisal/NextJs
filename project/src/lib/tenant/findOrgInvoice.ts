@@ -7,7 +7,7 @@ export async function findOrgInvoice(
   session: SessionPayload,
   invoiceId: number,
   extra: Record<string, unknown> = {},
-  include?: Parameters<typeof prisma.invoice.findFirst>[0]["include"]
+  include?: any
 ) {
   return prisma.invoice.findFirst({
     where: orgWhere(session, { id: invoiceId, ...extra }),

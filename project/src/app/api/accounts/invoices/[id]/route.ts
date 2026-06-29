@@ -17,7 +17,7 @@ export async function GET(
     const { id } = await params;
     const invoiceId = parseInt(id);
 
-    const invoice = await findOrgInvoice(session, invoiceId, {}, {
+    const invoice: any = await findOrgInvoice(session, invoiceId, {}, {
       customer: true,
       vendor: true,
       shipment: true,

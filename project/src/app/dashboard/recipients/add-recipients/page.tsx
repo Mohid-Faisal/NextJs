@@ -180,6 +180,19 @@ const RecipientsPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!form.companyname.trim()) {
+      toast.error("Company Name is required.");
+      return;
+    }
+    if (!form.personname.trim()) {
+      toast.error("Person Name is required.");
+      return;
+    }
+    if (!form.country) {
+      toast.error("Country is required.");
+      return;
+    }
+
     const url = isEditMode ? `/api/recipients/${recipientId}` : "/api/add-recipients";
     const method = isEditMode ? "PUT" : "POST";
 

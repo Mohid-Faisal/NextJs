@@ -6,7 +6,7 @@ import { orgWhere } from "@/lib/tenant/prismaScope";
 export async function findOrgJournalEntry(
   session: SessionPayload,
   entryId: number,
-  include?: Parameters<typeof prisma.journalEntry.findFirst>[0]["include"]
+  include?: any
 ) {
   return prisma.journalEntry.findFirst({
     where: orgWhere(session, { id: entryId }),

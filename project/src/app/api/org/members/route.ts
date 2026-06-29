@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { sendEmail } from "@/lib/email";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
-export const ASSIGNABLE_ROLES = ["OWNER", "ADMIN", "STAFF", "ACCOUNTANT"];
+const ASSIGNABLE_ROLES = ["OWNER", "ADMIN", "STAFF", "ACCOUNTANT"];
 
 export const dynamic = 'force-dynamic';
 

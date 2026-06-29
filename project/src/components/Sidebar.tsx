@@ -38,6 +38,7 @@ import {
   UserCheck,
   Crown,
   Layers,
+  Landmark,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -131,6 +132,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   ];
   const subLinksSaaS = [
     { href: "/dashboard/saas/organizations", label: "SaaS Dashboard", icon: Crown },
+    { href: "/dashboard/saas/payment-proofs", label: "Payment Proofs", icon: Landmark },
     { href: "/dashboard/saas/plans", label: "Plans", icon: Layers },
     { href: "/dashboard/saas/wallets", label: "Wallets", icon: Wallet },
     { href: "/dashboard/saas/subscriptions", label: "Subscriptions", icon: FileText },

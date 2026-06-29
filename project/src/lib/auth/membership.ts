@@ -84,7 +84,7 @@ export async function createOrganizationForSignup(
   companyName: string,
   userId: number,
   planCode = "starter"
-): Promise<{ organizationId: number; slug: string }> {
+): Promise<{ id: number; slug: string }> {
   const slug = await uniqueSlug(companyName);
 
   // Resolve the requested plan, falling back to starter so a bad/empty code
@@ -118,5 +118,5 @@ export async function createOrganizationForSignup(
     },
   });
 
-  return { organizationId: org.id, slug: org.slug };
+  return { id: org.id, slug: org.slug };
 }
