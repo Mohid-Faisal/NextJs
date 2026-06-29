@@ -72,6 +72,7 @@ export default function ShipmentsPage() {
   const [inTransitCount, setInTransitCount] = useState(0);
   const [deliveredCount, setDeliveredCount] = useState(0);
   const [cancelledCount, setCancelledCount] = useState(0);
+  const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
@@ -318,10 +319,85 @@ export default function ShipmentsPage() {
     try {
       const date =
         typeof dateString === "string" ? parseISO(dateString) : dateString;
-      return format(date, "dd/MM/yy");
+      return format(date, "dd/MM/yyyy");
     } catch (error) {
       console.error("Error formatting date:", error);
       return "Invalid Date";
+    }
+  };
+
+  // Function to format time from createdAt
+  const formatTime = (dateString: string | Date) => {
+    try {
+      const date =
+        typeof dateString === "string" ? parseISO(dateString) : dateString;
+      return format(date, "hh:mm a");
+    } catch (error) {
+      console.error("Error formatting time:", error);
+      return "";
+    }
+  };
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "?";
+    const clean = name.trim().replace(/\s+/g, " ");
+    const parts = clean.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
+  const refreshShipmentsList = async () => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: pageSize === 'all' ? 'all' : String(pageSize),
+      ...(searchTerm && { search: searchTerm }),
+      ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
+      ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+      ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+      sortField,
+      sortOrder,
+    });
+    const refreshRes = await fetch(`/api/shipments?${params}`);
+    const data = await refreshRes.json();
+    setShipments(data.shipments);
+    setTotal(data.total);
+    if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
+    if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
+    if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
+    if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = shipments.map(s => s.id);
+      setSelectedShipmentIds(allIds);
+    } else {
+      setSelectedShipmentIds([]);
+    }
+  };
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedShipmentIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete the ${selectedShipmentIds.length} selected shipment(s)?`)) return;
+    try {
+      await Promise.all(
+        selectedShipmentIds.map(id =>
+          fetch(`/api/shipments/${id}`, { method: "DELETE" })
+        )
+      );
+      toast.success("Selected shipments deleted successfully!");
+      setSelectedShipmentIds([]);
+      await refreshShipmentsList();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete some shipments.");
     }
   };
 
@@ -837,6 +913,10 @@ export default function ShipmentsPage() {
     exportToPDF(data, headers, 'Shipments Report', total);
   };
 
+  const selectedTotal = shipments
+    .filter((s) => selectedShipmentIds.includes(s.id))
+    .reduce((sum, s) => sum + Number(s.totalCost || 0), 0);
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0 min-h-[calc(100vh-64px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
@@ -1009,84 +1089,30 @@ export default function ShipmentsPage() {
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
                 <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
+                  <th className="w-12 px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                      checked={shipments.length > 0 && selectedShipmentIds.length === shipments.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("shipmentDate")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Date</span>
-                      <span className="sm:hidden">D</span>
+                      <span>Order</span>
                       {getSortIcon("shipmentDate")}
                     </button>
                   </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("invoiceNumber")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Booking#</span>
-                      <span className="sm:hidden">B</span>
-                      {getSortIcon("invoiceNumber")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[180px]">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[200px]">
                     <button
                       onClick={() => handleSort("senderName")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Sender / Recipient</span>
-                      <span className="sm:hidden">S / R</span>
+                      <span>Sender / Recipient</span>
                       {getSortIcon("senderName")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("destination")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Country</span>
-                      <span className="sm:hidden">D</span>
-                      {getSortIcon("destination")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("packaging")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Type</span>
-                      <span className="sm:hidden">T</span>
-                      {getSortIcon("packaging")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("amount")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Pcs</span>
-                      <span className="sm:hidden">P</span>
-                      {getSortIcon("amount")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("totalWeight")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Weight</span>
-                      <span className="sm:hidden">W</span>
-                      {getSortIcon("totalWeight")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[140px]">
-                    <button
-                      onClick={() => handleSort("trackingId")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Tracking</span>
-                      <span className="sm:hidden">T</span>
-                      {getSortIcon("trackingId")}
                     </button>
                   </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
@@ -1094,14 +1120,24 @@ export default function ShipmentsPage() {
                       onClick={() => handleSort("totalCost")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Total</span>
-                      <span className="sm:hidden">T</span>
+                      <span>Total</span>
                       {getSortIcon("totalCost")}
                     </button>
                   </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">Actions</span>
-                    <span className="sm:hidden">A</span>
+                    <button
+                      onClick={() => handleSort("deliveryStatus")}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                    >
+                      <span>Order Status</span>
+                      {getSortIcon("deliveryStatus")}
+                    </button>
+                  </th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span>Address</span>
+                  </th>
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <span>Actions</span>
                   </th>
                 </tr>
               </thead>
@@ -1116,144 +1152,149 @@ export default function ShipmentsPage() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        {formatDate(shipment.shipmentDate || shipment.createdAt)}
+                      <td className="w-12 px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                          checked={selectedShipmentIds.includes(shipment.id)}
+                          onChange={() => handleToggleSelect(shipment.id)}
+                        />
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <button
-                          onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                          className="font-bold text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                        >
-                          {shipment.invoiceNumber}
-                        </button>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="min-w-0">
-                          <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                            <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
-                            <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
-                          </div>
-                          <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
-                            <ArrowRight className="h-3 w-3 shrink-0" />
-                            <span className="truncate">
-                              <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
-                              <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{getCountryName(shipment.destination)}</span>
-                        <span className="sm:hidden">{getCountryName(shipment.destination)?.substring(0, 8)}...</span>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.packaging || "N/A"}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || shipment.weight || 0}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="flex min-w-0 flex-col items-start gap-1">
+                        <div className="flex flex-col gap-1 items-start">
                           {getTrackingUrl(shipment) ? (
                             <a
                               href={getTrackingUrl(shipment)!}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="block max-w-full truncate font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              className="text-slate-900 dark:text-white hover:text-white hover:bg-slate-900 dark:hover:text-black dark:hover:bg-white rounded-md px-1.5 py-0.5 transition-all duration-200 block w-fit font-bold"
                             >
-                              <span className="hidden sm:inline">{shipment.trackingId}</span>
-                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                              {shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}
                             </a>
                           ) : (
                             <button
                               onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                              className="block max-w-full truncate text-left font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              className="text-slate-900 dark:text-white hover:text-white hover:bg-slate-900 dark:hover:text-black dark:hover:bg-white rounded-md px-1.5 py-0.5 transition-all duration-200 block w-fit font-bold text-left cursor-pointer"
                             >
-                              <span className="hidden sm:inline">{shipment.trackingId}</span>
-                              <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
+                              {shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}
                             </button>
                           )}
-                          {deliveryStatusFilter === "All" && (
-                            <span
-                              className={`rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getDeliveryStatusColor(
-                                shipment.deliveryStatus
-                              )}`}
-                            >
-                              {shipment.deliveryStatus || "N/A"}
-                            </span>
-                          )}
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400 font-mono tracking-tight leading-tight">
+                            <div>{formatDate(shipment.shipmentDate || shipment.createdAt)}</div>
+                            <div className="mt-0.5 text-slate-400">{formatTime(shipment.shipmentDate || shipment.createdAt)}</div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="min-w-0">
-                          <div className="font-semibold text-gray-900 dark:text-gray-100">
-                            {Number(shipment.totalCost || 0).toLocaleString()}
+                        <div className="flex items-center gap-3">
+                          {/* Initials Circle */}
+                          <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-300 shrink-0">
+                            {getInitials(shipment.senderName)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate text-sm">
+                              {shipment.senderName || "N/A"}
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400 min-w-0">
+                              <ArrowRight className="h-3 w-3 text-slate-400 shrink-0" />
+                              <span className="truncate">{shipment.recipientName || "N/A"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <div className="flex flex-col items-start gap-1">
+                          <div className="font-bold text-gray-950 dark:text-gray-50 text-sm">
+                            ${Number(shipment.totalCost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                           </div>
                           <span
-                            className={`mt-1 inline-block rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getInvoiceColor(
+                            className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${getInvoiceColor(
                               shipment.invoices?.[0]?.status ||
                                 shipment.invoiceStatus ||
                                 "N/A"
                             )}`}
                           >
-                            <span className="hidden sm:inline">
-                              {shipment.invoices?.[0]?.status ||
-                                shipment.invoiceStatus ||
-                                "N/A"}
-                            </span>
-                            <span className="sm:hidden">
-                              {(shipment.invoices?.[0]?.status ||
-                                shipment.invoiceStatus ||
-                                "N/A").substring(0, 3)}
-                            </span>
+                            {shipment.invoices?.[0]?.status ||
+                              shipment.invoiceStatus ||
+                              "N/A"}
                           </span>
                         </div>
                       </td>
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-43">
-                            <DropdownMenuItem onSelect={() => handleEdit(shipment)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipments/${shipment.id}`)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipment-invoice/${shipment.id}`)}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Shipment Invoice
-                            </DropdownMenuItem>
-                            {shipment.invoices?.[0]?.id && (
-                              <>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold inline-block border ${
+                            shipment.deliveryStatus?.toLowerCase() === "delivered"
+                              ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-900 dark:text-green-300"
+                              : shipment.deliveryStatus?.toLowerCase() === "in transit"
+                              ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/20 dark:border-blue-900 dark:text-blue-300"
+                              : shipment.deliveryStatus?.toLowerCase() === "cancelled" || shipment.deliveryStatus?.toLowerCase() === "canceled"
+                              ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-950/20 dark:border-red-900 dark:text-red-300"
+                              : "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-900 dark:text-amber-300"
+                          }`}
+                        >
+                          {shipment.deliveryStatus || "Pending"}
+                        </span>
+                      </td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 max-w-[220px] truncate text-xs text-gray-500 dark:text-gray-400" title={shipment.recipientAddress || "N/A"}>
+                        {shipment.recipientAddress || "N/A"}
+                      </td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full"
+                            onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100 rounded-full">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4 text-slate-500" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg p-1 z-50">
+                              <DropdownMenuItem onSelect={() => handleEdit(shipment)} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-md">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipments/${shipment.id}`)} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-md">
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipment-invoice/${shipment.id}`)} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-md">
+                                <FileText className="mr-2 h-4 w-4" />
+                                Shipment Invoice
+                              </DropdownMenuItem>
+                              {shipment.invoices?.[0]?.id && (
                                 <DropdownMenuItem
                                   onSelect={() => router.push(`/dashboard/receipt/${shipment.invoices![0].id}`)}
+                                  className="cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-md"
                                 >
                                   📄 Print Receipt
                                 </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuItem onSelect={() => openManageTrackingDialogFor(shipment)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Tracking Status
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleMarkAsInTransit(shipment)} className="text-blue-600">
-                              <Truck className="mr-2 h-4 w-4" />
-                              Mark as In Transit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleMarkAsDelivered(shipment)} className="text-green-600">
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Mark as Delivered
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleDelete(shipment)} className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              )}
+                              <DropdownMenuItem onSelect={() => openManageTrackingDialogFor(shipment)} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-md">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Tracking Status
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleMarkAsInTransit(shipment)} className="text-blue-600 cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-md">
+                                <Truck className="mr-2 h-4 w-4" />
+                                Mark as In Transit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleMarkAsDelivered(shipment)} className="text-green-600 cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-md">
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Mark as Delivered
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleDelete(shipment)} className="text-red-600 cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-md">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </td>
                     </motion.tr>
                   ))}
@@ -1518,20 +1559,7 @@ export default function ShipmentsPage() {
             entityType="shipment"
             entityId={shipmentToDelete?.id || 0}
             onDelete={async () => {
-              const params = new URLSearchParams({
-                page: String(page),
-                limit: pageSize === 'all' ? 'all' : String(pageSize),
-                ...(searchTerm && { search: searchTerm }),
-                ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
-                ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
-                ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
-                sortField,
-                sortOrder,
-              });
-              const refreshRes = await fetch(`/api/shipments?${params}`);
-              const { shipments, total } = await refreshRes.json();
-              setShipments(shipments);
-              setTotal(total);
+              await refreshShipmentsList();
               setShipmentToDelete(null);
             }}
             onClose={() => {
@@ -1551,6 +1579,50 @@ export default function ShipmentsPage() {
         onPageSizeChange={setPageSize}
         entityName="shipments"
       />
+
+      {/* Floating Selected Capsule */}
+      <AnimatePresence>
+        {selectedShipmentIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-zinc-950 text-white rounded-full px-6 py-3.5 shadow-2xl flex items-center gap-6 z-50 border border-slate-800"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-slate-300">
+                {selectedShipmentIds.length} selected
+              </span>
+              <span className="h-4 w-px bg-slate-700" />
+              <span className="text-sm font-extrabold text-emerald-400">
+                ${selectedTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            
+            <div className="h-4 w-px bg-slate-700" />
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 text-sm font-bold text-rose-400 hover:text-rose-300 transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                Delete selected
+              </button>
+              
+              <span className="h-4 w-px bg-slate-700" />
+              
+              <button
+                onClick={() => setSelectedShipmentIds([])}
+                className="flex items-center gap-1.5 text-sm font-bold text-slate-300 hover:text-white transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <span className="text-lg leading-none font-light">×</span>
+                <span>Deselect all</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
