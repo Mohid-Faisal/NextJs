@@ -95,6 +95,7 @@ export default function ShipmentsPage() {
   const [customEndDate, setCustomEndDate] = useState("");
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false);
   const [shipmentToDelete, setShipmentToDelete] = useState<
     (Shipment & { invoices: { id: number; status: string }[] }) | null
   >(null);
@@ -392,21 +393,8 @@ export default function ShipmentsPage() {
     );
   };
 
-  const handleBulkDelete = async () => {
-    if (!window.confirm(`Are you sure you want to delete the ${selectedShipmentIds.length} selected shipment(s)?`)) return;
-    try {
-      await Promise.all(
-        selectedShipmentIds.map(id =>
-          fetch(`/api/shipments/${id}`, { method: "DELETE" })
-        )
-      );
-      toast.success("Selected shipments deleted successfully!");
-      setSelectedShipmentIds([]);
-      await refreshShipmentsList();
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to delete some shipments.");
-    }
+  const handleBulkDelete = () => {
+    setOpenBulkDeleteDialog(true);
   };
 
 
@@ -1675,6 +1663,24 @@ export default function ShipmentsPage() {
             onClose={() => {
               setOpenDeleteDialog(false);
               setShipmentToDelete(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete dialog */}
+      <Dialog open={openBulkDeleteDialog} onOpenChange={setOpenBulkDeleteDialog}>
+        <DialogContent className="max-w-md w-full">
+          <DeleteDialog
+            entityType="shipment"
+            entityId={selectedShipmentIds[0] || 0}
+            entityIds={selectedShipmentIds}
+            onDelete={async () => {
+              setSelectedShipmentIds([]);
+              await refreshShipmentsList();
+            }}
+            onClose={() => {
+              setOpenBulkDeleteDialog(false);
             }}
           />
         </DialogContent>

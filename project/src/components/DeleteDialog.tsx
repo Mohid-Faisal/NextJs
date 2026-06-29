@@ -17,6 +17,7 @@ interface DeleteDialogProps {
   onClose?: () => void;
   entityType: "vendor" | "recipient" | "customer" | "shipment" | "invoice" | "payment";
   entityId: number;
+  entityIds?: number[];
 }
 
 const DeleteDialog = ({
@@ -24,7 +25,10 @@ const DeleteDialog = ({
   onClose,
   entityType,
   entityId,
+  entityIds,
 }: DeleteDialogProps) => {
+  const isBulk = entityIds && entityIds.length > 1;
+  const primaryId = isBulk ? entityIds[0] : entityId;
   const [password, setPassword] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [step, setStep] = useState<"password" | "verification">("password");
@@ -53,7 +57,7 @@ const DeleteDialog = ({
         }
 
         // Send 2FA code to user's email
-        const response = await fetch(`/api/shipments/${entityId}/send-2fa`, {
+        const response = await fetch(`/api/shipments/${primaryId}/send-2fa`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -105,27 +109,44 @@ const DeleteDialog = ({
         return;
       }
 
-      // Verify 2FA code and delete shipment
-      const response = await fetch(`/api/shipments/${entityId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ password, verificationCode }),
-      });
+      const idsToDelete = isBulk ? entityIds : [entityId];
+      let successCount = 0;
+      let failCount = 0;
 
-      const data = await response.json();
+      for (const id of idsToDelete) {
+        try {
+          const response = await fetch(`/api/shipments/${id}`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ password, verificationCode }),
+          });
 
-      if (response.ok) {
-        toast.success("Shipment deleted successfully!");
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(
+          isBulk
+            ? `${successCount} shipment(s) deleted successfully!${failCount > 0 ? ` (${failCount} failed)` : ""}`
+            : "Shipment deleted successfully!"
+        );
         onDelete?.();
         onClose?.();
         setPassword("");
         setVerificationCode("");
         setStep("password");
       } else {
-        toast.error(data.error || "Failed to delete shipment");
+        toast.error("Failed to delete shipment(s)");
       }
     } catch (error) {
       console.error("Verification error:", error);
@@ -322,8 +343,15 @@ const DeleteDialog = ({
         </DialogTitle>
       </DialogHeader>
       <div className="text-sm text-gray-700 mb-4 text-center">
-        Are you sure you want to delete this {getEntityDisplayName()}? This action cannot be
-        undone.
+        {isBulk ? (
+          <>
+            Are you sure you want to delete <strong>{entityIds.length}</strong> selected {getEntityDisplayName()}(s)? This action cannot be undone.
+          </>
+        ) : (
+          <>
+            Are you sure you want to delete this {getEntityDisplayName()}? This action cannot be undone.
+          </>
+        )}
         {entityType === "shipment" && (
           <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
             ⚠️ Shipment deletion requires two-factor authentication for security.
