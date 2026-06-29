@@ -510,7 +510,7 @@ const AddShipmentPage = () => {
   const [offices, setOffices] = useState<Option[]>([]);
 
   const [form, setForm] = useState({
-    shipmentDate: new Date().toLocaleDateString("en-CA"), // Default to today's date in local timezone
+    shipmentDate: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16), // Default to current date and time in local timezone
     trackingId: "",
     referenceNumber: "", // Add reference number field
     invoiceNumber: "", // Add invoice number field
@@ -699,7 +699,7 @@ const AddShipmentPage = () => {
       console.log("Shipment saved successfully with data:", data.receivedData);
       if (!isEditing) {
       setForm({
-          shipmentDate: new Date().toLocaleDateString("en-CA"),
+          shipmentDate: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
         trackingId: "",
           invoiceNumber: "",
           referenceNumber: "",
@@ -826,8 +826,8 @@ const AddShipmentPage = () => {
           // Create a complete form state object with all the data
           const completeFormData = {
             shipmentDate: s.shipmentDate
-              ? new Date(s.shipmentDate).toISOString().slice(0, 10)
-              : new Date().toLocaleDateString("en-CA"),
+              ? new Date(new Date(s.shipmentDate).getTime() - new Date(s.shipmentDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+              : new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
             trackingId: s.trackingId || "",
             invoiceNumber: s.invoiceNumber || "",
             referenceNumber: s.referenceNumber || "",
@@ -1245,7 +1245,7 @@ const AddShipmentPage = () => {
                   <Input
                     id="shipmentDate"
                     name="shipmentDate"
-                    type="date"
+                    type="datetime-local"
                     ref={shipmentDateRef}
                     value={form.shipmentDate}
                     onChange={handleChange}
