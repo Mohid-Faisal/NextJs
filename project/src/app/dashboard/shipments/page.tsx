@@ -31,6 +31,7 @@ import {
   Table,
   CheckCircle,
   Truck,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Country } from "country-state-city";
@@ -1016,7 +1017,8 @@ export default function ShipmentsPage() {
         {/* Left side - Page size and Search field */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:max-w-2xl min-w-0">
           {/* Search field */}
-          <div className="flex w-full max-w-sm">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search by invoice #, sender, receiver, destination, type, tracking..."
               value={searchTerm}
@@ -1024,11 +1026,8 @@ export default function ShipmentsPage() {
                 setPage(1);
                 setSearchTerm(e.target.value);
               }}
-              className="rounded-r-none"
+              className="pl-10 w-full rounded-lg border-gray-300 dark:border-gray-600"
             />
-            <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-              <Search className="text-white w-5 h-5" />
-            </div>
           </div>
         </div>
 
@@ -1038,7 +1037,7 @@ export default function ShipmentsPage() {
           <div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+                <Button className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">
                   Export
                   <ArrowUp className="ml-2 h-4 w-4" />
                 </Button>
@@ -1111,6 +1110,15 @@ export default function ShipmentsPage() {
               </div>
             )}
           </div>
+
+          {/* Add Shipment Button */}
+          <Button
+            onClick={() => router.push('/dashboard/shipments/add')}
+            className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Shipment
+          </Button>
         </div>
       </div>
 
