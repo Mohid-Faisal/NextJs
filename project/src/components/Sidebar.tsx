@@ -158,6 +158,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   ];
   const subLinksSaaS = [
     { href: "/dashboard/saas/organizations", label: "SaaS Dashboard", icon: Crown },
+    { href: "/dashboard/saas/manage-organizations", label: "Manage Organizations", icon: Building2 },
     { href: "/dashboard/saas/payment-proofs", label: "Payment Proofs", icon: Landmark },
     { href: "/dashboard/saas/plans", label: "Plans", icon: Layers },
     { href: "/dashboard/saas/wallets", label: "Wallets", icon: Wallet },
