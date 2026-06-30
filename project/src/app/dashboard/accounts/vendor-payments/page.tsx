@@ -506,20 +506,20 @@ export default function VendorPaymentsPage() {
 
         {/* Read-only stats tabs on the top right */}
         <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-          <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[140px] bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-450 shadow-sm border border-gray-150/40">
-            <span className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400">
-              ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
-              Total Vendor Payments
-            </span>
-          </div>
           <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[110px] bg-blue-50 dark:bg-blue-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40">
             <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">
               {filteredPayments.length}
             </span>
             <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
               Payments Count
+            </span>
+          </div>
+          <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[140px] bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-455 shadow-sm border border-gray-150/40">
+            <span className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400">
+              ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
+              Total Vendor Payments
             </span>
           </div>
         </div>
