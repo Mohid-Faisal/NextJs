@@ -22,6 +22,9 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import Link from "next/link";
+import { Lock, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/components/PermissionContext";
 import {
   Select,
@@ -91,9 +94,42 @@ function formatAccountsTrendAxis(value: number): string {
 }
 
 // Active slice renderer for the country pie chart: slightly larger with white border.
+const DashboardAccessPlaceholder = ({ 
+  type, 
+  message, 
+  title = "Access Restricted"
+}: { 
+  type: "permission" | "upgrade";
+  message: string;
+  title?: string;
+}) => {
+  return (
+    <div className="absolute inset-0 bg-white/75 dark:bg-slate-900/80 backdrop-blur-[6px] rounded-2xl flex flex-col items-center justify-center text-center p-6 z-10 border border-slate-100 dark:border-slate-800 transition-all duration-300">
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 shadow-xs ${
+        type === "permission" 
+          ? "bg-red-50 dark:bg-red-950/20 text-red-500" 
+          : "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-500 animate-pulse"
+      }`}>
+        {type === "permission" ? <Lock className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+      </div>
+      <h4 className="font-bold text-sm text-gray-900 dark:text-white">{title}</h4>
+      <p className="text-[11px] text-gray-550 dark:text-gray-400 mt-1 max-w-[240px] leading-relaxed">
+        {message}
+      </p>
+      {type === "upgrade" && (
+        <Link href="/dashboard/settings/billing">
+          <Button size="sm" className="mt-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold h-8 px-3 rounded-lg shadow-sm flex items-center gap-1">
+            Upgrade Plan <ArrowUpRight className="w-3.5 h-3.5" />
+          </Button>
+        </Link>
+      )}
+    </div>
+  );
+};
+
 const DashboardPage = () => {
   const router = useRouter();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, hasFeature } = usePermissions();
   const [activeTab, setActiveTab] = useState<'shipments' | 'payments'>('shipments');
   const [showReceivableModal, setShowReceivableModal] = useState(false);
   const [showCustomersModal, setShowCustomersModal] = useState(false);
@@ -283,7 +319,7 @@ const DashboardPage = () => {
 
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
-          {hasPermission("view_revenue") && (
+          <div className="relative overflow-hidden rounded-xl">
             <MetricCard
               title="Total Revenue"
               value={data.totalRevenue.toLocaleString()}
@@ -293,8 +329,14 @@ const DashboardPage = () => {
               iconColor="text-white"
               currentMonth={(data.currentMonthData?.revenue || 0).toLocaleString()}
             />
-          )}
-          {hasPermission("view_revenue") && (
+            {!hasFeature("accounts") ? (
+              <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock billing & revenue dashboard metrics." />
+            ) : !hasPermission("view_revenue") ? (
+              <DashboardAccessPlaceholder type="permission" message="You do not have the 'view_revenue' permission to view total earnings." />
+            ) : null}
+          </div>
+
+          <div className="relative overflow-hidden rounded-xl">
             <MetricCard
               title="Receivables"
               value={data.accountsData.accountsReceivable.toLocaleString()}
@@ -302,11 +344,17 @@ const DashboardPage = () => {
               icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
               bgColor="bg-gradient-to-r from-orange-500 to-red-600"
               iconColor="text-white"
-              onClick={() => setShowReceivableModal(true)}
+              onClick={hasFeature("accounts") && hasPermission("view_revenue") ? () => setShowReceivableModal(true) : undefined}
               currentMonth={(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}
             />
-          )}
-          {hasPermission("view_kpis") && (
+            {!hasFeature("accounts") ? (
+              <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock accounts receivable ledger." />
+            ) : !hasPermission("view_revenue") ? (
+              <DashboardAccessPlaceholder type="permission" message="You do not have the 'view_revenue' permission to view accounts receivables." />
+            ) : null}
+          </div>
+
+          <div className="relative overflow-hidden rounded-xl">
             <MetricCard
               title="Total Shipments"
               value={data.totalShipments.toLocaleString()}
@@ -316,8 +364,12 @@ const DashboardPage = () => {
               iconColor="text-white"
               currentMonth={(data.currentMonthData?.shipments || 0).toLocaleString()}
             />
-          )}
-          {(hasPermission("view_customers") || hasPermission("view_kpis")) && (
+            {!hasPermission("view_kpis") && (
+              <DashboardAccessPlaceholder type="permission" message="You do not have the 'view_kpis' permission to view shipment counts." />
+            )}
+          </div>
+
+          <div className="relative overflow-hidden rounded-xl">
             <MetricCard
               title="Total Customers"
               value={data.totalCustomers.toLocaleString()}
@@ -325,181 +377,192 @@ const DashboardPage = () => {
               icon={<Users className="w-5 h-5 sm:w-6 sm:h-6" />}
               bgColor="bg-gradient-to-r from-purple-500 to-pink-600"
               iconColor="text-white"
-              onClick={() => setShowCustomersModal(true)}
+              onClick={hasFeature("customersPage") && (hasPermission("view_customers") || hasPermission("view_kpis")) ? () => setShowCustomersModal(true) : undefined}
               currentMonth={(data.currentMonthData?.customers || 0).toLocaleString()}
             />
-          )}
+            {!hasFeature("customersPage") ? (
+              <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock the customer directory metrics." />
+            ) : (!hasPermission("view_customers") && !hasPermission("view_kpis")) ? (
+              <DashboardAccessPlaceholder type="permission" message="You do not have the 'view_customers' permission to view customer database statistics." />
+            ) : null}
+          </div>
         </div>
-
-
-        {/* Accounts Payable vs Receivable Chart - First Chart */}
-        {hasPermission("view_analytics") && hasPermission("view_revenue") && (
-          <div className="mb-6 md:mb-8">
+{/* Accounts Payable vs Receivable Chart - First Chart */}
+        <div className="mb-6 md:mb-8 relative overflow-hidden rounded-xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
+                Accounts Payable vs Receivable Trend
+              </h3>
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
+            </div>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+              <AreaChart
+                data={data.accountsData?.monthlyAccountsData || []}
+                margin={{ top: 8, right: 12, left: 4, bottom: 4 }}
+              >
+                <defs>
+                  <linearGradient id="colorReceivable" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="colorPayable" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                <YAxis
+                  stroke="#6B7280"
+                  fontSize={11}
+                  width={52}
+                  tickFormatter={formatAccountsTrendAxis}
+                  tickMargin={6}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1F2937', 
+                    border: 'none', 
+                    borderRadius: '8px',
+                    color: '#F9FAFB',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value, name) => {
+                    const n = typeof value === "number" ? value : Number(value);
+                    return [
+                      n.toLocaleString(),
+                      name === "receivable" ? "Receivable" : "Payable",
+                    ];
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="receivable" 
+                  stroke="#10B981" 
+                  strokeWidth={3}
+                  fill="url(#colorReceivable)" 
+                  name="receivable"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="payable" 
+                  stroke="#EF4444" 
+                  strokeWidth={3}
+                  fill="url(#colorPayable)" 
+                  name="payable"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
+              Green: Accounts Receivable (Money owed to you) | Red: Accounts Payable (Money you owe)
+            </div>
+          </motion.div>
+          {!hasFeature("accounts") || !hasFeature("analytics") ? (
+            <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock detailed financial reports & receivables performance analytics." />
+          ) : !hasPermission("view_analytics") || !hasPermission("view_revenue") ? (
+            <DashboardAccessPlaceholder type="permission" message="You do not have permission to view detailed financial analytics charts." />
+          ) : null}
+        </div>
+{/* Additional Charts */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8 items-stretch">
+          {/* Monthly Shipments vs Revenue */}
+          <div className="relative overflow-hidden rounded-xl flex flex-col">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col h-full"
             >
               <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                  Accounts Payable vs Receivable Trend
+                  Shipments vs Revenue
                 </h3>
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
+                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
               </div>
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-                <AreaChart
-                  data={data.accountsData?.monthlyAccountsData || []}
-                  margin={{ top: 8, right: 12, left: 4, bottom: 4 }}
-                >
-                  <defs>
-                    <linearGradient id="colorReceivable" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <linearGradient id="colorPayable" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                  <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
-                  <YAxis
-                    stroke="#6B7280"
-                    fontSize={11}
-                    width={52}
-                    tickFormatter={formatAccountsTrendAxis}
-                    tickMargin={6}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1F2937', 
-                      border: 'none', 
-                      borderRadius: '8px',
-                      color: '#F9FAFB',
-                      fontSize: '12px'
-                    }}
-                    formatter={(value, name) => {
-                      const n = typeof value === "number" ? value : Number(value);
-                      return [
-                        n.toLocaleString(),
-                        name === "receivable" ? "Receivable" : "Payable",
-                      ];
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="receivable" 
-                    stroke="#10B981" 
-                    strokeWidth={3}
-                    fill="url(#colorReceivable)" 
-                    name="receivable"
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="payable" 
-                    stroke="#EF4444" 
-                    strokeWidth={3}
-                    fill="url(#colorPayable)" 
-                    name="payable"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-              <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
-                Green: Accounts Receivable (Money owed to you) | Red: Accounts Payable (Money you owe)
+              <div className="flex-1 min-h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.monthlyShipments} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+                    <XAxis
+                      dataKey="month"
+                      stroke="#6B7280"
+                      fontSize={12}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#6B7280" fontSize={12} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1F2937', 
+                        border: 'none', 
+                        borderRadius: '8px',
+                        color: '#F9FAFB',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <Bar yAxisId="left" dataKey="shipments" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={3} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </motion.div>
+            {!hasFeature("analytics") ? (
+              <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock interactive delivery rate charts and volumes analytics." />
+            ) : (!hasPermission("view_analytics") || !hasPermission("view_kpis")) ? (
+              <DashboardAccessPlaceholder type="permission" message="You do not have permission to view shipments statistics and charts." />
+            ) : null}
           </div>
-        )}
 
-
-        {/* Additional Charts */}
-        {(hasPermission("view_analytics") || hasPermission("view_map")) && (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8 items-stretch">
-            {/* Monthly Shipments vs Revenue */}
-            {hasPermission("view_analytics") && hasPermission("view_kpis") ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
-              >
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                    Shipments vs Revenue
-                  </h3>
-                  <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
+          {/* Shipments and Revenue by Country */}
+          <div className="relative overflow-hidden rounded-xl flex flex-col">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col h-full"
+            >
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
+                  Shipments and Revenue by Country
+                </h3>
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+              </div>
+              {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && (data.revenueByDestination.some(d => d.revenue > 0) || data.revenueByDestination.some(d => d.shipments > 0)) ? (
+                <div className="space-y-3">
+                  <CountryRevenueMap
+                    data={data.revenueByDestination
+                      .filter(d => d.destination && d.destination !== "No Data")}
+                    onHoverCountry={setSelectedCountryIso}
+                    onClickCountry={(info) => setSelectedCountryIso(info?.iso || null)}
+                    onFullscreen={() => setMapFullscreen(true)}
+                  />
                 </div>
-                <div className="flex-1 min-h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.monthlyShipments} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                      <XAxis
-                        dataKey="month"
-                        stroke="#6B7280"
-                        fontSize={12}
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                      />
-                      <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
-                      <YAxis yAxisId="right" orientation="right" stroke="#6B7280" fontSize={12} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1F2937', 
-                          border: 'none', 
-                          borderRadius: '8px',
-                          color: '#F9FAFB',
-                          fontSize: '12px'
-                        }}
-                      />
-                      <Bar yAxisId="left" dataKey="shipments" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                      <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={3} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </motion.div>
-            ) : <div />}
-
-            {/* Shipments and Revenue by Country */}
-            {hasPermission("view_map") ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
-              >
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                    Shipments and Revenue by Country
-                  </h3>
-                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-                </div>
-                {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && (data.revenueByDestination.some(d => d.revenue > 0) || data.revenueByDestination.some(d => d.shipments > 0)) ? (
-                  <div className="space-y-3">
-                    <CountryRevenueMap
-                      data={data.revenueByDestination
-                        .filter(d => d.destination && d.destination !== "No Data")}
-                      onHoverCountry={setSelectedCountryIso}
-                      onClickCountry={(info) => setSelectedCountryIso(info?.iso || null)}
-                      onFullscreen={() => setMapFullscreen(true)}
-                    />
+              ) : (
+                <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">
+                  <div className="text-center">
+                    <DollarSign className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    <p>No data available</p>
+                    <p className="text-sm">Check if you have shipments and invoices in your database</p>
                   </div>
-                ) : (
-                  <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">
-                    <div className="text-center">
-                      <DollarSign className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                      <p>No data available</p>
-                      <p className="text-sm">Check if you have shipments and invoices in your database</p>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            ) : <div />}
+                </div>
+              )}
+            </motion.div>
+            {!hasFeature("map") ? (
+              <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock real-time shipments geo-mapping tracking." />
+            ) : !hasPermission("view_map") ? (
+              <DashboardAccessPlaceholder type="permission" message="You do not have permission to view shipments interactive tracking maps." />
+            ) : null}
           </div>
-        )}
-
-        {/* Fullscreen Map Modal */}
+        </div>
+{/* Fullscreen Map Modal */}
         {mapFullscreen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-8">
             <div className="relative w-full max-w-5xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
@@ -525,8 +588,7 @@ const DashboardPage = () => {
         )}
 
         {/* Top Customers Chart */}
-        {hasPermission("view_analytics") && hasPermission("view_customers") && (
-          <div className="mb-6 md:mb-8">
+        <div className="mb-6 md:mb-8 relative overflow-hidden rounded-xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -589,16 +651,13 @@ const DashboardPage = () => {
                           <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>
                             {label}
                           </div>
-                          {payload.map((entry: any, index: number) => (
-                            <div key={index} style={{ marginBottom: '4px' }}>
-                              <span style={{ color: entry.color }}>
-                                {entry.name === 'shipments' ? 'Shipments' : entry.name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'}:{' '}
-                                {entry.name === 'shipments' ? entry.value : entry.value.toLocaleString()}
-                              </span>
+                          {payload.map((entry, index) => (
+                            <div key={index} style={{ color: entry.color, margin: '4px 0' }}>
+                              {entry.name === 'shipments' ? 'Shipments' : entry.name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'}: {entry.name === 'shipments' ? entry.value : entry.value.toLocaleString()}
                             </div>
                           ))}
                           {formattedDate && (
-                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #374151', fontSize: '11px', color: '#9CA3AF' }}>
+                            <div style={{ marginTop: '8px', borderTop: '1px solid #374151', paddingTop: '8px', fontSize: '10px', color: '#9CA3AF' }}>
                               Last Shipment: {formattedDate}
                             </div>
                           )}
@@ -608,6 +667,7 @@ const DashboardPage = () => {
                     return null;
                   }}
                 />
+                <Legend />
                 <Bar yAxisId="left" dataKey="shipments" fill="#10B981" radius={[4, 4, 0, 0]} name="shipments" />
                 <Line yAxisId="right" type="monotone" dataKey="totalSpent" stroke="#F59E0B" strokeWidth={3} name="totalSpent" />
                 <Line yAxisId="right" type="monotone" dataKey="avgOrderValue" stroke="#EF4444" strokeWidth={2} name="avgOrderValue" />
@@ -617,271 +677,231 @@ const DashboardPage = () => {
               Shipments (bars), Total Spent (orange line), Avg Order Value (red line)
             </div>
           </motion.div>
+          {!hasFeature("customersPage") || !hasFeature("analytics") ? (
+            <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock customer directories and analytics performance tracking." />
+          ) : !hasPermission("view_analytics") || !hasPermission("view_customers") ? (
+            <DashboardAccessPlaceholder type="permission" message="You do not have permission to view top customers chart stats." />
+          ) : null}
         </div>
-        )}
-
-        {/* Recent Activity Table - Tabbed Interface */}
-        {hasPermission("view_activity") && (
+{/* Recent Activity Table - Tabbed Interface */}
+        <div className="relative overflow-hidden rounded-xl">
           <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
-        >
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div className="flex items-center gap-2">
-              {/* Tab Navigation */}
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setActiveTab('shipments')}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${
-                    activeTab === 'shipments'
-                      ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-                >
-                  <Package className="w-4 h-4" />
-                  Recent Shipments
-                </button>
-                <button
-                  onClick={() => setActiveTab('payments')}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${
-                    activeTab === 'payments'
-                      ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-                >
-                  <DollarSign className="w-4 h-4" />
-                  Recent Payments
-                </button>
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex items-center gap-2">
+                {/* Tab Navigation */}
+                <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                  <button
+                    onClick={() => setActiveTab('shipments')}
+                    className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${
+                      activeTab === 'shipments'
+                        ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <Package className="w-4 h-4" />
+                    Recent Shipments
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('payments')}
+                    className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${
+                      activeTab === 'payments'
+                        ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Recent Payments
+                  </button>
+                </div>
               </div>
+              <button
+                onClick={() => {
+                  if (activeTab === 'shipments') {
+                    router.push('/dashboard/shipments?status=All');
+                  } else {
+                    router.push('/dashboard/accounts/payments?type=All');
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-all duration-200 flex items-center gap-2"
+              >
+                View All
+                <ArrowUpRight className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              onClick={() => {
-                if (activeTab === 'shipments') {
-                  router.push('/dashboard/shipments?status=All');
-                } else {
-                  router.push('/dashboard/accounts/payments?type=All');
-                }
-              }}
-              className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-all duration-200 flex items-center gap-2"
-            >
-              View All
-              <ArrowUpRight className="w-4 h-4" />
-            </button>
-          </div>
 
-          {/* Tab Content */}
-          <div className="overflow-x-auto">
-            {activeTab === 'shipments' ? (
-              /* Shipments Table */
-              <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
-                <thead>
-                  <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Date</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Booking#</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[180px]">Sender / Recipient</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Country</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Type</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Pcs</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Weight</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[140px]">Tracking</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
-                  {data.recentShipments.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="px-2 sm:px-3 lg:px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        No recent shipments found.
-                      </td>
+            {/* Tab Content */}
+            <div className="overflow-x-auto">
+              {activeTab === 'shipments' ? (
+                /* Shipments Table */
+                <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
+                  <thead>
+                    <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 font-medium">
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Date</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Booking#</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[180px]">Sender / Recipient</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Country</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Type</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Pcs</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Weight</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[140px]">Tracking</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Total</th>
                     </tr>
-                  ) : (
-                    data.recentShipments.map((shipment, index) => (
-                      <motion.tr
-                        key={shipment.id}
-                        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                      >
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          {new Date(shipment.shipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                  </thead>
+                  <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
+                    {data.recentShipments.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="px-2 sm:px-3 lg:px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                          No recent shipments found.
                         </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <button
-                            onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                            className="font-bold text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                          >
-                            {shipment.invoiceNumber}
-                          </button>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <div className="min-w-0">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                              <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
-                              <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
-                            </div>
-                            <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
-                              <ArrowRight className="h-3 w-3 shrink-0" />
-                              <span className="truncate">
-                                <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
-                                <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
+                      </tr>
+                    ) : (
+                      data.recentShipments.map((shipment) => (
+                        <motion.tr
+                          key={shipment.id}
+                          className="bg-gray-50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-lg"
+                        >
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap">
+                            {new Date(shipment.shipmentDate || shipment.createdAt).toLocaleDateString('en-GB', {
+                              year: '2-digit',
+                              month: '2-digit',
+                              day: '2-digit',
+                            }).split('/').join('/')}
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                            <span 
+                              className="cursor-pointer hover:underline"
+                              onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                            >
+                              {shipment.trackingId}
+                            </span>
+                            <div className="text-[10px] text-gray-550 dark:text-gray-400 font-normal">
+                              Invoice: <span 
+                                className="cursor-pointer hover:underline text-indigo-650 dark:text-indigo-400 font-medium"
+                                onClick={() => router.push(`/dashboard/invoice/${shipment.id}`)}
+                              >
+                                {shipment.invoiceNumber}
                               </span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{getCountryNameFromCode(shipment.destination)}</span>
-                          <span className="sm:hidden">{getCountryNameFromCode(shipment.destination)?.substring(0, 8)}...</span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.packaging || "N/A"}</td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || 0}</td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <div className="flex min-w-0 flex-col items-start gap-1">
-                            {getTrackingUrl(shipment) ? (
-                              <a
-                                href={getTrackingUrl(shipment)!}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block max-w-full truncate font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                              >
-                                <span className="hidden sm:inline">{shipment.trackingId}</span>
-                                <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
-                              </a>
-                            ) : (
-                              <button
-                                onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                                className="block max-w-full truncate text-left font-bold text-purple-600 hover:text-white hover:bg-purple-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                              >
-                                <span className="hidden sm:inline">{shipment.trackingId}</span>
-                                <span className="sm:hidden">{shipment.trackingId?.substring(0, 8)}...</span>
-                              </button>
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 max-w-[200px] truncate">
+                            <div className="font-semibold text-slate-800 dark:text-slate-100">{truncateName(shipment.senderName, 18)}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">To: {truncateName(shipment.recipientName, 18)}</div>
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
+                            {shipment.destination}
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap">
+                            {shipment.packaging}
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap">
+                            1
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
+                            {shipment.totalWeight} kg
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-mono text-[10px] sm:text-xs">
+                            {shipment.serviceMode && (
+                              <div className="mb-1 text-gray-500 dark:text-gray-400">{shipment.serviceMode}</div>
                             )}
-                            <span
-                              className={`rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getDeliveryStatusColor(
-                                shipment.status
-                              )}`}
+                            <a 
+                              href={getTrackingUrl(shipment.serviceMode, shipment.trackingId)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
                             >
-                              <span className="hidden sm:inline">{shipment.status || "N/A"}</span>
-                              <span className="sm:hidden">{shipment.status?.substring(0, 3) || "N/A"}</span>
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <div className="min-w-0">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100">
-                              {shipment.totalCost.toLocaleString()}
-                            </div>
-                            <span
-                              className={`mt-1 inline-block rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getInvoiceColor(
-                                shipment.invoiceStatus
-                              )}`}
-                            >
-                              <span className="hidden sm:inline">{shipment.invoiceStatus || "N/A"}</span>
-                              <span className="sm:hidden">{shipment.invoiceStatus?.substring(0, 3) || "N/A"}</span>
-                            </span>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            ) : (
-              /* Payments Table */
-              <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
-                <thead>
-                  <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Date</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Type</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Party</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Category</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Description</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Reference</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Invoice</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Amount</th>
-                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Mode</th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
-                  {data.recentPayments.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="px-2 sm:px-3 lg:px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        No recent payments found.
-                      </td>
+                              Track Shipment <ArrowRight className="w-3 h-3" />
+                            </a>
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold text-slate-900 dark:text-white">
+                            {(shipment.totalCost || shipment.amount || 0).toLocaleString()}
+                          </td>
+                        </motion.tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                /* Payments Table */
+                <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
+                  <thead>
+                    <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 font-medium">
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Date</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Party</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Category</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Description</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Reference</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Invoice</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Amount</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">Mode</th>
                     </tr>
-                  ) : (
-                    data.recentPayments.map((payment, index) => (
-                      <motion.tr
-                        key={payment.id}
-                        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                      >
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          {new Date(payment.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                  </thead>
+                  <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
+                    {data.recentPayments.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="text-center py-6 text-sm text-gray-500">
+                          No recent payments found
                         </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              payment.type === 'INCOME' 
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                : payment.type === 'EXPENSE'
-                                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                            }`}
-                          >
-                            {payment.type}
-                          </span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <div>
-                            <div className="font-medium">{payment.partyName}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{payment.partyType}</div>
-                          </div>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{payment.category || 'N/A'}</span>
-                          <span className="sm:hidden">{payment.category?.substring(0, 8) || 'N/A'}</span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{payment.description}</span>
-                          <span className="sm:hidden">{payment.description?.substring(0, 15)}...</span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{payment.reference}</span>
-                          <span className="sm:hidden">{payment.reference?.substring(0, 8)}...</span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                          <span className="hidden sm:inline">{payment.invoice}</span>
-                          <span className="sm:hidden">{payment.invoice?.substring(0, 8)}...</span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold">
-                          <span className={payment.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}>
-                            {payment.amount.toLocaleString()}
-                          </span>
-                        </td>
-                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-gray-600 dark:text-gray-400">
-                          <span className="hidden sm:inline">{payment.paymentMode || 'N/A'}</span>
-                          <span className="sm:hidden">{payment.paymentMode?.substring(0, 4) || 'N/A'}</span>
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
+                      </tr>
+                    ) : (
+                      data.recentPayments.map((payment) => (
+                        <motion.tr
+                          key={payment.id}
+                          className="bg-gray-50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-lg"
+                        >
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap">
+                            {new Date(payment.createdAt).toLocaleDateString('en-GB', {
+                              year: '2-digit',
+                              month: '2-digit',
+                              day: '2-digit',
+                            }).split('/').join('/')}
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
+                            <div>
+                              <div className="font-semibold text-slate-800 dark:text-slate-100">{payment.partyName}</div>
+                              <div className="text-[10px] text-gray-550 dark:text-gray-400">{payment.partyType}</div>
+                            </div>
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap">
+                            {payment.category || 'N/A'}
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 max-w-[200px] truncate text-slate-650 dark:text-gray-400">
+                            {payment.description}
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-mono text-[10px] sm:text-xs">
+                            {payment.reference}
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
+                            {payment.invoice}
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold">
+                            <span className={payment.type === 'INCOME' ? 'text-green-600 font-bold' : 'text-red-550 font-bold'}>
+                              {payment.amount.toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-gray-650 dark:text-gray-400 whitespace-nowrap font-medium">
+                            {payment.paymentMode || 'N/A'}
+                          </td>
+                        </motion.tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </motion.div>
-        )}
+          {!hasFeature("activityLogs") ? (
+            <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock audit trail and recent activity logging." />
+          ) : !hasPermission("view_activity") ? (
+            <DashboardAccessPlaceholder type="permission" message="You do not have permission to view recent activity tracking logs." />
+          ) : null}
+        </div>
       </div>
-
-      {/* Accounts Receivable Modal */}
+{/* Accounts Receivable Modal */}
       {showReceivableModal && (
         <motion.div
           initial={{ opacity: 0 }}

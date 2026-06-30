@@ -11,6 +11,8 @@ interface PermissionContextType {
   platformRole: string | null;
   permissions: string[];
   hasPermission: (code: string) => boolean;
+  planFeatures: Record<string, any> | null;
+  hasFeature: (key: string) => boolean;
   loading: boolean;
 }
 
@@ -20,6 +22,8 @@ const PermissionContext = createContext<PermissionContextType>({
   platformRole: null,
   permissions: [],
   hasPermission: () => false,
+  planFeatures: null,
+  hasFeature: () => false,
   loading: true,
 });
 
@@ -69,10 +73,11 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
   const [orgRole, setOrgRole] = useState<string | null>(null);
   const [platformRole, setPlatformRole] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
+  const [planFeatures, setPlanFeatures] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPermissions = async () => {
+    const fetchPermissionsAndPlan = async () => {
       try {
         const token = Cookies.get("token");
         if (!token) {
@@ -100,6 +105,30 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
             setPermissions(list);
           }
         }
+
+        // Fetch current org to get plan features
+        const orgRes = await fetch("/api/org/current");
+        if (orgRes.ok) {
+          const orgData = await orgRes.json();
+          if (orgData.organization) {
+            const orgId = orgData.organization.id;
+            if (orgId === 1) {
+              setPlanFeatures({
+                accounts: true,
+                bulkUpload: true,
+                map: true,
+                analytics: true,
+                activityLogs: true,
+                customersPage: true,
+                vendorsPage: true,
+                recipientsPage: true,
+              });
+            } else {
+              const features = orgData.organization.subscription?.plan?.features || {};
+              setPlanFeatures(features);
+            }
+          }
+        }
       } catch (err) {
         console.error("Error loading permissions context:", err);
       } finally {
@@ -107,16 +136,21 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
       }
     };
 
-    fetchPermissions();
+    fetchPermissionsAndPlan();
   }, []);
 
   const hasPermission = (code: string): boolean => {
     if (loading) return false;
-    // Super admin bypasses all checks
     if (platformRole === "SUPER_ADMIN") return true;
-    // Org Owner bypasses all checks
     if (orgRole === "OWNER") return true;
     return permissions.includes(code);
+  };
+
+  const hasFeature = (key: string): boolean => {
+    if (loading) return false;
+    if (platformRole === "SUPER_ADMIN") return true;
+    if (!planFeatures) return false;
+    return planFeatures[key] === true;
   };
 
   return (
@@ -127,6 +161,8 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
         platformRole,
         permissions,
         hasPermission,
+        planFeatures,
+        hasFeature,
         loading,
       }}
     >

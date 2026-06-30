@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, Layers, ShieldAlert, Plus, Check, RefreshCw, 
-  MoreVertical, Edit2, ToggleLeft, ToggleRight, Users, Clock, AlertCircle
+  MoreVertical, Edit2, ToggleLeft, ToggleRight, Users, Clock, AlertCircle, Trash2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,14 @@ export default function SaasPlansPage() {
   const [editAccounts, setEditAccounts] = useState(false);
   const [editBulkUpload, setEditBulkUpload] = useState(false);
   const [editIsActive, setEditIsActive] = useState(true);
+  
+  // Custom features states
+  const [editMap, setEditMap] = useState(false);
+  const [editAnalytics, setEditAnalytics] = useState(false);
+  const [editActivityLogs, setEditActivityLogs] = useState(false);
+  const [editCustomersPage, setEditCustomersPage] = useState(false);
+  const [editVendorsPage, setEditVendorsPage] = useState(false);
+  const [editRecipientsPage, setEditRecipientsPage] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -117,6 +125,14 @@ export default function SaasPlansPage() {
     setEditAccounts(features.accounts === true);
     setEditBulkUpload(features.bulkUpload === true);
     setEditIsActive(features.isActive !== false);
+
+    // Populate custom features
+    setEditMap(features.map === true);
+    setEditAnalytics(features.analytics === true);
+    setEditActivityLogs(features.activityLogs === true);
+    setEditCustomersPage(features.customersPage === true);
+    setEditVendorsPage(features.vendorsPage === true);
+    setEditRecipientsPage(features.recipientsPage === true);
   };
 
   const savePlanEdit = async () => {
@@ -151,6 +167,12 @@ export default function SaasPlansPage() {
           bulkUpload: editBulkUpload,
           isActive: editIsActive,
           annualPrice: parseFloat(editPriceAnnual),
+          map: editMap,
+          analytics: editAnalytics,
+          activityLogs: editActivityLogs,
+          customersPage: editCustomersPage,
+          vendorsPage: editVendorsPage,
+          recipientsPage: editRecipientsPage,
         }
       };
 
@@ -197,6 +219,22 @@ export default function SaasPlansPage() {
       }
     } catch {
       toast.error("An error occurred");
+    }
+  };
+
+  const handleDeletePlan = async (planId: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete the plan "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/plans/${planId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Plan "${name}" has been deleted successfully.`);
+        loadPlans();
+      } else {
+        toast.error(data.error || "Failed to delete plan.");
+      }
+    } catch {
+      toast.error("An error occurred trying to delete the plan.");
     }
   };
 
@@ -308,6 +346,9 @@ export default function SaasPlansPage() {
                             </>
                           )}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeletePlan(plan.id, plan.name)} className="cursor-pointer gap-2 text-destructive focus:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -336,15 +377,33 @@ export default function SaasPlansPage() {
                     <span className="font-semibold">{plan.maxShipmentsPerMonth.toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Accounting:</span>
+                    <span>Accounting Module:</span>
                     <span className={`font-semibold ${features.accounts ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
                       {features.accounts ? "Enabled" : "Disabled"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Bulk Upload/Delete:</span>
+                    <span>Bulk Actions:</span>
                     <span className={`font-semibold ${features.bulkUpload ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
                       {features.bulkUpload ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Interactive Map:</span>
+                    <span className={`font-semibold ${features.map ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
+                      {features.map ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Analytics & Charts:</span>
+                    <span className={`font-semibold ${features.analytics ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
+                      {features.analytics ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Activity Audit Logs:</span>
+                    <span className={`font-semibold ${features.activityLogs ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
+                      {features.activityLogs ? "Enabled" : "Disabled"}
                     </span>
                   </div>
                 </div>
@@ -372,11 +431,11 @@ export default function SaasPlansPage() {
 
       {/* Fully Functional Edit Plan Modal Dialog */}
       <Dialog open={editingPlan !== null} onOpenChange={(open) => !open && setEditingPlan(null)}>
-        <DialogContent className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-6">
+        <DialogContent className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">Edit subscription plan</DialogTitle>
             <DialogDescription className="text-slate-500">
-              Configure properties and limits for the <strong>{editingPlan?.name}</strong> plan.
+              Configure properties, operational limits, and granular modules for <strong>{editingPlan?.name}</strong>.
             </DialogDescription>
           </DialogHeader>
 
@@ -457,7 +516,7 @@ export default function SaasPlansPage() {
             </div>
 
             <div className="space-y-3 pt-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Features Configuration</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Features Configuration</span>
               
               <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
                 <div className="space-y-0.5">
@@ -473,6 +532,54 @@ export default function SaasPlansPage() {
                   <span className="text-xs text-muted-foreground block">Allow uploading CSV lists and batch actions.</span>
                 </div>
                 <Switch checked={editBulkUpload} onCheckedChange={setEditBulkUpload} />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Interactive Map</span>
+                  <span className="text-xs text-muted-foreground block">Unlock real-time shipments geo-mapping tracking.</span>
+                </div>
+                <Switch checked={editMap} onCheckedChange={setEditMap} />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Analytics & Charts</span>
+                  <span className="text-xs text-muted-foreground block">Display detailed KPI statistics and graphs.</span>
+                </div>
+                <Switch checked={editAnalytics} onCheckedChange={setEditAnalytics} />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Activity Audit Logs</span>
+                  <span className="text-xs text-muted-foreground block">Keep records of user audits and system logs.</span>
+                </div>
+                <Switch checked={editActivityLogs} onCheckedChange={setEditActivityLogs} />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Customers Module</span>
+                  <span className="text-xs text-muted-foreground block">Enable customers directory and actions.</span>
+                </div>
+                <Switch checked={editCustomersPage} onCheckedChange={setEditCustomersPage} />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Vendors Module</span>
+                  <span className="text-xs text-muted-foreground block">Enable vendors database and profiles.</span>
+                </div>
+                <Switch checked={editVendorsPage} onCheckedChange={setEditVendorsPage} />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Recipients Module</span>
+                  <span className="text-xs text-muted-foreground block">Enable recipients directory tracking.</span>
+                </div>
+                <Switch checked={editRecipientsPage} onCheckedChange={setEditRecipientsPage} />
               </div>
 
               <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
