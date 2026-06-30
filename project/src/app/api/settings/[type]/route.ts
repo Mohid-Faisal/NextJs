@@ -12,6 +12,11 @@ const modelMap: Record<string, any> = {
   hscodes: prisma.hsCode,
 };
 
+const orderByMap: Record<string, any> = {
+  deliveryStatus: { order: "asc" },
+  hscodes: { code: "asc" },
+};
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   const auth = await requireApiSession(req);
   if (auth.error) return auth.error;
@@ -23,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
 
   const data = await model.findMany({
     where: orgWhere(session),
-    ...(type === "deliveryStatus" ? { orderBy: { order: "asc" } } : { orderBy: { name: "asc" } }),
+    orderBy: orderByMap[type] ?? { name: "asc" },
   });
   return NextResponse.json(data);
 }
@@ -37,10 +42,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
-  const body = await req.json();
-  const { id, createdAt, organizationId, ...dataFields } = body;
-  const created = await model.create({ data: orgData(session, dataFields) });
-  return NextResponse.json(created);
+  try {
+    const body = await req.json();
+    const { id, createdAt, organizationId, ...dataFields } = body;
+    const created = await model.create({ data: orgData(session, dataFields) });
+    return NextResponse.json(created);
+  } catch (error: any) {
+    console.error(`Error creating ${type}:`, error);
+    if (error?.code === "P2002") {
+      return NextResponse.json({ error: "Record already exists" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "Failed to create" }, { status: 500 });
+  }
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
@@ -75,6 +88,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ type
     return NextResponse.json(updated);
   } catch (error) {
     console.error(`Error updating ${type}:`, error);
+    if ((error as any)?.code === "P2002") {
+      return NextResponse.json({ error: "Record already exists" }, { status: 409 });
+    }
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
 }

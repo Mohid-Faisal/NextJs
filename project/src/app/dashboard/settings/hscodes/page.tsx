@@ -104,7 +104,8 @@ export default function HsCodesPage() {
         setEditingId(null);
         fetchHsCodes();
       } else {
-        toast.error("Failed to save HS Code");
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error || "Failed to save HS Code");
       }
     } catch {
       toast.error("Something went wrong");
