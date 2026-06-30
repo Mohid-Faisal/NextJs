@@ -40,6 +40,7 @@ import {
   Crown,
   Layers,
   Landmark,
+  Palette,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -166,6 +167,11 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     { href: "/dashboard/saas/invoices", label: "Invoices", icon: Receipt },
   ];
   const subLinksSettings = [
+    {
+      href: "/dashboard/settings/branding",
+      label: "Branding & Interface",
+      icon: Palette,
+    },
     {
       href: "/dashboard/settings/manage-zones",
       label: "Manage Zones",

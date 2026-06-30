@@ -34,6 +34,18 @@ export default function InvoicePage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [org, setOrg] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/org/current")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setOrg(data.organization);
+        }
+      })
+      .catch((err) => console.error("Error fetching org settings:", err));
+  }, []);
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -301,10 +313,12 @@ export default function InvoicePage() {
             <div class="header">
               <div class="header-content">
                 <div class="company-info">
-                  <div class="logo">P</div>
+                  <div class="logo" style="background: transparent; border: none; width: auto; height: 48px;">
+                    <img src="${logoUrl}" alt="${companyName} Logo" style="height: 48px; max-height: 48px; width: auto; object-fit: contain;" />
+                  </div>
                   <div>
-                    <div class="company-name">PSS</div>
-                    <div class="company-tagline">Prompt Survey & Services</div>
+                    <div class="company-name" style="margin-left: 12px;">${companyName}</div>
+                    <div class="company-tagline" style="margin-left: 12px;">Prompt Survey & Services</div>
                   </div>
                 </div>
                 
@@ -865,14 +879,17 @@ export default function InvoicePage() {
   const lineItems = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
   const hasLineItems = lineItems.length > 0;
 
+  const logoUrl = org?.logoUrl || "/logo_final.png";
+  const companyName = org?.name || "PSS";
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 print:p-0">
       {/* Print Header - Hidden on screen, visible when printing */}
       <div className="hidden print:block print-header bg-blue-600 text-white p-4 text-center mb-4">
         <div className="flex items-center justify-center gap-4">
-          <img src="/logo_final.png" alt="PSS Logo" className="h-12 w-auto" />
+          <img src={logoUrl} alt={`${companyName} Logo`} className="h-12 w-auto object-contain" />
           <div>
-            <h1 className="text-3xl font-bold">PSS</h1>
+            <h1 className="text-3xl font-bold">{companyName}</h1>
             <p className="text-lg">PROMPT SURVEY & SERVICES</p>
           </div>
         </div>
@@ -909,9 +926,9 @@ export default function InvoicePage() {
               {/* Left Side - Company Branding & Client Info */}
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
-                  <img src="/logo_final.png" alt="PSS Logo" className="h-12 w-auto" />
+                  <img src={logoUrl} alt={`${companyName} Logo`} className="h-12 w-auto object-contain" />
                   <div>
-                    <h1 className="text-3xl font-bold text-blue-800">PSS</h1>
+                    <h1 className="text-3xl font-bold text-blue-800">{companyName}</h1>
                     <p className="text-lg text-blue-700">Prompt Survey & Services</p>
                   </div>
                 </div>

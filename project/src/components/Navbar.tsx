@@ -266,8 +266,7 @@ const Navbar = ({
           </span>
         </button>
 
-        {/* Theme toggle */}
-        <ThemeToggle />
+        {/* Theme toggle removed from navbar and placed in configuration/branding page */}
 
         {/* Profile Dropdown */}
         <DropdownMenu>

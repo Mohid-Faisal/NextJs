@@ -91,6 +91,18 @@ export default function ReceiptPage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [org, setOrg] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/org/current")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setOrg(data.organization);
+        }
+      })
+      .catch((err) => console.error("Error fetching org settings:", err));
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -1183,8 +1195,8 @@ export default function ReceiptPage() {
         <div className="waybill-container">
           {/* Header */}
           <div className="header-area" style={{position: 'relative'}}>
-            <div className="logo">
-              <img src="/logo_final.png" alt="PSS Logo" />
+            <div className="logo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '48px', width: '120px', overflow: 'hidden' }}>
+              <img src={org?.logoUrl || "/logo_final.png"} alt={`${org?.name || "PSS"} Logo`} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
             </div>
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <a href="https://www.psswwe.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>www.psswwe.com</a>

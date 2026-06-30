@@ -1,16 +1,38 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import * as fs from "fs";
 import * as path from "path";
+import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // Attempt to resolve dynamic organization logo if session exists
+    let logoPath = path.join(process.cwd(), 'public', 'logo_final.png');
+    
+    const auth = await requireApiSession(req);
+    if (auth.session) {
+      const org = await prisma.organization.findUnique({
+        where: { id: auth.session.organizationId },
+        select: { logoUrl: true }
+      });
+
+      if (org && org.logoUrl && org.logoUrl.startsWith('/')) {
+        const customPath = path.join(process.cwd(), 'public', org.logoUrl);
+        if (fs.existsSync(customPath)) {
+          logoPath = customPath;
+        }
+      }
+    }
+
     // Get logo as base64
-    const logoPath = path.join(process.cwd(), 'public', 'logo_final.png');
     let logoBase64 = '';
     try {
       const logoBuffer = fs.readFileSync(logoPath);
       logoBase64 = logoBuffer.toString('base64');
-      logoBase64 = `data:image/png;base64,${logoBase64}`;
+      // Resolve MIME type dynamically
+      const ext = path.extname(logoPath).toLowerCase();
+      const mime = ext === '.svg' ? 'image/svg+xml' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+      logoBase64 = `data:${mime};base64,${logoBase64}`;
     } catch (error) {
       console.error('Error reading logo file:', error);
     }
@@ -38,4 +60,3 @@ export async function GET() {
     );
   }
 }
-
