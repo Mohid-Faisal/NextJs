@@ -32,6 +32,8 @@ import {
   Trash2,
   Calendar,
   TrendingUp,
+  Search,
+  Upload,
 } from "lucide-react";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -698,25 +700,43 @@ export default function IncomeInvoicesPage() {
 
       <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
         {/* Left side - Search bar */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
-          <div className="flex w-full max-w-sm">
-            <Input
-              placeholder="Search by invoice #, tracking #, customer..."
-              value={searchTerm}
-              onChange={(e) => {
-                setPage(1);
-                setSearchTerm(e.target.value);
-              }}
-              className="rounded-r-none"
-            />
-            <div className="bg-green-500 px-3 flex items-center justify-center rounded-r-md text-white text-sm">
-              Search
-            </div>
-          </div>
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
+          <Input
+            placeholder="Search by invoice #, tracking #, customer..."
+            value={searchTerm}
+            onChange={(e) => {
+              setPage(1);
+              setSearchTerm(e.target.value);
+            }}
+            className="pl-9 text-sm rounded-lg"
+          />
         </div>
 
-        {/* Right side - Date Range, and Export */}
+        {/* Right side - Export and Date Range */}
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+          {/* Export Dropdown */}
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold">
+                  Export
+                  <Upload className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[110px]">
+                <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2 text-xs">
+                  <Table className="w-3.5 h-3.5" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2 text-xs">
+                  <Printer className="w-3.5 h-3.5" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           {/* Date Range Filter */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <Select
@@ -763,28 +783,6 @@ export default function IncomeInvoicesPage() {
                 />
               </div>
             )}
-          </div>
-          
-          {/* Export Dropdown */}
-          <div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
-                  Export
-                  <ArrowUp className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[120px]">
-                <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2">
-                  <Table className="w-4 h-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
-                  <Printer className="w-4 h-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </div>
