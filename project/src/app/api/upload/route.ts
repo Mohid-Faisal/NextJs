@@ -57,3 +57,47 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+/**
+ * DELETE /api/upload
+ * Requires API session. Deletes a file from Supabase Storage by its public URL.
+ */
+export async function DELETE(req: NextRequest) {
+  const auth = await requireApiSession(req);
+  if (auth.error) return auth.error;
+
+  try {
+    const { url } = await req.json();
+    if (!url) {
+      return NextResponse.json({ success: false, error: "No URL provided" }, { status: 400 });
+    }
+
+    const marker = "/public/uploads/";
+    const markerIndex = url.indexOf(marker);
+    if (markerIndex === -1) {
+      return NextResponse.json({ success: false, error: "Invalid URL for storage deletion" }, { status: 400 });
+    }
+
+    const filePathInBucket = url.substring(markerIndex + marker.length);
+
+    const { error: deleteError } = await supabase.storage
+      .from("uploads")
+      .remove([filePathInBucket]);
+
+    if (deleteError) {
+      console.error("❌ Supabase delete error:", deleteError);
+      return NextResponse.json(
+        { success: false, error: `Failed to delete from Supabase: ${deleteError.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Delete error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to delete file" },
+      { status: 500 }
+    );
+  }
+}

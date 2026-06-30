@@ -65,17 +65,34 @@ export default function BrandingSettingsPage() {
   const [invoiceSupportEmail, setInvoiceSupportEmail] = useState("");
   const [invoiceSupportPhone, setInvoiceSupportPhone] = useState("");
 
+  // Saved / DB states for robust dirty checking
+  const [savedName, setSavedName] = useState("");
+  const [savedCurrency, setSavedCurrency] = useState("PKR");
+  const [savedLogoUrl, setSavedLogoUrl] = useState("");
+  const [savedAccentColor, setSavedAccentColor] = useState("blue");
+  const [savedDisclaimer, setSavedDisclaimer] = useState("");
+  const [savedSupportEmail, setSavedSupportEmail] = useState("");
+  const [savedSupportPhone, setSavedSupportPhone] = useState("");
+
   // Fix hydration mismatch for next-themes
   useEffect(() => {
     setMounted(true);
     // Load local storage values if present
-    setAccentColor(localStorage.getItem("brand_accent_color") || "blue");
-    setInvoiceDisclaimer(
-      localStorage.getItem("brand_invoice_disclaimer") ||
-      "Any discrepancy in invoice must be notified within 03 days of receipt of this invoice. You are requested to pay the invoice amount through cash payment or cross cheque with immediate effect."
-    );
-    setInvoiceSupportEmail(localStorage.getItem("brand_support_email") || "info@psswwe.com");
-    setInvoiceSupportPhone(localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333");
+    const color = localStorage.getItem("brand_accent_color") || "blue";
+    const disclaimer = localStorage.getItem("brand_invoice_disclaimer") || 
+      "Any discrepancy in invoice must be notified within 03 days of receipt of this invoice. You are requested to pay the invoice amount through cash payment or cross cheque with immediate effect.";
+    const email = localStorage.getItem("brand_support_email") || "info@psswwe.com";
+    const phone = localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333";
+
+    setAccentColor(color);
+    setInvoiceDisclaimer(disclaimer);
+    setInvoiceSupportEmail(email);
+    setInvoiceSupportPhone(phone);
+
+    setSavedAccentColor(color);
+    setSavedDisclaimer(disclaimer);
+    setSavedSupportEmail(email);
+    setSavedSupportPhone(phone);
   }, []);
 
   const canManage = MANAGE_ROLES.includes(role);
@@ -92,6 +109,10 @@ export default function BrandingSettingsPage() {
       setName(o.name);
       setCurrency(o.currency || "PKR");
       setLogoUrl(o.logoUrl || "");
+
+      setSavedName(o.name);
+      setSavedCurrency(o.currency || "PKR");
+      setSavedLogoUrl(o.logoUrl || "");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load organization");
     } finally {
@@ -119,6 +140,7 @@ export default function BrandingSettingsPage() {
     formData.append("file", file);
 
     try {
+      // 1. Upload new logo to Supabase storage
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -126,10 +148,68 @@ export default function BrandingSettingsPage() {
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
 
-      setLogoUrl(uploadData.url);
-      toast.success("Logo uploaded successfully! Save changes to apply.");
+      const newLogoUrl = uploadData.url;
+
+      // 2. Immediately save to database to prevent disappearing on refresh
+      const patchRes = await fetch("/api/org/current", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoUrl: newLogoUrl }),
+      });
+      const patchData = await patchRes.json();
+      if (!patchRes.ok) throw new Error(patchData.error || "Failed to save logo to database");
+
+      // 3. Delete the old logo from Supabase storage if it exists (so they don't accumulate)
+      if (logoUrl) {
+        await fetch("/api/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: logoUrl }),
+        }).catch((err) => console.error("Error deleting old logo file from storage:", err));
+      }
+
+      setLogoUrl(newLogoUrl);
+      setSavedLogoUrl(newLogoUrl);
+      setOrg((prev) => (prev ? { ...prev, logoUrl: newLogoUrl } : prev));
+      window.dispatchEvent(new Event("orgBrandingUpdated"));
+      toast.success("Logo uploaded and saved successfully!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Remove Logo from database and Supabase storage
+  const handleRemoveLogo = async () => {
+    if (!logoUrl) return;
+    setUploading(true);
+    try {
+      // 1. Delete from Supabase Storage
+      const delRes = await fetch("/api/upload", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: logoUrl }),
+      });
+      const delData = await delRes.json();
+      if (!delRes.ok) console.warn("Failed to delete file from storage bucket:", delData.error);
+
+      // 2. PATCH database to set logoUrl to null
+      const patchRes = await fetch("/api/org/current", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoUrl: null }),
+      });
+      const patchData = await patchRes.json();
+      if (!patchRes.ok) throw new Error(patchData.error || "Failed to remove logo from database");
+
+      setLogoUrl("");
+      setSavedLogoUrl("");
+      setOrg((prev) => (prev ? { ...prev, logoUrl: null } : prev));
+      window.dispatchEvent(new Event("orgBrandingUpdated"));
+      toast.success("Logo removed from database and storage successfully!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove logo");
     } finally {
       setUploading(false);
     }
@@ -152,6 +232,15 @@ export default function BrandingSettingsPage() {
       localStorage.setItem("brand_invoice_disclaimer", invoiceDisclaimer);
       localStorage.setItem("brand_support_email", invoiceSupportEmail);
       localStorage.setItem("brand_support_phone", invoiceSupportPhone);
+
+      // 3. Update saved states for dirty calculation
+      setSavedName(name);
+      setSavedCurrency(currency);
+      setSavedLogoUrl(logoUrl);
+      setSavedAccentColor(accentColor);
+      setSavedDisclaimer(invoiceDisclaimer);
+      setSavedSupportEmail(invoiceSupportEmail);
+      setSavedSupportPhone(invoiceSupportPhone);
 
       // Trigger a custom event to tell the navbar/sidebar to reload the logo
       window.dispatchEvent(new Event("orgBrandingUpdated"));
@@ -179,13 +268,13 @@ export default function BrandingSettingsPage() {
   }
 
   const isDirty =
-    name !== org.name ||
-    currency !== (org.currency || "PKR") ||
-    (logoUrl || "") !== (org.logoUrl || "") ||
-    accentColor !== (localStorage.getItem("brand_accent_color") || "blue") ||
-    invoiceDisclaimer !== (localStorage.getItem("brand_invoice_disclaimer") || "") ||
-    invoiceSupportEmail !== (localStorage.getItem("brand_support_email") || "") ||
-    invoiceSupportPhone !== (localStorage.getItem("brand_support_phone") || "");
+    name !== savedName ||
+    currency !== savedCurrency ||
+    logoUrl !== savedLogoUrl ||
+    accentColor !== savedAccentColor ||
+    invoiceDisclaimer !== savedDisclaimer ||
+    invoiceSupportEmail !== savedSupportEmail ||
+    invoiceSupportPhone !== savedSupportPhone;
 
   return (
     <div className="p-6 space-y-6 bg-slate-50/50 dark:bg-zinc-950/20 min-h-screen">
@@ -269,7 +358,8 @@ export default function BrandingSettingsPage() {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          onClick={() => setLogoUrl("")}
+                          onClick={handleRemoveLogo}
+                          disabled={uploading}
                           className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
                         >
                           Remove Logo
