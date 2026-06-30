@@ -143,7 +143,7 @@ export default function CreateCreditNoteDialog({
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) {
-          alert(data.error || "Failed to load credit note");
+          alert(data.error || "Failed to load adjustment");
           onClose();
           return;
         }
@@ -179,7 +179,7 @@ export default function CreateCreditNoteDialog({
         }
       } catch {
         if (!cancelled) {
-          alert("Failed to load credit note");
+          alert("Failed to load adjustment");
           onClose();
         }
       } finally {
@@ -273,7 +273,7 @@ export default function CreateCreditNoteDialog({
     setIsLoading(true);
 
     try {
-      const typePrefix = entryType === "DEBIT" ? "Debit Note" : "Credit Note";
+      const typePrefix = "Adjustment";
       const prefixedDescription = description
         ? `${typePrefix}: ${description}`
         : typePrefix;
@@ -312,11 +312,11 @@ export default function CreateCreditNoteDialog({
         onSuccess();
       } else {
         const error = await response.json();
-        alert(error.error || (isEditMode ? "Failed to update credit note" : "Failed to create credit note"));
+        alert(error.error || (isEditMode ? "Failed to update adjustment" : "Failed to create adjustment"));
       }
     } catch (error) {
-      console.error(isEditMode ? "Error updating credit note:" : "Error creating credit note:", error);
-      alert(isEditMode ? "Failed to update credit note" : "Failed to create credit note");
+      console.error(isEditMode ? "Error updating adjustment:" : "Error creating adjustment:", error);
+      alert(isEditMode ? "Failed to update adjustment" : "Failed to create adjustment");
     } finally {
       setIsLoading(false);
     }
@@ -330,7 +330,7 @@ export default function CreateCreditNoteDialog({
   if (isEditMode && editLoading) {
     return (
       <div className="p-6 text-center text-sm text-muted-foreground">
-        Loading credit note…
+        Loading adjustment...
       </div>
     );
   }
@@ -339,7 +339,7 @@ export default function CreateCreditNoteDialog({
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          {isEditMode ? "Edit Credit Note" : "Create New Credit Note"}
+          {isEditMode ? "Edit Adjustment" : "Create New Adjustment"}
         </h2>
       </div>
 

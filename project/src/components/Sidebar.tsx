@@ -232,7 +232,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     { href: "/dashboard/income/revenue", label: "Revenue", icon: TrendingUp },
     {
       href: "/dashboard/income/credit-notes",
-      label: "Credit Notes",
+      label: "Adjustments",
       icon: FileText,
     },
   ];
@@ -246,7 +246,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     },
     {
       href: "/dashboard/expense/debit-notes",
-      label: "Debit Notes",
+      label: "Adjustments",
       icon: FileText,
     },
   ];

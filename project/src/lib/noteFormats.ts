@@ -49,33 +49,33 @@ export function parseDateInputAsLocalDate(
 }
 
 /**
- * Single clean ledger line: `Credit Note: …` or `Debit Note: …`.
- * Strips chains of duplicated "Credit Note:" / "Debit Note:" from body (dialog + API used to double-prefix).
+ * Single clean ledger line: `Adjustment: ...`.
+ * Strips chains of duplicated old/new note prefixes from body.
  */
 export function normalizeNoteLineDescription(
   kind: "credit" | "debit",
   bodyDescription: string | undefined,
   shortRef: string
 ): string {
-  const label = kind === "credit" ? "Credit Note" : "Debit Note";
+  const label = "Adjustment";
   let t = (bodyDescription ?? "").trim();
   if (!t) return `${label}: ${shortRef}`;
   let prev = "";
   while (t !== prev) {
     prev = t;
-    t = t.replace(/^(Credit Note|Debit Note)\s*:\s*/i, "").trim();
+    t = t.replace(/^(Credit Note|Debit Note|Adjustment)\s*:\s*/i, "").trim();
   }
   const detail = t || shortRef;
   return `${label}: ${detail}`;
 }
 
-/** Strip leading `Credit Note:` / `Debit Note:` chains for form fields (edit dialogs). */
+/** Strip leading note prefixes for form fields (edit dialogs). */
 export function extractNoteDetailDescription(stored: string | null | undefined): string {
   let t = (stored ?? "").trim();
   let prev = "";
   while (t !== prev) {
     prev = t;
-    t = t.replace(/^(Credit Note|Debit Note)\s*:\s*/i, "").trim();
+    t = t.replace(/^(Credit Note|Debit Note|Adjustment)\s*:\s*/i, "").trim();
   }
   return t;
 }

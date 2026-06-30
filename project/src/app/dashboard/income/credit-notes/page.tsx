@@ -125,7 +125,7 @@ export default function CreditNotesPage() {
   const exportToCSV = () => {
     const headers = [
       "ID",
-      "Credit Note #",
+      "Adjustment #",
       "Type",
       "Customer",
       "Invoice #",
@@ -149,7 +149,7 @@ export default function CreditNotesPage() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `credit_notes_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `adjustments_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
   };
 
@@ -175,7 +175,7 @@ export default function CreditNotesPage() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Credit Notes</title>
+          <title>Adjustments</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             table { border-collapse: collapse; width: 100%; }
@@ -184,13 +184,13 @@ export default function CreditNotesPage() {
           </style>
         </head>
         <body>
-          <h1>Credit Notes</h1>
+          <h1>Adjustments</h1>
           <p>Total Amount: ${totalAmount.toLocaleString()}</p>
           <table>
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Credit Note #</th>
+                <th>Adjustment #</th>
                 <th>Type</th>
                 <th>Customer</th>
                 <th>Invoice #</th>
@@ -216,7 +216,7 @@ export default function CreditNotesPage() {
         <div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
             <FileText className="w-8 sm:w-10 h-8 sm:h-10 text-green-600" />
-            Manage Credit Notes
+            Manage Adjustments
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Compensate for overpayment from customers
@@ -299,7 +299,7 @@ export default function CreditNotesPage() {
         <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
           {!creditNotes || creditNotes.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
-              No credit notes found.
+              No adjustments found.
             </p>
           ) : (
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
@@ -310,8 +310,8 @@ export default function CreditNotesPage() {
                       onClick={() => handleSort("creditNoteNumber")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">CREDIT NOTE</span>
-                      <span className="sm:hidden">CREDIT</span>
+                      <span className="hidden sm:inline">ADJUSTMENT</span>
+                      <span className="sm:hidden">ADJ</span>
                       {getSortIcon("creditNoteNumber")}
                     </button>
                   </th>
@@ -401,8 +401,8 @@ export default function CreditNotesPage() {
                       {cn.currency} {cn.amount.toLocaleString()}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{cn.description || `${cn.creditNoteNumber} Credit Note`}</span>
-                      <span className="sm:hidden">{cn.description?.substring(0, 15) || `${cn.creditNoteNumber} Credit Note`.substring(0, 15)}...</span>
+                      <span className="hidden sm:inline">{cn.description || `${cn.creditNoteNumber} Adjustment`}</span>
+                      <span className="sm:hidden">{cn.description?.substring(0, 15) || `${cn.creditNoteNumber} Adjustment`.substring(0, 15)}...</span>
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <DropdownMenu>
@@ -423,13 +423,13 @@ export default function CreditNotesPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={async () => {
-                              if (confirm("Are you sure you want to delete this credit note? This action cannot be undone.")) {
+                              if (confirm("Are you sure you want to delete this adjustment? This action cannot be undone.")) {
                                 try {
                                   const res = await fetch(`/api/credit-notes/${cn.id}`, {
                                     method: "DELETE",
                                   });
                                   if (res.ok) {
-                                    toast.success("Credit note deleted successfully");
+                                    toast.success("Adjustment deleted successfully");
                                     // Refresh the data
                                     const params = new URLSearchParams({
                                       page: String(page),
@@ -444,11 +444,11 @@ export default function CreditNotesPage() {
                                     setTotal(json.total);
                                   } else {
                                     const error = await res.json();
-                                    toast.error(error.error || "Failed to delete credit note");
+                                    toast.error(error.error || "Failed to delete adjustment");
                                   }
                                 } catch (error) {
-                                  console.error("Error deleting credit note:", error);
-                                  toast.error("Failed to delete credit note");
+                                  console.error("Error deleting adjustment:", error);
+                                  toast.error("Failed to delete adjustment");
                                 }
                               }
                             }}
@@ -475,10 +475,10 @@ export default function CreditNotesPage() {
         pageSize={pageSize}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
-        entityName="credit notes"
+        entityName="adjustments"
       />
 
-      {/* Create Credit Note Dialog */}
+      {/* Create Adjustment Dialog */}
       <Dialog
         open={openCreateDialog}
         onOpenChange={(open) => {

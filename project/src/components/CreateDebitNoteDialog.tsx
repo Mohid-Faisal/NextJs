@@ -142,7 +142,7 @@ export default function CreateDebitNoteDialog({
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) {
-          alert(data.error || "Failed to load debit note");
+          alert(data.error || "Failed to load adjustment");
           onClose();
           return;
         }
@@ -178,7 +178,7 @@ export default function CreateDebitNoteDialog({
         }
       } catch {
         if (!cancelled) {
-          alert("Failed to load debit note");
+          alert("Failed to load adjustment");
           onClose();
         }
       } finally {
@@ -271,7 +271,7 @@ export default function CreateDebitNoteDialog({
     try {
       const parsed = parseFloat(amount);
       const numericAmount = Math.abs(parsed);
-      const typePrefix = entryType === "DEBIT" ? "Debit Note" : "Credit Note";
+      const typePrefix = "Adjustment";
       const prefixedDescription = description
         ? `${typePrefix}: ${description}`
         : typePrefix;
@@ -310,11 +310,11 @@ export default function CreateDebitNoteDialog({
         onSuccess();
       } else {
         const error = await response.json();
-        alert(error.error || (isEditMode ? "Failed to update debit note" : "Failed to create debit note"));
+        alert(error.error || (isEditMode ? "Failed to update adjustment" : "Failed to create adjustment"));
       }
     } catch (error) {
-      console.error(isEditMode ? "Error updating debit note:" : "Error creating debit note:", error);
-      alert(isEditMode ? "Failed to update debit note" : "Failed to create debit note");
+      console.error(isEditMode ? "Error updating adjustment:" : "Error creating adjustment:", error);
+      alert(isEditMode ? "Failed to update adjustment" : "Failed to create adjustment");
     } finally {
       setIsLoading(false);
     }
@@ -328,7 +328,7 @@ export default function CreateDebitNoteDialog({
   if (isEditMode && editLoading) {
     return (
       <div className="p-6 text-center text-sm text-muted-foreground">
-        Loading debit note…
+        Loading adjustment...
       </div>
     );
   }
@@ -337,7 +337,7 @@ export default function CreateDebitNoteDialog({
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          {isEditMode ? "Edit Debit Note" : "Create New Debit Note"}
+          {isEditMode ? "Edit Adjustment" : "Create New Adjustment"}
         </h2>
         {/* <Button
           variant="ghost"

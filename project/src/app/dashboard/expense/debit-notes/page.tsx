@@ -130,7 +130,7 @@ export default function DebitNotesPage() {
   const exportToCSV = () => {
          const headers = [
        "ID",
-       "Debit Note #",
+       "Adjustment #",
        "Type",
        "Vendor",
        "Bill/Invoice #",
@@ -154,7 +154,7 @@ export default function DebitNotesPage() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `debit_notes_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `adjustments_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
   };
 
@@ -180,7 +180,7 @@ export default function DebitNotesPage() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Debit Notes</title>
+          <title>Adjustments</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             table { border-collapse: collapse; width: 100%; }
@@ -189,13 +189,13 @@ export default function DebitNotesPage() {
           </style>
         </head>
         <body>
-          <h1>Debit Notes</h1>
+          <h1>Adjustments</h1>
           <p>Total Amount: ${totalAmount.toLocaleString()}</p>
           <table>
             <thead>
               <tr>
                                  <th>ID</th>
-                 <th>Debit Note #</th>
+                 <th>Adjustment #</th>
                  <th>Type</th>
                  <th>Vendor</th>
                  <th>Bill/Invoice #</th>
@@ -221,7 +221,7 @@ export default function DebitNotesPage() {
         <div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
             <FileText className="w-8 sm:w-10 h-8 sm:h-10 text-orange-600" />
-            Manage Debit Notes
+            Manage Adjustments
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Compensate for less payment to vendors
@@ -304,7 +304,7 @@ export default function DebitNotesPage() {
         <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
           {!debitNotes || debitNotes.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">
-              No debit notes found.
+              No adjustments found.
             </p>
           ) : (
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
@@ -315,8 +315,8 @@ export default function DebitNotesPage() {
                       onClick={() => handleSort("debitNoteNumber")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">DEBIT NOTE</span>
-                      <span className="sm:hidden">DEBIT</span>
+                      <span className="hidden sm:inline">ADJUSTMENT</span>
+                      <span className="sm:hidden">ADJ</span>
                       {getSortIcon("debitNoteNumber")}
                     </button>
                   </th>
@@ -406,8 +406,8 @@ export default function DebitNotesPage() {
                       {dn.currency} {dn.amount.toLocaleString()}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{dn.description || `${dn.debitNoteNumber} Debit Note`}</span>
-                      <span className="sm:hidden">{dn.description?.substring(0, 15) || `${dn.debitNoteNumber} Debit Note`.substring(0, 15)}...</span>
+                      <span className="hidden sm:inline">{dn.description || `${dn.debitNoteNumber} Adjustment`}</span>
+                      <span className="sm:hidden">{dn.description?.substring(0, 15) || `${dn.debitNoteNumber} Adjustment`.substring(0, 15)}...</span>
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <DropdownMenu>
@@ -428,13 +428,13 @@ export default function DebitNotesPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={async () => {
-                              if (confirm("Are you sure you want to delete this debit note? This action cannot be undone.")) {
+                              if (confirm("Are you sure you want to delete this adjustment? This action cannot be undone.")) {
                                 try {
                                   const res = await fetch(`/api/debit-notes/${dn.id}`, {
                                     method: "DELETE",
                                   });
                                   if (res.ok) {
-                                    toast.success("Debit note deleted successfully");
+                                    toast.success("Adjustment deleted successfully");
                                     // Refresh the data
                                     const params = new URLSearchParams({
                                       page: String(page),
@@ -449,11 +449,11 @@ export default function DebitNotesPage() {
                                     setTotal(json.total);
                                   } else {
                                     const error = await res.json();
-                                    toast.error(error.error || "Failed to delete debit note");
+                                    toast.error(error.error || "Failed to delete adjustment");
                                   }
                                 } catch (error) {
-                                  console.error("Error deleting debit note:", error);
-                                  toast.error("Failed to delete debit note");
+                                  console.error("Error deleting adjustment:", error);
+                                  toast.error("Failed to delete adjustment");
                                 }
                               }
                             }}
@@ -480,10 +480,10 @@ export default function DebitNotesPage() {
         pageSize={pageSize}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
-        entityName="debit notes"
+        entityName="adjustments"
       />
 
-      {/* Create Debit Note Dialog */}
+      {/* Create Adjustment Dialog */}
       <Dialog
         open={openCreateDialog}
         onOpenChange={(open) => {
