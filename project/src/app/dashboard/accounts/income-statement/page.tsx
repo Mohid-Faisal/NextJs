@@ -18,8 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Download, Calendar, TrendingUp, TrendingDown, DollarSign, ArrowUp, Table, Printer, FileText } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Table, Printer, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, eachYearOfInterval, startOfYear, endOfYear, addMonths, subMonths, differenceInYears } from "date-fns";
 import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
@@ -70,7 +69,6 @@ type IncomeStatementData = {
 };
 
 export default function IncomeStatementPage() {
-  const router = useRouter();
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [accountBalances, setAccountBalances] = useState<AccountBalance[]>([]);
   const now = new Date();
@@ -724,15 +722,6 @@ export default function IncomeStatementPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
       <div className="mb-4 sm:mb-6">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        
         <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
@@ -797,9 +786,9 @@ export default function IncomeStatementPage() {
              <div>
                <DropdownMenu>
                  <DropdownMenuTrigger asChild>
-                   <Button className="w-full sm:w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+                   <Button className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">
                      Export
-                     <ArrowUp className="ml-2 h-4 w-4" />
+                     <Upload className="ml-2 h-4 w-4" />
                    </Button>
                  </DropdownMenuTrigger>
                  <DropdownMenuContent align="end" className="w-[120px]">

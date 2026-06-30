@@ -18,8 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Filter, Download, Table, Printer, FileText } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Search, Filter, Table, Printer, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
 
@@ -57,7 +56,6 @@ type Payment = {
 };
 
 export default function AccountBooksPage() {
-  const router = useRouter();
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<number>(0);
   const [selectedCategory, setSelectedCategory] = useState<string>("all-categories");
@@ -396,15 +394,6 @@ export default function AccountBooksPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
       <div className="mb-4 sm:mb-6">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
           Account Books
         </h1>
@@ -506,15 +495,15 @@ export default function AccountBooksPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      variant="outline"
                       size="sm"
                       disabled={filteredEntries.length === 0}
+                      className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
                     >
                       Export
-                      <Download className="w-4 h-4 ml-2" />
+                      <Upload className="ml-2 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="w-[120px]">
                     <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
                       <Table className="w-4 h-4" />
                       Excel

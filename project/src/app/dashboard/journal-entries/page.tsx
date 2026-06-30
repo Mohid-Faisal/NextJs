@@ -31,11 +31,11 @@ import {
   MoreHorizontal, 
   Eye, 
   CheckCircle, 
-  ArrowLeft,
   FileText,
   Table,
   Printer,
-  AlertCircle
+  AlertCircle,
+  Upload
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -300,15 +300,6 @@ const JournalEntriesPage = () => {
     >
       {/* Header */}
       <div className="mb-4 sm:mb-8">
-        <Button
-          variant="outline"
-          onClick={() => window.history.back()}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
@@ -374,11 +365,12 @@ const JournalEntriesPage = () => {
             {/* Export */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
+                <Button className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">
                   Export
+                  <Upload className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent align="end" className="w-[120px]">
                 <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
                   <Table className="w-4 h-4" />
                   Excel
