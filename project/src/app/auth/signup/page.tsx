@@ -108,6 +108,7 @@ const SignupPage = () => {
   const [step, setStep] = useState<"signup" | "plan" | "payment" | "verification" | "pending">("signup");
   const [verificationCode, setVerificationCode] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
+  const [orgId, setOrgId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme } = useTheme();
@@ -216,30 +217,120 @@ const SignupPage = () => {
     } catch (err) {
       if (err instanceof ZodError) { toast.error(err.issues[0].message); return; }
     }
-    setStep("plan");
+    // We sign up the user under default free plan to send verification code first
+    handleSignup("free", true);
   };
 
-  // Step 2 → Step 3 or API call
-  const handlePlanSelected = () => {
-    if (isFreeTrial) {
-      // Free trial — go straight to signup API
-      handleSignup("starter", true);
-    } else {
-      if (!selectedPlan) { toast.error("Please select a plan."); return; }
-      setStep("payment");
+  const getChecklistForPlan = (code: string): string[] => {
+    switch (code) {
+      case "free":
+        return ["50 shipments/month", "2 users", "1 branches"];
+      case "starter":
+        return ["500 shipments/month", "5 users", "2 branches", "API Access"];
+      case "growth":
+        return ["2000 shipments/month", "15 users", "5 branches", "API Access", "Custom Branding"];
+      case "pro":
+        return ["10000 shipments/month", "50 users", "20 branches", "API Access", "Custom Branding", "Priority Support"];
+      case "enterprise":
+        return ["Unlimited shipments/month", "Unlimited users", "Unlimited branches", "API Access", "Custom Branding", "Priority Support"];
+      default:
+        return [];
     }
   };
 
-  // Step 3 → API call (paid plan)
+  const handleSelectPaidPlan = async (planCode: string) => {
+    setSelectedPlan(planCode);
+    setIsFreeTrial(false);
+    
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/signup/update-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          organizationId: orgId,
+          planCode,
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStep("payment");
+      } else {
+        toast.error(data.message || "Failed to update plan selection.");
+      }
+    } catch {
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectFreePlan = async () => {
+    setSelectedPlan("free");
+    setIsFreeTrial(true);
+    
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/signup/update-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          organizationId: orgId,
+          planCode: "free",
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStep("pending");
+        toast.success("Registration complete! Waiting for approval.");
+      } else {
+        toast.error(data.message || "Failed to update plan selection.");
+      }
+    } catch {
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handlePaymentSubmit = async () => {
     if (!paymentMethod) { toast.error("Please select a payment method."); return; }
     if (!referenceId.trim()) { toast.error("Please enter a transaction/reference ID."); return; }
 
-    let receiptUrl: string | null = null;
-    if (receiptFile) {
-      receiptUrl = await uploadReceipt();
+    setIsLoading(true);
+    try {
+      let receiptUrl: string | null = null;
+      if (receiptFile) {
+        receiptUrl = await uploadReceipt();
+      }
+
+      const res = await fetch("/api/signup/update-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          organizationId: orgId,
+          planCode: selectedPlan,
+          paymentMethod,
+          referenceId: referenceId.trim(),
+          receiptUrl,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStep("pending");
+        toast.success("Payment submitted successfully! Waiting for approval.");
+      } else {
+        toast.error(data.message || "Failed to submit payment details");
+      }
+    } catch {
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
     }
-    await handleSignup(selectedPlan, false, paymentMethod, referenceId.trim(), receiptUrl);
   };
 
   const handleSignup = async (planCode: string, trial: boolean, pMethod?: string, refId?: string, rcptUrl?: string | null) => {
@@ -274,6 +365,9 @@ const SignupPage = () => {
 
       if (response.ok && data.success) {
         setUserId(data.userId);
+        if (data.organization?.id) {
+          setOrgId(data.organization.id);
+        }
         setStep("verification");
         toast.success("Verification code sent to your email!");
       } else {
@@ -334,7 +428,7 @@ const SignupPage = () => {
       const data = await response.json();
       if (response.ok && data.success) {
         if (tab === "org") {
-          setStep("pending");
+          setStep("plan");
         } else {
           toast.success(data.message);
           setTimeout(() => router.push("/auth/login"), 3000);
@@ -423,6 +517,11 @@ const SignupPage = () => {
             Back to home
           </Link>
           <h1 className={`text-3xl font-bold text-center mb-6 ${isDark ? "text-white" : "text-gray-900"}`}>Verify Your Email</h1>
+          {tab === "org" && (
+            <div className="mb-6 bg-white/5 dark:bg-slate-900/5 backdrop-blur-md rounded-2xl p-4 border border-slate-200/50 dark:border-slate-800/50">
+              <StepIndicator currentStep={1} totalSteps={4} labels={["Details", "Verify", "Plan", "Payment"]} />
+            </div>
+          )}
           <Card className="backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-xl">
             <CardContent className="p-6 space-y-4">
               <div className="text-center mb-4">
@@ -453,7 +552,7 @@ const SignupPage = () => {
                 {isLoading ? "Verifying..." : "Verify Email"}
               </Button>
               <div className="text-center">
-                <Button variant="ghost" onClick={() => setStep(tab === "org" ? "plan" : "signup")} className="text-sm text-slate-500">
+                <Button variant="ghost" onClick={() => setStep("signup")} className="text-sm text-slate-500">
                   ← Back
                 </Button>
               </div>
@@ -466,128 +565,111 @@ const SignupPage = () => {
 
   // --- STEP: Plan Selection (org only) ---
   if (step === "plan") {
-    const orgStepLabels = ["Details", "Plan", "Verify"];
+    const orgStepLabels = ["Details", "Verify", "Plan", "Payment"];
+    const sortedPlans = [...plans].sort((a, b) => a.priceMonthlyUsd - b.priceMonthlyUsd);
+
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
-        <motion.div className="w-full max-w-3xl relative z-10" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
-          <button onClick={() => setStep("signup")} className={`inline-flex items-center gap-2 text-sm mb-6 ${isDark ? "text-gray-300 hover:text-white" : "text-gray-500 hover:text-gray-900"}`}>
+        <motion.div className="w-full max-w-7xl relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          
+          <button 
+            onClick={() => setStep("verification")} 
+            className={`inline-flex items-center gap-2 text-sm mb-6 font-semibold transition-colors ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
+          >
             <ArrowLeft className="h-4 w-4" />
-            Back to details
+            Back to verification
           </button>
 
-          <h1 className={`text-3xl font-extrabold text-center mb-2 tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
-            Choose Your Plan
+          <h1 className={`text-4xl sm:text-5xl font-extrabold text-center mb-3 tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
+            Simple, transparent pricing
           </h1>
-          <p className="text-center text-muted-foreground text-sm mb-8">
-            Start with a 14-day free trial, or pick a plan that fits your needs.
+          <p className="text-center text-muted-foreground text-base mb-10 max-w-2xl mx-auto">
+            Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
           </p>
 
-          <StepIndicator currentStep={1} totalSteps={3} labels={orgStepLabels} />
-
-          {/* Free Trial Card */}
-          <motion.button
-            type="button"
-            onClick={() => { setIsFreeTrial(true); setSelectedPlan(""); }}
-            className={`w-full text-left rounded-2xl border-2 p-6 mb-4 transition-all cursor-pointer focus:outline-none ${
-              isFreeTrial
-                ? "border-indigo-500 ring-2 ring-indigo-300 dark:ring-indigo-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/40"
-                : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 bg-white dark:bg-slate-900"
-            }`}
-            whileHover={{ scale: 1.005 }}
-            whileTap={{ scale: 0.995 }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-lg text-gray-900 dark:text-white">14-Day Free Trial</h3>
-                    <span className="bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Recommended</span>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Try all features free for 14 days. No payment required.</p>
-                </div>
-              </div>
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                isFreeTrial ? "border-indigo-500 bg-indigo-500" : "border-gray-300 dark:border-gray-600"
-              }`}>
-                {isFreeTrial && <Check className="w-4 h-4 text-white" />}
-              </div>
-            </div>
-          </motion.button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1" />
-            <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase">or choose a paid plan</span>
-            <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1" />
+          <div className="mb-12 max-w-xl mx-auto bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-4 border border-slate-250/30 dark:border-slate-800/30">
+            <StepIndicator currentStep={2} totalSteps={4} labels={orgStepLabels} />
           </div>
 
-          {/* Paid Plan Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            {plans.map((plan, idx) => {
-              const active = !isFreeTrial && selectedPlan === plan.code;
-              const icons = [Zap, Crown, Crown];
-              const gradients = [
-                "from-blue-500 to-cyan-500",
-                "from-violet-500 to-purple-600",
-                "from-amber-500 to-orange-500",
-              ];
-              const PlanIcon = icons[idx] || Zap;
+          {/* 5 columns pricing grid */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-stretch mb-8">
+            {sortedPlans.map((plan) => {
+              const features = plan.features || {};
+              const isGrowth = plan.code === "growth";
+              const isFree = plan.priceMonthlyUsd === 0;
+              const annualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
+              const planDescription = features.description || (isFree ? "Get started at no cost. Up to 50 shipments/month." : "");
 
               return (
-                <motion.button
+                <Card 
                   key={plan.id}
-                  type="button"
-                  onClick={() => { setIsFreeTrial(false); setSelectedPlan(plan.code); }}
-                  className={`text-left rounded-2xl border-2 p-5 transition-all cursor-pointer focus:outline-none ${
-                    active
-                      ? "border-indigo-500 ring-2 ring-indigo-300 dark:ring-indigo-700 bg-indigo-50/50 dark:bg-indigo-950/30"
-                      : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 bg-white dark:bg-slate-900"
+                  className={`relative flex flex-col justify-between p-6 transition-all duration-300 ${
+                    isGrowth 
+                      ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl scale-[1.02] bg-white dark:bg-slate-900" 
+                      : "border border-slate-200 dark:border-slate-850 shadow-sm bg-white dark:bg-slate-900/90"
                   }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`w-10 h-10 bg-gradient-to-br ${gradients[idx]} rounded-xl flex items-center justify-center shadow-sm`}>
-                      <PlanIcon className="w-5 h-5 text-white" />
+                  {isGrowth && (
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase flex items-center gap-1 shadow-sm">
+                      <Sparkles className="w-3 h-3 fill-white" /> Most Popular
                     </div>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      active ? "border-indigo-500 bg-indigo-500" : "border-gray-300 dark:border-gray-600"
-                    }`}>
-                      {active && <Check className="w-3 h-3 text-white" />}
+                  )}
+
+                  <div className="space-y-4 flex-1 flex flex-col">
+                    <div>
+                      <h3 className="font-extrabold text-xl text-gray-900 dark:text-white capitalize">{plan.name}</h3>
+                      <p className="text-xs text-slate-500 mt-1 min-h-[32px] leading-normal">{planDescription}</p>
                     </div>
+
+                    <div className="pt-2">
+                      <div className="flex items-baseline gap-0.5">
+                        <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                          ${plan.priceMonthlyUsd.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">/month</span>
+                      </div>
+                      {!isFree && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                          ${annualPrice.toFixed(2)}/year (Save 20%)
+                        </p>
+                      )}
+                    </div>
+
+                    <hr className="border-slate-100 dark:border-slate-800/80 my-2" />
+
+                    <ul className="space-y-3.5 text-xs text-gray-650 dark:text-gray-400 flex-1 py-2">
+                      {getChecklistForPlan(plan.code).map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                          <span className="font-medium">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <h3 className="font-bold text-base text-gray-900 dark:text-white capitalize">{plan.name}</h3>
-                  <div className="mt-1 mb-3">
-                    <span className="text-2xl font-extrabold text-gray-900 dark:text-white">${plan.priceMonthlyUsd}</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">/mo</span>
+
+                  <div className="pt-6">
+                    <Button
+                      onClick={() => isFree ? handleSelectFreePlan() : handleSelectPaidPlan(plan.code)}
+                      disabled={isLoading}
+                      className={`w-full py-5 rounded-xl font-bold transition-all ${
+                        isGrowth 
+                          ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none" 
+                          : "bg-slate-950 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
+                      }`}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                      ) : (
+                        "Start Free Trial"
+                      )}
+                    </Button>
                   </div>
-                  <ul className="space-y-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-green-500" />{plan.maxUsers} users</li>
-                    <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-green-500" />{plan.maxShipmentsPerMonth.toLocaleString()} shipments/mo</li>
-                  </ul>
-                </motion.button>
+                </Card>
               );
             })}
           </div>
-
-          <Button
-            onClick={handlePlanSelected}
-            disabled={!isFreeTrial && !selectedPlan || isLoading}
-            className="w-full py-6 text-lg bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            {isLoading ? (
-              <><Loader2 className="w-5 h-5 animate-spin mr-2" />Processing...</>
-            ) : isFreeTrial ? (
-              <>Start Free Trial</>
-            ) : (
-              <>Continue to Payment <ArrowRight className="w-5 h-5 ml-2" /></>
-            )}
-          </Button>
         </motion.div>
       </div>
     );
@@ -613,7 +695,7 @@ const SignupPage = () => {
             Submit your payment proof for the <span className="font-semibold text-indigo-600 capitalize">{chosenPlan?.name}</span> plan.
           </p>
 
-          <StepIndicator currentStep={2} totalSteps={3} labels={["Details", "Plan", "Payment"]} />
+          <StepIndicator currentStep={3} totalSteps={4} labels={["Details", "Verify", "Plan", "Payment"]} />
 
           <Card className="backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-2xl">
             <CardContent className="p-6 space-y-5">
@@ -764,6 +846,12 @@ const SignupPage = () => {
                 )}
               </button>
             </div>
+
+            {tab === "org" && (
+              <div className="mb-6 bg-slate-50/50 dark:bg-slate-950/20 backdrop-blur-md rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                <StepIndicator currentStep={0} totalSteps={4} labels={["Details", "Verify", "Plan", "Payment"]} />
+              </div>
+            )}
 
             <div className="space-y-4">
               <AnimatePresence mode="wait">
