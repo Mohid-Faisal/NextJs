@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import {
   buildShipmentDebitTransactionLineDescription,
@@ -233,7 +233,7 @@ export async function PATCH(req: Request) {
 
 async function handleShipmentUpdate(req: Request) {
   try {
-    const auth = await requireApiSession(req as import("next/server").NextRequest);
+    const auth = await requirePermission(req as import("next/server").NextRequest, "edit_shipment");
     if (auth.error) return auth.error;
     const session = auth.session;
 

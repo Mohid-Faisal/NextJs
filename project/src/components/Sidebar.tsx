@@ -45,6 +45,7 @@ import {
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import { AnimatePresence, motion } from "framer-motion";
+import { usePermissions } from "@/components/PermissionContext";
 
 const links = [
   { href: "/dashboard/customers", label: "Customers", icon: User },
@@ -67,6 +68,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [userName, setUserName] = useState("User");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [orgRole, setOrgRole] = useState<string | null>(null);
+  const { hasPermission, loading } = usePermissions();
   const [isHovered, setIsHovered] = useState(false);
   const [shipmentOpen, setShipmentOpen] = useState(
     pathname.startsWith("/dashboard/shipments") ||
@@ -386,67 +388,77 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
 
 
           {/* Shipments Collapsible */}
-          <div>
-            <button
-              onClick={() => setShipmentOpen(!shipmentOpen)}
-              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                pathname.startsWith("/dashboard/shipments") ||
-                pathname.startsWith("/dashboard/add-shipment") ||
-                pathname.startsWith("/dashboard/rate-calculator")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <Package className="w-5 h-5 shrink-0" />
-                <span
-                  className={`whitespace-nowrap transition-all duration-200 ${
-                    shouldExpand
-                      ? "opacity-100"
-                      : "opacity-0 w-0 overflow-hidden"
-                  }`}
-                >
-                  Shipments
-                </span>
-              </div>
-              {shouldExpand &&
-                (shipmentOpen ? (
-                  <ChevronUp className="w-4 h-4 ml-auto" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 ml-auto" />
-                ))}
-            </button>
-
-            <AnimatePresence>
-              {shipmentOpen && shouldExpand && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="pl-10 mt-2 space-y-1"
-                >
-                  {subLinksShipment.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        isLinkActive(href)
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {label}
-                    </Link>
+          {hasPermission("view_shipments") && (
+            <div>
+              <button
+                onClick={() => setShipmentOpen(!shipmentOpen)}
+                className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                  pathname.startsWith("/dashboard/shipments") ||
+                  pathname.startsWith("/dashboard/add-shipment") ||
+                  pathname.startsWith("/dashboard/rate-calculator")
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <Package className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand
+                        ? "opacity-100"
+                        : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    Shipments
+                  </span>
+                </div>
+                {shouldExpand &&
+                  (shipmentOpen ? (
+                    <ChevronUp className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
                   ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              </button>
+
+              <AnimatePresence>
+                {shipmentOpen && shouldExpand && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="pl-10 mt-2 space-y-1"
+                  >
+                    {subLinksShipment
+                      .filter((sub) => sub.label !== "Add Shipment" || hasPermission("create_shipment"))
+                      .map(({ href, label, icon: Icon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                            isLinkActive(href)
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          {label}
+                        </Link>
+                      ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Other Static Links */}
           {links
-            .filter((link) => link.href !== "/dashboard/users" || isSuperAdmin || orgRole === "OWNER")
+            .filter((link) => {
+              if (link.href === "/dashboard/users") return isSuperAdmin || orgRole === "OWNER";
+              if (link.href === "/dashboard/customers") return hasPermission("view_customers");
+              if (link.href === "/dashboard/recipients") return hasPermission("view_customers");
+              if (link.href === "/dashboard/vendors") return hasPermission("view_vendors");
+              return true;
+            })
             .map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href;
               return (
@@ -474,308 +486,349 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             })}
 
           {/* Income Collapsible */}
-          <div>
-            <button
-              onClick={() => setIncomeOpen(!incomeOpen)}
-              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                pathname.startsWith("/dashboard/income") ||
-                pathname.startsWith("/dashboard/accounts/revenue")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <TrendingUp className="w-5 h-5 shrink-0" />
-                <span
-                  className={`whitespace-nowrap transition-all duration-200 ${
-                    shouldExpand
-                      ? "opacity-100"
-                      : "opacity-0 w-0 overflow-hidden"
-                  }`}
-                >
-                  Income
-                </span>
-              </div>
-              {shouldExpand &&
-                (incomeOpen ? (
-                  <ChevronUp className="w-4 h-4 ml-auto" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 ml-auto" />
-                ))}
-            </button>
-
-            <AnimatePresence>
-              {incomeOpen && shouldExpand && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="pl-10 mt-2 space-y-1"
-                >
-                  {subLinksIncome.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        isLinkActive(href)
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {label}
-                    </Link>
+          {(hasPermission("view_revenue") || hasPermission("manage_billing")) && (
+            <div>
+              <button
+                onClick={() => setIncomeOpen(!incomeOpen)}
+                className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                  pathname.startsWith("/dashboard/income") ||
+                  pathname.startsWith("/dashboard/accounts/revenue")
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <TrendingUp className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand
+                        ? "opacity-100"
+                        : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    Income
+                  </span>
+                </div>
+                {shouldExpand &&
+                  (incomeOpen ? (
+                    <ChevronUp className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
                   ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              </button>
+
+              <AnimatePresence>
+                {incomeOpen && shouldExpand && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="pl-10 mt-2 space-y-1"
+                  >
+                    {subLinksIncome
+                      .filter((sub) => {
+                        if (sub.label === "Revenue") return hasPermission("view_revenue");
+                        if (sub.label === "Invoices") return hasPermission("manage_billing") || hasPermission("view_revenue");
+                        if (sub.label === "Adjustments") return hasPermission("manage_billing");
+                        return true;
+                      })
+                      .map(({ href, label, icon: Icon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                            isLinkActive(href)
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          {label}
+                        </Link>
+                      ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Expense Collapsible */}
-          <div>
-            <button
-              onClick={() => setExpenseOpen(!expenseOpen)}
-              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                pathname.startsWith("/dashboard/expense") &&
-                !pathname.startsWith("/dashboard/accounts/payments")
+          {(hasPermission("manage_billing") || hasPermission("view_revenue")) && (
+            <div>
+              <button
+                onClick={() => setExpenseOpen(!expenseOpen)}
+                className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                  pathname.startsWith("/dashboard/expense") &&
+                  !pathname.startsWith("/dashboard/accounts/payments")
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <ShoppingCart className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand
+                        ? "opacity-100"
+                        : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    Expense
+                  </span>
+                </div>
+                {shouldExpand &&
+                  (expenseOpen ? (
+                    <ChevronUp className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
+                  ))}
+              </button>
+
+              <AnimatePresence>
+                {expenseOpen && shouldExpand && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="pl-10 mt-2 space-y-1"
+                  >
+                    {subLinksExpense
+                      .filter((sub) => {
+                        if (sub.label === "Payments") return hasPermission("manage_billing") || hasPermission("view_revenue");
+                        if (sub.label === "Bills" || sub.label === "Adjustments") return hasPermission("manage_billing");
+                        return true;
+                      })
+                      .map(({ href, label, icon: Icon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                            isLinkActive(href)
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          {label}
+                        </Link>
+                      ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+          {/* Transactions */}
+          {(hasPermission("view_revenue") || hasPermission("manage_billing")) && (
+            <Link
+              href="/dashboard/accounts/payments"
+              className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+                pathname.startsWith("/dashboard/transactions") ||
+                pathname.startsWith("/dashboard/accounts/payments")
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
             >
-              <div className="flex items-center gap-4">
-                <ShoppingCart className="w-5 h-5 shrink-0" />
-                <span
-                  className={`whitespace-nowrap transition-all duration-200 ${
-                    shouldExpand
-                      ? "opacity-100"
-                      : "opacity-0 w-0 overflow-hidden"
-                  }`}
-                >
-                  Expense
-                </span>
-              </div>
-              {shouldExpand &&
-                (expenseOpen ? (
-                  <ChevronUp className="w-4 h-4 ml-auto" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 ml-auto" />
-                ))}
-            </button>
-
-            <AnimatePresence>
-              {expenseOpen && shouldExpand && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="pl-10 mt-2 space-y-1"
-                >
-                  {subLinksExpense.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        isLinkActive(href)
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {label}
-                    </Link>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          {/* Transactions */}
-          <Link
-            href="/dashboard/accounts/payments"
-            className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
-              pathname.startsWith("/dashboard/transactions") ||
-              pathname.startsWith("/dashboard/accounts/payments")
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            }`}
-          >
-            <CreditCard className="w-5 h-5 shrink-0" />
-            <span
-              className={`whitespace-nowrap transition-all duration-200 ${
-                shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-              }`}
-            >
-              Transactions
-            </span>
-          </Link>
+              <CreditCard className="w-5 h-5 shrink-0" />
+              <span
+                className={`whitespace-nowrap transition-all duration-200 ${
+                  shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                }`}
+              >
+                Transactions
+              </span>
+            </Link>
+          )}
 
           {/* Accounts Collapsible */}
-          <div>
-            <button
-              onClick={() => setAccountsOpen(!accountsOpen)}
-              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                pathname.startsWith("/dashboard/accounts") &&
-                !pathname.startsWith("/dashboard/accounts/payments") &&
-                !pathname.startsWith("/dashboard/accounts/ledger")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <DollarSign className="w-5 h-5 shrink-0" />
-                <span
-                  className={`whitespace-nowrap transition-all duration-200 ${
-                    shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-                  }`}
-                >
-                  Finance
-                </span>
-              </div>
-              {shouldExpand &&
-                (accountsOpen ? (
-                  <ChevronUp className="w-4 h-4 ml-auto" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 ml-auto" />
-                ))}
-            </button>
-
-            <AnimatePresence>
-              {accountsOpen && shouldExpand && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="pl-10 mt-2 space-y-1"
-                >
-                  {subLinksAccounts.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        isLinkActive(href)
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {label}
-                    </Link>
+          {(hasPermission("manage_billing") || hasPermission("view_revenue")) && (
+            <div>
+              <button
+                onClick={() => setAccountsOpen(!accountsOpen)}
+                className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                  pathname.startsWith("/dashboard/accounts") &&
+                  !pathname.startsWith("/dashboard/accounts/payments") &&
+                  !pathname.startsWith("/dashboard/accounts/ledger")
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <DollarSign className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    Finance
+                  </span>
+                </div>
+                {shouldExpand &&
+                  (accountsOpen ? (
+                    <ChevronUp className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
                   ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              </button>
+
+              <AnimatePresence>
+                {accountsOpen && shouldExpand && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="pl-10 mt-2 space-y-1"
+                  >
+                    {subLinksAccounts
+                      .filter((sub) => hasPermission("manage_billing"))
+                      .map(({ href, label, icon: Icon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                            isLinkActive(href)
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          {label}
+                        </Link>
+                      ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Reports Collapsible */}
-          <div>
-            <button
-              onClick={() => setReportsOpen(!reportsOpen)}
-              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                pathname.startsWith("/dashboard/reports") || pathname.startsWith("/dashboard/accounts/ledger")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <ClipboardList className="w-5 h-5 shrink-0" />
-                <span
-                  className={`whitespace-nowrap transition-all duration-200 ${
-                    shouldExpand
-                      ? "opacity-100"
-                      : "opacity-0 w-0 overflow-hidden"
-                  }`}
-                >
-                  Reports
-                </span>
-              </div>
-              {shouldExpand &&
-                (reportsOpen ? (
-                  <ChevronUp className="w-4 h-4 ml-auto" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 ml-auto" />
-                ))}
-            </button>
-
-            <AnimatePresence>
-              {reportsOpen && shouldExpand && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="pl-10 mt-2 space-y-1"
-                >
-                  {subLinksReports.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        isLinkActive(href)
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {label}
-                    </Link>
+          {(hasPermission("view_analytics") || hasPermission("view_revenue")) && (
+            <div>
+              <button
+                onClick={() => setReportsOpen(!reportsOpen)}
+                className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                  pathname.startsWith("/dashboard/reports") || pathname.startsWith("/dashboard/accounts/ledger")
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <ClipboardList className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand
+                        ? "opacity-100"
+                        : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    Reports
+                  </span>
+                </div>
+                {shouldExpand &&
+                  (reportsOpen ? (
+                    <ChevronUp className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
                   ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              </button>
+
+              <AnimatePresence>
+                {reportsOpen && shouldExpand && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="pl-10 mt-2 space-y-1"
+                  >
+                    {subLinksReports
+                      .filter((sub) => {
+                        if (sub.label.includes("Payments")) return hasPermission("view_revenue");
+                        return hasPermission("view_analytics") || hasPermission("view_revenue");
+                      })
+                      .map(({ href, label, icon: Icon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                            isLinkActive(href)
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          {label}
+                        </Link>
+                      ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Settings Collapsible */}
-          <div>
-            <button
-              onClick={() => setSettingsOpen(!settingsOpen)}
-              className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                pathname.startsWith("/dashboard/shipment-settings")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <Settings className="w-5 h-5 shrink-0" />
-                <span
-                  className={`whitespace-nowrap transition-all duration-200 ${
-                    shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-                  }`}
-                >
-                  Configuration
-                </span>
-              </div>
-              {shouldExpand &&
-                (settingsOpen ? (
-                  <ChevronUp className="w-4 h-4 ml-auto" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 ml-auto" />
-                ))}
-            </button>
-
-            <AnimatePresence>
-              {settingsOpen && shouldExpand && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="pl-10 mt-2 space-y-1"
-                >
-                  {subLinksSettings.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                        isLinkActive(href)
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {label}
-                    </Link>
+          {(hasPermission("view_config") || hasPermission("manage_statuses") || hasPermission("manage_billing") || hasPermission("view_map") || hasPermission("manage_hscodes")) && (
+            <div>
+              <button
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                  pathname.startsWith("/dashboard/shipment-settings")
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <Settings className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    Configuration
+                  </span>
+                </div>
+                {shouldExpand &&
+                  (settingsOpen ? (
+                    <ChevronUp className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
                   ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              </button>
+
+              <AnimatePresence>
+                {settingsOpen && shouldExpand && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="pl-10 mt-2 space-y-1"
+                  >
+                    {subLinksSettings
+                      .filter((sub) => {
+                        if (sub.label === "Branding & Interface") return hasPermission("view_config");
+                        if (sub.label === "Manage Zones") return hasPermission("manage_statuses");
+                        if (sub.label === "Manage Rate List") return hasPermission("manage_billing");
+                        if (sub.label === "Remote Area") return hasPermission("view_map");
+                        if (sub.label === "HS Codes") return hasPermission("manage_hscodes");
+                        return true;
+                      })
+                      .map(({ href, label, icon: Icon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
+                            isLinkActive(href)
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          {label}
+                        </Link>
+                      ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </nav>
       </div>
     </aside>

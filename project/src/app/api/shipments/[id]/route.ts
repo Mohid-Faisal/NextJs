@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { createJournalEntryForTransaction } from "@/lib/utils";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 // Helper function to decode JWT token
@@ -21,7 +21,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "view_shipments");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -155,7 +155,7 @@ export async function DELETE(
   try {
     console.log("🚀 DELETE shipment request started");
 
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "delete_shipment");
     if (auth.error) return auth.error;
     const session = auth.session;
 

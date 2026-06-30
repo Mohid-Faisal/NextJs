@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { decodeToken } from "@/lib/utils";
 import bcrypt from "bcrypt";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 
 // Define proper types for the request body
@@ -33,7 +33,7 @@ export async function GET(
       );
     }
 
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "view_vendors");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -73,7 +73,7 @@ export async function PUT(
       );
     }
 
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_vendors");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -130,7 +130,7 @@ export async function DELETE(
       );
     }
 
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_vendors");
     if (auth.error) return auth.error;
     const session = auth.session;
 

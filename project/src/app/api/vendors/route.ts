@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { Country } from "country-state-city";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(req: Request) {
-  const auth = await requireApiSession(req);
+  const auth = await requirePermission(req, "view_vendors");
   if (auth.error) return auth.error;
   const session = auth.session;
 

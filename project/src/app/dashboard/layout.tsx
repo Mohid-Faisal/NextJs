@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LayoutContent from "@/components/LayoutContent";
+import { PermissionProvider } from "@/components/PermissionContext";
 
 export const metadata: Metadata = {
   title: "Courier Dashboard",
@@ -11,5 +12,10 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <LayoutContent>{children}</LayoutContent>;
+  return (
+    <PermissionProvider>
+      <LayoutContent>{children}</LayoutContent>
+    </PermissionProvider>
+  );
 }
+

@@ -508,7 +508,8 @@ const DashboardPage = () => {
         )}
 
         {/* Top Customers Chart */}
-        <div className="mb-6 md:mb-8">
+        {hasPermission("view_analytics") && hasPermission("view_customers") && (
+          <div className="mb-6 md:mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -600,9 +601,11 @@ const DashboardPage = () => {
             </div>
           </motion.div>
         </div>
+        )}
 
         {/* Recent Activity Table - Tabbed Interface */}
-        <motion.div
+        {hasPermission("view_activity") && (
+          <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.8 }}
@@ -857,7 +860,8 @@ const DashboardPage = () => {
               </table>
             )}
           </div>
-        </motion.div>
+          </motion.div>
+        )}
       </div>
 
       {/* Accounts Receivable Modal */}
