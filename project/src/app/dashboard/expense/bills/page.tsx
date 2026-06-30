@@ -588,7 +588,9 @@ export default function ExpenseBillsPage() {
             Vendor Bills
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your vendor invoices and track expenses</p>
-          <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">Showing only Vendor invoices</p>
+          <p className="text-sm text-orange-600 dark:text-orange-400 mt-1 font-medium">
+            {statusFilter === "All" ? "Showing all vendor bills" : `Showing only ${statusFilter.toLowerCase()} vendor bills`}
+          </p>
         </div>
 
         {/* Status filter tabs */}

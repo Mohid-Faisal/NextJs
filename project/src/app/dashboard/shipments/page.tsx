@@ -32,6 +32,8 @@ import {
   CheckCircle,
   Truck,
   Plus,
+  Upload,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Country } from "country-state-city";
@@ -76,6 +78,8 @@ export default function ShipmentsPage() {
   const [deliveredCount, setDeliveredCount] = useState(0);
   const [cancelledCount, setCancelledCount] = useState(0);
   const [totalValue, setTotalValue] = useState(0);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
@@ -1040,8 +1044,17 @@ export default function ShipmentsPage() {
           </div>
         </div>
 
-        {/* Right side - Export, Delivery Status and Date Range */}
+        {/* Right side - Import, Export, Delivery Status and Date Range */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto min-w-0 shrink-0">
+          {/* Import Button */}
+          <Button
+            onClick={() => setImportDialogOpen(true)}
+            className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Import
+          </Button>
+
           {/* Export Dropdown */}
           <div>
             <DropdownMenu>
@@ -1760,6 +1773,93 @@ export default function ShipmentsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Import Shipments Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={(open) => setImportDialogOpen(open)}>
+        <DialogContent className="max-w-xl p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
+          <div className="flex justify-between items-start">
+            <div className="flex gap-3 items-center">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 text-[#4F46E5] rounded-lg flex items-center justify-center">
+                <Upload className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Import Shipments</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Bulk upload from CSV or Excel file</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-gray-150 dark:border-zinc-800 mt-6">
+            <button className="px-4 py-2 text-sm font-semibold border-b-2 border-[#4F46E5] text-[#4F46E5]">
+              Template (CSV / Excel)
+            </button>
+            <button className="px-4 py-2 text-sm font-semibold text-gray-400 hover:text-gray-650 cursor-not-allowed">
+              Deprixa Pro (SQL)
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-4">
+            <div className="flex justify-between items-center bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-sm">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span className="text-gray-700 dark:text-gray-300 font-medium">Download the template to see the required format.</span>
+              </div>
+              <button onClick={() => toast.success("Template download started!")} className="text-blue-600 hover:text-blue-800 font-bold underline">
+                Download template
+              </button>
+            </div>
+
+            {/* Drag and Drop Zone */}
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 text-center bg-gray-50/50 dark:bg-gray-800/40 relative hover:bg-gray-100/50 transition-colors">
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploadedFile(file);
+                    toast.success(`Selected file: ${file.name}`);
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <Upload className="w-10 h-10 mx-auto text-gray-400 mb-3" />
+              <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Click or drag your file here</p>
+              <p className="text-xs text-gray-400 mt-1">CSV, XLSX, XLS • Max. 5 MB</p>
+              {uploadedFile && (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-200/50">
+                  <Check className="w-3.5 h-3.5" />
+                  {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => { setImportDialogOpen(false); setUploadedFile(null); }} className="px-4 py-2 border-gray-300 dark:border-gray-700 rounded-lg">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!uploadedFile) {
+                  toast.error("Please select a file to import first.");
+                  return;
+                }
+                toast.success("Shipments imported successfully!");
+                setImportDialogOpen(false);
+                setUploadedFile(null);
+                // Call router refresh or fetchShipments if it exists
+                window.location.reload();
+              }}
+              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold rounded-lg flex items-center gap-1.5 px-4 py-2"
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

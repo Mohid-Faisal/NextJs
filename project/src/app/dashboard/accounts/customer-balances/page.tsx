@@ -401,79 +401,83 @@ export default function CustomerBalancesPage() {
 
   return (
     <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
-          Customer Balances Report
-        </h1>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-          View all customers with their current account balances
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <Wallet className="w-8 sm:w-10 h-8 sm:h-10 text-blue-600" />
+            Customer Balances Report
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            View all customers with their current account balances
+          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium">
+            Showing current balances for all customers
+          </p>
+        </div>
+
+        {/* Read-only stats tabs on the top right */}
+        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[130px] bg-blue-50 dark:bg-blue-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40">
+            <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">
+              ${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
+              Total Balance
+            </span>
+          </div>
+          <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[130px] bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 shadow-sm border border-gray-150/40">
+            <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-300">
+              {filteredCustomers.length}
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
+              Total Customers
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-        <div className="flex gap-2 w-full sm:w-auto">
+        {/* Left side - Search bar */}
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
           <Input
             placeholder="Search customers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 sm:max-w-sm"
+            className="pl-9 text-sm rounded-lg"
           />
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-[120px] justify-between">
-              Export
-              <ArrowUp className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[120px]">
-            <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
-              <Table className="w-4 h-4" />
-              Excel
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
-              <Printer className="w-4 h-4" />
-              Print
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={handleExportPDF} 
-              disabled={isGeneratingPDF}
-              className="flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              {isGeneratingPDF ? 'Generating...' : 'PDF'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Wallet className="w-4 h-4" />
-              Total Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-800 dark:text-white">
-              {totalBalance.toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <CardHeader>
-            <CardTitle className="text-sm">Total Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-800 dark:text-white">
-              {filteredCustomers.length}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Export Button */}
+        <div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold">
+                Export
+                <ArrowUp className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[110px]">
+              <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2 text-xs">
+                <Table className="w-3.5 h-3.5" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2 text-xs">
+                <Printer className="w-3.5 h-3.5" />
+                Print
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleExportPDF} 
+                disabled={isGeneratingPDF}
+                className="flex items-center gap-2 text-xs"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                {isGeneratingPDF ? 'Generating...' : 'PDF'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Customers Table */}

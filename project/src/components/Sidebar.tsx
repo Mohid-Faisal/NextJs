@@ -242,7 +242,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   ];
 
   const subLinksReports = [
-    { href: "/dashboard/accounts/ledger", label: "Ledger", icon: BookOpen },
     { href: "/dashboard/accounts/customer-balances", label: "Customer Balances", icon: Wallet },
     { href: "/dashboard/accounts/vendor-balances", label: "Vendor Balances", icon: Wallet },
     { href: "/dashboard/accounts/payments-received", label: "Payments Received", icon: ArrowDownCircle },

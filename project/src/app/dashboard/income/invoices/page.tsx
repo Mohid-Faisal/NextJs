@@ -617,8 +617,8 @@ export default function IncomeInvoicesPage() {
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Manage your customer invoices and track revenue
           </p>
-          <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-            Showing only Customer invoices
+          <p className="text-sm text-green-600 dark:text-green-400 mt-1 font-medium">
+            {statusFilter === "All" ? "Showing all customer invoices" : `Showing only ${statusFilter.toLowerCase()} customer invoices`}
           </p>
         </div>
 

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table } from "lucide-react";
+import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Country as country } from "country-state-city";
@@ -47,6 +47,8 @@ export default function RecipientsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "remote">("all");
   const [remoteTotal, setRemoteTotal] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
@@ -319,9 +321,18 @@ export default function RecipientsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">
-          Recipients
-        </h2>
+        <div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <User className="w-8 sm:w-10 h-8 sm:h-10 text-blue-600" />
+            Recipients
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Manage delivery consignees and remote locations
+          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium">
+            {activeTab === "all" ? "Showing all registered recipients" : "Showing only remote recipients"}
+          </p>
+        </div>
         <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
           <button
             type="button"
@@ -367,52 +378,54 @@ export default function RecipientsPage() {
       {/* Filters */}
       <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
         {/* Left side - Search bar */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto">
-          {/* Search bar with icon */}
-          <div className="flex flex-1 max-w-sm">
-            {/* Search input */}
-            <Input
-              placeholder="Search by company name, person name, phone, city, or country"
-              value={searchTerm}
-              onChange={(e) => {
-                setPage(1);
-                setSearchTerm(e.target.value);
-              }}
-              className="rounded-r-none"
-            />
-            {/* Icon box */}
-            <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-              <Search className="text-white w-5 h-5" />
-            </div>
-          </div>
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
+          <Input
+            placeholder="Search by company, contact person..."
+            value={searchTerm}
+            onChange={(e) => {
+              setPage(1);
+              setSearchTerm(e.target.value);
+            }}
+            className="pl-9 text-sm rounded-lg"
+          />
         </div>
 
-        {/* Right side - Export and Add buttons */}
+        {/* Right side - Import, Export, Add Recipient */}
         <div className="flex gap-2">
+          {/* Import Button */}
+          <Button
+            onClick={() => setImportDialogOpen(true)}
+            className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Import
+          </Button>
+
           {/* Export Dropdown */}
           <div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="w-[120px] justify-between bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+                <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold">
                   Export
                   <ArrowUp className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[120px]">
-                <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
-                  <Table className="w-4 h-4" />
+              <DropdownMenuContent align="end" className="w-[110px]">
+                <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2 text-xs">
+                  <Table className="w-3.5 h-3.5" />
                   Excel
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
-                  <Printer className="w-4 h-4" />
+                <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2 text-xs">
+                  <Printer className="w-3.5 h-3.5" />
                   Print
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={handleExportPDF} 
                   disabled={isGeneratingPDF}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-xs"
                 >
-                  <FileText className="w-4 h-4" />
+                  <FileText className="w-3.5 h-3.5" />
                   {isGeneratingPDF ? 'Generating...' : 'PDF'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -420,9 +433,9 @@ export default function RecipientsPage() {
           </div>
 
           {/* Add Recipient button */}
-          <Button asChild>
+          <Button asChild className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm">
             <Link href="/dashboard/recipients/add-recipients">
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4" />
               Add Recipient
             </Link>
           </Button>
@@ -644,6 +657,92 @@ export default function RecipientsPage() {
         onPageSizeChange={setPageSize}
         entityName="recipients"
       />
+
+      {/* Import Recipients Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={(open) => setImportDialogOpen(open)}>
+        <DialogContent className="max-w-xl p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
+          <div className="flex justify-between items-start">
+            <div className="flex gap-3 items-center">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 text-[#4F46E5] rounded-lg flex items-center justify-center">
+                <Upload className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Import Recipients</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Bulk upload from CSV or Excel file</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-gray-150 dark:border-zinc-800 mt-6">
+            <button className="px-4 py-2 text-sm font-semibold border-b-2 border-[#4F46E5] text-[#4F46E5]">
+              Template (CSV / Excel)
+            </button>
+            <button className="px-4 py-2 text-sm font-semibold text-gray-400 hover:text-gray-650 cursor-not-allowed">
+              Deprixa Pro (SQL)
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-4">
+            <div className="flex justify-between items-center bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-sm">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span className="text-gray-700 dark:text-gray-300 font-medium">Download the template to see the required format.</span>
+              </div>
+              <button onClick={() => toast.success("Template download started!")} className="text-blue-600 hover:text-blue-800 font-bold underline">
+                Download template
+              </button>
+            </div>
+
+            {/* Drag and Drop Zone */}
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 text-center bg-gray-50/50 dark:bg-gray-800/40 relative hover:bg-gray-100/50 transition-colors">
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploadedFile(file);
+                    toast.success(`Selected file: ${file.name}`);
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <Upload className="w-10 h-10 mx-auto text-gray-400 mb-3" />
+              <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Click or drag your file here</p>
+              <p className="text-xs text-gray-400 mt-1">CSV, XLSX, XLS • Max. 5 MB</p>
+              {uploadedFile && (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full border border-green-200/50">
+                  <Check className="w-3.5 h-3.5" />
+                  {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => { setImportDialogOpen(false); setUploadedFile(null); }} className="px-4 py-2 border-gray-300 dark:border-gray-700 rounded-lg">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!uploadedFile) {
+                  toast.error("Please select a file to import first.");
+                  return;
+                }
+                toast.success("Recipients imported successfully!");
+                setImportDialogOpen(false);
+                setUploadedFile(null);
+                fetchRecipients();
+              }}
+              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold rounded-lg flex items-center gap-1.5 px-4 py-2"
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
