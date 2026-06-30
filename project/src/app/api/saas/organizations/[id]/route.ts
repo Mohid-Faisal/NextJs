@@ -210,7 +210,7 @@ export async function DELETE(
       await tx.deliveryStatus.deleteMany({ where: { organizationId: orgId } });
       await tx.office.deleteMany({ where: { organizationId: orgId } });
       await tx.agency.deleteMany({ where: { organizationId: orgId } });
-      await tx.branch.deleteMany({ where: { organizationId: orgId } });
+      await tx.deliveryTime.deleteMany({ where: { organizationId: orgId } });
       await tx.shipment.deleteMany({ where: { organizationId: orgId } });
       await tx.customers.deleteMany({ where: { organizationId: orgId } });
       await tx.vendors.deleteMany({ where: { organizationId: orgId } });
@@ -218,7 +218,6 @@ export async function DELETE(
       await tx.fixedCharge.deleteMany({ where: { organizationId: orgId } });
       await tx.chartOfAccount.deleteMany({ where: { organizationId: orgId } });
       await tx.journalEntry.deleteMany({ where: { organizationId: orgId } });
-      await tx.wallet.deleteMany({ where: { organizationId: orgId } });
       await tx.paymentProof.deleteMany({ where: { organizationId: orgId } });
 
       // 4. Delete memberships and subscription
@@ -236,6 +235,8 @@ export async function DELETE(
           await tx.user.delete({ where: { id: userId } });
         }
       }
+    }, {
+      timeout: 30000 // 30 seconds timeout to prevent transaction expiry with large datasets
     });
 
     // Reset user 2FA status back to ACTIVE
