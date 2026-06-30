@@ -53,12 +53,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the code and update user status
+    const member = await prisma.organizationMember.findFirst({
+      where: { userId, role: "OWNER" }
+    });
+
     await prisma.user.update({
       where: { id: userId },
       data: {
         status: "PENDING_APPROVAL",
         isApproved: false,
-        role: "USER", // Set default role
+        role: member ? "Admin" : "USER", // Set default role
       },
     });
 

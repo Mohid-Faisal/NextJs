@@ -25,6 +25,13 @@ export async function PUT(
     const body = await request.json();
     const { role, status, name, email } = body;
 
+    if (userId === session.userId) {
+      return NextResponse.json(
+        { error: "Forbidden: You cannot edit your own account details or role here." },
+        { status: 400 }
+      );
+    }
+
     // Validate user exists and belongs to the same organization
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -93,6 +100,13 @@ export async function DELETE(
   try {
     const { id } = await params;
     const userId = parseInt(id);
+
+    if (userId === session.userId) {
+      return NextResponse.json(
+        { error: "Forbidden: You cannot delete your own account." },
+        { status: 400 }
+      );
+    }
 
     // Validate user exists and belongs to the same organization
     const existingUser = await prisma.user.findFirst({

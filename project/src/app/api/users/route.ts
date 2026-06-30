@@ -35,14 +35,45 @@ export async function GET(req: NextRequest) {
         status: true,
         isApproved: true,
         createdAt: true,
-        // Exclude password for security
+        memberships: {
+          where: {
+            organizationId: session.organizationId
+          },
+          select: {
+            role: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
-    return NextResponse.json(users);
+    const mappedUsers = users.map(u => {
+      const membership = u.memberships?.[0];
+      let displayRole = u.role;
+      if (membership) {
+        const mRole = membership.role.toUpperCase();
+        if (mRole === "OWNER" || mRole === "ADMIN") {
+          displayRole = "Admin";
+        } else if (mRole === "STAFF" || mRole === "ACCOUNTANT") {
+          displayRole = "Employee";
+        } else {
+          displayRole = membership.role;
+        }
+      }
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: displayRole,
+        status: u.status,
+        isApproved: u.isApproved,
+        createdAt: u.createdAt,
+      };
+    });
+
+    return NextResponse.json(mappedUsers);
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(

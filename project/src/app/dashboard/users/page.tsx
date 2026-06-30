@@ -118,6 +118,7 @@ const totalPermissionsCount = 22; // 6 + 7 + 4 + 5
 export default function UsersAndTeamsPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"users" | "permissions">("users");
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
@@ -189,6 +190,9 @@ export default function UsersAndTeamsPage() {
         const decoded = jwtDecode<any>(token);
         const isSuper = decoded.platformRole === "SUPER_ADMIN";
         const isOwner = decoded.orgRole === "OWNER";
+        if (decoded.userId) {
+          setCurrentUserId(Number(decoded.userId));
+        }
         if (isSuper || isOwner) {
           setIsAuthorized(true);
           fetchUsersAndPermissions();
@@ -460,35 +464,39 @@ export default function UsersAndTeamsPage() {
                           </td>
                           <td className="px-5 py-4 text-gray-400">Never</td>
                           <td className="px-5 py-4 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => {
-                                  setEditingUser(u);
-                                  setForm({
-                                    name: u.name,
-                                    email: u.email,
-                                    password: "",
-                                    role: u.role || "Employee",
-                                    status: u.status || "Active",
-                                    branch: "HQ",
-                                    department: "—"
-                                  });
-                                  setOpenModal("edit");
-                                }} className="flex items-center gap-2">
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDeleteUser(u.id)} className="flex items-center gap-2 text-red-650">
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {u.id === currentUserId ? (
+                              <span className="text-xs text-gray-400 font-medium italic pr-2 select-none">Logged In (You)</span>
+                            ) : (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    setEditingUser(u);
+                                    setForm({
+                                      name: u.name,
+                                      email: u.email,
+                                      password: "",
+                                      role: u.role || "Employee",
+                                      status: u.status || "Active",
+                                      branch: "HQ",
+                                      department: "—"
+                                    });
+                                    setOpenModal("edit");
+                                  }} className="flex items-center gap-2">
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDeleteUser(u.id)} className="flex items-center gap-2 text-red-650">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </td>
                         </tr>
                       ))}
