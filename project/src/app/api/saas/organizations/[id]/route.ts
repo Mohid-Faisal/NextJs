@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth/requireSuperAdmin";
+import bcrypt from "bcryptjs";
 
 const ALLOWED_STATUSES = ["active", "trial", "suspended"] as const;
 type OrgStatus = (typeof ALLOWED_STATUSES)[number];
