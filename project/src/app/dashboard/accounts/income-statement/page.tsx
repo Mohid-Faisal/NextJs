@@ -22,6 +22,7 @@ import { ArrowLeft, Download, Calendar, TrendingUp, TrendingDown, DollarSign, Ar
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, eachYearOfInterval, startOfYear, endOfYear, addMonths, subMonths, differenceInYears } from "date-fns";
+import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
 
 type ChartOfAccount = {
   id: number;
@@ -537,50 +538,46 @@ export default function IncomeStatementPage() {
   };
 
   // Export functions
-  const exportToExcel = () => {
+  const getExportData = () => {
     const headers = ["Category", "Account Code", "Account Name", "Amount"];
-    const csvContent = [
-      headers.join(","),
-      // Revenues
+    const rows = [
       ...incomeStatementData.revenues.map(acc => [
         "Revenue",
         acc.accountCode,
-        `"${acc.accountName}"`,
+        acc.accountName,
         acc.balance.toLocaleString()
-      ].join(",")),
-      ["", "", "Total Revenues", incomeStatementData.totalRevenue.toLocaleString()].join(","),
-      ["", "", "", ""].join(","),
-      // Expenses
+      ]),
+      ["", "", "Total Revenues", incomeStatementData.totalRevenue.toLocaleString()],
+      ["", "", "", ""],
       ...incomeStatementData.expenses.map(acc => [
         "Expense",
         acc.accountCode,
-        `"${acc.accountName}"`,
+        acc.accountName,
         acc.balance.toLocaleString()
-      ].join(",")),
-      ["", "", "Total Expenses", incomeStatementData.totalExpenses.toLocaleString()].join(","),
-      ["", "", "", ""].join(","),
-      // Net Income
-      ["", "", "Net Income", incomeStatementData.netIncome.toLocaleString()].join(",")
-    ].join("\n");
+      ]),
+      ["", "", "Total Expenses", incomeStatementData.totalExpenses.toLocaleString()],
+      ["", "", "", ""],
+      ["", "", "Gross Profit", incomeStatementData.grossProfit.toLocaleString()],
+      ["", "", "Net Income", incomeStatementData.netIncome.toLocaleString()],
+    ];
+    return { headers, rows };
+  };
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `income-statement-${incomeStatementData.period.startDate}-to-${incomeStatementData.period.endDate}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    
+  const exportToExcel = () => {
+    const { headers, rows } = getExportData();
+    exportRowsToExcel(rows, headers, `income_statement_${incomeStatementData.period.startDate}_to_${incomeStatementData.period.endDate}`);
     toast.success("Income statement exported to Excel successfully");
   };
 
   const exportToPrint = () => {
-    window.print();
-    toast.success("Print dialog opened");
+    const { headers, rows } = getExportData();
+    exportRowsToPrint(rows, headers, "Income Statement", formatPeriod());
   };
 
-  const exportToPDF = () => {
-    // For now, just show a message that PDF export is not implemented
-    toast.info("PDF export will be implemented soon");
+  const exportToPDF = async () => {
+    const { headers, rows } = getExportData();
+    await exportRowsToPDF(rows, headers, "Income Statement", formatPeriod());
+    toast.success("Income statement PDF exported");
   };
 
   const formatCurrency = (amount: number) => {

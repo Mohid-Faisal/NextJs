@@ -5,9 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Download, Calendar, TrendingUp } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Download, Calendar, TrendingUp, Table, Printer, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
 
 type ChartOfAccount = {
   id: number;
@@ -363,62 +370,64 @@ export default function BalanceSheetPage() {
     });
   };
 
-  const exportToCSV = () => {
+  const getExportData = () => {
     const headers = ["Category", "Account Code", "Account Name", "Balance"];
-    const csvContent = [
-      headers.join(","),
-      // Assets
+    const rows = [
       ...balanceSheetData.assets.current.map(acc => [
         "Current Assets",
         acc.accountCode,
-        `"${acc.accountName}"`,
+        acc.accountName,
         acc.balance.toLocaleString()
-      ].join(",")),
+      ]),
       ...balanceSheetData.assets.fixed.map(acc => [
         "Fixed Assets",
         acc.accountCode,
-        `"${acc.accountName}"`,
+        acc.accountName,
         acc.balance.toLocaleString()
-      ].join(",")),
-      ["", "", "Total Assets", balanceSheetData.assets.total.toLocaleString()].join(","),
-      ["", "", "", ""].join(","),
-      // Liabilities
+      ]),
+      ["", "", "Total Assets", balanceSheetData.assets.total.toLocaleString()],
+      ["", "", "", ""],
       ...balanceSheetData.liabilities.current.map(acc => [
         "Current Liabilities",
         acc.accountCode,
-        `"${acc.accountName}"`,
+        acc.accountName,
         acc.balance.toLocaleString()
-      ].join(",")),
+      ]),
       ...balanceSheetData.liabilities.nonCurrent.map(acc => [
         "Non-Current Liabilities",
         acc.accountCode,
-        `"${acc.accountName}"`,
+        acc.accountName,
         acc.balance.toLocaleString()
-      ].join(",")),
-      ["", "", "Total Liabilities", balanceSheetData.liabilities.total.toLocaleString()].join(","),
-      ["", "", "", ""].join(","),
-      // Equity
+      ]),
+      ["", "", "Total Liabilities", balanceSheetData.liabilities.total.toLocaleString()],
+      ["", "", "", ""],
       ...balanceSheetData.equity.map(acc => [
         "Equity",
         acc.accountCode,
-        `"${acc.accountName}"`,
+        acc.accountName,
         acc.balance.toLocaleString()
-      ].join(",")),
-      ["", "", "Total Equity", balanceSheetData.totalEquity.toLocaleString()].join(","),
-      ["", "", "Total Liabilities & Equity", balanceSheetData.totalLiabilitiesAndEquity.toLocaleString()].join(",")
-    ].join("\n");
+      ]),
+      ["", "", "Total Equity", balanceSheetData.totalEquity.toLocaleString()],
+      ["", "", "Total Liabilities & Equity", balanceSheetData.totalLiabilitiesAndEquity.toLocaleString()],
+    ];
+    return { headers, rows };
+  };
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `balance-sheet-${asOfDate}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
+  const exportToExcel = () => {
+    const { headers, rows } = getExportData();
+    exportRowsToExcel(rows, headers, `balance_sheet_${asOfDate}`);
     toast.success("Balance sheet exported successfully");
+  };
+
+  const exportToPrint = () => {
+    const { headers, rows } = getExportData();
+    exportRowsToPrint(rows, headers, "Balance Sheet", `As of ${asOfDate}`);
+  };
+
+  const exportToPDF = async () => {
+    const { headers, rows } = getExportData();
+    await exportRowsToPDF(rows, headers, "Balance Sheet", `As of ${asOfDate}`);
+    toast.success("Balance sheet PDF exported");
   };
 
   const formatCurrency = (amount: number) => {
@@ -491,14 +500,28 @@ export default function BalanceSheetPage() {
                 className="w-full sm:w-40"
               />
             </div>
-            <Button
-              onClick={exportToCSV}
-              variant="outline"
-              disabled={loading}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={loading}>
+                  Export
+                  <Download className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
+                  <Table className="w-4 h-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
+                  <Printer className="w-4 h-4" />
+                  Print
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

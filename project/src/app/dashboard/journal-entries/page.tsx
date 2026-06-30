@@ -40,6 +40,7 @@ import {
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { TablePagination } from "@/components/TablePagination";
+import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
 
 interface ChartOfAccount {
   id: number;
@@ -250,16 +251,36 @@ const JournalEntriesPage = () => {
     setIsViewDialogOpen(true);
   };
 
-  const exportToExcel = () => {
-    toast.info("Excel export functionality coming soon");
+  const getExportData = () => {
+    const headers = ["Date", "Entry #", "Description", "Reference", "Debit", "Credit", "Status", "Lines"];
+    const rows = entries.map((entry) => [
+      new Date(entry.date).toLocaleDateString(),
+      entry.entryNumber,
+      entry.description,
+      entry.reference || "",
+      entry.totalDebit.toLocaleString(),
+      entry.totalCredit.toLocaleString(),
+      entry.isPosted ? "Posted" : "Draft",
+      entry.lines.map((line) => `${line.account?.code || ""} ${line.account?.accountName || ""}`).join("; "),
+    ]);
+    return { headers, rows };
   };
 
-  const exportToPDF = () => {
-    toast.info("PDF export functionality coming soon");
+  const exportToExcel = () => {
+    const { headers, rows } = getExportData();
+    exportRowsToExcel(rows, headers, "journal_entries");
+    toast.success("Journal entries exported");
+  };
+
+  const exportToPDF = async () => {
+    const { headers, rows } = getExportData();
+    await exportRowsToPDF(rows, headers, "Journal Entries", total || entries.length);
+    toast.success("Journal entries PDF exported");
   };
 
   const exportToPrint = () => {
-    window.print();
+    const { headers, rows } = getExportData();
+    exportRowsToPrint(rows, headers, "Journal Entries", total || entries.length);
   };
 
   useEffect(() => {
@@ -358,17 +379,17 @@ const JournalEntriesPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={exportToExcel}>
-                  <Table className="w-4 h-4 mr-2" />
+                <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
+                  <Table className="w-4 h-4" />
                   Excel
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPDF}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPrint}>
-                  <Printer className="w-4 h-4 mr-2" />
+                <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
+                  <Printer className="w-4 h-4" />
                   Print
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

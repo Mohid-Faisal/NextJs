@@ -12,9 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Search, Filter, Download } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Search, Filter, Download, Table, Printer, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
 
 type ChartOfAccount = {
   id: number;
@@ -329,39 +336,50 @@ export default function AccountBooksPage() {
     return breakdown;
   };
 
-  const exportToCSV = () => {
+  const getExportData = () => {
+    const headers = ["Date", "Description", "Account", "Account Code", "Type", "Amount", "Reference", "Category", "Journal Entry"];
+    const rows = filteredEntries.map(entry => [
+      new Date(entry.date).toLocaleDateString(),
+      entry.description || "",
+      entry.accountName || "",
+      entry.accountCode || "",
+      entry.transactionType,
+      entry.amount,
+      entry.reference || "",
+      entry.category,
+      entry.journalEntryNumber || "",
+    ]);
+    return { headers, rows };
+  };
+
+  const exportToExcel = () => {
     if (filteredEntries.length === 0) {
       toast.error("No entries to export");
       return;
     }
 
-    const headers = ["Date", "Description", "Account", "Account Code", "Type", "Amount", "Reference", "Category", "Journal Entry"];
-    const csvContent = [
-      headers.join(","),
-      ...filteredEntries.map(entry => [
-        new Date(entry.date).toLocaleDateString(),
-        `"${entry.description || ''}"`,
-        entry.accountName || '',
-        entry.accountCode || '',
-        entry.transactionType,
-        entry.amount,
-        entry.reference || '',
-        entry.category,
-        entry.journalEntryNumber || ''
-      ].join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `account-book-${selectedAccount || selectedCategory}-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
+    const { headers, rows } = getExportData();
+    exportRowsToExcel(rows, headers, `account_book_${selectedAccount || selectedCategory}`);
     toast.success("Account book exported successfully");
+  };
+
+  const exportToPrint = () => {
+    if (filteredEntries.length === 0) {
+      toast.error("No entries to export");
+      return;
+    }
+    const { headers, rows } = getExportData();
+    exportRowsToPrint(rows, headers, "Account Books", filteredEntries.length);
+  };
+
+  const exportToPDF = async () => {
+    if (filteredEntries.length === 0) {
+      toast.error("No entries to export");
+      return;
+    }
+    const { headers, rows } = getExportData();
+    await exportRowsToPDF(rows, headers, "Account Books", filteredEntries.length);
+    toast.success("Account book PDF exported");
   };
 
   const clearFilters = () => {
@@ -485,15 +503,32 @@ export default function AccountBooksPage() {
                 Journal Entries & Transactions
               </CardTitle>
               <div className="flex gap-2">
-                <Button
-                  onClick={exportToCSV}
-                  variant="outline"
-                  size="sm"
-                  disabled={filteredEntries.length === 0}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={filteredEntries.length === 0}
+                    >
+                      Export
+                      <Download className="w-4 h-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
+                      <Table className="w-4 h-4" />
+                      Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
+                      <Printer className="w-4 h-4" />
+                      Print
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
             
