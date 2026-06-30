@@ -34,6 +34,7 @@ import {
   Plus,
   Upload,
   Check,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Country } from "country-state-city";
@@ -1051,7 +1052,7 @@ export default function ShipmentsPage() {
             onClick={() => setImportDialogOpen(true)}
             className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
           >
-            <ArrowUp className="w-4 h-4" />
+            <Download className="w-4 h-4" />
             Import
           </Button>
 

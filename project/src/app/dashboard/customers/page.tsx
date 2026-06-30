@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, Users } from "lucide-react";
+import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, Users, Download } from "lucide-react";
 import { Country as country } from "country-state-city";
 import { useRouter } from "next/navigation";
 import DeleteDialog from "@/components/DeleteDialog";
@@ -764,7 +764,7 @@ export default function CustomersPage() {
               onClick={() => setImportDialogOpen(true)}
               className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm"
             >
-              <ArrowUp className="w-4 h-4" />
+              <Download className="w-4 h-4" />
               Import
             </Button>
 

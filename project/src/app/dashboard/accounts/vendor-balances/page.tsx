@@ -26,7 +26,8 @@ import {
   ArrowUp,
   Printer,
   FileText,
-  Briefcase
+  Briefcase,
+  Upload
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -456,7 +457,7 @@ export default function VendorBalancesPage() {
             <DropdownMenuTrigger asChild>
               <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold">
                 Export
-                <ArrowUp className="ml-2 h-4 w-4" />
+                <Upload className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[110px]">
