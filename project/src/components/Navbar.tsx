@@ -221,11 +221,28 @@ const Navbar = ({
               : "opacity-0 -translate-x-4 pointer-events-none"
           }`}
         >
-          <img 
-            src={logoUrl} 
-            alt={`${companyName} Logo`} 
-            className="h-14 w-auto object-contain"
-          />
+          {logoUrl ? (
+            <img 
+              src={logoUrl} 
+              alt={`${companyName} Logo`} 
+              className="h-12 w-auto object-contain max-w-[180px]"
+            />
+          ) : isSuperAdmin ? (
+            <img 
+              src="/logo_final.png" 
+              alt="PSS Logo" 
+              className="h-14 w-auto object-contain"
+            />
+          ) : (
+            <div className="flex items-center gap-2.5 h-11 px-3 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/20 text-foreground shadow-xs font-semibold text-xs transition-all hover:bg-slate-100/50 dark:hover:bg-zinc-900/40">
+              <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-655 dark:text-indigo-300 flex items-center justify-center font-bold text-sm shrink-0">
+                {companyName ? companyName[0].toUpperCase() : "O"}
+              </div>
+              <span className="max-w-[120px] truncate text-slate-800 dark:text-slate-200 font-bold uppercase tracking-wide">
+                {companyName || "Org"}
+              </span>
+            </div>
+          )}
         </Link>
       </div>
 
