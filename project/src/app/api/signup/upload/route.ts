@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import fs from "fs/promises";
+import { supabase } from "@/lib/supabase";
 
 // Public upload endpoint for signup receipt screenshots (no auth required)
 export async function POST(request: NextRequest) {
@@ -26,18 +26,32 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "signup-receipts");
-    await fs.mkdir(uploadsDir, { recursive: true });
-
     const ext = path.extname(file.name) || ".png";
     const uniqueName = `signup_receipt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-    const filePath = path.join(uploadsDir, uniqueName);
+    const filePathInBucket = `signup-receipts/${uniqueName}`;
 
-    await fs.writeFile(filePath, buffer);
+    const { error: uploadError } = await supabase.storage
+      .from("uploads")
+      .upload(filePathInBucket, buffer, {
+        contentType: file.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("❌ Signup Supabase upload error:", uploadError);
+      return NextResponse.json(
+        { error: `Upload failed: ${uploadError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("uploads")
+      .getPublicUrl(filePathInBucket);
 
     return NextResponse.json({
       success: true,
-      url: `/uploads/signup-receipts/${uniqueName}`,
+      url: publicUrl,
     });
   } catch (error) {
     console.error("Signup upload error:", error);

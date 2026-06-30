@@ -1,86 +1,26 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import formidable, { Fields, Files } from "formidable";
-import fs from "fs";
 import path from "path";
-import { Readable } from "stream";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
-
-const prisma = new PrismaClient();
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-// For Vercel deployment, we'll handle file uploads differently
-// const uploadDir = path.join(process.cwd(), "public/uploads");
-// fs.mkdirSync(uploadDir, { recursive: true });
-
-async function toNodeIncomingMessage(req: Request): Promise<any> {
-  const reader = req.body?.getReader();
-  const stream = new Readable({
-    async read() {
-      if (!reader) return this.push(null);
-      const { done, value } = await reader.read();
-      done ? this.push(null) : this.push(value);
-    },
-  });
-
-  (stream as any).headers = Object.fromEntries(req.headers.entries());
-  (stream as any).method = req.method;
-  (stream as any).url = new URL(req.url).pathname;
-
-  return stream;
-}
-
-async function parseForm(req: Request): Promise<{ fields: Fields; files: Files }> {
-  const incoming = await toNodeIncomingMessage(req);
-
-  const form = formidable({
-    // For Vercel, use memory storage instead of disk
-    uploadDir: undefined,
-    keepExtensions: true,
-    maxFileSize: 5 * 1024 * 1024, // 5MB
-    filename: (_, __, part) => `${Date.now()}_${part.originalFilename}`,
-  });
-
-  return new Promise((resolve, reject) => {
-    form.parse(incoming, (err, fields, files) => {
-      if (err) reject(err);
-      else resolve({ fields, files });
-    });
-  });
-}
+import { supabase } from "@/lib/supabase";
 
 // Function to generate next customer ID starting from 1000 with increment of 5
 async function getNextCustomerId(): Promise<number> {
   try {
-    // Get the highest existing customer ID
     const lastCustomer = await prisma.customers.findFirst({
-      orderBy: { id: 'desc' },
-      select: { id: true }
+      orderBy: { id: "desc" },
+      select: { id: true },
     });
 
-    if (!lastCustomer) {
-      // If no customers exist, start with 1000
+    if (!lastCustomer || lastCustomer.id < 1000) {
       return 1000;
     }
 
-    // If the last ID is less than 1000, start from 1000
-    if (lastCustomer.id < 1000) {
-      return 1000;
-    }
-
-    // Calculate next ID with increment of 5
-    const nextId = lastCustomer.id + 5;
-    return nextId;
+    return lastCustomer.id + 5;
   } catch (error) {
     console.error("Error getting next customer ID:", error);
-    // Fallback to 1000 if there's an error
     return 1000;
   }
 }
@@ -91,28 +31,52 @@ export async function POST(req: NextRequest) {
     if (auth.error) return auth.error;
     const session = auth.session;
 
-    const { fields, files } = await parseForm(req);
-    const uploadedFile = files.file?.[0];
-    const filename = uploadedFile?.newFilename;
-    
-    // console.log(fields);
-    const jsonstring = fields.form?.[0]
-    const obj = JSON.parse(jsonstring!)
-    
-    // console.log(obj)
-    // const normalize = (str: string) => str.toLowerCase().replace(/\s/g, "");
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+    const jsonstring = formData.get("form") as string | null;
 
-    // const getString = (obj: Fields, key: string): string => {
-    //   const normalizedKey = Object.keys(obj).find(
-    //     (k) => normalize(k) === normalize(key)
-    //   );
-    //   const value = normalizedKey ? obj[normalizedKey] : "";
-    //   return Array.isArray(value) ? value[0] : value || "";
-    // };
-    
+    if (!jsonstring) {
+      return NextResponse.json(
+        { success: false, message: "Form data is required." },
+        { status: 400 }
+      );
+    }
+
+    const obj = JSON.parse(jsonstring);
+
+    let fileUrl = "";
+    if (file && file.size > 0) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const ext = path.extname(file.name) || ".png";
+      const filename = `customer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+      const filePathInBucket = `customer-documents/${filename}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("uploads")
+        .upload(filePathInBucket, buffer, {
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("❌ Supabase upload error:", uploadError);
+        return NextResponse.json(
+          { success: false, message: `Failed to upload customer document: ${uploadError.message}` },
+          { status: 500 }
+        );
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("uploads")
+        .getPublicUrl(filePathInBucket);
+
+      fileUrl = publicUrl;
+    }
+
     // Generate custom customer ID
     const customId = await getNextCustomerId();
-    
+
     const customerData = {
       id: customId,
       CompanyName: obj.companyname,
@@ -128,9 +92,9 @@ export async function POST(req: NextRequest) {
       Zip: obj.zip,
       Address: obj.address,
       ActiveStatus: obj.activestatus,
-      FilePath: `/uploads/${filename}`,
+      FilePath: fileUrl,
     };
-    
+
     if (!customerData.CompanyName || customerData.CompanyName.trim() === "") {
       return NextResponse.json(
         { success: false, message: "Company Name is required." },
@@ -155,15 +119,14 @@ export async function POST(req: NextRequest) {
         CompanyName: customerData.CompanyName,
       }),
     });
-    
+
     if (existingCustomer) {
       return NextResponse.json(
         { success: false, message: "Customer already exists." },
         { status: 400 }
       );
     }
-    
-    // console.log(customerData);
+
     const newCustomer = await prisma.customers.create({
       data: orgData(session, customerData),
     });
@@ -174,7 +137,7 @@ export async function POST(req: NextRequest) {
       customer: newCustomer,
     });
   } catch (error: any) {
-    console.error("❌ Upload error:", error);
+    console.error("❌ Customer creation error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

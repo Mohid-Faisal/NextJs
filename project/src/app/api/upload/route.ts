@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
 import path from "path";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/upload
- * Requires API session. Uploads a file (receipt screenshot) to local public/uploads/receipts directory.
+ * Requires API session. Uploads a file (receipt screenshot) to Supabase Storage uploads bucket under receipts/.
  */
 export async function POST(req: NextRequest) {
   const auth = await requireApiSession(req);
@@ -24,25 +24,35 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create target directory
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "receipts");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
     // Generate unique name
     const ext = path.extname(file.name) || ".png";
     const filename = `receipt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
-    const filePath = path.join(uploadDir, filename);
+    const filePathInBucket = `receipts/${filename}`;
 
-    await fs.promises.writeFile(filePath, buffer);
+    const { error: uploadError } = await supabase.storage
+      .from("uploads")
+      .upload(filePathInBucket, buffer, {
+        contentType: file.type,
+        upsert: true,
+      });
 
-    const fileUrl = `/uploads/receipts/${filename}`;
-    return NextResponse.json({ success: true, url: fileUrl });
-  } catch (error) {
+    if (uploadError) {
+      console.error("❌ Supabase upload error:", uploadError);
+      return NextResponse.json(
+        { success: false, error: `Failed to upload file to Supabase: ${uploadError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("uploads")
+      .getPublicUrl(filePathInBucket);
+
+    return NextResponse.json({ success: true, url: publicUrl });
+  } catch (error: any) {
     console.error("Upload error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to upload file" },
+      { success: false, error: error.message || "Failed to upload file" },
       { status: 500 }
     );
   }
