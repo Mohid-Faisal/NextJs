@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { usePermissions } from "@/components/PermissionContext";
 import {
   Select,
   SelectContent,
@@ -92,6 +93,7 @@ function formatAccountsTrendAxis(value: number): string {
 // Active slice renderer for the country pie chart: slightly larger with white border.
 const DashboardPage = () => {
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const [activeTab, setActiveTab] = useState<'shipments' | 'payments'>('shipments');
   const [showReceivableModal, setShowReceivableModal] = useState(false);
   const [showCustomersModal, setShowCustomersModal] = useState(false);
@@ -281,155 +283,94 @@ const DashboardPage = () => {
 
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
-          <MetricCard
-            title="Total Revenue"
-            value={data.totalRevenue.toLocaleString()}
-            change={data.percentageChanges?.revenuePercentageChange || 0}
-            icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
-            bgColor="bg-gradient-to-r from-green-500 to-emerald-600"
-            iconColor="text-white"
-            currentMonth={(data.currentMonthData?.revenue || 0).toLocaleString()}
-          />
-          <MetricCard
-            title="Receivables"
-            value={data.accountsData.accountsReceivable.toLocaleString()}
-            change={data.percentageChanges?.receivablePercentageChange ?? 0}
-            icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
-            bgColor="bg-gradient-to-r from-orange-500 to-red-600"
-            iconColor="text-white"
-            onClick={() => setShowReceivableModal(true)}
-            currentMonth={(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}
-          />
-          <MetricCard
-            title="Total Shipments"
-            value={data.totalShipments.toLocaleString()}
-            change={data.percentageChanges?.shipmentPercentageChange || 0}
-            icon={<Truck className="w-5 h-5 sm:w-6 sm:h-6" />}
-            bgColor="bg-gradient-to-r from-blue-500 to-indigo-600"
-            iconColor="text-white"
-            currentMonth={(data.currentMonthData?.shipments || 0).toLocaleString()}
-          />
-          <MetricCard
-            title="Total Customers"
-            value={data.totalCustomers.toLocaleString()}
-            change={data.percentageChanges?.customerPercentageChange || 0}
-            icon={<Users className="w-5 h-5 sm:w-6 sm:h-6" />}
-            bgColor="bg-gradient-to-r from-purple-500 to-pink-600"
-            iconColor="text-white"
-            onClick={() => setShowCustomersModal(true)}
-            currentMonth={(data.currentMonthData?.customers || 0).toLocaleString()}
-          />
+          {hasPermission("view_revenue") && (
+            <MetricCard
+              title="Total Revenue"
+              value={data.totalRevenue.toLocaleString()}
+              change={data.percentageChanges?.revenuePercentageChange || 0}
+              icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
+              bgColor="bg-gradient-to-r from-green-500 to-emerald-600"
+              iconColor="text-white"
+              currentMonth={(data.currentMonthData?.revenue || 0).toLocaleString()}
+            />
+          )}
+          {hasPermission("view_revenue") && (
+            <MetricCard
+              title="Receivables"
+              value={data.accountsData.accountsReceivable.toLocaleString()}
+              change={data.percentageChanges?.receivablePercentageChange ?? 0}
+              icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
+              bgColor="bg-gradient-to-r from-orange-500 to-red-600"
+              iconColor="text-white"
+              onClick={() => setShowReceivableModal(true)}
+              currentMonth={(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}
+            />
+          )}
+          {hasPermission("view_kpis") && (
+            <MetricCard
+              title="Total Shipments"
+              value={data.totalShipments.toLocaleString()}
+              change={data.percentageChanges?.shipmentPercentageChange || 0}
+              icon={<Truck className="w-5 h-5 sm:w-6 sm:h-6" />}
+              bgColor="bg-gradient-to-r from-blue-500 to-indigo-600"
+              iconColor="text-white"
+              currentMonth={(data.currentMonthData?.shipments || 0).toLocaleString()}
+            />
+          )}
+          {(hasPermission("view_customers") || hasPermission("view_kpis")) && (
+            <MetricCard
+              title="Total Customers"
+              value={data.totalCustomers.toLocaleString()}
+              change={data.percentageChanges?.customerPercentageChange || 0}
+              icon={<Users className="w-5 h-5 sm:w-6 sm:h-6" />}
+              bgColor="bg-gradient-to-r from-purple-500 to-pink-600"
+              iconColor="text-white"
+              onClick={() => setShowCustomersModal(true)}
+              currentMonth={(data.currentMonthData?.customers || 0).toLocaleString()}
+            />
+          )}
         </div>
 
 
         {/* Accounts Payable vs Receivable Chart - First Chart */}
-        <div className="mb-6 md:mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                Accounts Payable vs Receivable Trend
-              </h3>
-              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
-            </div>
-            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <AreaChart
-                data={data.accountsData?.monthlyAccountsData || []}
-                margin={{ top: 8, right: 12, left: 4, bottom: 4 }}
-              >
-                <defs>
-                  <linearGradient id="colorReceivable" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
-                  </linearGradient>
-                  <linearGradient id="colorPayable" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
-                <YAxis
-                  stroke="#6B7280"
-                  fontSize={11}
-                  width={52}
-                  tickFormatter={formatAccountsTrendAxis}
-                  tickMargin={6}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: 'none', 
-                    borderRadius: '8px',
-                    color: '#F9FAFB',
-                    fontSize: '12px'
-                  }}
-                  formatter={(value, name) => {
-                    const n = typeof value === "number" ? value : Number(value);
-                    return [
-                      n.toLocaleString(),
-                      name === "receivable" ? "Receivable" : "Payable",
-                    ];
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="receivable" 
-                  stroke="#10B981" 
-                  strokeWidth={3}
-                  fill="url(#colorReceivable)" 
-                  name="receivable"
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="payable" 
-                  stroke="#EF4444" 
-                  strokeWidth={3}
-                  fill="url(#colorPayable)" 
-                  name="payable"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-            <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
-              Green: Accounts Receivable (Money owed to you) | Red: Accounts Payable (Money you owe)
-            </div>
-          </motion.div>
-        </div>
-
-
-        {/* Additional Charts */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8 items-stretch">
-          {/* Monthly Shipments vs Revenue */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
-          >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                Shipments vs Revenue
-              </h3>
-              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
-            </div>
-            <div className="flex-1 min-h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.monthlyShipments} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+        {hasPermission("view_analytics") && hasPermission("view_revenue") && (
+          <div className="mb-6 md:mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"
+            >
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
+                  Accounts Payable vs Receivable Trend
+                </h3>
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
+              </div>
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+                <AreaChart
+                  data={data.accountsData?.monthlyAccountsData || []}
+                  margin={{ top: 8, right: 12, left: 4, bottom: 4 }}
+                >
+                  <defs>
+                    <linearGradient id="colorReceivable" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="colorPayable" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                  <XAxis
-                    dataKey="month"
+                  <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                  <YAxis
                     stroke="#6B7280"
-                    fontSize={12}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
+                    fontSize={11}
+                    width={52}
+                    tickFormatter={formatAccountsTrendAxis}
+                    tickMargin={6}
                   />
-                  <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#6B7280" fontSize={12} />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: '#1F2937', 
@@ -438,49 +379,125 @@ const DashboardPage = () => {
                       color: '#F9FAFB',
                       fontSize: '12px'
                     }}
+                    formatter={(value, name) => {
+                      const n = typeof value === "number" ? value : Number(value);
+                      return [
+                        n.toLocaleString(),
+                        name === "receivable" ? "Receivable" : "Payable",
+                      ];
+                    }}
                   />
-                  <Bar yAxisId="left" dataKey="shipments" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={3} />
-                </BarChart>
+                  <Area 
+                    type="monotone" 
+                    dataKey="receivable" 
+                    stroke="#10B981" 
+                    strokeWidth={3}
+                    fill="url(#colorReceivable)" 
+                    name="receivable"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="payable" 
+                    stroke="#EF4444" 
+                    strokeWidth={3}
+                    fill="url(#colorPayable)" 
+                    name="payable"
+                  />
+                </AreaChart>
               </ResponsiveContainer>
-            </div>
-          </motion.div>
-
-          {/* Shipments and Revenue by Country */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
-          >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
-                Shipments and Revenue by Country
-              </h3>
-              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-            </div>
-            {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && (data.revenueByDestination.some(d => d.revenue > 0) || data.revenueByDestination.some(d => d.shipments > 0)) ? (
-              <div className="space-y-3">
-                <CountryRevenueMap
-                  data={data.revenueByDestination
-                    .filter(d => d.destination && d.destination !== "No Data")}
-                  onHoverCountry={setSelectedCountryIso}
-                  onClickCountry={(info) => setSelectedCountryIso(info?.iso || null)}
-                  onFullscreen={() => setMapFullscreen(true)}
-                />
-
+              <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
+                Green: Accounts Receivable (Money owed to you) | Red: Accounts Payable (Money you owe)
               </div>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">
-                <div className="text-center">
-                  <DollarSign className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                  <p>No data available</p>
-                  <p className="text-sm">Check if you have shipments and invoices in your database</p>
+            </motion.div>
+          </div>
+        )}
+
+
+        {/* Additional Charts */}
+        {(hasPermission("view_analytics") || hasPermission("view_map")) && (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 md:mb-8 items-stretch">
+            {/* Monthly Shipments vs Revenue */}
+            {hasPermission("view_analytics") && hasPermission("view_kpis") ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
+              >
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
+                    Shipments vs Revenue
+                  </h3>
+                  <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
                 </div>
-              </div>
-            )}
-          </motion.div>
-        </div>
+                <div className="flex-1 min-h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.monthlyShipments} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+                      <XAxis
+                        dataKey="month"
+                        stroke="#6B7280"
+                        fontSize={12}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis yAxisId="left" stroke="#6B7280" fontSize={12} />
+                      <YAxis yAxisId="right" orientation="right" stroke="#6B7280" fontSize={12} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1F2937', 
+                          border: 'none', 
+                          borderRadius: '8px',
+                          color: '#F9FAFB',
+                          fontSize: '12px'
+                        }}
+                      />
+                      <Bar yAxisId="left" dataKey="shipments" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                      <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={3} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </motion.div>
+            ) : <div />}
+
+            {/* Shipments and Revenue by Country */}
+            {hasPermission("view_map") ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
+              >
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
+                    Shipments and Revenue by Country
+                  </h3>
+                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                </div>
+                {data.revenueByDestination && data.revenueByDestination.length > 0 && data.revenueByDestination[0].destination !== "No Data" && (data.revenueByDestination.some(d => d.revenue > 0) || data.revenueByDestination.some(d => d.shipments > 0)) ? (
+                  <div className="space-y-3">
+                    <CountryRevenueMap
+                      data={data.revenueByDestination
+                        .filter(d => d.destination && d.destination !== "No Data")}
+                      onHoverCountry={setSelectedCountryIso}
+                      onClickCountry={(info) => setSelectedCountryIso(info?.iso || null)}
+                      onFullscreen={() => setMapFullscreen(true)}
+                    />
+                  </div>
+                ) : (
+                  <div className="h-[250px] flex items-center justify-center text-gray-500 dark:text-gray-400">
+                    <div className="text-center">
+                      <DollarSign className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p>No data available</p>
+                      <p className="text-sm">Check if you have shipments and invoices in your database</p>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            ) : <div />}
+          </div>
+        )}
 
         {/* Fullscreen Map Modal */}
         {mapFullscreen && (
