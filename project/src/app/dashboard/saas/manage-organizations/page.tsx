@@ -261,10 +261,10 @@ export default function SaasManageOrganizationsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 w-full min-w-0 max-w-full overflow-x-hidden bg-slate-50/50 dark:bg-zinc-950/20 min-h-screen">
+    <div className="p-6 space-y-6 bg-slate-50/50 dark:bg-zinc-950/20 min-h-screen w-full min-w-0 max-w-full overflow-x-hidden">
       
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/saas/organizations">
             <Button variant="ghost" size="icon" className="rounded-full bg-white dark:bg-slate-900 border shadow-xs">
@@ -272,9 +272,9 @@ export default function SaasManageOrganizationsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Manage Organizations</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Manage Orgs</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Review, mark paid, suspend, or delete tenant organizations and all their data.
+              Review, mark paid, suspend, or delete tenant orgs and all their data.
             </p>
           </div>
         </div>
@@ -288,9 +288,9 @@ export default function SaasManageOrganizationsPage() {
       <Card className="shadow-sm border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl overflow-hidden">
         <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <CardTitle className="text-base font-bold">All Organizations</CardTitle>
+            <CardTitle className="text-base font-bold">All Orgs</CardTitle>
             <CardDescription className="text-xs">
-              {loading ? "Loading organizations..." : `${total} organization(s) registered`}
+              {loading ? "Loading orgs..." : `${total} org(s) registered`}
             </CardDescription>
           </div>
           {/* Search bar */}
@@ -324,13 +324,13 @@ export default function SaasManageOrganizationsPage() {
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                       <RefreshCw className="h-6 w-6 animate-spin mx-auto text-slate-400 mb-2" />
-                      Loading organizations...
+                      Loading orgs...
                     </TableCell>
                   </TableRow>
                 ) : paginatedOrgs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
-                      No organizations found.
+                      No orgs found.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -420,7 +420,7 @@ export default function SaasManageOrganizationsPage() {
               pageSize={pageSize}
               onPageChange={setPage}
               onPageSizeChange={setPageSize}
-              entityName="organizations"
+              entityName="orgs"
             />
           )}
         </CardContent>
@@ -432,7 +432,7 @@ export default function SaasManageOrganizationsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive font-bold">
               <ShieldAlert className="w-5 h-5 text-destructive" />
-              Delete Organization
+              Delete Org
             </DialogTitle>
             <CardDescription className="text-xs">
               This action is highly critical. You are about to permanently delete <span className="font-bold text-slate-900 dark:text-white">{deleteOrg?.name}</span>, including all its shipments, customers, invoices, transactions, settings, and its users. This cannot be undone.
@@ -496,7 +496,7 @@ export default function SaasManageOrganizationsPage() {
                   {isDeleting ? (
                     <><RefreshCw className="w-4 h-4 animate-spin mr-1.5" />Deleting...</>
                   ) : (
-                    <>Permanently Delete Organization</>
+                    <>Permanently Delete Org</>
                   )}
                 </Button>
               </DialogFooter>
