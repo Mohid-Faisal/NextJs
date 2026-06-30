@@ -125,6 +125,26 @@ export default function UsersAndTeamsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [permSearch, setPermSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [orgPlan, setOrgPlan] = useState<any>(null);
+
+  const getPlanAllowedPermissionsCount = () => {
+    let count = 0;
+    permissionCategories.forEach(category => {
+      category.permissions.forEach(p => {
+        if (orgPlan) {
+          const features = orgPlan.features || {};
+          if (p.code === "view_revenue" || p.code === "manage_billing") {
+            if (features.accounts !== true) return;
+          }
+          if (p.code === "bulk_delete") {
+            if (features.bulkUpload !== true) return;
+          }
+        }
+        count++;
+      });
+    });
+    return count || 1; // Avoid divide by zero
+  };
 
   // Role permissions mapping state
   const [rolePermissions, setRolePermissions] = useState<Record<RoleName, string[]>>({
@@ -173,6 +193,15 @@ export default function UsersAndTeamsPage() {
         const data = await permRes.json();
         if (data.value) {
           setRolePermissions(JSON.parse(data.value));
+        }
+      }
+
+      // 3. Fetch Org Current Plan Features
+      const orgRes = await fetch("/api/org/current");
+      if (orgRes.ok) {
+        const orgData = await orgRes.json();
+        if (orgData.success && orgData.organization) {
+          setOrgPlan(orgData.organization.subscription?.plan || null);
         }
       }
     } catch (err) {
@@ -526,8 +555,21 @@ export default function UsersAndTeamsPage() {
                   const styles = getRoleCardClass(r);
                   const Icon = getRoleIcon(r);
                   const permList = rolePermissions[r] || [];
-                  const checkedCount = r === "Super Admin" ? totalPermissionsCount : permList.length;
-                  const progressPct = Math.round((checkedCount / totalPermissionsCount) * 100);
+                  const maxAllowedCount = getPlanAllowedPermissionsCount();
+                  const allowedPermList = permList.filter(code => {
+                    if (orgPlan) {
+                      const features = orgPlan.features || {};
+                      if (code === "view_revenue" || code === "manage_billing") {
+                        return features.accounts === true;
+                      }
+                      if (code === "bulk_delete") {
+                        return features.bulkUpload === true;
+                      }
+                    }
+                    return true;
+                  });
+                  const checkedCount = r === "Super Admin" ? maxAllowedCount : allowedPermList.length;
+                  const progressPct = Math.round((checkedCount / maxAllowedCount) * 100);
 
                   return (
                     <Card key={r} className={`shadow-sm border rounded-xl p-4 flex flex-col justify-between relative ${styles?.bg}`}>
@@ -543,7 +585,7 @@ export default function UsersAndTeamsPage() {
                         <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider">{r}</h4>
                         <div className="flex items-baseline gap-1 mt-1">
                           <span className="text-xl font-extrabold text-gray-900 dark:text-white">
-                            {r === "Super Admin" ? "All" : `${checkedCount} / ${totalPermissionsCount}`}
+                            {r === "Super Admin" ? "All" : `${checkedCount} / ${maxAllowedCount}`}
                           </span>
                         </div>
 
@@ -598,9 +640,20 @@ export default function UsersAndTeamsPage() {
                       
                       {permissionCategories.map((category) => {
                         const isCollapsed = collapsedSections[category.code];
-                        const filteredPerms = category.permissions.filter(p => 
-                          p.name.toLowerCase().includes(permSearch.toLowerCase())
-                        );
+                         const filteredPerms = category.permissions.filter(p => {
+                           const matchesSearch = p.name.toLowerCase().includes(permSearch.toLowerCase());
+                           if (!matchesSearch) return false;
+                           if (orgPlan) {
+                             const features = orgPlan.features || {};
+                             if (p.code === "view_revenue" || p.code === "manage_billing") {
+                               return features.accounts === true;
+                             }
+                             if (p.code === "bulk_delete") {
+                               return features.bulkUpload === true;
+                             }
+                           }
+                           return true;
+                         });
 
                         if (filteredPerms.length === 0) return null;
 

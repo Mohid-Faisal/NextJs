@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmployeeInvitationEmail } from '@/lib/email';
 import { requireApiSession } from '@/lib/auth/requireApiSession';
 import bcrypt from "bcryptjs";
+import { getOrgPlan, getOrgUsage } from "@/lib/billing/usage";
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiSession(req);
@@ -98,6 +99,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const plan = await getOrgPlan(session.organizationId);
+    if (plan && plan.maxUsers > 0) {
+      const usage = await getOrgUsage(session.organizationId);
+      if (usage.members >= plan.maxUsers) {
+        return NextResponse.json(
+          { error: `Member limit reached. Your subscription plan ("${plan.name}") allows up to ${plan.maxUsers} team members.` },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await request.json();
     const { name, email, password, role } = body;
 

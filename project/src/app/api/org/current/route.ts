@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
           select: {
             status: true,
             trialEndsAt: true,
-            plan: { select: { code: true, name: true, maxUsers: true, maxShipmentsPerMonth: true } },
+            plan: { select: { code: true, name: true, maxUsers: true, maxShipmentsPerMonth: true, features: true } },
           },
         },
       },

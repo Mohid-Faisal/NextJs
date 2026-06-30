@@ -4,6 +4,7 @@ import { requireApiSession } from "@/lib/auth/requireApiSession";
 
 import bcrypt from "bcryptjs";
 import { sendEmail } from "@/lib/email";
+import { getOrgPlan, getOrgUsage } from "@/lib/billing/usage";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
 const ASSIGNABLE_ROLES = ["OWNER", "ADMIN", "STAFF", "ACCOUNTANT"];
@@ -59,6 +60,17 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const plan = await getOrgPlan(session.organizationId);
+    if (plan && plan.maxUsers > 0) {
+      const usage = await getOrgUsage(session.organizationId);
+      if (usage.members >= plan.maxUsers) {
+        return NextResponse.json(
+          { success: false, error: `Member limit reached. Your subscription plan ("${plan.name}") allows up to ${plan.maxUsers} team members.` },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await req.json();
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const role = typeof body.role === "string" ? body.role.trim().toUpperCase() : "STAFF";

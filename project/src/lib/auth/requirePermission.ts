@@ -3,6 +3,7 @@ import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { prisma } from "@/lib/prisma";
 import { resolveRoleName, type RoleName } from "@/lib/auth/roles";
 import type { SessionPayload } from "@/lib/auth/session";
+import { getOrgPlan } from "@/lib/billing/usage";
 
 type PermissionResult =
   | { session: SessionPayload; error: null }
@@ -30,6 +31,35 @@ export async function requirePermission(
   // Super Admin bypasses all checks
   if (session.platformRole === "SUPER_ADMIN") {
     return { session, error: null };
+  }
+
+  // Enforce subscription plan features for non-platform admin orgs (orgId > 1)
+  if (session.organizationId > 1) {
+    const plan = await getOrgPlan(session.organizationId);
+    if (plan) {
+      if (permissionCode === "view_revenue" || permissionCode === "manage_billing") {
+        if (plan.features.accounts !== true) {
+          return {
+            session: null,
+            error: NextResponse.json(
+              { success: false, error: `Forbidden: Current plan "${plan.name}" does not support accounting/billing features.` },
+              { status: 403 }
+            )
+          };
+        }
+      }
+      if (permissionCode === "bulk_delete") {
+        if (plan.features.bulkUpload !== true) {
+          return {
+            session: null,
+            error: NextResponse.json(
+              { success: false, error: `Forbidden: Current plan "${plan.name}" does not support bulk upload/delete features.` },
+              { status: 403 }
+            )
+          };
+        }
+      }
+    }
   }
 
   // Org Owners bypass all checks (Admin access)

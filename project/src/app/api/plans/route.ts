@@ -10,15 +10,11 @@ export async function GET() {
   try {
     const plans = await prisma.plan.findMany({
       orderBy: { priceMonthlyUsd: "asc" },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        priceMonthlyUsd: true,
-        maxUsers: true,
-        maxShipmentsPerMonth: true,
-        features: true,
-      },
+      include: {
+        _count: {
+          select: { subscriptions: true }
+        }
+      }
     });
     return NextResponse.json({ success: true, plans });
   } catch (error) {

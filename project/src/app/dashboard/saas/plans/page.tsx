@@ -2,11 +2,31 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Layers, ShieldAlert, Plus, Sparkles, Check, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { 
+  ArrowLeft, Layers, ShieldAlert, Plus, Check, RefreshCw, 
+  MoreVertical, Edit2, ToggleLeft, ToggleRight, Users, Clock, AlertCircle
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -18,6 +38,10 @@ type Plan = {
   priceMonthlyUsd: number;
   maxUsers: number;
   maxShipmentsPerMonth: number;
+  features: any;
+  _count?: {
+    subscriptions: number;
+  };
 };
 
 interface DecodedToken {
@@ -25,10 +49,24 @@ interface DecodedToken {
 }
 
 export default function SaasPlansPage() {
+  const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Edit Modal States
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPriceMonthly, setEditPriceMonthly] = useState("");
+  const [editPriceAnnual, setEditPriceAnnual] = useState("");
+  const [editMaxUsers, setEditMaxUsers] = useState("");
+  const [editMaxShipments, setEditMaxShipments] = useState("");
+  const [editTrialDays, setEditTrialDays] = useState("");
+  const [editGracePeriodDays, setEditGracePeriodDays] = useState("");
+  const [editAccounts, setEditAccounts] = useState(false);
+  const [editBulkUpload, setEditBulkUpload] = useState(false);
+  const [editIsActive, setEditIsActive] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -66,6 +104,102 @@ export default function SaasPlansPage() {
     }
   }, [isSuperAdmin]);
 
+  const startEdit = (plan: Plan) => {
+    const features = plan.features || {};
+    setEditingPlan(plan);
+    setEditName(plan.name);
+    setEditPriceMonthly(String(plan.priceMonthlyUsd));
+    setEditPriceAnnual(String(features.annualPrice ?? (plan.priceMonthlyUsd * 10 * 1.2)));
+    setEditMaxUsers(String(plan.maxUsers));
+    setEditMaxShipments(String(plan.maxShipmentsPerMonth));
+    setEditTrialDays(String(features.trialDays ?? 14));
+    setEditGracePeriodDays(String(features.gracePeriodDays ?? 7));
+    setEditAccounts(features.accounts === true);
+    setEditBulkUpload(features.bulkUpload === true);
+    setEditIsActive(features.isActive !== false);
+  };
+
+  const savePlanEdit = async () => {
+    if (!editName.trim()) {
+      toast.error("Plan name is required");
+      return;
+    }
+    if (
+      isNaN(Number(editPriceMonthly)) || 
+      isNaN(Number(editPriceAnnual)) || 
+      isNaN(Number(editMaxUsers)) || 
+      isNaN(Number(editMaxShipments)) || 
+      isNaN(Number(editTrialDays)) || 
+      isNaN(Number(editGracePeriodDays))
+    ) {
+      toast.error("Please enter valid numeric values");
+      return;
+    }
+
+    try {
+      const features = editingPlan?.features || {};
+      const updatedPayload = {
+        name: editName.trim(),
+        priceMonthlyUsd: parseFloat(editPriceMonthly),
+        maxUsers: parseInt(editMaxUsers, 10),
+        maxShipmentsPerMonth: parseInt(editMaxShipments, 10),
+        features: {
+          ...features,
+          trialDays: parseInt(editTrialDays, 10),
+          gracePeriodDays: parseInt(editGracePeriodDays, 10),
+          accounts: editAccounts,
+          bulkUpload: editBulkUpload,
+          isActive: editIsActive,
+          annualPrice: parseFloat(editPriceAnnual),
+        }
+      };
+
+      const res = await fetch(`/api/plans/${editingPlan?.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedPayload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Plan "${editName}" updated successfully!`);
+        setEditingPlan(null);
+        loadPlans();
+      } else {
+        toast.error(data.error || "Failed to update plan");
+      }
+    } catch {
+      toast.error("An error occurred during plan update");
+    }
+  };
+
+  const togglePlanActive = async (plan: Plan) => {
+    const features = plan.features || {};
+    const currentlyActive = features.isActive !== false;
+    const nextActiveState = !currentlyActive;
+
+    try {
+      const res = await fetch(`/api/plans/${plan.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          features: {
+            ...features,
+            isActive: nextActiveState
+          }
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Plan is now ${nextActiveState ? "active" : "inactive"}`);
+        loadPlans();
+      } else {
+        toast.error(data.error || "Failed to toggle status");
+      }
+    } catch {
+      toast.error("An error occurred");
+    }
+  };
+
   if (!mounted) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[300px]">
@@ -91,101 +225,278 @@ export default function SaasPlansPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Layers className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-bold">Platform Subscription Plans</h1>
+    <div className="p-6 space-y-6 bg-slate-50/40 dark:bg-zinc-950/10 min-h-screen">
+      
+      {/* Premium Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => router.push("/dashboard")} 
+            className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Plans</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage subscription plans available to organizations.
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={loadPlans}>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={loadPlans} className="bg-white dark:bg-slate-900 shadow-sm">
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
           <Link href="/dashboard/saas/plans/create">
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Plan
+            <Button size="sm" className="bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-md">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Create
             </Button>
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {plans.map((plan) => (
-          <Card key={plan.id} className="relative overflow-hidden border-2 hover:border-primary/50 transition-all duration-300">
-            {plan.code === "pro" && (
-              <div className="absolute top-0 right-0 bg-primary text-white text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-bl-lg flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> Best Seller
+      {/* Grid Layout matching target design */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {plans.map((plan) => {
+          const features = plan.features || {};
+          const isActive = features.isActive !== false;
+          const trialDays = features.trialDays ?? 14;
+          const annualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
+          const subCount = plan._count?.subscriptions ?? 0;
+
+          return (
+            <Card 
+              key={plan.id} 
+              className={`bg-white dark:bg-slate-900/40 shadow-sm hover:shadow-md transition-all border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between ${!isActive ? "opacity-75" : ""}`}
+            >
+              <div className="p-6 space-y-4">
+                
+                {/* Header Row */}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white capitalize">{plan.name}</h3>
+                    <code className="text-xs text-muted-foreground block mt-0.5">{plan.code}</code>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30" : ""}>
+                      {isActive ? "Active" : "Inactive"}
+                    </Badge>
+                    
+                    {/* Action Dropdown Menu */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600 rounded-full">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-36">
+                        <DropdownMenuItem onClick={() => startEdit(plan)} className="cursor-pointer gap-2">
+                          <Edit2 className="h-3.5 w-3.5" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => togglePlanActive(plan)} className="cursor-pointer gap-2">
+                          {isActive ? (
+                            <>
+                              <ToggleLeft className="h-3.5 w-3.5 text-slate-500" /> Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <ToggleRight className="h-3.5 w-3.5 text-emerald-500" /> Activate
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Pricing Block */}
+                <div className="pt-2">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">${plan.priceMonthlyUsd.toFixed(2)}</span>
+                    <span className="text-xs text-muted-foreground">/monthly</span>
+                  </div>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">${annualPrice.toFixed(2)}/annual</span>
+                </div>
+
+                {/* Divider Line */}
+                <hr className="border-slate-100 dark:border-slate-800" />
+
+                {/* Limits & Features Checklist */}
+                <div className="space-y-2 pt-1 text-xs text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center justify-between">
+                    <span>Max Users/Staff:</span>
+                    <span className="font-semibold">{plan.maxUsers}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Max Shipments/mo:</span>
+                    <span className="font-semibold">{plan.maxShipmentsPerMonth.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Accounting:</span>
+                    <span className={`font-semibold ${features.accounts ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
+                      {features.accounts ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Bulk Upload/Delete:</span>
+                    <span className={`font-semibold ${features.bulkUpload ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
+                      {features.bulkUpload ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                </div>
+
               </div>
-            )}
-            <CardHeader>
-              <CardTitle className="capitalize text-xl">{plan.name}</CardTitle>
-              <CardDescription>Plan identifier: <code className="text-xs">{plan.code}</code></CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-extrabold">${plan.priceMonthlyUsd}</span>
-                <span className="text-sm text-muted-foreground">/ month</span>
+
+              {/* Card Footer matching target design */}
+              <div className="bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800/80 px-6 py-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Users className="h-3.5 w-3.5 text-slate-400" />
+                  <span>{subCount} Subscriptions</span>
+                </div>
+                {trialDays > 0 && (
+                  <div className="flex items-center gap-1 font-medium bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded border border-indigo-100/30">
+                    <Clock className="h-3 w-3" />
+                    <span>{trialDays}d Free Trial</span>
+                  </div>
+                )}
               </div>
-              <hr />
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 shrink-0" />
-                  <span>Up to <strong>{plan.maxUsers}</strong> users/staff</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 shrink-0" />
-                  <span>Up to <strong>{plan.maxShipmentsPerMonth.toLocaleString()}</strong> shipments/mo</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 shrink-0" />
-                  <span>Multi-tenant isolation & data security</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600 shrink-0" />
-                  <span>Basic support & accounting modules</span>
-                </li>
-              </ul>
-              <Button className="w-full mt-4" variant="outline" onClick={() => toast.success("Configuration loaded")}>
-                Configure Plan Features
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+
+            </Card>
+          );
+        })}
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Detailed Plan Matrix</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Plan Name</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Price (Monthly)</TableHead>
-                <TableHead className="text-right">Max Users</TableHead>
-                <TableHead className="text-right">Max Shipments</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {plans.map((plan) => (
-                <TableRow key={plan.id}>
-                  <TableCell className="font-semibold capitalize">{plan.name}</TableCell>
-                  <TableCell><code>{plan.code}</code></TableCell>
-                  <TableCell className="font-medium">${plan.priceMonthlyUsd}</TableCell>
-                  <TableCell className="text-right font-medium">{plan.maxUsers}</TableCell>
-                  <TableCell className="text-right font-medium">{plan.maxShipmentsPerMonth.toLocaleString()}</TableCell>
-                  <TableCell><Badge>Active</Badge></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Fully Functional Edit Plan Modal Dialog */}
+      <Dialog open={editingPlan !== null} onOpenChange={(open) => !open && setEditingPlan(null)}>
+        <DialogContent className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">Edit subscription plan</DialogTitle>
+            <DialogDescription className="text-slate-500">
+              Configure properties and limits for the <strong>{editingPlan?.name}</strong> plan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="editName" className="font-semibold text-slate-800 dark:text-slate-200">Plan Name</Label>
+              <Input 
+                id="editName" 
+                value={editName} 
+                onChange={(e) => setEditName(e.target.value)} 
+                placeholder="e.g. Starter, Business" 
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="editPriceMonthly" className="font-semibold text-slate-800 dark:text-slate-200">Monthly Price ($)</Label>
+                <Input 
+                  id="editPriceMonthly" 
+                  value={editPriceMonthly} 
+                  onChange={(e) => setEditPriceMonthly(e.target.value)} 
+                  type="number"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="editPriceAnnual" className="font-semibold text-slate-800 dark:text-slate-200">Annual Price ($)</Label>
+                <Input 
+                  id="editPriceAnnual" 
+                  value={editPriceAnnual} 
+                  onChange={(e) => setEditPriceAnnual(e.target.value)} 
+                  type="number"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="editMaxUsers" className="font-semibold text-slate-800 dark:text-slate-200">Max Users Limit</Label>
+                <Input 
+                  id="editMaxUsers" 
+                  value={editMaxUsers} 
+                  onChange={(e) => setEditMaxUsers(e.target.value)} 
+                  type="number" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="editMaxShipments" className="font-semibold text-slate-800 dark:text-slate-200">Max Shipments/mo</Label>
+                <Input 
+                  id="editMaxShipments" 
+                  value={editMaxShipments} 
+                  onChange={(e) => setEditMaxShipments(e.target.value)} 
+                  type="number" 
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="editTrialDays" className="font-semibold text-slate-800 dark:text-slate-200">Trial Days</Label>
+                <Input 
+                  id="editTrialDays" 
+                  value={editTrialDays} 
+                  onChange={(e) => setEditTrialDays(e.target.value)} 
+                  type="number" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="editGracePeriodDays" className="font-semibold text-slate-800 dark:text-slate-200">Grace Period Days</Label>
+                <Input 
+                  id="editGracePeriodDays" 
+                  value={editGracePeriodDays} 
+                  onChange={(e) => setEditGracePeriodDays(e.target.value)} 
+                  type="number" 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Features Configuration</span>
+              
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Accounts & Billing</span>
+                  <span className="text-xs text-muted-foreground block">Enable invoicing, ledger, and accounting modules.</span>
+                </div>
+                <Switch checked={editAccounts} onCheckedChange={setEditAccounts} />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Bulk Upload & Delete</span>
+                  <span className="text-xs text-muted-foreground block">Allow uploading CSV lists and batch actions.</span>
+                </div>
+                <Switch checked={editBulkUpload} onCheckedChange={setEditBulkUpload} />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
+                <div className="space-y-0.5">
+                  <span className="text-sm font-semibold block">Active status</span>
+                  <span className="text-xs text-muted-foreground block">Determine if this plan is visible to new users.</span>
+                </div>
+                <Switch checked={editIsActive} onCheckedChange={setEditIsActive} />
+              </div>
+            </div>
+
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setEditingPlan(null)} className="border">
+              Cancel
+            </Button>
+            <Button onClick={savePlanEdit} className="bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
