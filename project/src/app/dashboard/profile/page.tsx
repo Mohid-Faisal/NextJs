@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import {
   User,
@@ -18,7 +19,8 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
-  DollarSign
+  Lock,
+  KeyRound
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
@@ -43,6 +45,15 @@ export default function ProfilePage() {
   const [maxUsers, setMaxUsers] = useState(5);
   const [maxShipments, setMaxShipments] = useState(100);
   const [loading, setLoading] = useState(true);
+
+  // Password / 2FA change states
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
   useEffect(() => {
     const fetchProfileAndOrg = async () => {
@@ -100,6 +111,90 @@ export default function ProfilePage() {
 
     fetchProfileAndOrg();
   }, []);
+
+  const handleRequestCode = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Please fill in all password fields.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirm password do not match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters.");
+      return;
+    }
+
+    setIsSendingCode(true);
+    try {
+      const token = Cookies.get("token");
+      const res = await fetch("/api/profile/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: "send-2fa",
+          currentPassword
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCodeSent(true);
+        toast.success(data.message || "2FA verification code sent to your email!");
+      } else {
+        toast.error(data.error || "Failed to send verification code.");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleChangePasswordSubmit = async () => {
+    if (!verificationCode.trim()) {
+      toast.error("Please enter the verification code.");
+      return;
+    }
+
+    setIsSubmittingPassword(true);
+    try {
+      const token = Cookies.get("token");
+      const res = await fetch("/api/profile/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: "change-password",
+          newPassword,
+          code: verificationCode
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Your password has been changed successfully!");
+        // Reset form
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setVerificationCode("");
+        setCodeSent(false);
+      } else {
+        toast.error(data.error || "Failed to change password.");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setIsSubmittingPassword(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -174,7 +269,7 @@ export default function ProfilePage() {
           </Card>
         </div>
 
-        {/* Right Columns: Org & Subscription info */}
+        {/* Right Columns: Org, Subscription & Change Password info */}
         <div className="lg:col-span-2 space-y-6">
           
           {/* Card 1: Organization Details */}
@@ -241,6 +336,103 @@ export default function ProfilePage() {
                   <span className="block text-sm font-semibold text-gray-900 dark:text-white mt-1">{maxShipments} Shipments/Month</span>
                 </div>
               </div>
+
+            </CardContent>
+          </Card>
+
+          {/* Card 3: Security & Password Setting */}
+          <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
+            <CardHeader className="border-b border-gray-100 dark:border-zinc-855 pb-5">
+              <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-[#4F46E5]" />
+                Security & Password
+              </CardTitle>
+              <CardDescription className="text-xs text-gray-500 mt-0.5">Securely update your password verified via 2FA code sent to your email.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              
+              {!codeSent ? (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">CURRENT PASSWORD</Label>
+                    <Input 
+                      type="password"
+                      value={currentPassword} 
+                      onChange={(e) => setCurrentPassword(e.target.value)} 
+                      placeholder="••••••••"
+                      className="text-sm rounded-lg"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">NEW PASSWORD</Label>
+                      <Input 
+                        type="password"
+                        value={newPassword} 
+                        onChange={(e) => setNewPassword(e.target.value)} 
+                        placeholder="••••••••"
+                        className="text-sm rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">CONFIRM NEW PASSWORD</Label>
+                      <Input 
+                        type="password"
+                        value={confirmPassword} 
+                        onChange={(e) => setConfirmPassword(e.target.value)} 
+                        placeholder="••••••••"
+                        className="text-sm rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <Button 
+                      onClick={handleRequestCode}
+                      disabled={isSendingCode}
+                      className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 font-semibold text-xs px-4 py-2.5 rounded-lg shadow-sm"
+                    >
+                      {isSendingCode ? "Requesting Code..." : "Request 2FA Code"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 bg-indigo-50/20 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-5">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-indigo-750 dark:text-indigo-300 uppercase tracking-wide">Enter 6-Digit Code sent to your email</Label>
+                    <Input 
+                      type="text"
+                      maxLength={6}
+                      value={verificationCode} 
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))} 
+                      placeholder="e.g. 123456"
+                      className="text-lg text-center tracking-[10px] font-mono h-12 rounded-lg border-indigo-200"
+                    />
+                    <p className="text-[11px] text-gray-500">We have sent a verification code to <strong>{userEmail}</strong>. Please check your inbox.</p>
+                  </div>
+
+                  <div className="pt-2 flex gap-3 justify-end">
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setCodeSent(false);
+                        setVerificationCode("");
+                      }}
+                      className="text-xs"
+                    >
+                      Back / Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleChangePasswordSubmit}
+                      disabled={isSubmittingPassword}
+                      className="bg-green-600 hover:bg-green-700 text-white font-semibold text-xs px-4 py-2.5 rounded-lg shadow-sm"
+                    >
+                      {isSubmittingPassword ? "Verifying..." : "Verify & Change Password"}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
             </CardContent>
           </Card>

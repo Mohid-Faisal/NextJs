@@ -205,3 +205,46 @@ export async function send2FACodeEmail(
     throw error;
   }
 }
+
+export async function sendPassword2FACodeEmail(
+  userEmail: string,
+  userName: string,
+  verificationCode: string
+) {
+  try {
+    const { data: emailData, error } = await resend.emails.send({
+      from: "PSS_Support@psswwe.com",
+      to: userEmail,
+      subject: "Security Verification Code - Password Change",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <h2 style="color: #4F46E5;">Security Verification Code</h2>
+          <p>Hi ${userName},</p>
+          <p>You have requested to change your account password. To complete this secure action, please use the verification code below:</p>
+          
+          <div style="background: #F3F4F6; border: 1px solid #E5E7EB; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+            <h1 style="color: #1F2937; font-size: 32px; letter-spacing: 5px; margin: 0;">${verificationCode}</h1>
+          </div>
+          
+          <p><strong>This code will expire in 10 minutes.</strong></p>
+          
+          <p style="color: #4F46E5; font-weight: bold;">🔐 Please do not share this code with anyone.</p>
+          
+          <p>If you didn't request this verification code, please ignore this email and secure your account immediately.</p>
+          
+          <p>Best regards,<br>Your Platform Team</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending Password 2FA code email:", error);
+      throw new Error("Failed to send 2FA code email");
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error("Error in sendPassword2FACodeEmail:", error);
+    throw error;
+  }
+}
