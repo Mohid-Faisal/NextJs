@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -46,6 +46,8 @@ const Navbar = ({
   const [showPublicToolsToggle, setShowPublicToolsToggle] = useState(false);
   const [orgRole, setOrgRole] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("/logo_final.png");
+  const [companyName, setCompanyName] = useState("PSS");
 
   // Check if fullscreen is supported
   const isFullscreenSupported = typeof document !== 'undefined' && 
@@ -126,6 +128,31 @@ const Navbar = ({
     }
   }, []);
 
+  const loadOrg = useCallback(async () => {
+    try {
+      const res = await fetch("/api/org/current");
+      const data = await res.json();
+      if (res.ok && data.success && data.organization) {
+        setLogoUrl(data.organization.logoUrl || "/logo_final.png");
+        setCompanyName(data.organization.name || "PSS");
+      }
+    } catch (e) {
+      console.error("Failed to load navbar org logo", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrg();
+
+    const handleBrandingUpdate = () => {
+      loadOrg();
+    };
+    window.addEventListener("orgBrandingUpdated", handleBrandingUpdate);
+    return () => {
+      window.removeEventListener("orgBrandingUpdated", handleBrandingUpdate);
+    };
+  }, [loadOrg]);
+
   const handleLogout = () => {
     Cookies.remove("token");
     router.push("/auth/login");
@@ -195,8 +222,8 @@ const Navbar = ({
           }`}
         >
           <img 
-            src="/logo_final.png" 
-            alt="PSS Logo" 
+            src={logoUrl} 
+            alt={`${companyName} Logo`} 
             className="h-14 w-auto object-contain"
           />
         </Link>
