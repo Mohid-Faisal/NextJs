@@ -46,8 +46,8 @@ const Navbar = ({
   const [showPublicToolsToggle, setShowPublicToolsToggle] = useState(false);
   const [orgRole, setOrgRole] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [logoUrl, setLogoUrl] = useState("/logo_final.png");
-  const [companyName, setCompanyName] = useState("PSS");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState("");
 
   // Check if fullscreen is supported
   const isFullscreenSupported = typeof document !== 'undefined' && 
@@ -133,8 +133,8 @@ const Navbar = ({
       const res = await fetch("/api/org/current");
       const data = await res.json();
       if (res.ok && data.success && data.organization) {
-        setLogoUrl(data.organization.logoUrl || "/logo_final.png");
-        setCompanyName(data.organization.name || "PSS");
+        setLogoUrl(data.organization.logoUrl || null);
+        setCompanyName(data.organization.name || "");
       }
     } catch (e) {
       console.error("Failed to load navbar org logo", e);
