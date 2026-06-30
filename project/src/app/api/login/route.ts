@@ -36,7 +36,8 @@ export async function POST(req: Request) {
       );
     }
 
-    if (user.status !== "ACTIVE" && !user.status.startsWith("PENDING_2FA_")) {
+    const userStatus = user.status?.toUpperCase() || "";
+    if (userStatus !== "ACTIVE" && !userStatus.startsWith("PENDING_2FA_")) {
       return NextResponse.json(
         {
           success: false,

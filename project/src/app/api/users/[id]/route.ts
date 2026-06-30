@@ -56,7 +56,7 @@ export async function PUT(
       where: { id: userId },
       data: {
         ...(role && { role }),
-        ...(status && { status }),
+        ...(status && { status: status.toUpperCase() }),
         ...(name && { name }),
         ...(email && { email }),
       },
