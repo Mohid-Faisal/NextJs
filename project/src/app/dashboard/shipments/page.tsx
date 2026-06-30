@@ -1051,7 +1051,7 @@ export default function ShipmentsPage() {
             onClick={() => setImportDialogOpen(true)}
             className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
           >
-            <Upload className="w-4 h-4" />
+            <ArrowUp className="w-4 h-4" />
             Import
           </Button>
 
@@ -1061,7 +1061,7 @@ export default function ShipmentsPage() {
               <DropdownMenuTrigger asChild>
                 <Button className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">
                   Export
-                  <ArrowUp className="ml-2 h-4 w-4" />
+                  <Upload className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[120px]">

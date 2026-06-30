@@ -367,11 +367,13 @@ export default function CustomersPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
-  const [activeTab, setActiveTab] = useState<"all" | "withBalance">("withBalance");
+  const [activeTab, setActiveTab] = useState<"all" | "withBalance" | "active" | "inactive">("all");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [grandTotal, setGrandTotal] = useState(0);
   const [withBalanceTotal, setWithBalanceTotal] = useState(0);
+  const [activeTotal, setActiveTotal] = useState(0);
+  const [inactiveTotal, setInactiveTotal] = useState(0);
 
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
@@ -379,24 +381,27 @@ export default function CustomersPage() {
     const params = new URLSearchParams({
       page: String(page),
       limit: pageSize === 'all' ? 'all' : String(pageSize),
-      ...(statusFilter !== "All" && { status: statusFilter }),
       ...(searchTerm && { search: searchTerm }),
       sortField: sortField,
       sortOrder: sortOrder,
       ...(activeTab === "withBalance" ? { onlyWithBalance: "true" } : {}),
+      ...(activeTab === "active" ? { status: "Active" } : {}),
+      ...(activeTab === "inactive" ? { status: "Inactive" } : {}),
     });
 
     const res = await fetch(`/api/customers?${params}`);
-    const { customers, total, grandTotal: gt, withBalanceTotal: wbt } = await res.json();
+    const { customers, total, grandTotal: gt, withBalanceTotal: wbt, activeTotal: at, inactiveTotal: it } = await res.json();
     setCustomers(customers);
     setTotal(total);
     if (typeof gt === "number") setGrandTotal(gt);
     if (typeof wbt === "number") setWithBalanceTotal(wbt);
+    if (typeof at === "number") setActiveTotal(at);
+    if (typeof it === "number") setInactiveTotal(it);
   };
 
   useEffect(() => {
     fetchCustomers();
-  }, [page, statusFilter, searchTerm, sortField, sortOrder, pageSize, activeTab]);
+  }, [page, searchTerm, sortField, sortOrder, pageSize, activeTab]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -645,26 +650,32 @@ export default function CustomersPage() {
             Manage your clients and track their balances
           </p>
           <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium">
-            {statusFilter === "All" ? "Showing all registered customers" : `Showing only ${statusFilter} customers`}
+            {activeTab === "all"
+              ? "Showing all registered customers"
+              : activeTab === "withBalance"
+              ? "Showing customers with a balance"
+              : activeTab === "active"
+              ? "Showing only active customers"
+              : "Showing only inactive customers"}
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap sm:flex-nowrap">
           <button
             type="button"
             onClick={() => {
               setActiveTab("all");
               setPage(1);
             }}
-            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[130px] ${
+            className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
               activeTab === "all"
-                ? "bg-blue-50 dark:bg-blue-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 hover:text-gray-800 dark:hover:text-gray-100"
+                ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-650 text-indigo-600 dark:text-indigo-400"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
             }`}
           >
-            <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">
+            <span className="text-lg font-bold text-blue-600 dark:text-blue-300">
               {grandTotal}
             </span>
-            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-350 mt-0.5">
               Total Customers
             </span>
           </button>
@@ -674,17 +685,55 @@ export default function CustomersPage() {
               setActiveTab("withBalance");
               setPage(1);
             }}
-            className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[130px] ${
+            className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
               activeTab === "withBalance"
-                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 shadow-sm"
-                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 hover:text-emerald-700 dark:hover:text-emerald-300"
+                ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-650 text-indigo-600 dark:text-indigo-400"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20"
             }`}
           >
-            <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-300">
+            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-300">
               {withBalanceTotal}
             </span>
-            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
-              Customers with Balance
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-355 mt-0.5">
+              With Balance
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("active");
+              setPage(1);
+            }}
+            className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
+              activeTab === "active"
+                ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-655 text-indigo-600 dark:text-indigo-400"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
+            }`}
+          >
+            <span className="text-lg font-bold text-indigo-600 dark:text-indigo-300">
+              {activeTotal}
+            </span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-350 mt-0.5">
+              Active
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("inactive");
+              setPage(1);
+            }}
+            className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-md flex flex-col items-center justify-center transition-all min-w-[110px] ${
+              activeTab === "inactive"
+                ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-655 text-indigo-600 dark:text-indigo-400"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
+            }`}
+          >
+            <span className="text-lg font-bold text-rose-600 dark:text-rose-300">
+              {inactiveTotal}
+            </span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-350 mt-0.5">
+              Inactive
             </span>
           </button>
         </div>
@@ -707,40 +756,15 @@ export default function CustomersPage() {
           />
         </div>
 
-        {/* Right side - Active tabs, Import, Export, Add Customer */}
+        {/* Right side - Import, Export, Add Customer */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto">
-          
-          {/* Status Tabs */}
-          <div className="flex border border-gray-200 dark:border-zinc-850 bg-gray-50 dark:bg-zinc-800/40 rounded-lg p-1 shrink-0">
-            {["All", "Active", "Inactive"].map((status) => {
-              const isActive = statusFilter === status;
-              return (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => {
-                    setPage(1);
-                    setStatusFilter(status);
-                  }}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                    isActive
-                      ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-600 text-indigo-600 dark:text-indigo-300 font-bold"
-                      : "text-gray-500 hover:text-gray-800 dark:hover:text-white"
-                  }`}
-                >
-                  {status}
-                </button>
-              );
-            })}
-          </div>
-
           <div className="flex gap-2">
             {/* Import Button */}
             <Button
               onClick={() => setImportDialogOpen(true)}
               className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm"
             >
-              <Upload className="w-4 h-4" />
+              <ArrowUp className="w-4 h-4" />
               Import
             </Button>
 
@@ -750,7 +774,7 @@ export default function CustomersPage() {
                 <DropdownMenuTrigger asChild>
                   <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold">
                     Export
-                    <ArrowUp className="ml-2 h-4 w-4" />
+                    <Upload className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[110px]">

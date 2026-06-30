@@ -70,14 +70,13 @@ export async function GET(req: Request) {
     findManyOptions.take = limit;
   }
 
-  const { currentBalance: _b, ...baseWhereNoBalance } = where;
-  const withBalanceWhere = { ...baseWhereNoBalance, currentBalance: { not: 0 } };
-
-  const [customers, total, grandTotal, withBalanceTotal] = await Promise.all([
+  const [customers, total, grandTotal, withBalanceTotal, activeTotal, inactiveTotal] = await Promise.all([
     prisma.customers.findMany(findManyOptions),
     prisma.customers.count({ where }),
-    prisma.customers.count({ where: baseWhereNoBalance }),
-    prisma.customers.count({ where: withBalanceWhere }),
+    prisma.customers.count({ where: orgWhere(session) }),
+    prisma.customers.count({ where: { ...orgWhere(session), currentBalance: { not: 0 } } }),
+    prisma.customers.count({ where: { ...orgWhere(session), ActiveStatus: "Active" } }),
+    prisma.customers.count({ where: { ...orgWhere(session), ActiveStatus: "Inactive" } }),
   ]);
 
   // Get shipment information for each customer
@@ -119,12 +118,12 @@ export async function GET(req: Request) {
     })
   );
 
-//   console.log("customers",customers);
-
   return NextResponse.json({
     customers: customersWithShipments,
     total,
-    grandTotal: onlyWithBalance ? grandTotal : total,
+    grandTotal,
     withBalanceTotal,
+    activeTotal,
+    inactiveTotal,
   });
 }

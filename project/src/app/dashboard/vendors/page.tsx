@@ -327,12 +327,18 @@ export default function VendorsPage() {
             Manage third-party logistics and carrier vendors
           </p>
           <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium">
-            {statusFilter === "All" ? "Showing all vendor accounts" : `Showing only ${statusFilter} vendor accounts`}
+            Showing all vendor accounts
           </p>
         </div>
-        <div className="text-right shrink-0">
-          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{total}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total Vendors</div>
+        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[120px] bg-blue-50 dark:bg-blue-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40">
+            <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">
+              {total}
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
+              Total Vendors
+            </span>
+          </div>
         </div>
       </div>
 
@@ -352,39 +358,15 @@ export default function VendorsPage() {
           />
         </div>
 
-        {/* Right side - Active tabs, Import, Export, Add Vendor */}
+        {/* Right side - Import, Export, Add Vendor */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto">
-          {/* Status Tabs */}
-          <div className="flex border border-gray-200 dark:border-zinc-850 bg-gray-50 dark:bg-zinc-800/40 rounded-lg p-1 shrink-0">
-            {["All", "Active", "Inactive"].map((status) => {
-              const isActive = statusFilter === status;
-              return (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => {
-                    setPage(1);
-                    setStatusFilter(status);
-                  }}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                    isActive
-                      ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-600 text-indigo-600 dark:text-indigo-300 font-bold"
-                      : "text-gray-500 hover:text-gray-800 dark:hover:text-white"
-                  }`}
-                >
-                  {status}
-                </button>
-              );
-            })}
-          </div>
-
           <div className="flex gap-2">
             {/* Import Button */}
             <Button
               onClick={() => setImportDialogOpen(true)}
               className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm"
             >
-              <Upload className="w-4 h-4" />
+              <ArrowUp className="w-4 h-4" />
               Import
             </Button>
 
@@ -394,7 +376,7 @@ export default function VendorsPage() {
                 <DropdownMenuTrigger asChild>
                   <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold">
                     Export
-                    <ArrowUp className="ml-2 h-4 w-4" />
+                    <Upload className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[110px]">
@@ -419,7 +401,7 @@ export default function VendorsPage() {
             </div>
 
             {/* Add Vendor button */}
-            <Button asChild className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm">
+            <Button asChild className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm">
               <Link href="/dashboard/vendors/add-vendors">
                 <Plus className="w-4 h-4" />
                 Add Vendor
