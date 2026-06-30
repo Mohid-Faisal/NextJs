@@ -4,7 +4,7 @@ import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 // UI-to-enum mapping
-const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Adjustment: "ADJUSTMENT", Equity: "EQUITY" };
+const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Adjustment: "ADJUSTMENT", Equity: "EQUITY", Return: "ADJUSTMENT" };
 const modeMap: Record<string, any> = { "Cash": "CASH", "Bank Transfer": "BANK_TRANSFER", "Card": "CARD", "Cheque": "CHEQUE" };
 
 export async function GET(request: NextRequest) {
@@ -181,7 +181,39 @@ export async function GET(request: NextRequest) {
     journalEntryNumber: p.journalEntry?.entryNumber ?? undefined,
   }));
 
-  return NextResponse.json({ payments: ui, total });
+  // Get total amount sum
+  const sumResult = await prisma.payment.aggregate({
+    where,
+    _sum: {
+      amount: true,
+    },
+  });
+  const totalAmount = sumResult._sum.amount ?? 0;
+
+  // Compute counts for all tabs based on active search and date filters
+  const countWhere = { ...where };
+  delete countWhere.transactionType;
+
+  const [incomeCount, expenseCount, transferCount, adjustmentCount, totalCount] = await Promise.all([
+    prisma.payment.count({ where: { ...countWhere, transactionType: "INCOME" } }),
+    prisma.payment.count({ where: { ...countWhere, transactionType: "EXPENSE" } }),
+    prisma.payment.count({ where: { ...countWhere, transactionType: "TRANSFER" } }),
+    prisma.payment.count({ where: { ...countWhere, transactionType: "ADJUSTMENT" } }),
+    prisma.payment.count({ where: countWhere }),
+  ]);
+
+  return NextResponse.json({
+    payments: ui,
+    total,
+    totalAmount,
+    counts: {
+      total: totalCount,
+      income: incomeCount,
+      expense: expenseCount,
+      transfer: transferCount,
+      return: adjustmentCount,
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {

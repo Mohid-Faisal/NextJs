@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload } from "lucide-react";
+import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -52,6 +52,14 @@ export default function PaymentsPage() {
   const searchParams = useSearchParams();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [counts, setCounts] = useState({
+    total: 0,
+    income: 0,
+    expense: 0,
+    transfer: 0,
+    return: 0
+  });
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(10);
@@ -189,6 +197,10 @@ export default function PaymentsPage() {
       const json = await res.json();
       setPayments(json.payments);
       setTotal(json.total);
+      setTotalAmount(json.totalAmount ?? 0);
+      if (json.counts) {
+        setCounts(json.counts);
+      }
     };
 
     fetchPayments();
@@ -248,10 +260,7 @@ export default function PaymentsPage() {
     );
   };
 
-  const totalAmount = useMemo(
-    () => payments.reduce((acc, p) => acc + p.amount, 0),
-    [payments]
-  );
+
 
   // Export functions
   const exportToExcel = (data: any[], headers: string[], filename: string) => {
@@ -494,156 +503,224 @@ export default function PaymentsPage() {
     const json = await res.json();
     setPayments(json.payments);
     setTotal(json.total);
+    setTotalAmount(json.totalAmount ?? 0);
+    if (json.counts) {
+      setCounts(json.counts);
+    }
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 sm:mb-6 gap-4">
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">Transactions</h2>
-        <div className="text-right">
-          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{total}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total Records</div>
+        
+        {/* Top Right Tabs */}
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
+          <button
+            type="button"
+            onClick={() => { setTypeFilter("All"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              typeFilter === "All"
+                ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-900/40"
+            }`}
+          >
+            <span className="text-lg font-bold text-blue-600 dark:text-blue-300">{counts.total}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Records</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => { setTypeFilter("Income"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              typeFilter === "Income"
+                ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-900/40"
+            }`}
+          >
+            <span className="text-lg font-bold text-blue-600 dark:text-blue-300">{counts.income}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Income</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setTypeFilter("Expense"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              typeFilter === "Expense"
+                ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-900/40"
+            }`}
+          >
+            <span className="text-lg font-bold text-red-600 dark:text-red-300">{counts.expense}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Expense</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setTypeFilter("Transfer"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              typeFilter === "Transfer"
+                ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-900/40"
+            }`}
+          >
+            <span className="text-lg font-bold text-blue-600 dark:text-blue-300">{counts.transfer}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Transfer</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setTypeFilter("Return"); setPage(1); }}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center transition-all min-w-[90px] ${
+              typeFilter === "Return"
+                ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-gray-900/40"
+            }`}
+          >
+            <span className="text-lg font-bold text-orange-600 dark:text-orange-300">{counts.return}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Return</span>
+          </button>
+
+          <div
+            aria-disabled
+            className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[120px] bg-white dark:bg-gray-900 text-gray-850 dark:text-gray-250 shadow-sm border border-gray-150/40 cursor-default select-none"
+          >
+            <span className="text-lg font-bold text-green-600 dark:text-green-300">
+              {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Amount</span>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 flex-wrap">
-        {/* Search field */}
-        <div className="flex flex-1 min-w-[200px] max-w-sm">
+      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+        {/* Left side - Search bar */}
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
           <Input
-            placeholder="Search by type, category, amount, from, to, mode, reference, invoice..."
+            placeholder="Search by category, amount, reference..."
             value={searchTerm}
             onChange={(e) => {
               setPage(1);
               setSearchTerm(e.target.value);
             }}
-            className="rounded-r-none"
+            className="pl-9 text-sm rounded-lg"
           />
-          <div className="bg-blue-500 px-3 flex items-center justify-center rounded-r-md">
-            <Search className="text-white w-5 h-5" />
-          </div>
         </div>
 
-        {/* Date Range Filter */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 shrink-0">
-          <Select
-            value={periodType}
-            onValueChange={(value: string) => {
-              setPeriodType(value as any);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Select period" />
+        {/* Right side - Filters and Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto justify-end flex-wrap">
+          <div className="flex gap-2">
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold h-9 shrink-0">
+                  Export
+                  <Upload className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[120px]">
+                <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2 text-xs">
+                  <Table className="w-3.5 h-3.5" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2 text-xs">
+                  <Printer className="w-3.5 h-3.5" />
+                  Print
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleExportPDF} 
+                  disabled={isGeneratingPDF}
+                  className="flex items-center gap-2 text-xs"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  {isGeneratingPDF ? 'Generating...' : 'PDF'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Import Button */}
+            <Button
+              onClick={() => {
+                setImportFile(null);
+                setImportResults(null);
+                setImportDialogOpen(true);
+              }}
+              className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold shadow-sm h-9 shrink-0"
+            >
+              <Download className="w-4 h-4" />
+              Import
+            </Button>
+          </div>
+
+          {/* Date Range Filter */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Select
+              value={periodType}
+              onValueChange={(value: string) => {
+                setPeriodType(value as any);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Current Month</SelectItem>
+                <SelectItem value="last3month">Last 3 Month</SelectItem>
+                <SelectItem value="last6month">Last 6 Month</SelectItem>
+                <SelectItem value="year">Last 12 Months</SelectItem>
+                <SelectItem value="financialyear">Financial Year</SelectItem>
+                <SelectItem value="custom">Custom Period</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {periodType === 'custom' && (
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-gray-500 shrink-0 hidden sm:block" />
+                <Input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => {
+                    setCustomStartDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-[130px] sm:w-[140px] h-9"
+                />
+                <span className="text-gray-500 shrink-0 text-xs sm:text-sm">to</span>
+                <Input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => {
+                    setCustomEndDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-[130px] sm:w-[140px] h-9"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Mode Filter */}
+          <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setPage(1); }}>
+            <SelectTrigger className="w-[140px] h-9 shrink-0">
+              <SelectValue placeholder="Mode" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="month">Current Month</SelectItem>
-              <SelectItem value="last3month">Last 3 Month</SelectItem>
-              <SelectItem value="last6month">Last 6 Month</SelectItem>
-                <SelectItem value="year">Last 12 Months</SelectItem>
-              <SelectItem value="financialyear">Financial Year</SelectItem>
-              <SelectItem value="custom">Custom Period</SelectItem>
+              {['All','Cash','Bank Transfer','Card','Cheque'].map(m => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          
-          {periodType === 'custom' && (
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-gray-500 shrink-0 hidden sm:block" />
-              <Input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => {
-                  setCustomStartDate(e.target.value);
-                  setPage(1);
-                }}
-                className="w-[130px] sm:w-[140px]"
-              />
-              <span className="text-gray-500 shrink-0 text-xs sm:text-sm">to</span>
-              <Input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => {
-                  setCustomEndDate(e.target.value);
-                  setPage(1);
-                }}
-                className="w-[130px] sm:w-[140px]"
-              />
-            </div>
-          )}
+
+          {/* Add Payment Button */}
+          <Button asChild className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm h-9 shrink-0">
+            <Link href="/dashboard/accounts/payments/add" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Transaction
+            </Link>
+          </Button>
         </div>
-
-        {/* Type Filter */}
-        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
-          <SelectTrigger className="w-[120px] h-9 shrink-0">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {['All','Income','Expense','Transfer','Return'].map(s => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Mode Filter */}
-        <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setPage(1); }}>
-          <SelectTrigger className="w-[140px] h-9 shrink-0">
-            <SelectValue placeholder="Mode" />
-          </SelectTrigger>
-          <SelectContent>
-            {['All','Cash','Bank Transfer','Card','Cheque'].map(m => (
-              <SelectItem key={m} value={m}>{m}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Export Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-[100px] h-9 justify-between shrink-0">
-              Export
-              <ArrowUp className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[120px]">
-            <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
-              <Table className="w-4 h-4" />
-              Excel
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
-              <Printer className="w-4 h-4" />
-              Print
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={handleExportPDF} 
-              disabled={isGeneratingPDF}
-              className="flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              {isGeneratingPDF ? 'Generating...' : 'PDF'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Import Button */}
-        <Button
-          variant="outline"
-          className="h-9 shrink-0"
-          onClick={() => {
-            setImportFile(null);
-            setImportResults(null);
-            setImportDialogOpen(true);
-          }}
-        >
-          <Upload className="w-4 h-4 mr-2" />
-          Import
-        </Button>
-
-        {/* Add Payment Button */}
-        <Button asChild className="h-9 shrink-0">
-          <Link href="/dashboard/accounts/payments/add" className="flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Transaction
-          </Link>
-        </Button>
       </div>
 
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">

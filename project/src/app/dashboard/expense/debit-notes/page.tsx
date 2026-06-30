@@ -65,6 +65,7 @@ type SortOrder = "asc" | "desc";
 export default function DebitNotesPage() {
   const [debitNotes, setDebitNotes] = useState<DebitNote[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(10);
   const totalPages =
@@ -95,6 +96,7 @@ export default function DebitNotesPage() {
       
       setDebitNotes(json.debitNotes);
       setTotal(json.total);
+      setTotalAmount(json.totalAmount ?? 0);
     };
 
     fetchDebitNotes();
@@ -123,7 +125,7 @@ export default function DebitNotesPage() {
     );
   };
 
-  const totalAmount = debitNotes?.reduce((acc, dn) => acc + dn.amount, 0) || 0;
+
 
   const exportToCSV = () => {
          const headers = [
@@ -225,13 +227,21 @@ export default function DebitNotesPage() {
             Compensate for less payment to vendors
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-          <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[120px] bg-blue-50 dark:bg-blue-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-gray-150/40">
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">
+          <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[100px] bg-white dark:bg-gray-900 text-gray-850 dark:text-gray-200 shadow-sm border border-gray-150/40">
             <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-300">
               {total}
             </span>
-            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Total Records
+            </span>
+          </div>
+          <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[120px] bg-white dark:bg-gray-900 text-gray-850 dark:text-gray-200 shadow-sm border border-gray-150/40">
+            <span className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-300">
+              {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Total Amount
             </span>
           </div>
         </div>

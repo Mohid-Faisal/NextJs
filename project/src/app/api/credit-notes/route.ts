@@ -145,9 +145,19 @@ export async function GET(request: NextRequest) {
     // Get total count for pagination
     const total = await prisma.creditNote.count({ where });
 
+    // Get total amount sum
+    const sumResult = await prisma.creditNote.aggregate({
+      where,
+      _sum: {
+        amount: true,
+      },
+    });
+    const totalAmount = sumResult._sum.amount ?? 0;
+
     return NextResponse.json({
       creditNotes: withType,
       total,
+      totalAmount,
       page,
       pageSize: pageSize || total,
       totalPages: pageSize ? Math.ceil(total / pageSize) : 1,
