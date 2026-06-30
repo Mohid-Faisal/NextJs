@@ -22,6 +22,8 @@ model User {
   approvedBy   Int?
   createdAt    DateTime             @default(now())
   memberships  OrganizationMember[]
+  phone        String?
+  address      String?
 }
 
 model Organization {

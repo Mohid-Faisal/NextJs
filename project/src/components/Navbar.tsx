@@ -24,6 +24,8 @@ const PUBLIC_TOOLS_ADMIN_EMAIL = "mohidfaisal321@gmail.com";
 interface DecodedToken {
   name?: string;
   email?: string;
+  platformRole?: string | null;
+  orgRole?: string | null;
 }
 
 const Navbar = ({
@@ -42,6 +44,8 @@ const Navbar = ({
   // Default true to match server (public tools off until DB says otherwise)
   const [publicToolsDisabled, setPublicToolsDisabled] = useState(true);
   const [showPublicToolsToggle, setShowPublicToolsToggle] = useState(false);
+  const [orgRole, setOrgRole] = useState("");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // Check if fullscreen is supported
   const isFullscreenSupported = typeof document !== 'undefined' && 
@@ -114,6 +118,8 @@ const Navbar = ({
       const email = (decoded.email || "").trim().toLowerCase();
       setUserName(decoded.name || "User");
       setUserEmail(email);
+      setOrgRole(decoded.orgRole || "");
+      setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
       setShowPublicToolsToggle(email === PUBLIC_TOOLS_ADMIN_EMAIL.toLowerCase());
     } catch {
       setShowPublicToolsToggle(false);
@@ -280,6 +286,9 @@ const Navbar = ({
               </div>
               <div className="text-xs text-muted-foreground truncate mt-0.5">
                 {userEmail}
+              </div>
+              <div className="text-[10px] font-bold text-indigo-650 dark:text-indigo-400 mt-1 uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded w-max">
+                {orgRole === "OWNER" ? "Org Owner" : isSuperAdmin ? "Super Admin" : "User / Staff"}
               </div>
             </div>
             <DropdownMenuSeparator className="bg-slate-100 dark:bg-zinc-800 my-1" />

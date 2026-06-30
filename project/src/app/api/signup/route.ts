@@ -7,13 +7,22 @@ import { createOrganizationForSignup } from "@/lib/auth/membership";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, companyName, planCode } = body;
+    const { name, email, password, companyName, planCode, phone, address } = body;
 
     if (!name?.trim() || !email?.trim() || !password) {
       return NextResponse.json(
         { success: false, message: "Name, email, and password are required." },
         { status: 400 }
       );
+    }
+
+    if (companyName?.trim()) {
+      if (!phone?.trim() || !address?.trim()) {
+        return NextResponse.json(
+          { success: false, message: "Phone number and address are required when creating a workspace." },
+          { status: 400 }
+        );
+      }
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -40,6 +49,8 @@ export async function POST(request: NextRequest) {
           name: name.trim(),
           password: hashedPassword,
           status: verificationStatus,
+          phone: phone?.trim() || undefined,
+          address: address?.trim() || undefined,
         },
       });
     } else {
@@ -51,6 +62,8 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           status: verificationStatus,
           isApproved: false,
+          phone: phone?.trim() || null,
+          address: address?.trim() || null,
         },
       });
     }

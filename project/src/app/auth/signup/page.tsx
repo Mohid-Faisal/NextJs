@@ -12,7 +12,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-import { ArrowLeft, Check, Building2, User, Mail, Lock } from "lucide-react";
+import { ArrowLeft, Check, Building2, User, Mail, Lock, Phone, MapPin } from "lucide-react";
 import { ZodError } from "zod";
 import { signupSchema } from "@/zodschemas/signupSchema";
 import Particles from "@/components/Particles";
@@ -42,7 +42,7 @@ const SignupPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<"user" | "org">("user");
-  const [form, setForm] = useState({ companyName: "", name: "", email: "", password: "" });
+  const [form, setForm] = useState({ companyName: "", name: "", email: "", password: "", phone: "", address: "" });
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
@@ -130,8 +130,15 @@ const SignupPage = () => {
           setIsLoading(false);
           return;
         }
+        if (!form.phone.trim() || !form.address.trim()) {
+          toast.error("Phone number and address are required when creating a workspace.");
+          setIsLoading(false);
+          return;
+        }
         payload.companyName = form.companyName.trim();
         payload.planCode = selectedPlan || "starter";
+        payload.phone = form.phone.trim();
+        payload.address = form.address.trim();
       }
 
       // Basic Zod schema check (shares structure check)
@@ -364,24 +371,56 @@ const SignupPage = () => {
               <AnimatePresence mode="wait">
                 {tab === "org" && (
                   <motion.div
-                    key="company-name"
+                    key="org-fields"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="space-y-2"
+                    className="space-y-4"
                   >
-                    <Label htmlFor="companyName">Company Name</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="companyName"
-                        name="companyName"
-                        value={form.companyName}
-                        onChange={handleChange}
-                        placeholder="Acme Logistics"
-                        className="pl-9 bg-white dark:bg-slate-950"
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="companyName"
+                          name="companyName"
+                          value={form.companyName}
+                          onChange={handleChange}
+                          placeholder="Acme Logistics"
+                          className="pl-9 bg-white dark:bg-slate-950"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phone"
+                          name="phone"
+                          value={form.phone}
+                          onChange={handleChange}
+                          placeholder="+1 (555) 000-0000"
+                          className="pl-9 bg-white dark:bg-slate-950"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="address"
+                          name="address"
+                          value={form.address}
+                          onChange={handleChange}
+                          placeholder="123 Logistics Way, Suite 100"
+                          className="pl-9 bg-white dark:bg-slate-950"
+                        />
+                      </div>
                     </div>
                   </motion.div>
                 )}

@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download } from "lucide-react";
+import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download, Coins } from "lucide-react";
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -512,7 +512,19 @@ export default function PaymentsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 sm:mb-6 gap-4">
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white">Transactions</h2>
+        <div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <Coins className="w-8 sm:w-10 h-8 sm:h-10 text-blue-600" />
+            Transactions
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 text-xs sm:text-sm">
+            {typeFilter === "All" && "Showing all transaction records"}
+            {typeFilter === "Income" && "Showing only income transaction records"}
+            {typeFilter === "Expense" && "Showing only expense transaction records"}
+            {typeFilter === "Transfer" && "Showing only transfer transaction records"}
+            {typeFilter === "Return" && "Showing only return transaction records"}
+          </p>
+        </div>
         
         {/* Top Right Tabs */}
         <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap">

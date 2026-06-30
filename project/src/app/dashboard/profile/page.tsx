@@ -29,6 +29,8 @@ import { toast } from "sonner";
 interface DecodedToken {
   name: string;
   email?: string;
+  platformRole?: string | null;
+  orgRole?: string | null;
 }
 
 export default function ProfilePage() {
@@ -45,6 +47,13 @@ export default function ProfilePage() {
   const [maxUsers, setMaxUsers] = useState(5);
   const [maxShipments, setMaxShipments] = useState(100);
   const [loading, setLoading] = useState(true);
+
+  // Profile details states
+  const [userPhone, setUserPhone] = useState("");
+  const [userAddress, setUserAddress] = useState("");
+  const [isOwner, setIsOwner] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Password / 2FA change states
   const [currentPassword, setCurrentPassword] = useState("");
@@ -67,16 +76,21 @@ export default function ProfilePage() {
           setUserName(decoded.name || "User");
           email = (decoded.email || "").trim().toLowerCase();
           setUserEmail(email);
+          setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
         }
 
-        // 2. Fetch Users
-        const usersRes = await fetch("/api/users");
-        if (usersRes.ok) {
-          const usersData = await usersRes.json();
-          const me = usersData.find((u: any) => u.email.toLowerCase() === email);
-          if (me) {
-            setUserRole(me.role || "Employee");
-            setUserStatus(me.status || "Active");
+        // 2. Fetch User Profile
+        const profileRes = await fetch("/api/profile/me");
+        if (profileRes.ok) {
+          const me = await profileRes.json();
+          setUserName(me.name || "User");
+          setUserEmail(me.email || "");
+          setUserRole(me.orgRole || me.role || "Employee");
+          setUserStatus(me.status || "Active");
+          setUserPhone(me.phone || "");
+          setUserAddress(me.address || "");
+          setIsOwner(me.orgRole === "OWNER");
+          if (me.createdAt) {
             setUserJoined(new Date(me.createdAt).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
@@ -111,6 +125,42 @@ export default function ProfilePage() {
 
     fetchProfileAndOrg();
   }, []);
+
+  const handleUpdateProfile = async () => {
+    if (!userName.trim()) {
+      toast.error("Name cannot be empty.");
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      const res = await fetch("/api/profile/me", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: userName.trim(),
+          phone: userPhone.trim(),
+          address: userAddress.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Profile details updated successfully!");
+        setUserName(data.name);
+        setUserPhone(data.phone || "");
+        setUserAddress(data.address || "");
+      } else {
+        toast.error(data.error || "Failed to update profile details.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong while updating profile.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const handleRequestCode = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -251,6 +301,13 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-400 font-semibold uppercase tracking-wider">Ownership</span>
+                  <span className={`font-bold text-xs ${isOwner ? "text-[#4F46E5]" : "text-gray-500"}`}>
+                    {isOwner ? "Organization Owner" : "Standard User / Member"}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center text-xs">
                   <span className="text-gray-400 font-semibold uppercase tracking-wider">Status</span>
                   <span className="inline-flex items-center gap-1 text-green-600 font-bold">
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -271,6 +328,76 @@ export default function ProfilePage() {
 
         {/* Right Columns: Org, Subscription & Change Password info */}
         <div className="lg:col-span-2 space-y-6">
+          
+          {/* Card 0: Personal Details */}
+          <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
+            <CardHeader className="border-b border-gray-100 dark:border-zinc-850 pb-5">
+              <CardTitle className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <User className="w-5 h-5 text-[#4F46E5]" />
+                Personal Profile Details
+              </CardTitle>
+              <CardDescription className="text-xs text-gray-500 mt-0.5">Update your contact details and home/work address.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">FULL NAME</Label>
+                  <Input 
+                    type="text"
+                    value={userName} 
+                    onChange={(e) => setUserName(e.target.value)} 
+                    placeholder="Jane Doe"
+                    className="text-sm rounded-lg"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">EMAIL ADDRESS</Label>
+                  <Input 
+                    type="email"
+                    value={userEmail} 
+                    disabled
+                    placeholder="jane@company.com"
+                    className="text-sm rounded-lg bg-gray-50 dark:bg-zinc-800 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">PHONE NUMBER</Label>
+                  <Input 
+                    type="text"
+                    value={userPhone} 
+                    onChange={(e) => setUserPhone(e.target.value)} 
+                    placeholder="+1 (555) 000-0000"
+                    className="text-sm rounded-lg"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">ADDRESS</Label>
+                  <Input 
+                    type="text"
+                    value={userAddress} 
+                    onChange={(e) => setUserAddress(e.target.value)} 
+                    placeholder="123 Logistics Way, Suite 100"
+                    className="text-sm rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Button 
+                  onClick={handleUpdateProfile}
+                  disabled={isSavingProfile}
+                  className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 font-semibold text-xs px-4 py-2.5 rounded-lg shadow-sm"
+                >
+                  {isSavingProfile ? "Saving Profile..." : "Save Profile Details"}
+                </Button>
+              </div>
+
+            </CardContent>
+          </Card>
           
           {/* Card 1: Organization Details */}
           <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
+import { jwtDecode } from "jwt-decode";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,6 +116,8 @@ const permissionCategories: PermissionCategory[] = [
 const totalPermissionsCount = 22; // 6 + 7 + 4 + 5
 
 export default function UsersAndTeamsPage() {
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<"users" | "permissions">("users");
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
@@ -178,7 +183,25 @@ export default function UsersAndTeamsPage() {
   };
 
   useEffect(() => {
-    fetchUsersAndPermissions();
+    const token = Cookies.get("token");
+    if (token) {
+      try {
+        const decoded = jwtDecode<any>(token);
+        const isSuper = decoded.platformRole === "SUPER_ADMIN";
+        const isOwner = decoded.orgRole === "OWNER";
+        if (isSuper || isOwner) {
+          setIsAuthorized(true);
+          fetchUsersAndPermissions();
+        } else {
+          setIsAuthorized(false);
+        }
+      } catch (err) {
+        console.error("Token decoding error", err);
+        setIsAuthorized(false);
+      }
+    } else {
+      setIsAuthorized(false);
+    }
   }, []);
 
   // Filter users
@@ -296,6 +319,36 @@ export default function UsersAndTeamsPage() {
       case "Super Admin": return Shield;
     }
   };
+
+  if (isAuthorized === null) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] w-full text-sm text-gray-500 bg-gray-50 dark:bg-zinc-950">
+        Checking permissions...
+      </div>
+    );
+  }
+
+  if (isAuthorized === false) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] w-full p-4 bg-gray-50 dark:bg-zinc-950">
+        <Card className="max-w-md w-full shadow-lg border border-red-100 dark:border-red-950/30 bg-white dark:bg-zinc-900 rounded-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="h-2 bg-red-500" />
+          <CardContent className="pt-6 pb-6 px-6 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 flex items-center justify-center mb-4">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Access Denied</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              You do not have permission to view the Users & Teams page. This section is restricted to Super Administrators and Organization Owners.
+            </p>
+            <Button onClick={() => router.push("/dashboard")} className="mt-6 bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+              Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

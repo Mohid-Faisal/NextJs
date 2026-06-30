@@ -10,6 +10,15 @@ export async function PUT(
   if (auth.error) return auth.error;
   const session = auth.session;
 
+  const isSuperAdmin = session.platformRole === "SUPER_ADMIN";
+  const isOrgOwner = session.orgRole === "OWNER";
+  if (!isSuperAdmin && !isOrgOwner) {
+    return NextResponse.json(
+      { error: "Forbidden: Only Super Admins and Org Owners can access this resource" },
+      { status: 403 }
+    );
+  }
+
   try {
     const { id } = await params;
     const userId = parseInt(id);
@@ -71,6 +80,15 @@ export async function DELETE(
   const auth = await requireApiSession(request);
   if (auth.error) return auth.error;
   const session = auth.session;
+
+  const isSuperAdmin = session.platformRole === "SUPER_ADMIN";
+  const isOrgOwner = session.orgRole === "OWNER";
+  if (!isSuperAdmin && !isOrgOwner) {
+    return NextResponse.json(
+      { error: "Forbidden: Only Super Admins and Org Owners can access this resource" },
+      { status: 403 }
+    );
+  }
 
   try {
     const { id } = await params;

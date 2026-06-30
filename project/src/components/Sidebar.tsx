@@ -56,6 +56,7 @@ interface DecodedToken {
   name: string;
   email?: string;
   platformRole?: string | null;
+  orgRole?: string | null;
 }
 
 const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
@@ -64,6 +65,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const searchParams = useSearchParams();
   const [userName, setUserName] = useState("User");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [orgRole, setOrgRole] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [shipmentOpen, setShipmentOpen] = useState(
     pathname.startsWith("/dashboard/shipments") ||
@@ -116,6 +118,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
         const decoded = jwtDecode<DecodedToken>(token);
         setUserName(decoded.name || "User");
         setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
+        setOrgRole(decoded.orgRole || null);
       } catch (err) {
         console.error("Failed to decode token:", err);
       }
@@ -436,7 +439,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
 
           {/* Other Static Links */}
           {links
-            .filter((link) => link.href !== "/dashboard/users" || isSuperAdmin)
+            .filter((link) => link.href !== "/dashboard/users" || isSuperAdmin || orgRole === "OWNER")
             .map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href;
               return (
