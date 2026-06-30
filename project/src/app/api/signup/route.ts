@@ -7,7 +7,7 @@ import { createOrganizationForSignup } from "@/lib/auth/membership";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, companyName, planCode, phone, address } = body;
+    const { name, email, password, companyName, planCode, phone, address, paymentMethod, referenceId, receiptUrl } = body;
 
     if (!name?.trim() || !email?.trim() || !password) {
       return NextResponse.json(
@@ -83,6 +83,29 @@ export async function POST(request: NextRequest) {
           { success: false, message: "Could not create organization. Try a different company name." },
           { status: 400 }
         );
+      }
+
+      // Create payment proof if paid plan details were provided
+      if (organization && paymentMethod && referenceId) {
+        try {
+          const plan = await prisma.plan.findUnique({ where: { code: planCode?.trim() || "starter" } });
+          if (plan) {
+            await prisma.paymentProof.create({
+              data: {
+                organizationId: organization.id,
+                planId: plan.id,
+                amount: plan.priceMonthlyUsd,
+                method: String(paymentMethod).toUpperCase(),
+                referenceId: String(referenceId).trim(),
+                receiptUrl: receiptUrl || null,
+                status: "pending",
+              },
+            });
+          }
+        } catch (paymentError) {
+          console.error("Payment proof creation failed during signup:", paymentError);
+          // Non-fatal — org is still created, admin can handle manually
+        }
       }
     }
 
