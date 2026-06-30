@@ -248,3 +248,60 @@ export async function sendPassword2FACodeEmail(
     throw error;
   }
 }
+
+export interface EmployeeInvitationEmailData {
+  employeeName: string;
+  employeeEmail: string;
+  initialPassword: string;
+  loginUrl: string;
+  organizationName: string;
+}
+
+export async function sendEmployeeInvitationEmail(data: EmployeeInvitationEmailData) {
+  try {
+    const { data: emailData, error } = await resend.emails.send({
+      from: "PSS_Support@psswwe.com",
+      to: data.employeeEmail,
+      subject: `You have been added to ${data.organizationName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <h2 style="color: #4F46E5;">Welcome to ${data.organizationName}!</h2>
+          <p>Hello ${data.employeeName},</p>
+          <p>You have been added as an employee to the <strong>${data.organizationName}</strong> workspace by an administrator.</p>
+          
+          <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #111827;">Your Account Credentials:</h3>
+            <p style="margin: 5px 0;"><strong>Email:</strong> ${data.employeeEmail}</p>
+            <p style="margin: 5px 0;"><strong>Initial Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 14px;">${data.initialPassword}</code></p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.loginUrl}" 
+               style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+              Log In to Your Account
+            </a>
+          </div>
+          
+          <p style="color: #ef4444; font-size: 13px; font-weight: 500;">
+            ⚠️ For security reasons, we strongly recommend that you change your password immediately after logging in.
+          </p>
+          
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+          <p style="color: #666; font-size: 13px; margin: 0;">
+            If you have any questions, please contact your workspace administrator.
+          </p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending employee invitation email:", error);
+      throw new Error("Failed to send employee invitation email");
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error("Error in sendEmployeeInvitationEmail:", error);
+    throw error;
+  }
+}

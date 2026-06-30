@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
-import { sendUserApprovalEmail } from '@/lib/email';
+import { sendEmployeeInvitationEmail } from '@/lib/email';
 import { requireApiSession } from '@/lib/auth/requireApiSession';
 import bcrypt from "bcryptjs";
 
@@ -93,7 +93,14 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create new user and organization membership in a transaction
+    // Fetch organization info to personalize invitation
+    const org = await prisma.organization.findUnique({
+      where: { id: session.organizationId },
+      select: { name: true }
+    });
+    const organizationName = org?.name || "our platform";
+
+    // Create new user and organization membership in a transaction (directly active and approved)
     const user = await prisma.$transaction(async (tx) => {
       const u = await tx.user.create({
         data: {
@@ -101,8 +108,8 @@ export async function POST(request: NextRequest) {
           email: email.trim().toLowerCase(),
           password: hashedPassword,
           role,
-          status: 'PENDING',
-          isApproved: false,
+          status: 'ACTIVE',
+          isApproved: true,
         },
         select: {
           id: true,
@@ -126,16 +133,18 @@ export async function POST(request: NextRequest) {
       return u;
     });
 
-    // Send approval email to admin
+    // Send invitation email directly to employee containing login credentials
     try {
-      const approvalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/users/approve/${user.id}`;
-      await sendUserApprovalEmail({
-        userName: user.name,
-        userEmail: user.email,
-        approvalUrl,
+      const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login`;
+      await sendEmployeeInvitationEmail({
+        employeeName: user.name,
+        employeeEmail: user.email,
+        initialPassword: password,
+        loginUrl,
+        organizationName,
       });
     } catch (emailError) {
-      console.error('Failed to send approval email:', emailError);
+      console.error('Failed to send employee invitation email:', emailError);
       // Don't fail user creation if email fails
     }
 
