@@ -7,6 +7,8 @@ import { requireApiSession } from "@/lib/auth/requireApiSession";
 export async function GET(req: NextRequest) {
   try {
     // Attempt to resolve dynamic organization logo if session exists
+    // Get logo as base64
+    let logoBase64 = '';
     let logoPath = path.join(process.cwd(), 'public', 'logo_final.png');
     
     const auth = await requireApiSession(req);
@@ -16,25 +18,38 @@ export async function GET(req: NextRequest) {
         select: { logoUrl: true }
       });
 
-      if (org && org.logoUrl && org.logoUrl.startsWith('/')) {
-        const customPath = path.join(process.cwd(), 'public', org.logoUrl);
-        if (fs.existsSync(customPath)) {
-          logoPath = customPath;
+      if (org && org.logoUrl) {
+        if (org.logoUrl.startsWith('http://') || org.logoUrl.startsWith('https://')) {
+          try {
+            const res = await fetch(org.logoUrl);
+            if (res.ok) {
+              const buffer = await res.arrayBuffer();
+              const base64 = Buffer.from(buffer).toString('base64');
+              const contentType = res.headers.get('content-type') || 'image/png';
+              logoBase64 = `data:${contentType};base64,${base64}`;
+            }
+          } catch (err) {
+            console.error('Error fetching remote logo:', err);
+          }
+        } else if (org.logoUrl.startsWith('/')) {
+          const customPath = path.join(process.cwd(), 'public', org.logoUrl);
+          if (fs.existsSync(customPath)) {
+            logoPath = customPath;
+          }
         }
       }
     }
 
-    // Get logo as base64
-    let logoBase64 = '';
-    try {
-      const logoBuffer = fs.readFileSync(logoPath);
-      logoBase64 = logoBuffer.toString('base64');
-      // Resolve MIME type dynamically
-      const ext = path.extname(logoPath).toLowerCase();
-      const mime = ext === '.svg' ? 'image/svg+xml' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
-      logoBase64 = `data:${mime};base64,${logoBase64}`;
-    } catch (error) {
-      console.error('Error reading logo file:', error);
+    if (!logoBase64) {
+      try {
+        const logoBuffer = fs.readFileSync(logoPath);
+        const base64 = logoBuffer.toString('base64');
+        const ext = path.extname(logoPath).toLowerCase();
+        const mime = ext === '.svg' ? 'image/svg+xml' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+        logoBase64 = `data:${mime};base64,${logoBase64}`;
+      } catch (error) {
+        console.error('Error reading logo file:', error);
+      }
     }
 
     // Get footer as base64

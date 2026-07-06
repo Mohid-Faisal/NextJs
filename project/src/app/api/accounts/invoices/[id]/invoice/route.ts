@@ -112,8 +112,14 @@ export async function GET(
       console.log('Parsed calculated values from database:', calculatedValues);
     }
 
+    // Fetch organization logo url from database
+    const org = await prisma.organization.findUnique({
+      where: { id: session.organizationId },
+      select: { logoUrl: true }
+    });
+
     // Convert logo and footer to base64
-    const logoBase64 = getLogoAsBase64();
+    const logoBase64 = await getLogoAsBase64(org?.logoUrl);
     const footerBase64 = getFooterAsBase64();
     
     // Generate HTML invoice content
@@ -135,8 +141,33 @@ export async function GET(
   }
 }
 
-function getLogoAsBase64(): string {
+async function getLogoAsBase64(logoUrl?: string | null): Promise<string> {
   try {
+    if (logoUrl) {
+      if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+        try {
+          const res = await fetch(logoUrl);
+          if (res.ok) {
+            const buffer = await res.arrayBuffer();
+            const base64 = Buffer.from(buffer).toString('base64');
+            const contentType = res.headers.get('content-type') || 'image/png';
+            return `data:${contentType};base64,${base64}`;
+          }
+        } catch (err) {
+          console.error('Error fetching remote logo:', err);
+        }
+      } else if (logoUrl.startsWith('/')) {
+        const customPath = path.join(process.cwd(), 'public', logoUrl);
+        if (fs.existsSync(customPath)) {
+          const logoBuffer = fs.readFileSync(customPath);
+          const base64 = logoBuffer.toString('base64');
+          const ext = path.extname(customPath).toLowerCase();
+          const mime = ext === '.svg' ? 'image/svg+xml' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+          return `data:${mime};base64,${base64}`;
+        }
+      }
+    }
+
     const logoPath = path.join(process.cwd(), 'public', 'logo_final.png');
     const logoBuffer = fs.readFileSync(logoPath);
     const base64 = logoBuffer.toString('base64');
