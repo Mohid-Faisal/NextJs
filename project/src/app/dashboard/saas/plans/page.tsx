@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,8 @@ export default function SaasPlansPage() {
   const [editMaxUsers, setEditMaxUsers] = useState("");
   const [editMaxShipments, setEditMaxShipments] = useState("");
   const [editMaxBranches, setEditMaxBranches] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editFeaturesList, setEditFeaturesList] = useState("");
   const [editTrialDays, setEditTrialDays] = useState("");
   const [editGracePeriodDays, setEditGracePeriodDays] = useState("");
   const [editAccounts, setEditAccounts] = useState(false);
@@ -122,6 +125,8 @@ export default function SaasPlansPage() {
     setEditMaxUsers(String(plan.maxUsers));
     setEditMaxShipments(String(plan.maxShipmentsPerMonth));
     setEditMaxBranches(String(features.maxBranches ?? (plan.code === "starter" ? 1 : plan.code === "growth" ? 3 : 5)));
+    setEditDescription(features.description ?? "");
+    setEditFeaturesList(Array.isArray(features.featuresList) ? features.featuresList.join("\n") : "");
     setEditTrialDays(String(features.trialDays ?? 14));
     setEditGracePeriodDays(String(features.gracePeriodDays ?? 7));
     setEditAccounts(features.accounts === true);
@@ -171,6 +176,8 @@ export default function SaasPlansPage() {
           isActive: editIsActive,
           annualPrice: parseFloat(editPriceAnnual),
           maxBranches: parseInt(editMaxBranches, 10),
+          description: editDescription.trim(),
+          featuresList: editFeaturesList.split("\n").map(f => f.trim()).filter(Boolean),
           map: editMap,
           analytics: editAnalytics,
           activityLogs: editActivityLogs,
@@ -517,6 +524,28 @@ export default function SaasPlansPage() {
               <div className="space-y-1.5">
                 {/* Empty spacer to align layout */}
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="editDescription" className="font-semibold text-slate-800 dark:text-slate-200">Plan Description</Label>
+              <Textarea 
+                id="editDescription" 
+                value={editDescription} 
+                onChange={(e) => setEditDescription(e.target.value)} 
+                placeholder="e.g. Starter Plan: 100 shipments/mo, 1 user limit." 
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="editFeaturesList" className="font-semibold text-slate-800 dark:text-slate-200">Plan Checklist Features (one per line)</Label>
+              <Textarea 
+                id="editFeaturesList" 
+                value={editFeaturesList} 
+                onChange={(e) => setEditFeaturesList(e.target.value)} 
+                placeholder="e.g.&#10;100 shipments/month&#10;1 user limit&#10;1 branch limit" 
+                rows={4}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

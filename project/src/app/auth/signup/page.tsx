@@ -221,7 +221,11 @@ const SignupPage = () => {
     handleSignup("free", true);
   };
 
-  const getChecklistForPlan = (code: string): string[] => {
+  const getChecklistForPlan = (plan: any): string[] => {
+    if (plan.features && Array.isArray(plan.features.featuresList) && plan.features.featuresList.length > 0) {
+      return plan.features.featuresList;
+    }
+    const code = plan.code;
     switch (code) {
       case "starter":
         return ["100 shipments/month", "1 user limit", "1 branch limit", "All core features", "Excludes Remote Area & Finances"];
@@ -688,7 +692,7 @@ const SignupPage = () => {
                     <hr className="border-slate-100 dark:border-slate-800/80 my-2" />
 
                     <ul className="space-y-3.5 text-xs text-gray-650 dark:text-gray-400 flex-1 py-2">
-                      {getChecklistForPlan(plan.code).map((item, idx) => (
+                      {getChecklistForPlan(plan).map((item, idx) => (
                         <li key={idx} className="flex items-start gap-2">
                           <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
                           <span className="font-medium">{item}</span>
