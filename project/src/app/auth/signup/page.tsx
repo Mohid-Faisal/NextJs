@@ -844,11 +844,16 @@ const SignupPage = () => {
                     )}
 
                     {paymentMethod === "BANK_TRANSFER" && (
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between"><span className="text-gray-500">Bank Name:</span><span className="font-bold text-slate-800 dark:text-slate-200">Allied Bank</span></div>
+                      <div className="space-y-1.5 text-sm">
+                        <div className="flex justify-between"><span className="text-gray-500">Bank Name:</span><span className="font-bold text-slate-800 dark:text-slate-200">Allied Bank Limited</span></div>
                         <div className="flex justify-between"><span className="text-gray-500">Account Title:</span><span className="font-bold text-slate-800 dark:text-slate-200">Prompt Survey & Services (PSS)</span></div>
-                        <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5"><span className="text-gray-500">Account No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">053000010010882520025</span></div>
-                        <div className="flex flex-col gap-0.5"><span className="text-gray-500">IBAN:</span><span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 select-all text-[11px] bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded mt-1 break-all">PK37ABPA0010010882520025</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Account No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">053000010010882520025</span></div>
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-gray-500 shrink-0">IBAN:</span>
+                          <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 select-all text-[11px] bg-slate-100 dark:bg-slate-900/50 px-2 py-0.5 rounded break-all">
+                            PK37ABPA0010010882520025
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
