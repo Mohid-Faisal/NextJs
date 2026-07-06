@@ -189,31 +189,48 @@ const DeleteDialog = ({
         return;
       }
 
-      // Make the delete API call
-      const apiUrl = entityType === "invoice" 
-        ? `/api/accounts/invoices/${entityId}`
-        : entityType === "payment"
-        ? `/api/accounts/payments/${entityId}`
-        : `/api/${entityType}s/${entityId}`;
-        
-      const response = await fetch(apiUrl, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ password }),
-      });
+      const idsToDelete = isBulk ? entityIds : [entityId];
+      let successCount = 0;
+      let failCount = 0;
 
-      const data = await response.json();
+      for (const id of idsToDelete) {
+        const apiUrl = entityType === "invoice" 
+          ? `/api/accounts/invoices/${id}`
+          : entityType === "payment"
+          ? `/api/accounts/payments/${id}`
+          : `/api/${entityType}s/${id}`;
+          
+        try {
+          const response = await fetch(apiUrl, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ password }),
+          });
 
-      if (response.ok) {
-        toast.success(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} deleted successfully!`);
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(
+          isBulk
+            ? `${successCount} ${entityType}(s) deleted successfully!${failCount > 0 ? ` (${failCount} failed)` : ""}`
+            : `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} deleted successfully!`
+        );
         onDelete?.();
         onClose?.();
         setPassword("");
       } else {
-        toast.error(data.error || "Failed to delete");
+        toast.error(`Failed to delete ${entityType}(s)`);
       }
     } catch (error) {
       console.error("Delete error:", error);

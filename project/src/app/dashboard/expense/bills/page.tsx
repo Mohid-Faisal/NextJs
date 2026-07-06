@@ -34,12 +34,14 @@ import {
   ShoppingCart,
   Search,
   Upload,
+  Check,
 } from "lucide-react";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TablePagination } from "@/components/TablePagination";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Edit Invoice Form Component
 const EditInvoiceForm = ({ 
@@ -315,6 +317,9 @@ export default function ExpenseBillsPage() {
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>([]);
+  const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Update date range based on period type
   const updatePeriodDates = () => {
@@ -478,6 +483,61 @@ export default function ExpenseBillsPage() {
     }
   };
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = invoices.map((i) => i.id);
+      setSelectedInvoiceIds(allIds);
+    } else {
+      setSelectedInvoiceIds([]);
+    }
+  };
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedInvoiceIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (selectedInvoiceIds.length === 0) return;
+    setIsUpdatingStatus(true);
+    const toastId = toast.loading(`Updating status of ${selectedInvoiceIds.length} bill(s)...`);
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const id of selectedInvoiceIds) {
+      try {
+        const response = await fetch(`/api/accounts/invoices/${id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        failCount++;
+      }
+    }
+    
+    setIsUpdatingStatus(false);
+    toast.dismiss(toastId);
+    
+    if (successCount > 0) {
+      toast.success(`Successfully updated ${successCount} bill(s) to ${newStatus}.${failCount > 0 ? ` (${failCount} failed)` : ""}`);
+      setSelectedInvoiceIds([]);
+      await handleDelete(); // refreshes list
+    } else {
+      toast.error(`Failed to update bill status`);
+    }
+  };
+
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
     return sortOrder === "asc" ? (
@@ -580,6 +640,10 @@ export default function ExpenseBillsPage() {
     printWindow.document.close();
     printWindow.print();
   };
+
+  const selectedTotal = invoices
+    .filter((inv) => selectedInvoiceIds.includes(inv.id))
+    .reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0">
@@ -769,6 +833,14 @@ export default function ExpenseBillsPage() {
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
                 <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
+                  <th className="w-12 px-2 sm:px-3 lg:px-4 py-2 text-left">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                      checked={invoices.length > 0 && selectedInvoiceIds.length === invoices.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button
                       onClick={() => handleSort("id")}
@@ -855,6 +927,14 @@ export default function ExpenseBillsPage() {
                     key={i.id}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
                   >
+                    <td className="w-12 px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                        checked={selectedInvoiceIds.includes(i.id)}
+                        onChange={() => handleToggleSelect(i.id)}
+                      />
+                    </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{i.id}</td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{i.invoiceNumber}</td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
@@ -1031,6 +1111,79 @@ export default function ExpenseBillsPage() {
               }}
             />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Selected Capsule */}
+      <AnimatePresence>
+        {selectedInvoiceIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-zinc-950 text-white rounded-full px-6 py-3.5 shadow-2xl flex items-center gap-6 z-50 border border-slate-800"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-slate-300">
+                {selectedInvoiceIds.length} selected
+              </span>
+              <span className="h-4 w-px bg-slate-700" />
+              <span className="text-sm font-extrabold text-orange-400">
+                ${selectedTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            
+            <div className="h-4 w-px bg-slate-700" />
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleBulkStatusChange("Paid")}
+                disabled={isUpdatingStatus}
+                className="flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors cursor-pointer bg-transparent border-0 disabled:opacity-50"
+              >
+                <Check className="w-4 h-4 text-orange-400" />
+                Mark Paid
+              </button>
+              
+              <span className="h-4 w-px bg-slate-700" />
+              
+              <button
+                onClick={() => setOpenBulkDeleteDialog(true)}
+                className="flex items-center gap-2 text-sm font-bold text-rose-400 hover:text-rose-300 transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                Delete selected
+              </button>
+              
+              <span className="h-4 w-px bg-slate-700" />
+              
+              <button
+                onClick={() => setSelectedInvoiceIds([])}
+                className="flex items-center gap-1.5 text-sm font-bold text-slate-300 hover:text-white transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <span className="text-lg leading-none font-light">×</span>
+                <span>Deselect all</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Delete dialog */}
+      <Dialog open={openBulkDeleteDialog} onOpenChange={setOpenBulkDeleteDialog}>
+        <DialogContent className="max-w-md w-full">
+          <DeleteDialog
+            entityType="invoice"
+            entityId={selectedInvoiceIds[0] || 0}
+            entityIds={selectedInvoiceIds}
+            onDelete={async () => {
+              setSelectedInvoiceIds([]);
+              await handleDelete();
+            }}
+            onClose={() => {
+              setOpenBulkDeleteDialog(false);
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>
