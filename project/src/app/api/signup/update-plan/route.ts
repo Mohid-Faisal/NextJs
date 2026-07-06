@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendUserApprovalEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +47,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Update organization status based on selected plan
+    await prisma.organization.update({
+      where: { id: parseInt(organizationId, 10) },
+      data: {
+        status: isTrial ? "trial" : "pending",
+      },
+    });
+
     // Create payment proof if payment details are present
     if (paymentMethod && referenceId) {
       await prisma.paymentProof.create({
@@ -59,6 +68,39 @@ export async function POST(request: NextRequest) {
           status: "pending",
         }
       });
+    }
+
+    // Trigger admin approval request when:
+    // 1. User selects the trial plan (free trial — no payment needed), OR
+    // 2. User selects a paid plan AND submits payment details.
+    const shouldTriggerApproval = isTrial || (paymentMethod && referenceId);
+
+    if (shouldTriggerApproval && userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: parseInt(userId, 10) },
+        select: { id: true, name: true, email: true, status: true },
+      });
+
+      if (user && (user.status === "PENDING_PLAN_SELECTION" || user.status === "PENDING_VERIFICATION")) {
+        // Update user status to PENDING_APPROVAL
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { status: "PENDING_APPROVAL" },
+        });
+
+        // Send approval email to super admin
+        try {
+          const approvalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/users/approve/${user.id}`;
+          await sendUserApprovalEmail({
+            userName: user.name,
+            userEmail: user.email,
+            approvalUrl,
+          });
+        } catch (emailError) {
+          console.error("Failed to send approval email during plan update:", emailError);
+          // Non-fatal — admin can still see the pending approval in the dashboard
+        }
+      }
     }
 
     return NextResponse.json({ success: true, message: "Subscription plan updated successfully." });

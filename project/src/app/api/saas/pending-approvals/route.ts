@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const users = await prisma.user.findMany({
       where: {
         isApproved: false,
-        OR: [{ status: "PENDING_APPROVAL" }, { status: "PENDING" }],
+        OR: [{ status: "PENDING_APPROVAL" }, { status: "PENDING" }, { status: "PENDING_PLAN_SELECTION" }],
       },
       orderBy: { createdAt: "desc" },
       select: {

@@ -267,7 +267,7 @@ const SignupPage = () => {
   };
 
   const handleSelectFreeTrial = async () => {
-    setSelectedPlan("starter");
+    setSelectedPlan("trial");
     setIsFreeTrial(true);
     
     setIsLoading(true);
@@ -278,7 +278,7 @@ const SignupPage = () => {
         body: JSON.stringify({
           userId,
           organizationId: orgId,
-          planCode: "starter",
+          planCode: "trial",
         })
       });
       const data = await res.json();

@@ -59,7 +59,7 @@ export async function DELETE(
         }),
       ]);
 
-      if (memberCount === 1 && org && org.status === "trial") {
+      if (memberCount === 1 && org && (org.status === "trial" || org.status === "pending")) {
         const shipmentCount = await prisma.shipment.count({
           where: { organizationId: m.organizationId },
         });

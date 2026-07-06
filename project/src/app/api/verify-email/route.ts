@@ -52,17 +52,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the code and update user status
+    // Check if the user is the OWNER of an organization (workspace signup).
+    // If so, defer admin approval until they select a plan/submit payment.
     const member = await prisma.organizationMember.findFirst({
       where: { userId, role: "OWNER" }
     });
 
+    if (member) {
+      // Workspace owner: defer approval — they still need to pick a plan.
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          status: "PENDING_PLAN_SELECTION",
+          isApproved: false,
+          role: "Admin",
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Email verified successfully! Please select a plan to continue.",
+      });
+    }
+
+    // Standard user (no workspace): request admin approval immediately.
     await prisma.user.update({
       where: { id: userId },
       data: {
         status: "PENDING_APPROVAL",
         isApproved: false,
-        role: member ? "Admin" : "USER", // Set default role
+        role: "USER",
       },
     });
 

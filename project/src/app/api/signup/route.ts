@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         organization = await createOrganizationForSignup(
           companyName.trim(),
           user.id,
-          typeof planCode === "string" && planCode.trim() ? planCode.trim() : "starter"
+          typeof planCode === "string" && planCode.trim() ? planCode.trim() : "trial"
         );
       } catch (orgError) {
         await prisma.user.delete({ where: { id: user.id } });
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       // Create payment proof if paid plan details were provided
       if (organization && paymentMethod && referenceId) {
         try {
-          const plan = await prisma.plan.findUnique({ where: { code: planCode?.trim() || "starter" } });
+          const plan = await prisma.plan.findUnique({ where: { code: planCode?.trim() || "trial" } });
           if (plan) {
             await prisma.paymentProof.create({
               data: {

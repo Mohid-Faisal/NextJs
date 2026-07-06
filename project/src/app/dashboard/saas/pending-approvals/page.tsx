@@ -190,6 +190,8 @@ export default function PendingApprovalsPage() {
                         ? "Unverified"
                         : u.status === "PENDING_APPROVAL"
                         ? "Awaiting approval"
+                        : u.status === "PENDING_PLAN_SELECTION"
+                        ? "Selecting plan"
                         : u.status.toLowerCase()}
                     </Badge>
                   </TableCell>
