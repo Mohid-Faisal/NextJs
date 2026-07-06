@@ -65,6 +65,7 @@ const PAYMENT_METHODS = [
   { value: "EASYPAISA", label: "Easypaisa", icon: Smartphone, desc: "Mobile wallet" },
   { value: "JAZZCASH", label: "JazzCash", icon: Smartphone, desc: "Mobile wallet" },
   { value: "CASH", label: "Cash", icon: Banknote, desc: "Cash payment" },
+  { value: "CARD", label: "Credit / Debit Card", icon: CreditCard, desc: "Visa, Mastercard (Not Enabled Yet)", disabled: true },
 ];
 
 // Step indicator showing progress
@@ -794,15 +795,21 @@ const SignupPage = () => {
                   {PAYMENT_METHODS.map((method) => {
                     const active = paymentMethod === method.value;
                     const Icon = method.icon;
+                    const isDisabled = (method as any).disabled;
                     return (
                       <button
                         key={method.value}
                         type="button"
-                        onClick={() => setPaymentMethod(method.value)}
-                        className={`text-left rounded-xl border-2 p-3 transition-all cursor-pointer focus:outline-none ${
-                          active
-                            ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 ring-1 ring-indigo-300"
-                            : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 bg-white dark:bg-slate-950"
+                        onClick={isDisabled ? undefined : () => setPaymentMethod(method.value)}
+                        disabled={isDisabled}
+                        className={`text-left rounded-xl border-2 p-3 transition-all focus:outline-none ${
+                          method.value === "CARD" ? "col-span-2" : ""
+                        } ${
+                          isDisabled
+                            ? "opacity-50 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 cursor-not-allowed"
+                            : active
+                              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 ring-1 ring-indigo-300 cursor-pointer"
+                              : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 bg-white dark:bg-slate-950 cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -814,6 +821,38 @@ const SignupPage = () => {
                     );
                   })}
                 </div>
+
+                {/* Selected Payment Method Account Details */}
+                {paymentMethod && paymentMethod !== "CASH" && paymentMethod !== "CARD" && (
+                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 space-y-2">
+                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Account Details for Transfer</p>
+                    
+                    {paymentMethod === "JAZZCASH" && (
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between"><span className="text-gray-500">Service:</span><span className="font-bold text-slate-800 dark:text-slate-200">JazzCash</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Account Title:</span><span className="font-bold text-slate-800 dark:text-slate-200">Zeeshan Ahmad Chaudhry</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Mobile No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">03008482321</span></div>
+                      </div>
+                    )}
+
+                    {paymentMethod === "EASYPAISA" && (
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between"><span className="text-gray-500">Service:</span><span className="font-bold text-slate-800 dark:text-slate-200">Easypaisa</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Account Title:</span><span className="font-bold text-slate-800 dark:text-slate-200">Zeeshan Ahmad Chaudhry</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Mobile No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">03008482321</span></div>
+                      </div>
+                    )}
+
+                    {paymentMethod === "BANK_TRANSFER" && (
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between"><span className="text-gray-500">Bank Name:</span><span className="font-bold text-slate-800 dark:text-slate-200">Allied Bank</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Account Title:</span><span className="font-bold text-slate-800 dark:text-slate-200">Prompt Survey & Services (PSS)</span></div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5"><span className="text-gray-500">Account No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">053000010010882520025</span></div>
+                        <div className="flex flex-col gap-0.5"><span className="text-gray-500">IBAN:</span><span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 select-all text-[11px] bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded mt-1 break-all">PK37ABPA0010010882520025</span></div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Reference ID */}
