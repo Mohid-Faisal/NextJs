@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
         status: true,
         isApproved: true,
         createdAt: true,
+        lastLoginAt: true,
         memberships: {
           where: {
             organizationId: session.organizationId
@@ -71,6 +72,7 @@ export async function GET(req: NextRequest) {
         status: u.status,
         isApproved: u.isApproved,
         createdAt: u.createdAt,
+        lastLoginAt: u.lastLoginAt,
       };
     });
 

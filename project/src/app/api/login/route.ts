@@ -55,6 +55,12 @@ export async function POST(req: Request) {
       );
     }
 
+    // Record last login timestamp
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
     const membership = await resolveMembership(user.id);
     if (!membership) {
       return NextResponse.json(

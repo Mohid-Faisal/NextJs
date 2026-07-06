@@ -52,6 +52,7 @@ const links = [
   { href: "/dashboard/recipients", label: "Recipients", icon: Users },
   { href: "/dashboard/vendors", label: "Vendors", icon: Building2 },
   { href: "/dashboard/users", label: "Users & Teams", icon: Users },
+  { href: "/dashboard/roles-permissions", label: "Roles & Permissions", icon: ShieldCheck },
 ];
 
 interface DecodedToken {
@@ -454,6 +455,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
           {links
             .filter((link) => {
               if (link.href === "/dashboard/users") return isSuperAdmin || orgRole === "OWNER";
+              if (link.href === "/dashboard/roles-permissions") return isSuperAdmin || orgRole === "OWNER";
               if (link.href === "/dashboard/customers") return hasPermission("view_customers");
               if (link.href === "/dashboard/recipients") return hasPermission("view_customers");
               if (link.href === "/dashboard/vendors") return hasPermission("view_vendors");

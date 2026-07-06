@@ -7,7 +7,6 @@ import { jwtDecode } from "jwt-decode";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,16 +16,8 @@ import {
   Edit3,
   Trash2,
   Lock,
-  UserCheck,
   Shield,
-  Briefcase,
-  User,
-  Building,
-  MoreVertical,
-  ChevronDown,
-  ChevronRight,
-  ShieldCheck,
-  Check
+  MoreVertical
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,118 +41,19 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-// Role interfaces
-type RoleName = "Customer" | "Vendor" | "Employee" | "Admin" | "Super Admin";
-
-interface PermissionItem {
-  name: string;
-  code: string;
-}
-
-interface PermissionCategory {
-  name: string;
-  code: string;
-  permissions: PermissionItem[];
-}
-
-const permissionCategories: PermissionCategory[] = [
-  {
-    name: "Dashboard",
-    code: "dashboard",
-    permissions: [
-      { name: "View activity", code: "view_activity" },
-      { name: "View analytics", code: "view_analytics" },
-      { name: "View KPIs", code: "view_kpis" },
-      { name: "View map", code: "view_map" },
-      { name: "View revenue", code: "view_revenue" },
-      { name: "View dashboard", code: "view_dashboard" }
-    ]
-  },
-  {
-    name: "Shipments",
-    code: "shipments",
-    permissions: [
-      { name: "View shipments", code: "view_shipments" },
-      { name: "Create shipment", code: "create_shipment" },
-      { name: "Edit shipment", code: "edit_shipment" },
-      { name: "Delete shipment", code: "delete_shipment" },
-      { name: "Bulk delete", code: "bulk_delete" },
-      { name: "Export shipments", code: "export_shipments" },
-      { name: "Update status", code: "update_status" }
-    ]
-  },
-  {
-    name: "Customers & Vendors",
-    code: "contacts",
-    permissions: [
-      { name: "View customers", code: "view_customers" },
-      { name: "Manage customers", code: "manage_customers" },
-      { name: "View vendors", code: "view_vendors" },
-      { name: "Manage vendors", code: "manage_vendors" }
-    ]
-  },
-  {
-    name: "Settings & Config",
-    code: "settings",
-    permissions: [
-      { name: "View configuration", code: "view_config" },
-      { name: "Manage statuses", code: "manage_statuses" },
-      { name: "Manage services", code: "manage_services" },
-      { name: "Manage HS codes", code: "manage_hscodes" },
-      { name: "Manage billing", code: "manage_billing" }
-    ]
-  }
-];
-
-const totalPermissionsCount = 22; // 6 + 7 + 4 + 5
+type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE" | "PENDING";
 
 export default function UsersAndTeamsPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"users" | "permissions">("users");
+  
+  // Data State
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [permSearch, setPermSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [loading, setLoading] = useState(true);
-  const [orgPlan, setOrgPlan] = useState<any>(null);
-
-  const getPlanAllowedPermissionsCount = () => {
-    let count = 0;
-    permissionCategories.forEach(category => {
-      category.permissions.forEach(p => {
-        if (orgPlan) {
-          const features = orgPlan.features || {};
-          if (p.code === "view_revenue" || p.code === "manage_billing") {
-            if (features.accounts !== true) return;
-          }
-          if (p.code === "bulk_delete") {
-            if (features.bulkUpload !== true) return;
-          }
-        }
-        count++;
-      });
-    });
-    return count || 1; // Avoid divide by zero
-  };
-
-  // Role permissions mapping state
-  const [rolePermissions, setRolePermissions] = useState<Record<RoleName, string[]>>({
-    "Customer": [],
-    "Vendor": [],
-    "Employee": [],
-    "Admin": [],
-    "Super Admin": []
-  });
-
-  // Collapsed sections in permissions list
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
-    dashboard: false,
-    shipments: false,
-    contacts: false,
-    settings: false
-  });
 
   // Modal / Form States
   const [openModal, setOpenModal] = useState<"invite" | "edit" | null>(null);
@@ -176,33 +68,13 @@ export default function UsersAndTeamsPage() {
     department: "—"
   });
 
-  const fetchUsersAndPermissions = async () => {
+  const fetchUsers = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Users
       const usersRes = await fetch("/api/users");
       if (usersRes.ok) {
         const data = await usersRes.json();
         setUsers(data);
-        setFilteredUsers(data);
-      }
-
-      // 2. Fetch Role Permissions Settings
-      const permRes = await fetch("/api/settings/custom?key=settings_role_permissions");
-      if (permRes.ok) {
-        const data = await permRes.json();
-        if (data.value) {
-          setRolePermissions(JSON.parse(data.value));
-        }
-      }
-
-      // 3. Fetch Org Current Plan Features
-      const orgRes = await fetch("/api/org/current");
-      if (orgRes.ok) {
-        const orgData = await orgRes.json();
-        if (orgData.success && orgData.organization) {
-          setOrgPlan(orgData.organization.subscription?.plan || null);
-        }
       }
     } catch (err) {
       console.error(err);
@@ -224,7 +96,7 @@ export default function UsersAndTeamsPage() {
         }
         if (isSuper || isOwner) {
           setIsAuthorized(true);
-          fetchUsersAndPermissions();
+          fetchUsers();
         } else {
           setIsAuthorized(false);
         }
@@ -237,9 +109,19 @@ export default function UsersAndTeamsPage() {
     }
   }, []);
 
-  // Filter users
+  // Filter users based on search term & status filter
   useEffect(() => {
     let res = users;
+
+    // Apply status filter
+    if (statusFilter !== "ALL") {
+      res = res.filter(u => {
+        const userStatus = (u.status || "ACTIVE").toUpperCase();
+        return userStatus === statusFilter;
+      });
+    }
+
+    // Apply search query
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       res = res.filter(u => 
@@ -248,8 +130,9 @@ export default function UsersAndTeamsPage() {
         (u.role || "").toLowerCase().includes(q)
       );
     }
+
     setFilteredUsers(res);
-  }, [searchTerm, users]);
+  }, [searchTerm, statusFilter, users]);
 
   // Invite/Save User
   const handleInviteUser = async () => {
@@ -275,7 +158,7 @@ export default function UsersAndTeamsPage() {
         toast.success(isEditing ? "User details updated" : "User invited successfully");
         setOpenModal(null);
         setEditingUser(null);
-        fetchUsersAndPermissions();
+        fetchUsers();
       } else {
         const errorData = await res.json();
         toast.error(errorData.error || "Failed to process user registration");
@@ -292,7 +175,7 @@ export default function UsersAndTeamsPage() {
       const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("User removed successfully");
-        fetchUsersAndPermissions();
+        fetchUsers();
       } else {
         toast.error("Failed to delete user");
       }
@@ -301,61 +184,49 @@ export default function UsersAndTeamsPage() {
     }
   };
 
-  // Toggle single permission for a role
-  const handleTogglePermission = async (role: RoleName, code: string, checked: boolean) => {
-    if (role === "Super Admin") return; // Super admin has locked access
+  // Status metrics counts
+  const totalCount = users.length;
+  const activeCount = users.filter(u => (u.status || "ACTIVE").toUpperCase() === "ACTIVE").length;
+  const inactiveCount = users.filter(u => (u.status || "ACTIVE").toUpperCase() === "INACTIVE").length;
+  const pendingCount = users.filter(u => (u.status || "ACTIVE").toUpperCase() === "PENDING").length;
 
-    const updatedRoles = { ...rolePermissions };
-    const list = updatedRoles[role] || [];
-    if (checked) {
-      if (!list.includes(code)) {
-        updatedRoles[role] = [...list, code];
-      }
-    } else {
-      updatedRoles[role] = list.filter(item => item !== code);
-    }
-
-    setRolePermissions(updatedRoles);
-
-    // Save configuration immediately to backend
-    try {
-      await fetch("/api/settings/custom", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: "settings_role_permissions",
-          value: JSON.stringify(updatedRoles)
-        })
-      });
-      toast.success(`Permissions updated for role ${role}`);
-    } catch {
-      toast.error("Failed to sync permissions mapping to database");
+  const getRoleBadgeStyle = (role: string) => {
+    const r = role || "Employee";
+    switch (r.toLowerCase()) {
+      case "customer":
+        return "bg-pink-50 dark:bg-pink-950/20 text-pink-650 dark:text-pink-400 border-pink-200/20";
+      case "vendor":
+        return "bg-amber-50 dark:bg-amber-950/20 text-amber-650 dark:text-amber-400 border-amber-200/20";
+      case "employee":
+        return "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650 dark:text-emerald-400 border-emerald-200/20";
+      case "admin":
+        return "bg-blue-50 dark:bg-blue-950/20 text-blue-650 dark:text-blue-400 border-blue-200/20";
+      case "super admin":
+        return "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-650 dark:text-indigo-400 border-indigo-200/20";
+      default:
+        return "bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 border-gray-200/20";
     }
   };
 
-  const getRoleCardClass = (role: RoleName) => {
-    switch (role) {
-      case "Customer": return { bg: "bg-pink-50/50 dark:bg-pink-950/10 border-pink-100 dark:border-pink-900/30", iconBg: "bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300", progressBg: "bg-pink-500", text: "text-pink-900 dark:text-pink-200" };
-      case "Vendor": return { bg: "bg-amber-50/50 dark:bg-amber-950/10 border-amber-100 dark:border-amber-900/30", iconBg: "bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-300", progressBg: "bg-amber-500", text: "text-amber-900 dark:text-amber-200" };
-      case "Employee": return { bg: "bg-emerald-50/50 dark:bg-emerald-950/10 border-emerald-100 dark:border-emerald-900/30", iconBg: "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300", progressBg: "bg-emerald-500", text: "text-emerald-900 dark:text-emerald-200" };
-      case "Admin": return { bg: "bg-blue-50/50 dark:bg-blue-950/10 border-blue-100 dark:border-blue-900/30", iconBg: "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300", progressBg: "bg-blue-500", text: "text-blue-900 dark:text-blue-200" };
-      case "Super Admin": return { bg: "bg-indigo-50/50 dark:bg-indigo-950/10 border-indigo-100 dark:border-indigo-900/30", iconBg: "bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300", progressBg: "bg-indigo-500", text: "text-indigo-900 dark:text-indigo-200" };
-    }
-  };
-
-  const getRoleIcon = (role: RoleName) => {
-    switch (role) {
-      case "Customer": return User;
-      case "Vendor": return Building;
-      case "Employee": return Briefcase;
-      case "Admin": return ShieldCheck;
-      case "Super Admin": return Shield;
+  const getStatusBadgeStyle = (status: string) => {
+    const s = status || "ACTIVE";
+    switch (s.toUpperCase()) {
+      case "ACTIVE":
+        return "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-250/20";
+      case "PENDING":
+        return "bg-amber-50 dark:bg-amber-950/20 text-amber-650 dark:text-amber-450 border-amber-250/20";
+      case "INACTIVE":
+        return "bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 border-gray-200/20";
+      case "SUSPENDED":
+        return "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200/20";
+      default:
+        return "bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 border-gray-200/20";
     }
   };
 
   if (isAuthorized === null) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] w-full text-sm text-gray-500 bg-gray-50 dark:bg-zinc-950">
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] w-full text-sm text-gray-500 bg-white dark:bg-zinc-900">
         Checking permissions...
       </div>
     );
@@ -363,8 +234,8 @@ export default function UsersAndTeamsPage() {
 
   if (isAuthorized === false) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] w-full p-4 bg-gray-50 dark:bg-zinc-950">
-        <Card className="max-w-md w-full shadow-lg border border-red-100 dark:border-red-950/30 bg-white dark:bg-zinc-900 rounded-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] w-full p-4 bg-white dark:bg-zinc-900">
+        <Card className="max-w-md w-full shadow-lg border border-red-100 dark:border-red-950/30 bg-white dark:bg-zinc-900 rounded-xl overflow-hidden">
           <div className="h-2 bg-red-500" />
           <CardContent className="pt-6 pb-6 px-6 flex flex-col items-center text-center">
             <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 flex items-center justify-center mb-4">
@@ -374,7 +245,7 @@ export default function UsersAndTeamsPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
               You do not have permission to view the Users & Teams page. This section is restricted to Super Administrators and Organization Owners.
             </p>
-            <Button onClick={() => router.push("/dashboard")} className="mt-6 bg-[#4F46E5] hover:bg-[#4338CA] text-white">
+            <Button onClick={() => router.push("/dashboard")} className="mt-6 bg-blue-600 hover:bg-blue-700 text-white">
               Back to Dashboard
             </Button>
           </CardContent>
@@ -385,385 +256,273 @@ export default function UsersAndTeamsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] w-full text-sm text-gray-500">
+      <div className="flex items-center justify-center min-h-[400px] w-full text-sm text-gray-500 bg-white dark:bg-zinc-900">
         Loading Users & Teams...
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-gray-50 dark:bg-zinc-950 transition-all duration-300 ml-0 min-h-[calc(100vh-64px)]">
+    <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0 min-h-[calc(100vh-64px)]">
       
-      {/* Top Tabs navbar */}
-      <div className="flex border-b border-gray-200 dark:border-zinc-800 mb-8">
-        <button 
-          onClick={() => setActiveTab("users")}
-          className={`px-5 py-3.5 text-sm font-bold border-b-2 transition-all ${
-            activeTab === "users" 
-              ? "border-[#4F46E5] text-[#4F46E5]" 
-              : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white"
-          }`}
-        >
-          Users & Teams
-        </button>
-        <button 
-          onClick={() => setActiveTab("permissions")}
-          className={`px-5 py-3.5 text-sm font-bold border-b-2 transition-all ${
-            activeTab === "permissions" 
-              ? "border-[#4F46E5] text-[#4F46E5]" 
-              : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white"
-          }`}
-        >
-          Roles & Permissions
-        </button>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+        <div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <Users className="w-8 sm:w-10 h-8 sm:h-10 text-blue-600" />
+            Users & Teams
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Manage your organization's users and their roles
+          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium text-capitalize">
+            {statusFilter === "ALL"
+              ? `Showing all ${filteredUsers.length} registered users`
+              : `Showing only ${statusFilter.toLowerCase()} users (${filteredUsers.length})`}
+          </p>
+        </div>
+
+        {/* Status filters matching Customers */}
+        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-wrap sm:flex-nowrap">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("ALL")}
+            className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-md flex flex-col items-center justify-center transition-all min-w-[100px] ${
+              statusFilter === "ALL"
+                ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-650 text-indigo-650 dark:text-indigo-400"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-blue-50/60 dark:hover:bg-blue-900/20"
+            }`}
+          >
+            <span className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-300">{totalCount}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-350 mt-0.5">Total Users</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("ACTIVE")}
+            className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-md flex flex-col items-center justify-center transition-all min-w-[100px] ${
+              statusFilter === "ACTIVE"
+                ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-650 text-indigo-650 dark:text-indigo-400"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20"
+            }`}
+          >
+            <span className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-300">{activeCount}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-350 mt-0.5">Active</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("PENDING")}
+            className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-md flex flex-col items-center justify-center transition-all min-w-[100px] ${
+              statusFilter === "PENDING"
+                ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-650 text-indigo-650 dark:text-indigo-400"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-amber-50/60 dark:hover:bg-amber-900/20"
+            }`}
+          >
+            <span className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-300">{pendingCount}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-350 mt-0.5">Pending</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("INACTIVE")}
+            className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-md flex flex-col items-center justify-center transition-all min-w-[100px] ${
+              statusFilter === "INACTIVE"
+                ? "bg-white dark:bg-zinc-700 shadow-sm border border-gray-150 dark:border-zinc-650 text-indigo-655 dark:text-indigo-400"
+                : "bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-zinc-800/40"
+            }`}
+          >
+            <span className="text-base sm:text-lg font-bold text-gray-600 dark:text-gray-400">{inactiveCount}</span>
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-350 mt-0.5">Inactive</span>
+          </button>
+        </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.2 }}
-        >
-          
-          {/* TAB 1: Users & Teams */}
-          {activeTab === "users" && (
-            <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
-              <div className="p-6 border-b border-gray-100 dark:border-zinc-800/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Users & Teams</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your organization's users and their access permissions.</p>
-                </div>
-                <Button 
-                  onClick={() => {
-                    setEditingUser(null);
-                    setForm({ name: "", email: "", password: "", role: "Employee", status: "Active", branch: "HQ", department: "—" });
-                    setOpenModal("invite");
-                  }}
-                  className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Invite User
-                </Button>
-              </div>
-              <div className="p-6">
-                
-                {/* Search / Filters */}
-                <div className="flex justify-between items-center gap-4 mb-6">
-                  <div className="relative w-full max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input 
-                      placeholder="Search users by name or email..." 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 text-sm rounded-lg border-gray-200 dark:border-zinc-800"
-                    />
-                  </div>
-                </div>
+      {/* Filters Row */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input 
+            placeholder="Search users by name, email or role..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 text-sm rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+          />
+        </div>
+        
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <Button 
+            onClick={() => {
+              setEditingUser(null);
+              setForm({ name: "", email: "", password: "", role: "Employee", status: "Active", branch: "HQ", department: "—" });
+              setOpenModal("invite");
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg shadow-sm w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4" />
+            Invite User
+          </Button>
+        </div>
+      </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto border border-gray-100 dark:border-zinc-850 rounded-xl">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                        <th className="px-5 py-4 w-1/4">Users</th>
-                        <th className="px-5 py-4">Role</th>
-                        <th className="px-5 py-4">2FA</th>
-                        <th className="px-5 py-4">Status</th>
-                        <th className="px-5 py-4">Last Login</th>
-                        <th className="px-5 py-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 text-sm text-gray-700 dark:text-zinc-300">
-                      {filteredUsers.map((u) => (
-                        <tr key={u.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
-                          <td className="px-5 py-4">
+      {/* Table Section */}
+      <Card className="border border-gray-150 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-zinc-900">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-separate border-spacing-y-2 sm:border-spacing-y-4 px-6 pb-6 pt-2">
+              <thead>
+                <tr className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
+                  <th className="px-5 py-3 w-1/3">User Info</th>
+                  <th className="px-5 py-3">Role</th>
+                  <th className="px-5 py-3 text-center">2FA Status</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Last Login</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                <AnimatePresence>
+                  {filteredUsers.map((u, i) => (
+                    <motion.tr 
+                      key={u.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: i * 0.02, duration: 0.2 }}
+                      className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/10 text-gray-700 dark:text-zinc-300"
+                    >
+                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 rounded-l-xl border-t border-b border-l border-gray-100 dark:border-zinc-850">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold shadow-sm">
+                            {u.name ? u.name.charAt(0).toUpperCase() : "U"}
+                          </div>
+                          <div>
                             <div className="font-semibold text-gray-900 dark:text-white">{u.name}</div>
                             <div className="text-xs text-gray-400 mt-0.5">{u.email}</div>
-                          </td>
-                          <td className="px-5 py-4 capitalize font-semibold">{u.role || "Employee"}</td>
-                          <td className="px-5 py-4">
-                            <Shield className="w-4 h-4 text-gray-300 dark:text-zinc-700" />
-                          </td>
-                          <td className="px-5 py-4">
-                            <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-[#4F46E5] dark:text-[#A5B4FC] rounded-full text-xs font-bold border border-indigo-200/20">
-                              {u.status === 'PENDING' ? 'Pending' : (u.status || 'Active')}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-gray-400">Never</td>
-                          <td className="px-5 py-4 text-right">
-                            {u.id === currentUserId ? (
-                              <span className="text-xs text-gray-400 font-medium italic pr-2 select-none">Logged In (You)</span>
-                            ) : (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => {
-                                    setEditingUser(u);
-                                    setForm({
-                                      name: u.name,
-                                      email: u.email,
-                                      password: "",
-                                      role: u.role || "Employee",
-                                      status: u.status || "Active",
-                                      branch: "HQ",
-                                      department: "—"
-                                    });
-                                    setOpenModal("edit");
-                                  }} className="flex items-center gap-2">
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDeleteUser(u.id)} className="flex items-center gap-2 text-red-650">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-6 flex justify-between items-center text-sm text-gray-400">
-                  <span>Showing 1 to {filteredUsers.length} of {filteredUsers.length} entries</span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg" disabled>Prev</Button>
-                    <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg" disabled>Next</Button>
-                  </div>
-                </div>
-
-              </div>
-            </Card>
-          )}
-
-          {/* TAB 2: Roles & Permissions */}
-          {activeTab === "permissions" && (
-            <div className="space-y-8">
-              
-              {/* Role Indicator Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => {
-                  const styles = getRoleCardClass(r);
-                  const Icon = getRoleIcon(r);
-                  const permList = rolePermissions[r] || [];
-                  const maxAllowedCount = getPlanAllowedPermissionsCount();
-                  const allowedPermList = permList.filter(code => {
-                    if (orgPlan) {
-                      const features = orgPlan.features || {};
-                      if (code === "view_revenue" || code === "manage_billing") {
-                        return features.accounts === true;
-                      }
-                      if (code === "bulk_delete") {
-                        return features.bulkUpload === true;
-                      }
-                    }
-                    return true;
-                  });
-                  const checkedCount = r === "Super Admin" ? maxAllowedCount : allowedPermList.length;
-                  const progressPct = Math.round((checkedCount / maxAllowedCount) * 100);
-
-                  return (
-                    <Card key={r} className={`shadow-sm border rounded-xl p-4 flex flex-col justify-between relative ${styles?.bg}`}>
-                      
-                      <div className="flex justify-between items-start">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${styles?.iconBg}`}>
-                          <Icon className="w-5 h-5" />
+                          </div>
                         </div>
-                        {r === "Super Admin" && <Lock className="w-3.5 h-3.5 text-indigo-400 absolute top-3.5 right-3.5" />}
-                      </div>
-
-                      <div className="mt-4">
-                        <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider">{r}</h4>
-                        <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-xl font-extrabold text-gray-900 dark:text-white">
-                            {r === "Super Admin" ? "All" : `${checkedCount} / ${maxAllowedCount}`}
-                          </span>
+                      </td>
+                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850">
+                        <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${getRoleBadgeStyle(u.role)}`}>
+                          {u.role || "Employee"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850 text-center">
+                        <div className="flex justify-center">
+                          <Shield className="w-4 h-4 text-gray-300 dark:text-zinc-700" />
                         </div>
+                      </td>
+                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850">
+                        <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${getStatusBadgeStyle(u.status)}`}>
+                          {u.status === "PENDING" ? "Pending" : (u.status || "Active")}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850 text-gray-405">
+                        {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never"}
+                      </td>
+                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 rounded-r-xl border-t border-b border-r border-gray-100 dark:border-zinc-850 text-right">
+                        {u.id === currentUserId ? (
+                          <span className="text-xs text-gray-400 font-medium italic pr-2 select-none">Logged In (You)</span>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setEditingUser(u);
+                                setForm({
+                                  name: u.name,
+                                  email: u.email,
+                                  password: "",
+                                  role: u.role || "Employee",
+                                  status: u.status || "Active",
+                                  branch: "HQ",
+                                  department: "—"
+                                });
+                                setOpenModal("edit");
+                              }} className="flex items-center gap-2">
+                                <Edit3 className="w-3.5 h-3.5" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteUser(u.id)} className="flex items-center gap-2 text-red-600">
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-gray-500">
+                      No users found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
-                        {/* Progress line */}
-                        <div className="w-full bg-gray-200 dark:bg-zinc-800 h-1.5 rounded-full mt-3 overflow-hidden">
-                          <div className={`h-full ${styles?.progressBg}`} style={{ width: `${progressPct}%` }} />
-                        </div>
-                        <span className="text-xs text-gray-400 mt-1.5 block">{progressPct}% access</span>
-                      </div>
-
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {/* Roles matrix checkbox table */}
-              <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl p-6">
-                
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-950 dark:text-white">Roles & Permissions Matrix</h3>
-                    <p className="text-sm text-gray-500 mt-1">Review and manage access control for each role. Assign permissions to users.</p>
-                  </div>
-                  
-                  {/* Search inside permissions */}
-                  <div className="relative w-64">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
-                    <Input 
-                      placeholder="Search permissions..." 
-                      value={permSearch}
-                      onChange={(e) => setPermSearch(e.target.value)}
-                      className="pl-8 h-9 text-sm rounded-lg border-gray-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto border border-gray-150 dark:border-zinc-850 rounded-xl">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-150 dark:border-zinc-800">
-                        <th className="px-5 py-4 w-1/3">FEATURE</th>
-                        {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => (
-                          <th key={r} className="px-5 py-4 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <span className="font-bold text-gray-900 dark:text-white">{r}</span>
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-150 dark:divide-zinc-800 text-sm">
-                      
-                      {permissionCategories.map((category) => {
-                        const isCollapsed = collapsedSections[category.code];
-                         const filteredPerms = category.permissions.filter(p => {
-                           const matchesSearch = p.name.toLowerCase().includes(permSearch.toLowerCase());
-                           if (!matchesSearch) return false;
-                           if (orgPlan) {
-                             const features = orgPlan.features || {};
-                             if (p.code === "view_revenue" || p.code === "manage_billing") {
-                               return features.accounts === true;
-                             }
-                             if (p.code === "bulk_delete") {
-                               return features.bulkUpload === true;
-                             }
-                           }
-                           return true;
-                         });
-
-                        if (filteredPerms.length === 0) return null;
-
-                        return (
-                          <>
-                            {/* Category Header Row */}
-                            <tr key={category.code} className="bg-gray-100/50 dark:bg-zinc-800/20 font-bold text-gray-600 dark:text-zinc-400">
-                              <td colSpan={6} className="px-4 py-2.5 text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer select-none" onClick={() => {
-                                setCollapsedSections(prev => ({ ...prev, [category.code]: !prev[category.code] }));
-                              }}>
-                                {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                {category.name}
-                                <span className="bg-[#4F46E5]/10 text-[#4F46E5] text-xs px-1.5 py-0.5 rounded ml-2">
-                                  {filteredPerms.length}
-                                </span>
-                              </td>
-                            </tr>
-
-                            {/* Permission Rows */}
-                            {!isCollapsed && filteredPerms.map((perm) => (
-                              <tr key={perm.code} className="hover:bg-gray-50/50 dark:hover:bg-zinc-850/20 text-sm text-gray-700 dark:text-zinc-300">
-                                <td className="px-5 py-3.5 font-medium text-gray-800 dark:text-gray-200 pl-8">{perm.name}</td>
-                                
-                                {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((role) => {
-                                  const isChecked = role === "Super Admin" || (rolePermissions[role] || []).includes(perm.code);
-                                  const isDisabled = role === "Super Admin";
-
-                                  return (
-                                    <td key={role} className="px-5 py-3.5 text-center">
-                                      <div className="flex justify-center items-center">
-                                        {isDisabled ? (
-                                          <div className="w-4 h-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200/50 rounded flex items-center justify-center">
-                                            <Lock className="w-2.5 h-2.5 text-indigo-500" />
-                                          </div>
-                                        ) : (
-                                          <Checkbox
-                                            checked={isChecked}
-                                            onCheckedChange={(checked) => handleTogglePermission(role, perm.code, !!checked)}
-                                            className="h-4 w-4 data-[state=checked]:bg-[#4F46E5] border-gray-300"
-                                          />
-                                        )}
-                                      </div>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </>
-                        );
-                      })}
-
-                    </tbody>
-                  </table>
-                </div>
-
-              </Card>
-
-            </div>
-          )}
-
-        </motion.div>
-      </AnimatePresence>
+          <div className="px-6 py-4 flex justify-between items-center border-t border-gray-100 dark:border-zinc-800/60 text-sm text-gray-400 bg-gray-50/10 dark:bg-zinc-900/50">
+            <span>Showing {filteredUsers.length} of {users.length} users</span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Invite/Edit User Dialog */}
       <Dialog open={openModal !== null} onOpenChange={(open) => !open && setOpenModal(null)}>
-        <DialogContent className="max-w-md w-full">
+        <DialogContent className="max-w-md w-full bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800">
           <DialogHeader>
-            <DialogTitle>{editingUser ? "Edit User Details" : "Invite New User"}</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+              {editingUser ? "Edit User Details" : "Invite New User"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-xs">Full Name</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Full Name</Label>
               <Input 
                 value={form.name} 
                 onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g. Maria Transport"
-                className="text-xs rounded-lg"
+                className="text-xs rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Email Address</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Email Address</Label>
               <Input 
                 value={form.email} 
                 onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="e.g. maria.transport@demo.co"
-                className="text-xs rounded-lg"
+                className="text-xs rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
               />
             </div>
             {!editingUser && (
               <div className="space-y-2">
-                <Label className="text-xs">Initial Password</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Initial Password</Label>
                 <Input 
                   type="password"
                   value={form.password} 
                   onChange={(e) => setForm(prev => ({ ...prev, password: e.target.value }))}
                   placeholder="Password"
-                  className="text-xs rounded-lg"
+                  className="text-xs rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                 />
               </div>
             )}
             <div className="space-y-2">
-              <Label className="text-xs">Role</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Role</Label>
               <Select 
                 value={form.role} 
                 onValueChange={(val) => setForm(prev => ({ ...prev, role: val }))}
               >
-                <SelectTrigger className="w-full text-xs">
-                  <SelectValue placeholder="Select Role" />
+                <SelectTrigger className="w-full text-xs border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                  <SelectTriggerContent>
+                    <SelectValue placeholder="Select Role" />
+                  </SelectTriggerContent>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-850">
                   <SelectItem value="Customer">Customer</SelectItem>
                   <SelectItem value="Vendor">Vendor</SelectItem>
                   <SelectItem value="Employee">Employee</SelectItem>
@@ -774,15 +533,17 @@ export default function UsersAndTeamsPage() {
             </div>
             {editingUser && (
               <div className="space-y-2">
-                <Label className="text-xs">Status</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Status</Label>
                 <Select 
                   value={form.status} 
                   onValueChange={(val) => setForm(prev => ({ ...prev, status: val }))}
                 >
-                  <SelectTrigger className="w-full text-xs">
-                    <SelectValue placeholder="Select Status" />
+                  <SelectTrigger className="w-full text-xs border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                    <SelectTriggerContent>
+                      <SelectValue placeholder="Select Status" />
+                    </SelectTriggerContent>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-850">
                     <SelectItem value="Active">Active</SelectItem>
                     <SelectItem value="Inactive">Inactive</SelectItem>
                     <SelectItem value="Suspended">Suspended</SelectItem>
@@ -791,9 +552,9 @@ export default function UsersAndTeamsPage() {
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
-            <Button onClick={handleInviteUser} className="bg-[#4F46E5] text-white">Save</Button>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setOpenModal(null)} className="text-xs rounded-lg">Cancel</Button>
+            <Button onClick={handleInviteUser} className="bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg px-4">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -801,3 +562,7 @@ export default function UsersAndTeamsPage() {
     </div>
   );
 }
+
+const SelectTriggerContent = ({ children }: { children: React.ReactNode }) => {
+  return <div className="flex items-center justify-between w-full">{children}</div>;
+};
