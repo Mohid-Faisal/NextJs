@@ -285,7 +285,7 @@ export default function SaasPlansPage() {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => router.push("/dashboard")} 
+            onClick={() => router.push("/dashboard/saas/organizations")} 
             className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
           >
             <ArrowLeft className="h-5 w-5" />

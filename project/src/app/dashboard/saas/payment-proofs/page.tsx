@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { 
   Landmark, RefreshCw, ShieldAlert, Check, X, 
-  Building2, ExternalLink, MessageSquare, Calendar
+  Building2, ExternalLink, MessageSquare, Calendar, ArrowLeft
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -174,19 +174,22 @@ export default function SaaSManualPaymentsPage() {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Landmark className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Manual Payment Proofs</h1>
-        </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Link href="/dashboard/saas/organizations">
-            <Button variant="ghost" size="sm">
-              <Building2 className="h-4 w-4" />
-              Organizations
+            <Button variant="ghost" size="icon" className="rounded-full bg-white dark:bg-slate-900 border shadow-xs">
+              <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Payments</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Review and approve manual subscription payments from tenants.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>

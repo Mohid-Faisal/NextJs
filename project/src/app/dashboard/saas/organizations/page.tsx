@@ -7,7 +7,7 @@ import {
   Building2, RefreshCw, ShieldAlert, UserCheck, DollarSign, 
   Layers, Wallet, FileText, Receipt, ArrowUpRight, ArrowDownRight, 
   CheckCircle2, AlertTriangle, Lock, HelpCircle, ArrowRight,
-  TrendingUp, Clock
+  TrendingUp, Clock, Landmark
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { 
@@ -195,6 +195,18 @@ export default function SaasOrganizationsPage() {
         
         {/* Quick Nav Row */}
         <div className="flex flex-wrap items-center gap-2">
+          <Link href="/dashboard/saas/manage-organizations">
+            <Button variant="outline" size="sm" className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+              <Building2 className="h-4 w-4 mr-2 text-rose-500" />
+              Organizations
+            </Button>
+          </Link>
+          <Link href="/dashboard/saas/payment-proofs">
+            <Button variant="outline" size="sm" className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+              <Landmark className="h-4 w-4 mr-2 text-violet-500" />
+              Payments
+            </Button>
+          </Link>
           <Link href="/dashboard/saas/plans">
             <Button variant="outline" size="sm" className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <Layers className="h-4 w-4 mr-2 text-indigo-500" />

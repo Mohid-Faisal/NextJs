@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wallet, ShieldAlert, DollarSign, ArrowUpRight, ArrowDownRight, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Wallet, ShieldAlert, DollarSign, ArrowUpRight, ArrowDownRight, RefreshCw, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -106,9 +107,16 @@ export default function SaasWalletsPage() {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Wallet className="h-6 w-6 text-green-600" />
-          <h1 className="text-2xl font-bold">Platform Wallets</h1>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/saas/organizations">
+            <Button variant="ghost" size="icon" className="rounded-full bg-white dark:bg-slate-900 border shadow-xs">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Tenant Wallets</h1>
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium">Manage virtual wallets and credit balances for organizations.</p>
+          </div>
         </div>
         <Button variant="outline" size="sm" onClick={loadWallets}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />

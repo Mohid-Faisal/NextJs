@@ -272,7 +272,7 @@ export default function SaasManageOrganizationsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Manage Orgs</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Organizations</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               Review, mark paid, suspend, or delete tenant orgs and all their data.
             </p>
