@@ -595,11 +595,11 @@ const SignupPage = () => {
             <StepIndicator currentStep={2} totalSteps={4} labels={orgStepLabels} />
           </div>
 
-          {/* 5 columns pricing grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-stretch mb-8">
+          {/* Centered flex pricing grid */}
+          <div className="flex flex-wrap justify-center gap-6 items-stretch mb-8">
             {/* Free Trial Card */}
             <Card 
-              className="relative flex flex-col justify-between p-6 border border-slate-200 dark:border-slate-850 shadow-sm bg-white dark:bg-slate-900/90"
+              className="relative flex flex-col justify-between p-6 border border-slate-200 dark:border-slate-855 shadow-sm bg-white dark:bg-slate-900/90 w-full sm:w-[280px] md:w-[290px]"
             >
               <div className="space-y-4 flex-1 flex flex-col">
                 <div>
@@ -661,10 +661,10 @@ const SignupPage = () => {
               return (
                 <Card 
                   key={plan.id}
-                  className={`relative flex flex-col justify-between p-6 transition-all duration-300 ${
+                  className={`relative flex flex-col justify-between p-6 transition-all duration-300 w-full sm:w-[280px] md:w-[290px] ${
                     isGrowth 
                       ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl scale-[1.02] bg-white dark:bg-slate-900" 
-                      : "border border-slate-200 dark:border-slate-850 shadow-sm bg-white dark:bg-slate-900/90"
+                      : "border border-slate-200 dark:border-slate-855 shadow-sm bg-white dark:bg-slate-900/90"
                   }`}
                 >
                   {isGrowth && (
