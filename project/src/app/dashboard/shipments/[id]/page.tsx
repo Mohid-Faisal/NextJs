@@ -22,6 +22,13 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Phone,
+  Mail,
+  Scale,
+  Layers,
+  Truck,
+  Building2,
+  Tag,
 } from "lucide-react";
 import { Country } from "country-state-city";
 import { format, parseISO } from "date-fns";
@@ -340,7 +347,7 @@ export default function ShipmentViewPage() {
           {activeTab === "details" && (
             <div className="space-y-6">
               {/* Route Details */}
-              <Card className="border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl">
+              <Card className="border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl overflow-hidden">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 mb-6">
                     <div className="w-7 h-7 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
@@ -349,54 +356,93 @@ export default function ShipmentViewPage() {
                     <h3 className="text-base font-bold text-gray-900 dark:text-white">Route Details</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+                    {/* Visual Connector Line between columns on md and larger screens */}
+                    <div className="hidden md:block absolute left-1/2 top-4 bottom-4 border-l border-dashed border-gray-300 dark:border-zinc-700 -translate-x-1/2"></div>
+
                     {/* Origin */}
-                    <div>
+                    <div className="relative border-l-4 border-green-500 pl-4 py-1 bg-green-50/10 dark:bg-green-950/5 rounded-r-xl">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Origin</span>
+                        <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">Origin</span>
                       </div>
-                      <div className="ml-5 space-y-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{shipment.senderName}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {customer?.Address || shipment.senderAddress}
-                        </p>
-                        {customer && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {[
-                              customer.City,
-                              customer.State,
-                              customer.Zip,
-                              getCountryName(customer.Country)
-                            ].filter(Boolean).join(", ")}
+                      <div className="space-y-2">
+                        <p className="text-base font-extrabold text-gray-900 dark:text-white">{shipment.senderName}</p>
+                        <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                          <p className="flex items-start gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                            <span>{customer?.Address || shipment.senderAddress}</span>
                           </p>
-                        )}
+                          {customer && (
+                            <p className="pl-5 text-gray-500 dark:text-gray-400">
+                              {[
+                                customer.City,
+                                customer.State,
+                                customer.Zip,
+                                getCountryName(customer.Country)
+                              ].filter(Boolean).join(", ")}
+                            </p>
+                          )}
+                          {(customer?.Phone || customer?.Email) && (
+                            <div className="pt-2 pl-5 space-y-1 text-xs border-t border-slate-200 dark:border-slate-800/40 mt-2">
+                              {customer?.Phone && (
+                                <p className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                                  <Phone className="w-3.5 h-3.5 text-indigo-500" />
+                                  <span>{customer.Phone}</span>
+                                </p>
+                              )}
+                              {customer?.Email && (
+                                <p className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                                  <Mail className="w-3.5 h-3.5 text-gray-400" />
+                                  <span>{customer.Email}</span>
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     {/* Destination */}
-                    <div>
+                    <div className="relative border-l-4 border-indigo-500 pl-4 py-1 bg-indigo-50/10 dark:bg-indigo-950/5 rounded-r-xl">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
-                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Destination</span>
+                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Destination</span>
                       </div>
-                      <div className="ml-5 space-y-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{shipment.recipientName}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {recipient?.Address || shipment.recipientAddress}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {recipient ? (
-                            [
-                              recipient.City,
-                              recipient.State,
-                              recipient.Zip,
-                              getCountryName(recipient.Country)
-                            ].filter(Boolean).join(", ")
-                          ) : (
-                            getCountryName(shipment.destination)
+                      <div className="space-y-2">
+                        <p className="text-base font-extrabold text-gray-900 dark:text-white">{shipment.recipientName}</p>
+                        <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                          <p className="flex items-start gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                            <span>{recipient?.Address || shipment.recipientAddress}</span>
+                          </p>
+                          <p className="pl-5 text-gray-500 dark:text-gray-400">
+                            {recipient ? (
+                              [
+                                recipient.City,
+                                recipient.State,
+                                recipient.Zip,
+                                getCountryName(recipient.Country)
+                              ].filter(Boolean).join(", ")
+                            ) : (
+                              getCountryName(shipment.destination)
+                            )}
+                          </p>
+                          {(recipient?.Phone || recipient?.Email) && (
+                            <div className="pt-2 pl-5 space-y-1 text-xs border-t border-slate-200 dark:border-slate-800/40 mt-2">
+                              {recipient?.Phone && (
+                                <p className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                                  <Phone className="w-3.5 h-3.5 text-indigo-500" />
+                                  <span>{recipient.Phone}</span>
+                                </p>
+                              )}
+                              {recipient?.Email && (
+                                <p className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                                  <Mail className="w-3.5 h-3.5 text-gray-400" />
+                                  <span>{recipient.Email}</span>
+                                </p>
+                              )}
+                            </div>
                           )}
-                        </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -413,26 +459,83 @@ export default function ShipmentViewPage() {
                     <h3 className="text-base font-bold text-gray-900 dark:text-white">Package Info</h3>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-6">
-                    <div>
-                      <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Weight</p>
-                      <p className="text-base font-bold text-gray-900 dark:text-white">{shipment.totalWeight || shipment.weight || 0} kg</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {/* Weight */}
+                    <div className="bg-slate-50/50 dark:bg-zinc-800/20 border border-slate-100 dark:border-zinc-800 p-4 rounded-xl flex flex-col justify-between hover:shadow-xs transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Weight</span>
+                        <div className="w-5 h-5 rounded bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                          <Scale className="w-3 h-3" />
+                        </div>
+                      </div>
+                      <p className="text-base font-extrabold text-gray-900 dark:text-white leading-tight">
+                        {shipment.totalWeight || shipment.weight || 0} kg
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Pieces</p>
-                      <p className="text-base font-bold text-gray-900 dark:text-white">{shipment.amount || 1}</p>
+
+                    {/* Pieces */}
+                    <div className="bg-slate-50/50 dark:bg-zinc-800/20 border border-slate-100 dark:border-zinc-800 p-4 rounded-xl flex flex-col justify-between hover:shadow-xs transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Pieces</span>
+                        <div className="w-5 h-5 rounded bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                          <Layers className="w-3 h-3" />
+                        </div>
+                      </div>
+                      <p className="text-base font-extrabold text-gray-900 dark:text-white leading-tight">
+                        {shipment.amount || 1}
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Service</p>
-                      <p className="text-base font-bold text-gray-900 dark:text-white">{shipment.serviceMode || shipment.shippingMode || "Standard"}</p>
+
+                    {/* Service */}
+                    <div className="bg-slate-50/50 dark:bg-zinc-800/20 border border-slate-100 dark:border-zinc-800 p-4 rounded-xl flex flex-col justify-between hover:shadow-xs transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Service</span>
+                        <div className="w-5 h-5 rounded bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                          <Truck className="w-3 h-3" />
+                        </div>
+                      </div>
+                      <p className="text-base font-extrabold text-gray-900 dark:text-white leading-tight truncate" title={shipment.serviceMode || shipment.shippingMode || "Standard"}>
+                        {shipment.serviceMode || shipment.shippingMode || "Standard"}
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Vendor</p>
-                      <p className="text-base font-bold text-gray-900 dark:text-white">{shipment.vendor || "N/A"}</p>
+
+                    {/* Vendor */}
+                    <div className="bg-slate-50/50 dark:bg-zinc-800/20 border border-slate-100 dark:border-zinc-800 p-4 rounded-xl flex flex-col justify-between hover:shadow-xs transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Vendor</span>
+                        <div className="w-5 h-5 rounded bg-violet-50 dark:bg-violet-950/20 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                          <Building2 className="w-3 h-3" />
+                        </div>
+                      </div>
+                      <p className="text-base font-extrabold text-gray-900 dark:text-white leading-tight truncate" title={shipment.vendor || "N/A"}>
+                        {shipment.vendor || "N/A"}
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Payment</p>
-                      <p className="text-base font-bold text-gray-900 dark:text-white">{shipment.invoiceStatus || "Unpaid"}</p>
+
+                    {/* Reference No */}
+                    <div className="bg-slate-50/50 dark:bg-zinc-800/20 border border-slate-100 dark:border-zinc-800 p-4 rounded-xl flex flex-col justify-between hover:shadow-xs transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reference No</span>
+                        <div className="w-5 h-5 rounded bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                          <Tag className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <p className="text-base font-extrabold text-gray-900 dark:text-white leading-tight truncate" title={shipment.referenceNumber || "N/A"}>
+                        {shipment.referenceNumber || "N/A"}
+                      </p>
+                    </div>
+
+                    {/* Payment Status */}
+                    <div className="bg-slate-50/50 dark:bg-zinc-800/20 border border-slate-100 dark:border-zinc-800 p-4 rounded-xl flex flex-col justify-between hover:shadow-xs transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Payment</span>
+                        <div className="w-5 h-5 rounded bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                          <CreditCard className="w-3 h-3" />
+                        </div>
+                      </div>
+                      <p className="text-base font-extrabold text-gray-900 dark:text-white leading-tight">
+                        {shipment.invoiceStatus || "Unpaid"}
+                      </p>
                     </div>
                   </div>
 
