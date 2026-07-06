@@ -109,7 +109,10 @@ function BillingPageInner() {
       setUsage(usageData.usage);
       setPlan(usageData.plan);
       setRole(usageData.role || "");
-      if (plansRes.ok) setPlans(plansData.plans ?? []);
+      if (plansRes.ok) {
+        const filteredPlans = (plansData.plans ?? []).filter((p: any) => p.code !== "trial" && p.code !== "free");
+        setPlans(filteredPlans);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load billing");
     } finally {
@@ -250,14 +253,14 @@ function BillingPageInner() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-semibold">Current plan</p>
-              <p className="text-sm text-muted-foreground capitalize">{plan?.name ?? "—"}</p>
+              <p className="text-sm text-muted-foreground capitalize">{subStatus === "trialing" ? "14-Day Free Trial" : plan?.name ?? "—"}</p>
             </div>
             {subStatus && (
               <Badge
                 variant={inactive ? "destructive" : subStatus === "trialing" ? "secondary" : "default"}
                 className="capitalize"
               >
-                {subStatus}
+                {subStatus === "trialing" ? "trial" : subStatus}
               </Badge>
             )}
           </div>
@@ -268,11 +271,19 @@ function BillingPageInner() {
               <UsageBar
                 label="Shipments this month"
                 used={usage.shipmentsThisMonth}
-                max={usage.maxShipmentsPerMonth}
+                max={subStatus === "trialing" ? -1 : usage.maxShipmentsPerMonth}
               />
-              <UsageBar label="Team members" used={usage.members} max={usage.maxUsers} />
+              <UsageBar 
+                label="Team members" 
+                used={usage.members} 
+                max={subStatus === "trialing" ? -1 : usage.maxUsers} 
+              />
               {usage.maxBranches !== undefined && (
-                <UsageBar label="Branches" used={usage.branches || 0} max={usage.maxBranches} />
+                <UsageBar 
+                  label="Branches" 
+                  used={usage.branches || 0} 
+                  max={subStatus === "trialing" ? -1 : usage.maxBranches} 
+                />
               )}
             </>
           )}

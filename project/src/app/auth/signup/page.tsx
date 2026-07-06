@@ -566,7 +566,9 @@ const SignupPage = () => {
   // --- STEP: Plan Selection (org only) ---
   if (step === "plan") {
     const orgStepLabels = ["Details", "Verify", "Plan", "Payment"];
-    const sortedPlans = [...plans].sort((a, b) => a.priceMonthlyUsd - b.priceMonthlyUsd);
+    const sortedPlans = [...plans]
+      .filter((p) => p.code !== "trial" && p.code !== "free")
+      .sort((a, b) => a.priceMonthlyUsd - b.priceMonthlyUsd);
 
     return (
       <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>

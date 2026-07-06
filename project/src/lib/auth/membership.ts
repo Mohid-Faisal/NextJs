@@ -83,14 +83,15 @@ export async function resolveMembership(userId: number): Promise<ResolvedMembers
 export async function createOrganizationForSignup(
   companyName: string,
   userId: number,
-  planCode = "starter"
+  planCode = "trial"
 ): Promise<{ id: number; slug: string }> {
   const slug = await uniqueSlug(companyName);
 
-  // Resolve the requested plan, falling back to starter so a bad/empty code
+  // Resolve the requested plan, falling back to trial or starter so a bad/empty code
   // never blocks signup.
   const plan =
     (await prisma.plan.findUnique({ where: { code: planCode } })) ??
+    (await prisma.plan.findUnique({ where: { code: "trial" } })) ??
     (await prisma.plan.findUnique({ where: { code: "starter" } }));
   if (!plan) throw new Error("No subscription plans configured");
 

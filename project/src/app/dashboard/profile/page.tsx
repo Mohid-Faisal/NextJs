@@ -108,7 +108,11 @@ export default function ProfilePage() {
             setOrgName(o.name);
             setOrgSlug(o.slug);
             setOrgCurrency(o.currency || "USD");
-            if (o.subscription?.plan) {
+            if (o.subscription?.status === "trialing") {
+              setPlanName("14-Day Free Trial");
+              setMaxUsers("Unlimited");
+              setMaxShipments("Unlimited");
+            } else if (o.subscription?.plan) {
               setPlanName(o.subscription.plan.name || "SaaS Plan");
               setMaxUsers(o.subscription.plan.maxUsers || 5);
               setMaxShipments(o.subscription.plan.maxShipmentsPerMonth || 100);
@@ -456,11 +460,15 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                 <div>
                   <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Users Limit</span>
-                  <span className="block text-sm font-semibold text-gray-900 dark:text-white mt-1">{maxUsers} Team Members</span>
+                  <span className="block text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                    {maxUsers === "Unlimited" ? "Unlimited" : `${maxUsers} Team Members`}
+                  </span>
                 </div>
                 <div>
                   <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Monthly Shipment Quota</span>
-                  <span className="block text-sm font-semibold text-gray-900 dark:text-white mt-1">{maxShipments} Shipments/Month</span>
+                  <span className="block text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                    {maxShipments === "Unlimited" ? "Unlimited" : `${maxShipments} Shipments/Month`}
+                  </span>
                 </div>
               </div>
 

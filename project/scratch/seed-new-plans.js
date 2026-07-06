@@ -4,6 +4,32 @@ const prisma = new PrismaClient();
 async function main() {
   const targetPlans = [
     {
+      code: "trial",
+      name: "14-Day Free Trial",
+      priceMonthlyUsd: 0,
+      maxUsers: 0,
+      maxShipmentsPerMonth: 0,
+      features: {
+        map: true,
+        accounts: true,
+        bulkUpload: true,
+        analytics: true,
+        activityLogs: true,
+        customersPage: true,
+        vendorsPage: true,
+        recipientsPage: true,
+        maxBranches: 0,
+        trialDays: 14,
+        gracePeriodDays: 7,
+        isActive: true,
+        annualPrice: 0,
+        description: "14-day free trial gives full access to our site for testing and getting the feel of it.",
+        featuresList: ["14 Days Free Trial", "Full access to all features", "No payment info required upfront"],
+        currency: "PKR",
+        sortOrder: -1
+      }
+    },
+    {
       code: "starter",
       name: "Starter",
       priceMonthlyUsd: 2000,
