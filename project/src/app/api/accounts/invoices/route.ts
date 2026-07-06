@@ -24,8 +24,14 @@ export async function GET(req: NextRequest) {
     const pageSize = limit === "all" ? undefined : parseInt(limit || "10");
     const skip = pageSize ? (page - 1) * pageSize : 0;
 
+    const shipmentId = searchParams.get("shipmentId");
+    
     // Build where clause
     const where: any = { ...orgWhere(session) };
+    
+    if (shipmentId) {
+      where.shipmentId = parseInt(shipmentId);
+    }
     
     // Add profile filter - this must come first and not be overridden
     if (profile) {

@@ -21,10 +21,18 @@ import {
   Circle,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Country } from "country-state-city";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 type TrackingHistoryEntry = {
   status: string;
@@ -49,9 +57,11 @@ const DELIVERY_STATUSES = [
 export default function ShipmentViewPage() {
   const params = useParams();
   const router = useRouter();
-  const [shipment, setShipment] = useState<Shipment | null>(null);
+  const [shipment, setShipment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
+  const [showPaymentChoiceModal, setShowPaymentChoiceModal] = useState(false);
+  const [shipmentInvoices, setShipmentInvoices] = useState<any[]>([]);
   const [trackingHistory, setTrackingHistory] = useState<TrackingHistoryEntry[]>([]);
 
   useEffect(() => {
@@ -83,11 +93,30 @@ export default function ShipmentViewPage() {
       }
     };
 
+    const fetchShipmentInvoices = async () => {
+      try {
+        const response = await fetch(`/api/accounts/invoices?shipmentId=${params.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.invoices) {
+            setShipmentInvoices(data.invoices);
+          }
+        }
+      } catch (error) {
+        console.log("Error fetching invoices:", error);
+      }
+    };
+
     if (params.id) {
       fetchShipment();
       fetchTrackingHistory();
+      fetchShipmentInvoices();
     }
   }, [params.id]);
+
+  const customerInvoice = shipmentInvoices.find(inv => inv.profile === "Customer") || (shipment ? { id: shipment.invoices?.[0]?.id, invoiceNumber: shipment.invoiceNumber } : null);
+  const vendorInvoice = shipmentInvoices.find(inv => inv.profile === "Vendor") || (shipment && shipment.invoiceNumber && !isNaN(parseInt(shipment.invoiceNumber)) ? { invoiceNumber: (parseInt(shipment.invoiceNumber) + 2).toString() } : null);
+  const airwayBillId = customerInvoice?.id || shipment?.invoices?.[0]?.id;
 
   const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return "N/A";
@@ -200,18 +229,17 @@ export default function ShipmentViewPage() {
 
   return (
     <div className="w-full min-h-screen bg-gray-50 dark:bg-zinc-900 px-4 sm:px-6 lg:px-8 py-6">
-      {/* Back Link */}
-      <button
-        onClick={() => router.push("/dashboard/shipments")}
-        className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-4 group"
-      >
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        Back to Shipments
-      </button>
-
-      {/* Header: Tracking ID + Status + Action Buttons */}
+      {/* Header: Back Button + Tracking ID + Status + Action Buttons */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
         <div className="flex items-center gap-3 flex-wrap">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/dashboard/shipments")}
+            className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
             {shipment.trackingId || `SHP-${shipment.id}`}
           </h1>
@@ -239,6 +267,17 @@ export default function ShipmentViewPage() {
             <FileText className="w-3.5 h-3.5" />
             Print Invoice
           </Button>
+          {airwayBillId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5 h-9 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={() => window.open(`/dashboard/receipt/${airwayBillId}`, '_blank')}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print Airway Bill
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -253,6 +292,7 @@ export default function ShipmentViewPage() {
           <Button
             size="sm"
             className="text-xs gap-1.5 h-9 bg-indigo-600 hover:bg-indigo-700 text-white"
+            onClick={() => setShowPaymentChoiceModal(true)}
           >
             <CreditCard className="w-3.5 h-3.5" />
             Register manual payment
@@ -265,7 +305,7 @@ export default function ShipmentViewPage() {
         {/* Left Column - Main Content with Tabs */}
         <div className="flex-1 min-w-0">
           {/* Tab Navigation */}
-          <div className="flex items-center border-b border-gray-200 dark:border-gray-700 mb-6">
+          <div className="flex items-center justify-center border-b border-gray-200 dark:border-gray-700 mb-6">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -494,7 +534,11 @@ export default function ShipmentViewPage() {
                 <div className="text-center py-12">
                   <CreditCard className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-500 dark:text-gray-400 text-sm">No payment records found for this shipment.</p>
-                  <Button size="sm" className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs">
+                  <Button
+                    size="sm"
+                    className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                    onClick={() => setShowPaymentChoiceModal(true)}
+                  >
                     <CreditCard className="w-3.5 h-3.5 mr-1.5" />
                     Register Payment
                   </Button>
@@ -616,7 +660,11 @@ export default function ShipmentViewPage() {
                   style={{ width: `${paymentPercentage}%` }}
                 ></div>
               </div>
-              <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9 gap-1.5">
+              <Button
+                size="sm"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9 gap-1.5"
+                onClick={() => setShowPaymentChoiceModal(true)}
+              >
                 <CreditCard className="w-3.5 h-3.5" />
                 Register manual payment
               </Button>
@@ -716,6 +764,51 @@ export default function ShipmentViewPage() {
           )}
         </div>
       </div>
+
+      {/* Manual Payment Choice Modal */}
+      <Dialog open={showPaymentChoiceModal} onOpenChange={setShowPaymentChoiceModal}>
+        <DialogContent className="max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">Process Manual Payment</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Select which invoice you want to record a manual payment for.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            {customerInvoice && (
+              <Button
+                onClick={() => {
+                  setShowPaymentChoiceModal(false);
+                  router.push(`/dashboard/accounts/payments/process?invoice=${customerInvoice.invoiceNumber}`);
+                }}
+                className="w-full justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-left font-medium p-4 h-auto bg-transparent text-gray-900 dark:text-white rounded-xl"
+              >
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold">Customer Payment Invoice</span>
+                  <span className="text-xs text-indigo-600 dark:text-indigo-400 font-normal mt-0.5">Invoice #{customerInvoice.invoiceNumber}</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </Button>
+            )}
+
+            {vendorInvoice && (
+              <Button
+                onClick={() => {
+                  setShowPaymentChoiceModal(false);
+                  router.push(`/dashboard/accounts/payments/process?invoice=${vendorInvoice.invoiceNumber}`);
+                }}
+                className="w-full justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-left font-medium p-4 h-auto bg-transparent text-gray-900 dark:text-white rounded-xl"
+              >
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold">Vendor Payment Invoice</span>
+                  <span className="text-xs text-indigo-600 dark:text-indigo-400 font-normal mt-0.5">Invoice #{vendorInvoice.invoiceNumber}</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
