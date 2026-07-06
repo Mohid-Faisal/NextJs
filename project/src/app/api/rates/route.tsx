@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
       await prisma.$executeRaw`
         INSERT INTO "filename" ("organizationId", "filename", "vendor", "service", "fileType", "uploadedAt")
         VALUES (${session.organizationId}, ${file.name}, ${vendor}, ${service}, 'rate', ${new Date()})
-        ON CONFLICT ("organizationId", "service", "fileType")
+        ON CONFLICT ("organizationId", "vendor", "service", "fileType")
         DO UPDATE SET "filename" = ${file.name}, "uploadedAt" = ${new Date()}
       `;
     } catch (error) {

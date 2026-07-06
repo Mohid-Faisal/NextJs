@@ -368,7 +368,7 @@ model filename {
   fileType       String
   uploadedAt     DateTime @default(now())
 
-  @@unique([organizationId, service, fileType])
+  @@unique([organizationId, vendor, service, fileType])
   @@index([organizationId])
 }
 
