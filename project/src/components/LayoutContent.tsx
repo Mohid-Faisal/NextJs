@@ -11,23 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Lock, Sparkles, ArrowUpRight } from "lucide-react";
 
 export const routeFeatures: Record<string, string> = {
-  "/dashboard/customers": "customersPage",
-  "/dashboard/recipients": "recipientsPage",
-  "/dashboard/vendors": "vendorsPage",
-  "/dashboard/income/invoices": "accounts",
-  "/dashboard/income/revenue": "accounts",
-  "/dashboard/income/credit-notes": "accounts",
-  "/dashboard/expense/bills": "accounts",
-  "/dashboard/expense/payments": "accounts",
-  "/dashboard/expense/debit-notes": "accounts",
-  "/dashboard/accounts/payments": "accounts",
   "/dashboard/chart-of-accounts": "accounts",
   "/dashboard/accounts/account-books": "accounts",
   "/dashboard/journal-entries": "accounts",
   "/dashboard/accounts/balance-sheet": "accounts",
   "/dashboard/accounts/income-statement": "accounts",
-  "/dashboard/reports": "analytics",
   "/dashboard/settings/manage-rate-list": "accounts",
+  "/dashboard/reports": "analytics",
   "/dashboard/remote-area-lookup": "map",
   "/dashboard/settings/remote-area-lookup": "map",
 };

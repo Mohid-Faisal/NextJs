@@ -329,9 +329,7 @@ const DashboardPage = () => {
               iconColor="text-white"
               currentMonth={(data.currentMonthData?.revenue || 0).toLocaleString()}
             />
-            {!hasFeature("accounts") ? (
-              <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock billing & revenue dashboard metrics." />
-            ) : !hasPermission("view_revenue") ? (
+            {!hasPermission("view_revenue") ? (
               <DashboardAccessPlaceholder type="permission" message="You do not have the 'view_revenue' permission to view total earnings." />
             ) : null}
           </div>
@@ -344,12 +342,10 @@ const DashboardPage = () => {
               icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
               bgColor="bg-gradient-to-r from-orange-500 to-red-600"
               iconColor="text-white"
-              onClick={hasFeature("accounts") && hasPermission("view_revenue") ? () => setShowReceivableModal(true) : undefined}
+              onClick={hasPermission("view_revenue") ? () => setShowReceivableModal(true) : undefined}
               currentMonth={(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}
             />
-            {!hasFeature("accounts") ? (
-              <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock accounts receivable ledger." />
-            ) : !hasPermission("view_revenue") ? (
+            {!hasPermission("view_revenue") ? (
               <DashboardAccessPlaceholder type="permission" message="You do not have the 'view_revenue' permission to view accounts receivables." />
             ) : null}
           </div>
@@ -463,7 +459,7 @@ const DashboardPage = () => {
               Green: Accounts Receivable (Money owed to you) | Red: Accounts Payable (Money you owe)
             </div>
           </motion.div>
-          {!hasFeature("accounts") || !hasFeature("analytics") ? (
+          {!hasFeature("analytics") ? (
             <DashboardAccessPlaceholder type="upgrade" message="Upgrade to unlock detailed financial reports & receivables performance analytics." />
           ) : !hasPermission("view_analytics") || !hasPermission("view_revenue") ? (
             <DashboardAccessPlaceholder type="permission" message="You do not have permission to view detailed financial analytics charts." />
