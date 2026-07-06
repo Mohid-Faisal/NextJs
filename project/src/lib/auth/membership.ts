@@ -95,18 +95,21 @@ export async function createOrganizationForSignup(
     (await prisma.plan.findUnique({ where: { code: "starter" } }));
   if (!plan) throw new Error("No subscription plans configured");
 
-  const trialEndsAt = new Date();
-  trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+  const isTrialPlan = plan.code === "trial";
+  const trialEndsAt = isTrialPlan ? new Date() : null;
+  if (trialEndsAt) {
+    trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+  }
 
   const org = await prisma.organization.create({
     data: {
       name: companyName.trim(),
       slug,
-      status: "trial",
+      status: isTrialPlan ? "trial" : "pending",
       subscription: {
         create: {
           planId: plan.id,
-          status: "trialing",
+          status: isTrialPlan ? "trialing" : "pending",
           trialEndsAt,
         },
       },

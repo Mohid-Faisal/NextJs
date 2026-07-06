@@ -24,17 +24,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const isTrial = plan.code === "trial";
+    const trialEndsAt = isTrial ? new Date() : null;
+    if (trialEndsAt) {
+      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+    }
+
     // Upsert subscription for the organization
     await prisma.subscription.upsert({
       where: { organizationId: parseInt(organizationId, 10) },
       update: {
         planId: plan.id,
-        status: "pending"
+        status: isTrial ? "trialing" : "pending",
+        trialEndsAt,
       },
       create: {
         organizationId: parseInt(organizationId, 10),
         planId: plan.id,
-        status: "pending"
+        status: isTrial ? "trialing" : "pending",
+        trialEndsAt,
       }
     });
 
