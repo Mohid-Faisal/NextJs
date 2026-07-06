@@ -58,6 +58,8 @@ export default function ShipmentViewPage() {
   const params = useParams();
   const router = useRouter();
   const [shipment, setShipment] = useState<any>(null);
+  const [customer, setCustomer] = useState<any>(null);
+  const [recipient, setRecipient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
   const [showPaymentChoiceModal, setShowPaymentChoiceModal] = useState(false);
@@ -71,6 +73,8 @@ export default function ShipmentViewPage() {
         if (response.ok) {
           const data = await response.json();
           setShipment(data.shipment);
+          setCustomer(data.customer);
+          setRecipient(data.recipient);
         }
       } catch (error) {
         console.error("Error fetching shipment:", error);
@@ -187,10 +191,17 @@ export default function ShipmentViewPage() {
 
   // Payment percentage
   const paymentPercentage = useMemo(() => {
-    if (!shipment) return 0;
-    if (shipment.invoiceStatus === "Paid") return 100;
-    return 0;
-  }, [shipment]);
+    if (!customerInvoice) {
+      if (!shipment) return 0;
+      if (shipment.invoiceStatus === "Paid") return 100;
+      return 0;
+    }
+    const total = customerInvoice.totalAmount || 0;
+    const remaining = customerInvoice.remainingAmount !== undefined ? customerInvoice.remainingAmount : total;
+    if (total <= 0) return 0;
+    const percentage = Math.round(((total - remaining) / total) * 100);
+    return Math.max(0, Math.min(100, percentage));
+  }, [customerInvoice, shipment]);
 
   // Current delivery status
   const currentStatus = shipment?.trackingStatus || shipment?.deliveryStatus || "Pending";
@@ -231,7 +242,7 @@ export default function ShipmentViewPage() {
     <div className="w-full min-h-screen bg-gray-50 dark:bg-zinc-900 px-4 sm:px-6 lg:px-8 py-6">
       {/* Header: Back Button + Tracking ID + Status + Action Buttons */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
@@ -240,12 +251,16 @@ export default function ShipmentViewPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-            {shipment.trackingId || `SHP-${shipment.id}`}
-          </h1>
-          <Badge className={`${getStatusBadge(currentStatus)} px-3 py-1 rounded-full text-xs font-semibold border`}>
-            {currentStatus}
-          </Badge>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight leading-none">
+              {shipment.trackingId || `SHP-${shipment.id}`}
+            </h1>
+            <div>
+              <Badge className={`${getStatusBadge(currentStatus)} px-3 py-1 rounded-full text-xs font-semibold border`}>
+                {currentStatus}
+              </Badge>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -343,7 +358,19 @@ export default function ShipmentViewPage() {
                       </div>
                       <div className="ml-5 space-y-1">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">{shipment.senderName}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{shipment.senderAddress}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {customer?.Address || shipment.senderAddress}
+                        </p>
+                        {customer && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {[
+                              customer.City,
+                              customer.State,
+                              customer.Zip,
+                              getCountryName(customer.Country)
+                            ].filter(Boolean).join(", ")}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -355,8 +382,21 @@ export default function ShipmentViewPage() {
                       </div>
                       <div className="ml-5 space-y-1">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">{shipment.recipientName}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{shipment.recipientAddress}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{getCountryName(shipment.destination)}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {recipient?.Address || shipment.recipientAddress}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {recipient ? (
+                            [
+                              recipient.City,
+                              recipient.State,
+                              recipient.Zip,
+                              getCountryName(recipient.Country)
+                            ].filter(Boolean).join(", ")
+                          ) : (
+                            getCountryName(shipment.destination)
+                          )}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -373,7 +413,7 @@ export default function ShipmentViewPage() {
                     <h3 className="text-base font-bold text-gray-900 dark:text-white">Package Info</h3>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-6">
                     <div>
                       <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Weight</p>
                       <p className="text-base font-bold text-gray-900 dark:text-white">{shipment.totalWeight || shipment.weight || 0} kg</p>
@@ -385,6 +425,10 @@ export default function ShipmentViewPage() {
                     <div>
                       <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Service</p>
                       <p className="text-base font-bold text-gray-900 dark:text-white">{shipment.serviceMode || shipment.shippingMode || "Standard"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Vendor</p>
+                      <p className="text-base font-bold text-gray-900 dark:text-white">{shipment.vendor || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Payment</p>
@@ -453,72 +497,7 @@ export default function ShipmentViewPage() {
                 </Card>
               )}
 
-              {/* Costs & Rates */}
-              <Card className="border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-6">
-                    <div className="w-7 h-7 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-                      <DollarSign className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Costs & Rates</h3>
-                  </div>
 
-                  <div className="space-y-3">
-                    {shipment.price > 0 && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Base Price</span>
-                        <span className="text-sm text-gray-900 dark:text-white">USD {shipment.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {shipment.fuelSurcharge > 0 && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Fuel Surcharge</span>
-                        <span className="text-sm text-gray-900 dark:text-white">USD {shipment.fuelSurcharge.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {shipment.insurance > 0 && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Insurance</span>
-                        <span className="text-sm text-gray-900 dark:text-white">USD {shipment.insurance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {shipment.customs > 0 && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Customs</span>
-                        <span className="text-sm text-gray-900 dark:text-white">USD {shipment.customs.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {shipment.discount > 0 && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Discount</span>
-                        <span className="text-sm text-green-600 dark:text-green-400">- USD {shipment.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {shipment.tax > 0 && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Tax</span>
-                        <span className="text-sm text-gray-900 dark:text-white">USD {shipment.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-2">
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Subtotal</span>
-                        <span className="text-sm text-gray-900 dark:text-white">USD {(shipment.subtotal || shipment.totalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-1">
-                      <span className="text-base font-bold text-gray-900 dark:text-white">Total</span>
-                      <span className="text-base font-bold text-gray-900 dark:text-white">USD {shipment.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    </div>
-
-                    <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-2">
-                      Tax applied per shipping configuration (rate on taxable base + surcharges).
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
 
@@ -629,28 +608,30 @@ export default function ShipmentViewPage() {
           {/* Financial Summary */}
           <Card className="border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/30 rounded flex items-center justify-center">
-                  <DollarSign className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/30 rounded flex items-center justify-center">
+                    <DollarSign className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Financial Summary</h3>
                 </div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Financial Summary</h3>
+                <Badge className={`${getInvoiceStatusBadge(shipment.invoiceStatus)} px-2.5 py-0.5 rounded text-xs font-semibold border`}>
+                  {shipment.invoiceStatus || "Unpaid"}
+                </Badge>
               </div>
             </div>
             <CardContent className="p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500 dark:text-gray-400">TOTAL</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">TOTAL</span>
                 <span className="text-sm font-bold text-gray-900 dark:text-white">USD {shipment.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500 dark:text-gray-400">BALANCE DUE</span>
-                <span className={`text-sm font-bold ${shipment.invoiceStatus === "Paid" ? "text-green-600" : "text-red-600"}`}>
-                  USD {shipment.invoiceStatus === "Paid" ? "0.00" : shipment.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">BALANCE DUE</span>
+                <span className={`text-sm font-bold ${shipment.invoiceStatus === "Paid" || (customerInvoice && customerInvoice.remainingAmount === 0) ? "text-green-600" : "text-red-600"}`}>
+                  USD {(customerInvoice && customerInvoice.remainingAmount !== undefined ? customerInvoice.remainingAmount : (shipment.invoiceStatus === "Paid" ? 0 : shipment.totalCost)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <Badge className={`${getInvoiceStatusBadge(shipment.invoiceStatus)} px-2.5 py-0.5 rounded text-xs font-semibold border`}>
-                  {shipment.invoiceStatus || "Unpaid"}
-                </Badge>
+              <div className="flex items-center justify-end">
                 <span className="text-xs text-gray-500 dark:text-gray-400">{paymentPercentage}%</span>
               </div>
               {/* Progress Bar */}
