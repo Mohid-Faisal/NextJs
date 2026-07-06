@@ -223,16 +223,12 @@ const SignupPage = () => {
 
   const getChecklistForPlan = (code: string): string[] => {
     switch (code) {
-      case "free":
-        return ["50 shipments/month", "2 users", "1 branches"];
       case "starter":
-        return ["500 shipments/month", "5 users", "2 branches", "API Access"];
+        return ["100 shipments/month", "1 user limit", "1 branch limit", "All core features", "Excludes Remote Area & Finances"];
       case "growth":
-        return ["2000 shipments/month", "15 users", "5 branches", "API Access", "Custom Branding"];
+        return ["300 shipments/month", "5 users limit", "3 branches limit", "Remote Area Lookup included", "Excludes Finances"];
       case "pro":
-        return ["10000 shipments/month", "50 users", "20 branches", "API Access", "Custom Branding", "Priority Support"];
-      case "enterprise":
-        return ["Unlimited shipments/month", "Unlimited users", "Unlimited branches", "API Access", "Custom Branding", "Priority Support"];
+        return ["500 shipments/month", "10 users limit", "5 branches limit", "Remote Area Lookup included", "Finances & Reports included", "All features enabled"];
       default:
         return [];
     }
@@ -428,7 +424,9 @@ const SignupPage = () => {
       const data = await response.json();
       if (response.ok && data.success) {
         if (tab === "org") {
-          setStep("plan");
+          setIsFreeTrial(true);
+          setStep("pending");
+          toast.success("Verification complete! Your trial workspace is awaiting approval.");
         } else {
           toast.success(data.message);
           setTimeout(() => router.push("/auth/login"), 3000);

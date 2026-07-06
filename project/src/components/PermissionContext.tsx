@@ -112,7 +112,10 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
           const orgData = await orgRes.json();
           if (orgData.organization) {
             const orgId = orgData.organization.id;
-            if (orgId === 1) {
+            const sub = orgData.organization.subscription;
+            const isTrialActive = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) > new Date();
+
+            if (orgId === 1 || isTrialActive) {
               setPlanFeatures({
                 accounts: true,
                 bulkUpload: true,
@@ -124,7 +127,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
                 recipientsPage: true,
               });
             } else {
-              const features = orgData.organization.subscription?.plan?.features || {};
+              const features = sub?.plan?.features || {};
               setPlanFeatures(features);
             }
           }

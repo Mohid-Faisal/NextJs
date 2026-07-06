@@ -68,7 +68,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const [userName, setUserName] = useState("User");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [orgRole, setOrgRole] = useState<string | null>(null);
-  const { hasPermission, loading } = usePermissions();
+  const { hasPermission, hasFeature, loading } = usePermissions();
   const [isHovered, setIsHovered] = useState(false);
   const [shipmentOpen, setShipmentOpen] = useState(
     pathname.startsWith("/dashboard/shipments") ||
@@ -486,7 +486,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             })}
 
           {/* Income Collapsible */}
-          {(hasPermission("view_revenue") || hasPermission("manage_billing")) && (
+          {(hasPermission("view_revenue") || hasPermission("manage_billing")) && hasFeature("accounts") && (
             <div>
               <button
                 onClick={() => setIncomeOpen(!incomeOpen)}
@@ -553,7 +553,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
           )}
 
           {/* Expense Collapsible */}
-          {(hasPermission("manage_billing") || hasPermission("view_revenue")) && (
+          {(hasPermission("manage_billing") || hasPermission("view_revenue")) && hasFeature("accounts") && (
             <div>
               <button
                 onClick={() => setExpenseOpen(!expenseOpen)}
@@ -640,7 +640,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
           )}
 
           {/* Accounts Collapsible */}
-          {(hasPermission("manage_billing") || hasPermission("view_revenue")) && (
+          {(hasPermission("manage_billing") || hasPermission("view_revenue")) && hasFeature("accounts") && (
             <div>
               <button
                 onClick={() => setAccountsOpen(!accountsOpen)}
@@ -805,8 +805,8 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       .filter((sub) => {
                         if (sub.label === "Branding & Interface") return hasPermission("view_config");
                         if (sub.label === "Manage Zones") return hasPermission("manage_statuses");
-                        if (sub.label === "Manage Rate List") return hasPermission("manage_billing");
-                        if (sub.label === "Remote Area") return hasPermission("view_map");
+                        if (sub.label === "Manage Rate List") return hasPermission("manage_billing") && hasFeature("accounts");
+                        if (sub.label === "Remote Area") return hasPermission("view_map") && hasFeature("map");
                         if (sub.label === "HS Codes") return hasPermission("manage_hscodes");
                         return true;
                       })

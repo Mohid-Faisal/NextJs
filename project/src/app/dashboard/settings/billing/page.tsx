@@ -26,6 +26,8 @@ type Usage = {
   maxShipmentsPerMonth: number; // -1 = unlimited
   members: number;
   maxUsers: number; // -1 = unlimited
+  branches?: number;
+  maxBranches?: number;
 };
 
 type PlanInfo = {
@@ -268,6 +270,9 @@ function BillingPageInner() {
                 max={usage.maxShipmentsPerMonth}
               />
               <UsageBar label="Team members" used={usage.members} max={usage.maxUsers} />
+              {usage.maxBranches !== undefined && (
+                <UsageBar label="Branches" used={usage.branches || 0} max={usage.maxBranches} />
+              )}
             </>
           )}
           {trialEnds && subStatus === "trialing" && !trialExpired && (
@@ -312,10 +317,24 @@ function BillingPageInner() {
                       <Check className="h-4 w-4 text-primary shrink-0" />
                       {p.maxUsers <= 0 ? "Unlimited users" : `${p.maxUsers} users`}
                     </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary shrink-0" />
+                      {(() => {
+                        const mb = (p.features as { maxBranches?: number })?.maxBranches;
+                        const resolvedBranches = mb !== undefined ? mb : (p.code === "starter" ? 1 : p.code === "growth" ? 3 : 5);
+                        return `${resolvedBranches} branches limit`;
+                      })()}
+                    </li>
+                    {(p.features as { map?: boolean })?.map && (
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-primary shrink-0" />
+                        Remote Area Lookup
+                      </li>
+                    )}
                     {(p.features as { accounts?: boolean })?.accounts && (
                       <li className="flex items-center gap-2">
                         <Check className="h-4 w-4 text-primary shrink-0" />
-                        Accounting module
+                        Accounting & Finance dropdown
                       </li>
                     )}
                   </ul>

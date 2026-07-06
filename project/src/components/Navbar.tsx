@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/components/PermissionContext";
 
 const PUBLIC_TOOLS_ADMIN_EMAIL = "mohidfaisal321@gmail.com";
 
@@ -37,6 +38,7 @@ const Navbar = ({
 }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { hasFeature } = usePermissions();
   const [userName, setUserName] = useState("User");
   const [userEmail, setUserEmail] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -259,18 +261,20 @@ const Navbar = ({
         </Link>
 
         {/* Remote Area Lookup */}
-        <Link
-          href="/dashboard/remote-area-lookup"
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors duration-200 bg-linear-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 ${
-            pathname.startsWith("/dashboard/remote-area-lookup")
-              ? "ring-2 ring-purple-300 dark:ring-purple-700"
-              : ""
-          }`}
-          title="Remote Area Lookup"
-        >
-          <Search className="w-5 h-5" />
-          <span className="text-sm font-medium">Remote Area Lookup</span>
-        </Link>
+        {hasFeature("map") && (
+          <Link
+            href="/dashboard/remote-area-lookup"
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors duration-200 bg-linear-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 ${
+              pathname.startsWith("/dashboard/remote-area-lookup")
+                ? "ring-2 ring-purple-300 dark:ring-purple-700"
+                : ""
+            }`}
+            title="Remote Area Lookup"
+          >
+            <Search className="w-5 h-5" />
+            <span className="text-sm font-medium">Remote Area Lookup</span>
+          </Link>
+        )}
 
         {showPublicToolsToggle && (
           <button

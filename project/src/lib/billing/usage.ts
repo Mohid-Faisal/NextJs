@@ -115,6 +115,15 @@ export async function checkShipmentLimit(organizationId: number): Promise<LimitC
     return { allowed: true, reason: "ok", limit: -1, used: 0, planCode: null };
   }
 
+  // Active free trial check - bypass all limits
+  const isTrialActive =
+    plan.subscriptionStatus === "trialing" &&
+    plan.trialEndsAt &&
+    plan.trialEndsAt.getTime() >= Date.now();
+  if (isTrialActive) {
+    return { allowed: true, reason: "ok", limit: -1, used: 0, planCode: plan.code };
+  }
+
   // Payment lapsed.
   if (plan.subscriptionStatus === "past_due" || plan.subscriptionStatus === "canceled") {
     return {
@@ -164,6 +173,59 @@ export async function checkShipmentLimit(organizationId: number): Promise<LimitC
   }
 
   return { allowed: true, reason: "ok", limit: plan.maxShipmentsPerMonth, used, planCode: plan.code };
+}
+
+export async function checkBranchLimit(organizationId: number): Promise<LimitCheck> {
+  if (organizationId === DEFAULT_ORG_ID) {
+    return { allowed: true, reason: "ok", limit: -1, used: 0, planCode: null };
+  }
+
+  const plan = await getOrgPlan(organizationId);
+  if (!plan) {
+    return { allowed: true, reason: "ok", limit: -1, used: 0, planCode: null };
+  }
+
+  // Active free trial check - bypass all limits
+  const isTrialActive =
+    plan.subscriptionStatus === "trialing" &&
+    plan.trialEndsAt &&
+    plan.trialEndsAt.getTime() >= Date.now();
+  if (isTrialActive) {
+    return { allowed: true, reason: "ok", limit: -1, used: 0, planCode: plan.code };
+  }
+
+  // Parse maxBranches from features
+  const maxBranchesRaw = plan.features.maxBranches;
+  let maxBranches = typeof maxBranchesRaw === "number"
+    ? maxBranchesRaw
+    : (maxBranchesRaw ? parseInt(maxBranchesRaw as string, 10) : 0);
+
+  if (maxBranches <= 0) {
+    // Default fallback limits by plan code
+    if (plan.code === "starter") maxBranches = 1;
+    else if (plan.code === "growth" || plan.code === "basic") maxBranches = 3;
+    else maxBranches = 5; // pro/enterprise
+  }
+
+  // Count offices + agencies
+  const [officesCount, agenciesCount] = await Promise.all([
+    prisma.office.count({ where: { organizationId } }),
+    prisma.agency.count({ where: { organizationId } }),
+  ]);
+  const used = officesCount + agenciesCount;
+
+  if (used >= maxBranches) {
+    return {
+      allowed: false,
+      reason: "limit_reached",
+      message: `You've reached your plan limit of ${maxBranches} branches. Upgrade your plan to add more.`,
+      limit: maxBranches,
+      used,
+      planCode: plan.code,
+    };
+  }
+
+  return { allowed: true, reason: "ok", limit: maxBranches, used, planCode: plan.code };
 }
 
 export function planHasFeature(plan: OrgPlan | null, key: keyof PlanFeatures): boolean {

@@ -62,6 +62,7 @@ export default function SaasPlansPage() {
   const [editPriceAnnual, setEditPriceAnnual] = useState("");
   const [editMaxUsers, setEditMaxUsers] = useState("");
   const [editMaxShipments, setEditMaxShipments] = useState("");
+  const [editMaxBranches, setEditMaxBranches] = useState("");
   const [editTrialDays, setEditTrialDays] = useState("");
   const [editGracePeriodDays, setEditGracePeriodDays] = useState("");
   const [editAccounts, setEditAccounts] = useState(false);
@@ -120,6 +121,7 @@ export default function SaasPlansPage() {
     setEditPriceAnnual(String(features.annualPrice ?? (plan.priceMonthlyUsd * 10 * 1.2)));
     setEditMaxUsers(String(plan.maxUsers));
     setEditMaxShipments(String(plan.maxShipmentsPerMonth));
+    setEditMaxBranches(String(features.maxBranches ?? (plan.code === "starter" ? 1 : plan.code === "growth" ? 3 : 5)));
     setEditTrialDays(String(features.trialDays ?? 14));
     setEditGracePeriodDays(String(features.gracePeriodDays ?? 7));
     setEditAccounts(features.accounts === true);
@@ -145,6 +147,7 @@ export default function SaasPlansPage() {
       isNaN(Number(editPriceAnnual)) || 
       isNaN(Number(editMaxUsers)) || 
       isNaN(Number(editMaxShipments)) || 
+      isNaN(Number(editMaxBranches)) || 
       isNaN(Number(editTrialDays)) || 
       isNaN(Number(editGracePeriodDays))
     ) {
@@ -167,6 +170,7 @@ export default function SaasPlansPage() {
           bulkUpload: editBulkUpload,
           isActive: editIsActive,
           annualPrice: parseFloat(editPriceAnnual),
+          maxBranches: parseInt(editMaxBranches, 10),
           map: editMap,
           analytics: editAnalytics,
           activityLogs: editActivityLogs,
@@ -377,6 +381,12 @@ export default function SaasPlansPage() {
                     <span className="font-semibold">{plan.maxShipmentsPerMonth.toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between">
+                    <span>Max Branches limit:</span>
+                    <span className="font-semibold">
+                      {features.maxBranches !== undefined ? features.maxBranches : (plan.code === "starter" ? 1 : plan.code === "growth" ? 3 : 5)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span>Accounting Module:</span>
                     <span className={`font-semibold ${features.accounts ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
                       {features.accounts ? "Enabled" : "Disabled"}
@@ -491,6 +501,21 @@ export default function SaasPlansPage() {
                   onChange={(e) => setEditMaxShipments(e.target.value)} 
                   type="number" 
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="editMaxBranches" className="font-semibold text-slate-800 dark:text-slate-200">Max Branches Limit</Label>
+                <Input 
+                  id="editMaxBranches" 
+                  value={editMaxBranches} 
+                  onChange={(e) => setEditMaxBranches(e.target.value)} 
+                  type="number" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                {/* Empty spacer to align layout */}
               </div>
             </div>
 

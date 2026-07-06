@@ -101,12 +101,18 @@ export async function POST(request: NextRequest) {
   try {
     const plan = await getOrgPlan(session.organizationId);
     if (plan && plan.maxUsers > 0) {
-      const usage = await getOrgUsage(session.organizationId);
-      if (usage.members >= plan.maxUsers) {
-        return NextResponse.json(
-          { error: `Member limit reached. Your subscription plan ("${plan.name}") allows up to ${plan.maxUsers} team members.` },
-          { status: 403 }
-        );
+      const isTrialActive =
+        plan.subscriptionStatus === "trialing" &&
+        plan.trialEndsAt &&
+        plan.trialEndsAt.getTime() >= Date.now();
+      if (!isTrialActive) {
+        const usage = await getOrgUsage(session.organizationId);
+        if (usage.members >= plan.maxUsers) {
+          return NextResponse.json(
+            { error: `Member limit reached. Your subscription plan ("${plan.name}") allows up to ${plan.maxUsers} team members.` },
+            { status: 403 }
+          );
+        }
       }
     }
 

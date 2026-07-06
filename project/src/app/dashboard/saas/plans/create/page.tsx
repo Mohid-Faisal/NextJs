@@ -57,6 +57,7 @@ export default function CreatePlanPage() {
   const [limits, setLimits] = useState<{ key: string; value: string }[]>([
     { key: "max_users", value: "10" },
     { key: "max_shipments", value: "1000" },
+    { key: "max_branches", value: "5" },
   ]);
   const [newLimitKey, setNewLimitKey] = useState("");
   const [newLimitValue, setNewLimitValue] = useState("");
@@ -131,10 +132,11 @@ export default function CreatePlanPage() {
     try {
       const maxUsersValue = parseInt(limits.find(l => l.key === "max_users")?.value || "10", 10);
       const maxShipmentsValue = parseInt(limits.find(l => l.key === "max_shipments")?.value || "1000", 10);
+      const maxBranchesValue = parseInt(limits.find(l => l.key === "max_branches")?.value || "5", 10);
       
       const additionalLimits: Record<string, any> = {};
       limits.forEach(l => {
-        if (l.key !== "max_users" && l.key !== "max_shipments") {
+        if (l.key !== "max_users" && l.key !== "max_shipments" && l.key !== "max_branches") {
           additionalLimits[l.key] = isNaN(Number(l.value)) ? l.value : Number(l.value);
         }
       });
@@ -156,6 +158,7 @@ export default function CreatePlanPage() {
           semiannualPrice: semiannualPrice ? parseFloat(semiannualPrice) : null,
           annualPrice: annualPrice ? parseFloat(annualPrice) : null,
           featuresList,
+          maxBranches: maxBranchesValue,
           additionalLimits,
         }
       };

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { checkBranchLimit } from "@/lib/billing/usage";
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,6 +25,11 @@ export async function POST(request: NextRequest) {
     const auth = await requireApiSession(request);
     if (auth.error) return auth.error;
     const session = auth.session;
+
+    const limitCheck = await checkBranchLimit(session.organizationId);
+    if (!limitCheck.allowed) {
+      return NextResponse.json({ error: limitCheck.message }, { status: 403 });
+    }
 
     const body = await request.json();
     const { code, name } = body;

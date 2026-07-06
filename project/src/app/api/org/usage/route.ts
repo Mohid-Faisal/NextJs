@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { getOrgPlan, getOrgUsage, DEFAULT_ORG_ID } from "@/lib/billing/usage";
 
@@ -13,9 +14,11 @@ export async function GET(req: NextRequest) {
   const session = auth.session;
 
   try {
-    const [plan, usage] = await Promise.all([
+    const [plan, usage, officesCount, agenciesCount] = await Promise.all([
       getOrgPlan(session.organizationId),
       getOrgUsage(session.organizationId),
+      prisma.office.count({ where: { organizationId: session.organizationId } }),
+      prisma.agency.count({ where: { organizationId: session.organizationId } }),
     ]);
 
     const unlimited =
@@ -24,6 +27,22 @@ export async function GET(req: NextRequest) {
       plan.features.unlimited === true ||
       plan.maxShipmentsPerMonth <= 0;
 
+    const branchesUsed = officesCount + agenciesCount;
+    let maxBranches = -1;
+    if (plan && session.organizationId !== DEFAULT_ORG_ID) {
+      const mb = typeof plan.features.maxBranches === 'number'
+        ? plan.features.maxBranches
+        : (plan.features.maxBranches ? parseInt(plan.features.maxBranches as string, 10) : 0);
+      if (mb > 0) {
+        maxBranches = mb;
+      } else {
+        // Fallback default mapping by plan code
+        if (plan.code === "starter") maxBranches = 1;
+        else if (plan.code === "growth" || plan.code === "basic") maxBranches = 3;
+        else maxBranches = 5;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       usage: {
@@ -31,6 +50,8 @@ export async function GET(req: NextRequest) {
         maxShipmentsPerMonth: unlimited ? -1 : plan!.maxShipmentsPerMonth,
         members: usage.members,
         maxUsers: !plan || plan.maxUsers <= 0 ? -1 : plan.maxUsers,
+        branches: branchesUsed,
+        maxBranches,
       },
       plan: plan
         ? {

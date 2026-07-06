@@ -28,6 +28,8 @@ export const routeFeatures: Record<string, string> = {
   "/dashboard/accounts/income-statement": "accounts",
   "/dashboard/reports": "analytics",
   "/dashboard/settings/manage-rate-list": "accounts",
+  "/dashboard/remote-area-lookup": "map",
+  "/dashboard/settings/remote-area-lookup": "map",
 };
 
 const LayoutContent = ({ children }: { children: React.ReactNode }) => {
