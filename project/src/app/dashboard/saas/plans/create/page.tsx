@@ -30,7 +30,7 @@ export default function CreatePlanPage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("Manage subscription plans available to organizations.");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("PKR");
   const [sortOrder, setSortOrder] = useState("0");
   const [activeGeneral, setActiveGeneral] = useState(true);
 

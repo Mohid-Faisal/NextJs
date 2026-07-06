@@ -64,6 +64,7 @@ export default function SaasPlansPage() {
   const [editMaxUsers, setEditMaxUsers] = useState("");
   const [editMaxShipments, setEditMaxShipments] = useState("");
   const [editMaxBranches, setEditMaxBranches] = useState("");
+  const [editCurrency, setEditCurrency] = useState("PKR");
   const [editDescription, setEditDescription] = useState("");
   const [editFeaturesList, setEditFeaturesList] = useState("");
   const [editTrialDays, setEditTrialDays] = useState("");
@@ -125,6 +126,7 @@ export default function SaasPlansPage() {
     setEditMaxUsers(String(plan.maxUsers));
     setEditMaxShipments(String(plan.maxShipmentsPerMonth));
     setEditMaxBranches(String(features.maxBranches ?? (plan.code === "starter" ? 1 : plan.code === "growth" ? 3 : 5)));
+    setEditCurrency(features.currency ?? "PKR");
     setEditDescription(features.description ?? "");
     setEditFeaturesList(Array.isArray(features.featuresList) ? features.featuresList.join("\n") : "");
     setEditTrialDays(String(features.trialDays ?? 14));
@@ -176,6 +178,7 @@ export default function SaasPlansPage() {
           isActive: editIsActive,
           annualPrice: parseFloat(editPriceAnnual),
           maxBranches: parseInt(editMaxBranches, 10),
+          currency: editCurrency.trim() || "PKR",
           description: editDescription.trim(),
           featuresList: editFeaturesList.split("\n").map(f => f.trim()).filter(Boolean),
           map: editMap,
@@ -368,10 +371,26 @@ export default function SaasPlansPage() {
                 {/* Pricing Block */}
                 <div className="pt-2">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">${plan.priceMonthlyUsd.toFixed(2)}</span>
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                      {(() => {
+                        const currency = features.currency || "PKR";
+                        if (currency === "USD") return `$${plan.priceMonthlyUsd.toFixed(2)}`;
+                        if (currency === "EUR") return `€${plan.priceMonthlyUsd.toFixed(2)}`;
+                        if (currency === "GBP") return `£${plan.priceMonthlyUsd.toFixed(2)}`;
+                        return `${currency} ${plan.priceMonthlyUsd.toLocaleString()}`;
+                      })()}
+                    </span>
                     <span className="text-xs text-muted-foreground">/monthly</span>
                   </div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">${annualPrice.toFixed(2)}/annual</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">
+                    {(() => {
+                      const currency = features.currency || "PKR";
+                      if (currency === "USD") return `$${annualPrice.toFixed(2)}`;
+                      if (currency === "EUR") return `€${annualPrice.toFixed(2)}`;
+                      if (currency === "GBP") return `£${annualPrice.toFixed(2)}`;
+                      return `${currency} ${annualPrice.toLocaleString()}`;
+                    })()}/annual
+                  </span>
                 </div>
 
                 {/* Divider Line */}
@@ -467,9 +486,18 @@ export default function SaasPlansPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="editPriceMonthly" className="font-semibold text-slate-800 dark:text-slate-200">Monthly Price ($)</Label>
+                <Label htmlFor="editCurrency" className="font-semibold text-slate-800 dark:text-slate-200">Currency</Label>
+                <Input 
+                  id="editCurrency" 
+                  value={editCurrency} 
+                  onChange={(e) => setEditCurrency(e.target.value)} 
+                  placeholder="e.g. PKR, USD" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="editPriceMonthly" className="font-semibold text-slate-800 dark:text-slate-200">Monthly Price</Label>
                 <Input 
                   id="editPriceMonthly" 
                   value={editPriceMonthly} 
@@ -479,7 +507,7 @@ export default function SaasPlansPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="editPriceAnnual" className="font-semibold text-slate-800 dark:text-slate-200">Annual Price ($)</Label>
+                <Label htmlFor="editPriceAnnual" className="font-semibold text-slate-800 dark:text-slate-200">Annual Price</Label>
                 <Input 
                   id="editPriceAnnual" 
                   value={editPriceAnnual} 

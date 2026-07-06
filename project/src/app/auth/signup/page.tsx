@@ -680,12 +680,24 @@ const SignupPage = () => {
                     <div className="pt-2">
                       <div className="flex items-baseline gap-0.5">
                         <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                          ${plan.priceMonthlyUsd.toFixed(2)}
+                          {(() => {
+                            const currency = (plan.features as any)?.currency || "PKR";
+                            if (currency === "USD") return `$${plan.priceMonthlyUsd.toFixed(2)}`;
+                            if (currency === "EUR") return `€${plan.priceMonthlyUsd.toFixed(2)}`;
+                            if (currency === "GBP") return `£${plan.priceMonthlyUsd.toFixed(2)}`;
+                            return `${currency} ${plan.priceMonthlyUsd.toLocaleString()}`;
+                          })()}
                         </span>
                         <span className="text-xs text-muted-foreground">/month</span>
                       </div>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                        ${annualPrice.toFixed(2)}/year (Save 20%)
+                        {(() => {
+                          const currency = (plan.features as any)?.currency || "PKR";
+                          if (currency === "USD") return `$${annualPrice.toFixed(2)}`;
+                          if (currency === "EUR") return `€${annualPrice.toFixed(2)}`;
+                          if (currency === "GBP") return `£${annualPrice.toFixed(2)}`;
+                          return `${currency} ${annualPrice.toLocaleString()}`;
+                        })()}/year (Save 20%)
                       </p>
                     </div>
 
@@ -759,7 +771,15 @@ const SignupPage = () => {
                     <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">{chosenPlan.name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">${chosenPlan.priceMonthlyUsd}</p>
+                    <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
+                      {(() => {
+                        const currency = (chosenPlan.features as any)?.currency || "PKR";
+                        if (currency === "USD") return `$${chosenPlan.priceMonthlyUsd}`;
+                        if (currency === "EUR") return `€${chosenPlan.priceMonthlyUsd}`;
+                        if (currency === "GBP") return `£${chosenPlan.priceMonthlyUsd}`;
+                        return `${currency} ${chosenPlan.priceMonthlyUsd.toLocaleString()}`;
+                      })()}
+                    </p>
                     <p className="text-xs text-gray-400">per month</p>
                   </div>
                 </div>

@@ -216,12 +216,13 @@ function BillingPageInner() {
   const trialExpired = subStatus === "trialing" && trialEnds && trialEnds.getTime() < Date.now();
   const inactive = subStatus === "past_due" || subStatus === "canceled";
 
-  // Quick helper to approximate PKR prices for local bank transfers
-  const getPKRPriceLabel = (planCode: string) => {
-    if (planCode === "starter") return "Rs. 14,000 / month";
-    if (planCode === "business") return "Rs. 28,000 / month";
-    if (planCode === "pro") return "Rs. 56,000 / month";
-    return "";
+  // Quick helper to format prices with custom currency
+  const getPlanPriceLabel = (p: PlanInfo) => {
+    const currency = (p.features as any)?.currency || "PKR";
+    if (currency === "USD") return `$${p.priceMonthlyUsd} / month`;
+    if (currency === "EUR") return `€${p.priceMonthlyUsd} / month`;
+    if (currency === "GBP") return `£${p.priceMonthlyUsd} / month`;
+    return `${currency} ${p.priceMonthlyUsd.toLocaleString()} / month`;
   };
 
   return (
@@ -301,7 +302,13 @@ function BillingPageInner() {
                     {isCurrent && <Badge>Current</Badge>}
                   </div>
                   <p className="text-2xl font-bold">
-                    ${p.priceMonthlyUsd}
+                    {(() => {
+                      const currency = (p.features as any)?.currency || "PKR";
+                      if (currency === "USD") return `$${p.priceMonthlyUsd.toFixed(2)}`;
+                      if (currency === "EUR") return `€${p.priceMonthlyUsd.toFixed(2)}`;
+                      if (currency === "GBP") return `£${p.priceMonthlyUsd.toFixed(2)}`;
+                      return `${currency} ${p.priceMonthlyUsd.toLocaleString()}`;
+                    })()}
                     <span className="text-sm font-normal text-muted-foreground">/mo</span>
                   </p>
                 </CardHeader>
@@ -432,7 +439,7 @@ function BillingPageInner() {
                   <SelectContent>
                     {plans.map((p) => (
                       <SelectItem key={p.code} value={p.code}>
-                        <span className="capitalize">{p.name}</span> ({getPKRPriceLabel(p.code) || `$${p.priceMonthlyUsd}/mo`})
+                        <span className="capitalize">{p.name}</span> ({getPlanPriceLabel(p)})
                       </SelectItem>
                     ))}
                   </SelectContent>
