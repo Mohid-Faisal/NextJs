@@ -572,7 +572,7 @@ const SignupPage = () => {
       <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
-        <motion.div className="w-full max-w-7xl relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <motion.div className="w-full max-w-[1600px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           
           <button 
             onClick={() => setStep("verification")} 
@@ -593,8 +593,8 @@ const SignupPage = () => {
             <StepIndicator currentStep={2} totalSteps={4} labels={orgStepLabels} />
           </div>
 
-          {/* 4 columns pricing grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-stretch mb-8">
+          {/* 5 columns pricing grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-stretch mb-8">
             {/* Free Trial Card */}
             <Card 
               className="relative flex flex-col justify-between p-6 border border-slate-200 dark:border-slate-850 shadow-sm bg-white dark:bg-slate-900/90"
