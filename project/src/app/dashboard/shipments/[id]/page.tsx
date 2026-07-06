@@ -295,7 +295,7 @@ export default function ShipmentViewPage() {
             onClick={() => setShowPaymentChoiceModal(true)}
           >
             <CreditCard className="w-3.5 h-3.5" />
-            Register manual payment
+            Register Payment
           </Button>
         </div>
       </div>
@@ -666,7 +666,7 @@ export default function ShipmentViewPage() {
                 onClick={() => setShowPaymentChoiceModal(true)}
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                Register manual payment
+                Register Payment
               </Button>
             </CardContent>
           </Card>
@@ -765,13 +765,13 @@ export default function ShipmentViewPage() {
         </div>
       </div>
 
-      {/* Manual Payment Choice Modal */}
+      {/* Payment Choice Modal */}
       <Dialog open={showPaymentChoiceModal} onOpenChange={setShowPaymentChoiceModal}>
         <DialogContent className="max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">Process Manual Payment</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">Register Payment</DialogTitle>
             <DialogDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Select which invoice you want to record a manual payment for.
+              Select which invoice you want to record a payment for.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 mt-4">
@@ -779,7 +779,7 @@ export default function ShipmentViewPage() {
               <Button
                 onClick={() => {
                   setShowPaymentChoiceModal(false);
-                  router.push(`/dashboard/accounts/payments/process?invoice=${customerInvoice.invoiceNumber}`);
+                  router.push(`/dashboard/income/revenue?invoice=${customerInvoice.invoiceNumber}`);
                 }}
                 className="w-full justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-left font-medium p-4 h-auto bg-transparent text-gray-900 dark:text-white rounded-xl"
               >
@@ -795,7 +795,7 @@ export default function ShipmentViewPage() {
               <Button
                 onClick={() => {
                   setShowPaymentChoiceModal(false);
-                  router.push(`/dashboard/accounts/payments/process?invoice=${vendorInvoice.invoiceNumber}`);
+                  router.push(`/dashboard/expense/payments?invoice=${vendorInvoice.invoiceNumber}`);
                 }}
                 className="w-full justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-left font-medium p-4 h-auto bg-transparent text-gray-900 dark:text-white rounded-xl"
               >

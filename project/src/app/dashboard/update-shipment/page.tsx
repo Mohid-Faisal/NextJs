@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const UpdateShipmentPage = () => {
+const UpdateShipmentPageContent = () => {
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get("id");
   const [searchTerm, setSearchTerm] = useState("");
   const [shipment, setShipment] = useState<any>(null);
   const [form, setForm] = useState({
@@ -29,12 +31,40 @@ const UpdateShipmentPage = () => {
     status: "",
   });
 
+  useEffect(() => {
+    if (idParam) {
+      const fetchShipmentById = async () => {
+        try {
+          const res = await fetch(`/api/shipments/${idParam}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.shipment) {
+              const s = data.shipment;
+              setShipment(s);
+              setForm({
+                trackingId: s.trackingId || "",
+                senderName: s.senderName || "",
+                recipientName: s.recipientName || "",
+                destination: s.destination || "",
+                invoiceStatus: s.invoiceStatus || "",
+                totalCost: s.totalCost?.toString() || "",
+                status: s.status || "",
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching shipment by ID:", error);
+        }
+      };
+      fetchShipmentById();
+    }
+  }, [idParam]);
+
   const handleSearch = async () => {
     if (!searchTerm) return;
 
     const res = await fetch(`/api/shipments?search=${searchTerm}`);
     const { shipments } = await res.json();
-    // console.log(shipments);
     if (shipments.length > 0) {
       const s = shipments[0];
       setShipment(s);
@@ -44,7 +74,7 @@ const UpdateShipmentPage = () => {
         recipientName: s.recipientName || "",
         destination: s.destination || "",
         invoiceStatus: s.invoiceStatus || "",
-        totalCost: s.totalCost || "",
+        totalCost: s.totalCost?.toString() || "",
         status: s.status || "",
       });
     } else {
@@ -114,7 +144,7 @@ const UpdateShipmentPage = () => {
               onSubmit={handleSubmit}
               className="grid grid-cols-1 md:grid-cols-2 gap-6"
             >
-              {[ 
+              {[
                 { label: "Tracking ID", name: "trackingId" },
                 { label: "Destination", name: "destination" },
                 { label: "Sender Name", name: "senderName" },
@@ -133,23 +163,6 @@ const UpdateShipmentPage = () => {
                   />
                 </div>
               ))}
-
-              {/* Invoice Status */}
-              <div className="flex flex-col space-y-2">
-                <Label>Invoice Status</Label>
-                <Select
-                  value={form.invoiceStatus}
-                  onValueChange={(val) => handleSelect("invoiceStatus", val)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select invoice status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Unpaid">Unpaid</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               {/* Status */}
               <div className="flex flex-col space-y-2">
@@ -201,4 +214,10 @@ const UpdateShipmentPage = () => {
   );
 };
 
-export default UpdateShipmentPage;
+export default function UpdateShipmentPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading update shipment page...</div>}>
+      <UpdateShipmentPageContent />
+    </Suspense>
+  );
+}
