@@ -152,6 +152,11 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
   const hasFeature = (key: string): boolean => {
     if (loading) return false;
     if (platformRole === "SUPER_ADMIN") return true;
+
+    // Customers, vendors, recipients, and analytics are always enabled for all plans
+    const alwaysEnabled = ["customersPage", "vendorsPage", "recipientsPage", "analytics"];
+    if (alwaysEnabled.includes(key)) return true;
+
     if (!planFeatures) return false;
     return planFeatures[key] === true;
   };

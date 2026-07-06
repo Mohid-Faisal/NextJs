@@ -486,7 +486,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             })}
 
           {/* Income Collapsible */}
-          {(hasPermission("view_revenue") || hasPermission("manage_billing")) && hasFeature("accounts") && (
+          {(hasPermission("view_revenue") || hasPermission("manage_billing")) && (
             <div>
               <button
                 onClick={() => setIncomeOpen(!incomeOpen)}
@@ -553,7 +553,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
           )}
 
           {/* Expense Collapsible */}
-          {(hasPermission("manage_billing") || hasPermission("view_revenue")) && hasFeature("accounts") && (
+          {(hasPermission("manage_billing") || hasPermission("view_revenue")) && (
             <div>
               <button
                 onClick={() => setExpenseOpen(!expenseOpen)}
@@ -805,7 +805,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                       .filter((sub) => {
                         if (sub.label === "Branding & Interface") return hasPermission("view_config");
                         if (sub.label === "Manage Zones") return hasPermission("manage_statuses");
-                        if (sub.label === "Manage Rate List") return hasPermission("manage_billing") && hasFeature("accounts");
+                        if (sub.label === "Manage Rate List") return hasPermission("manage_billing");
                         if (sub.label === "Remote Area") return hasPermission("view_map") && hasFeature("map");
                         if (sub.label === "HS Codes") return hasPermission("manage_hscodes");
                         return true;

@@ -182,11 +182,11 @@ export default function SaasPlansPage() {
           description: editDescription.trim(),
           featuresList: editFeaturesList.split("\n").map(f => f.trim()).filter(Boolean),
           map: editMap,
-          analytics: editAnalytics,
+          analytics: true,
           activityLogs: editActivityLogs,
-          customersPage: editCustomersPage,
-          vendorsPage: editVendorsPage,
-          recipientsPage: editRecipientsPage,
+          customersPage: true,
+          vendorsPage: true,
+          recipientsPage: true,
         }
       };
 
@@ -413,7 +413,7 @@ export default function SaasPlansPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Accounting Module:</span>
+                    <span>Finance Module:</span>
                     <span className={`font-semibold ${features.accounts ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
                       {features.accounts ? "Enabled" : "Disabled"}
                     </span>
@@ -425,15 +425,9 @@ export default function SaasPlansPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Interactive Map:</span>
+                    <span>Remote Area Lookup:</span>
                     <span className={`font-semibold ${features.map ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
                       {features.map ? "Enabled" : "Disabled"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Analytics & Charts:</span>
-                    <span className={`font-semibold ${features.analytics ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`}>
-                      {features.analytics ? "Enabled" : "Disabled"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -602,8 +596,8 @@ export default function SaasPlansPage() {
               
               <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
                 <div className="space-y-0.5">
-                  <span className="text-sm font-semibold block">Accounts & Billing</span>
-                  <span className="text-xs text-muted-foreground block">Enable invoicing, ledger, and accounting modules.</span>
+                  <span className="text-sm font-semibold block">Finance</span>
+                  <span className="text-xs text-muted-foreground block">Enable ledger and accounting modules dropdown in the sidebar.</span>
                 </div>
                 <Switch checked={editAccounts} onCheckedChange={setEditAccounts} />
               </div>
@@ -618,18 +612,10 @@ export default function SaasPlansPage() {
 
               <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
                 <div className="space-y-0.5">
-                  <span className="text-sm font-semibold block">Interactive Map</span>
-                  <span className="text-xs text-muted-foreground block">Unlock real-time shipments geo-mapping tracking.</span>
+                  <span className="text-sm font-semibold block">Remote Area</span>
+                  <span className="text-xs text-muted-foreground block">Enable Remote Area Lookup directory.</span>
                 </div>
                 <Switch checked={editMap} onCheckedChange={setEditMap} />
-              </div>
-
-              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
-                <div className="space-y-0.5">
-                  <span className="text-sm font-semibold block">Analytics & Charts</span>
-                  <span className="text-xs text-muted-foreground block">Display detailed KPI statistics and graphs.</span>
-                </div>
-                <Switch checked={editAnalytics} onCheckedChange={setEditAnalytics} />
               </div>
 
               <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
@@ -638,30 +624,6 @@ export default function SaasPlansPage() {
                   <span className="text-xs text-muted-foreground block">Keep records of user audits and system logs.</span>
                 </div>
                 <Switch checked={editActivityLogs} onCheckedChange={setEditActivityLogs} />
-              </div>
-
-              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
-                <div className="space-y-0.5">
-                  <span className="text-sm font-semibold block">Customers Module</span>
-                  <span className="text-xs text-muted-foreground block">Enable customers directory and actions.</span>
-                </div>
-                <Switch checked={editCustomersPage} onCheckedChange={setEditCustomersPage} />
-              </div>
-
-              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
-                <div className="space-y-0.5">
-                  <span className="text-sm font-semibold block">Vendors Module</span>
-                  <span className="text-xs text-muted-foreground block">Enable vendors database and profiles.</span>
-                </div>
-                <Switch checked={editVendorsPage} onCheckedChange={setEditVendorsPage} />
-              </div>
-
-              <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
-                <div className="space-y-0.5">
-                  <span className="text-sm font-semibold block">Recipients Module</span>
-                  <span className="text-xs text-muted-foreground block">Enable recipients directory tracking.</span>
-                </div>
-                <Switch checked={editRecipientsPage} onCheckedChange={setEditRecipientsPage} />
               </div>
 
               <div className="flex items-center justify-between border border-slate-150 rounded-xl p-3 bg-slate-50/50 dark:bg-zinc-800/10">
