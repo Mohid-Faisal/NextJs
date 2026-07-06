@@ -262,8 +262,8 @@ const SignupPage = () => {
     }
   };
 
-  const handleSelectFreePlan = async () => {
-    setSelectedPlan("free");
+  const handleSelectFreeTrial = async () => {
+    setSelectedPlan("starter");
     setIsFreeTrial(true);
     
     setIsLoading(true);
@@ -274,15 +274,15 @@ const SignupPage = () => {
         body: JSON.stringify({
           userId,
           organizationId: orgId,
-          planCode: "free",
+          planCode: "starter",
         })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setStep("pending");
-        toast.success("Registration complete! Waiting for approval.");
+        toast.success("Registration complete! Your 14-day free trial is awaiting approval.");
       } else {
-        toast.error(data.message || "Failed to update plan selection.");
+        toast.error(data.message || "Failed to start free trial.");
       }
     } catch {
       toast.error("An unexpected error occurred.");
@@ -424,9 +424,7 @@ const SignupPage = () => {
       const data = await response.json();
       if (response.ok && data.success) {
         if (tab === "org") {
-          setIsFreeTrial(true);
-          setStep("pending");
-          toast.success("Verification complete! Your trial workspace is awaiting approval.");
+          setStep("plan");
         } else {
           toast.success(data.message);
           setTimeout(() => router.push("/auth/login"), 3000);
@@ -591,14 +589,68 @@ const SignupPage = () => {
             <StepIndicator currentStep={2} totalSteps={4} labels={orgStepLabels} />
           </div>
 
-          {/* 5 columns pricing grid */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-stretch mb-8">
+          {/* 4 columns pricing grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-stretch mb-8">
+            {/* Free Trial Card */}
+            <Card 
+              className="relative flex flex-col justify-between p-6 border border-slate-200 dark:border-slate-850 shadow-sm bg-white dark:bg-slate-900/90"
+            >
+              <div className="space-y-4 flex-1 flex flex-col">
+                <div>
+                  <h3 className="font-extrabold text-xl text-indigo-600 dark:text-indigo-400 capitalize">14-Day Free Trial</h3>
+                  <p className="text-xs text-slate-500 mt-1 min-h-[32px] leading-normal">
+                    Get full access to all features of the site for testing and getting the feel of it.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                      $0.00
+                    </span>
+                    <span className="text-xs text-muted-foreground">/14 days</span>
+                  </div>
+                </div>
+
+                <hr className="border-slate-100 dark:border-slate-800/80 my-2" />
+
+                <ul className="space-y-3.5 text-xs text-gray-650 dark:text-gray-400 flex-1 py-2">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                    <span className="font-medium">14 Days Free Trial</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                    <span className="font-medium">Full access to all features</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                    <span className="font-medium">No payment info required upfront</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-6">
+                <Button 
+                  onClick={handleSelectFreeTrial}
+                  disabled={isLoading}
+                  className="w-full py-5 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                  ) : (
+                    "Start Free Trial"
+                  )}
+                </Button>
+              </div>
+            </Card>
+
+            {/* Paid Plans */}
             {sortedPlans.map((plan) => {
               const features = plan.features || {};
               const isGrowth = plan.code === "growth";
-              const isFree = plan.priceMonthlyUsd === 0;
               const annualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
-              const planDescription = features.description || (isFree ? "Get started at no cost. Up to 50 shipments/month." : "");
+              const planDescription = features.description || "";
 
               return (
                 <Card 
@@ -628,11 +680,9 @@ const SignupPage = () => {
                         </span>
                         <span className="text-xs text-muted-foreground">/month</span>
                       </div>
-                      {!isFree && (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                          ${annualPrice.toFixed(2)}/year (Save 20%)
-                        </p>
-                      )}
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                        ${annualPrice.toFixed(2)}/year (Save 20%)
+                      </p>
                     </div>
 
                     <hr className="border-slate-100 dark:border-slate-800/80 my-2" />
@@ -649,7 +699,7 @@ const SignupPage = () => {
 
                   <div className="pt-6">
                     <Button
-                      onClick={() => isFree ? handleSelectFreePlan() : handleSelectPaidPlan(plan.code)}
+                      onClick={() => handleSelectPaidPlan(plan.code)}
                       disabled={isLoading}
                       className={`w-full py-5 rounded-xl font-bold transition-all ${
                         isGrowth 
@@ -660,7 +710,7 @@ const SignupPage = () => {
                       {isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
                       ) : (
-                        "Start Free Trial"
+                        "Choose Plan"
                       )}
                     </Button>
                   </div>
