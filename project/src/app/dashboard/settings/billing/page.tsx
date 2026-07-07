@@ -328,9 +328,9 @@ function BillingPageInner() {
   };
 
   return (
-    <div className="p-6 space-y-8 w-full">
+    <div className="p-6 space-y-8 w-full transition-all duration-300 ease-in-out">
       {/* Header section with top-right current plan circular indicators */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-300 ease-in-out">
         <div className="space-y-1 flex-1">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl text-indigo-600 dark:text-indigo-400">
@@ -347,7 +347,7 @@ function BillingPageInner() {
 
         {/* Top-right Current Plan & Limits card */}
         {usage && (
-          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-5 shrink-0 flex flex-row items-center gap-8">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-5 min-w-0 flex flex-row items-center gap-8 transition-all duration-300 ease-in-out">
             <div className="flex items-center gap-4">
               <CircularProgress
                 label="Shipments"
@@ -441,7 +441,7 @@ function BillingPageInner() {
       </div>
 
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5">
+        <div className="flex flex-wrap xl:flex-nowrap justify-center gap-4 xl:gap-5 w-full transition-all duration-300 ease-in-out">
           {plans.map((p) => {
             const isCurrent = plan?.code === p.code;
             const isGrowth = p.code === "growth";
@@ -472,11 +472,11 @@ function BillingPageInner() {
             return (
               <Card 
                 key={p.id} 
-                className={`relative flex flex-col justify-between p-5 transition-all duration-300 rounded-2xl ${
+                className={`relative flex flex-col justify-between p-5 transition-all duration-300 w-full sm:w-[calc(50%-0.5rem)] lg:flex-1 min-w-0 rounded-2xl ${
                   isCurrent 
-                    ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md" 
+                    ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-slate-50/50 dark:bg-slate-955/45 backdrop-blur-md" 
                     : isGrowth 
-                      ? "border border-indigo-500/50 dark:border-indigo-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md" 
+                      ? "border border-indigo-500/50 dark:border-indigo-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-955/45 backdrop-blur-md" 
                       : "border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-955/45 backdrop-blur-md hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)]"
                 }`}
               >
