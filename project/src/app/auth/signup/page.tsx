@@ -533,21 +533,24 @@ const SignupPage = () => {
         <Background />
         
         <motion.div className="w-full max-w-[1300px] relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="text-center max-w-2xl mx-auto space-y-4 mb-8 flex flex-col items-center">
-            <button 
-              onClick={() => setStep("verification")} 
-              className={`inline-flex items-center gap-2 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
+          <div className="flex items-center gap-4 w-full max-w-[1300px] mb-10 pb-5 border-b border-slate-200/50 dark:border-slate-800/40 text-left">
+            <Button 
+              type="button"
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setStep("verification")}
+              className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0 h-10 w-10"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to verification
-            </button>
-
-            <h1 className={`text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter uppercase ${isDark ? "text-white" : "text-gray-900"}`}>
-              Simple, transparent pricing
-            </h1>
-            <p className="text-sm text-slate-550 dark:text-slate-400">
-              Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
-            </p>
+              <ArrowLeft className="h-4.5 w-4.5" />
+            </Button>
+            <div>
+              <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white`}>
+                Simple, transparent pricing
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
+              </p>
+            </div>
           </div>
 
           {/* Self-adjusting pricing grid */}
@@ -691,19 +694,24 @@ const SignupPage = () => {
         <Background />
         
         <motion.div className="w-full max-w-xl relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="text-center space-y-3 mb-6 flex flex-col items-center">
-            <button 
-              onClick={() => setStep("plan")} 
-              className={`inline-flex items-center gap-2 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
+          <div className="flex items-center gap-4 w-full mb-8 pb-4 border-b border-slate-200/50 dark:border-slate-800/40 text-left">
+            <Button 
+              type="button"
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setStep("plan")}
+              className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0 h-10 w-10"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to plans
-            </button>
-
-            <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Submit Payment Details</h2>
-            <p className="text-xs text-slate-550 dark:text-slate-455">
-              Please send the plan subscription fee and paste the transaction details below.
-            </p>
+              <ArrowLeft className="h-4.5 w-4.5" />
+            </Button>
+            <div>
+              <h2 className={`text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white`}>
+                Submit payment details
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Please send the plan subscription fee and paste the transaction details below.
+              </p>
+            </div>
           </div>
 
           <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
