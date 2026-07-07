@@ -37,6 +37,40 @@ export async function requirePermission(
   if (session.organizationId > 1) {
     const plan = await getOrgPlan(session.organizationId);
     if (plan) {
+      // 1. Expired Trial Check
+      const isTrialExpired = plan.subscriptionStatus === "trialing" && 
+        plan.trialEndsAt && 
+        plan.trialEndsAt.getTime() < Date.now();
+      
+      // 2. Inactive Subscription Check
+      const isSubscriptionInactive = plan.subscriptionStatus === "past_due" || 
+        plan.subscriptionStatus === "canceled";
+
+      if (isTrialExpired || isSubscriptionInactive) {
+        const isWriteAction = permissionCode.startsWith("manage_") || 
+          permissionCode.startsWith("create_") || 
+          permissionCode.startsWith("edit_") || 
+          permissionCode.startsWith("delete_") || 
+          permissionCode === "bulk_delete";
+
+        if (isWriteAction) {
+          return {
+            session: null,
+            error: NextResponse.json(
+              { 
+                success: false, 
+                error: "limit_exceeded", 
+                reason: isTrialExpired ? "trial_expired" : "subscription_inactive",
+                message: isTrialExpired 
+                  ? "Your free trial has ended. Choose a plan to continue." 
+                  : "Your subscription is inactive. Please update billing to continue."
+              },
+              { status: 402 }
+            )
+          };
+        }
+      }
+
       if (permissionCode === "view_revenue" || permissionCode === "manage_billing") {
         if (plan.features.accounts !== true) {
           return {
