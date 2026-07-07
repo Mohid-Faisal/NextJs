@@ -588,7 +588,7 @@ const SignupPage = () => {
                 >
                   <div className="space-y-3 flex-1 flex flex-col">
                     <div>
-                      <h3 className="font-extrabold text-base text-indigo-600 dark:text-indigo-400 capitalize">{trialPlan.name}</h3>
+                      <h3 className="font-extrabold text-base text-gray-900 dark:text-white capitalize">{trialPlan.name}</h3>
                       <p className="text-xs text-slate-550 dark:text-slate-400 mt-1 min-h-[28px] leading-normal">
                         {trialDescription}
                       </p>
@@ -619,7 +619,7 @@ const SignupPage = () => {
                     <Button 
                       onClick={handleSelectFreeTrial}
                       disabled={isLoading}
-                      className="w-full py-3.5 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer"
+                      className="w-full py-3.5 rounded-xl font-bold transition-all bg-slate-950 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 cursor-pointer shadow-xs"
                     >
                       {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Free Trial"}
                     </Button>
