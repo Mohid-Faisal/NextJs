@@ -112,18 +112,34 @@ export async function GET(
       console.log('Parsed calculated values from database:', calculatedValues);
     }
 
-    // Fetch organization logo url from database
+    // Fetch organization details from database
     const org = await prisma.organization.findUnique({
       where: { id: session.organizationId },
-      select: { logoUrl: true }
+      select: { logoUrl: true, name: true, slug: true }
     });
+
+    const supportEmail = searchParams.get('support_email') || 'info@psswwe.com';
+    const supportPhone = searchParams.get('support_phone') || '+92 (21) 111-222-333';
+    const supportAddress = searchParams.get('support_address') || 'LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore';
 
     // Convert logo and footer to base64
     const logoBase64 = await getLogoAsBase64(org?.logoUrl);
     const footerBase64 = getFooterAsBase64();
+
+    const isPssOrg = !org || org.slug === "pss" || org.name?.toLowerCase().includes("pss");
+    let footerHTML = "";
+    if (isPssOrg) {
+      footerHTML = footerBase64 ? `<img src="${footerBase64}" width="100%" alt="Footer" style="display: block;">` : '<div style="width: 100%; height: 100px; background-color: #007bff; color: white; text-align: center; padding: 20px;">PSS Payment Solutions Footer</div>';
+    } else {
+      footerHTML = `
+        <div class="footer-single-line" style="text-align: center; font-size: 11px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 15px; margin-top: 20px; font-family: Arial, sans-serif; line-height: 1.5; width: 100%;">
+          Support: ${supportAddress} | ${supportPhone} | ${supportEmail}
+        </div>
+      `;
+    }
     
     // Generate HTML invoice content
-    const htmlContent = generateInvoiceHTML(invoice, lineItems, packages, calculatedValues, logoBase64, footerBase64, !!formData, print);
+    const htmlContent = generateInvoiceHTML(invoice, lineItems, packages, calculatedValues, logoBase64, footerHTML, !!formData, print);
     
     // Return HTML content for display (not as download)
     return new NextResponse(htmlContent, {
@@ -192,7 +208,7 @@ function getFooterAsBase64(): string {
   }
 }
 
-function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], calculatedValues: any, logoBase64: string, footerBase64: string, formData: boolean, printParam: string | null): string {
+function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], calculatedValues: any, logoBase64: string, footerHTML: string, formData: boolean, printParam: string | null): string {
   const shipment = invoice.shipment;
   const customer = invoice.customer;
   const vendor = invoice.vendor;
@@ -531,7 +547,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
 
     <div class="footer-container">
       <div class="row">
-        ${footerBase64 ? `<img src="${footerBase64}" width="100%" alt="Footer" style="display: block;">` : '<div style="width: 100%; height: 100px; background-color: #007bff; color: white; text-align: center; padding: 20px;">PSS Payment Solutions Footer</div>'}
+        ${footerHTML}
       </div>
     </div>
 

@@ -360,12 +360,18 @@ export default function EditInvoicePage() {
           calculatedValues: calculatedValues,
         }
       };
-      
+      const supportEmail = localStorage.getItem("brand_support_email") || "info@psswwe.com";
+      const supportPhone = localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333";
+      const supportAddress = localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore";
+
       // Open invoice with updated data for printing with print parameter
       const queryParams = new URLSearchParams({
         invID: invID.toString(),
         data: JSON.stringify(updatedInvoiceData),
-        print: 'true'
+        print: 'true',
+        support_email: supportEmail,
+        support_phone: supportPhone,
+        support_address: supportAddress
       });
       
       window.open(`/api/accounts/invoices/${shipmentId}/invoice?${queryParams.toString()}`, '_blank');
