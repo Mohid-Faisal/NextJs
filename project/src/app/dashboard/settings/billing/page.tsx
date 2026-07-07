@@ -643,6 +643,19 @@ function BillingPageInner() {
               <h3 className="font-bold text-xs uppercase text-slate-400 dark:text-slate-500 tracking-wider">Submit Payment Proof</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
+                  <Label htmlFor="cycleSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Billing Cycle</Label>
+                  <Select value={manualCycle} onValueChange={setManualCycle}>
+                    <SelectTrigger id="cycleSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
+                      <SelectValue placeholder="Select billing cycle" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-955">
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
                   <Label htmlFor="planSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Target Plan</Label>
                   <Select value={manualPlan} onValueChange={setManualPlan}>
                     <SelectTrigger id="planSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
@@ -654,19 +667,6 @@ function BillingPageInner() {
                           <span className="capitalize">{p.name}</span> ({getPlanPriceLabel(p, manualCycle)})
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="cycleSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Billing Cycle</Label>
-                  <Select value={manualCycle} onValueChange={setManualCycle}>
-                    <SelectTrigger id="cycleSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
-                      <SelectValue placeholder="Select billing cycle" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-955">
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
