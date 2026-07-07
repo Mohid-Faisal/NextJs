@@ -62,6 +62,16 @@ function truncateName(name: string | null | undefined, maxLen: number): string {
   return name.length > maxLen ? `${name.slice(0, maxLen)}…` : name;
 }
 
+function getInitials(name: string | null | undefined): string {
+  if (!name) return "?";
+  const clean = name.trim().replace(/\s+/g, " ");
+  const parts = clean.split(" ");
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return parts[0].slice(0, 2).toUpperCase();
+}
+
 /** Compact Y-axis for large currency-style values (e.g. 80M, 1.2B). */
 function formatAccountsTrendAxis(value: number): string {
   if (value === 0) return "0";
@@ -775,18 +785,25 @@ const DashboardPage = () => {
                             >
                               {shipment.trackingId}
                             </span>
-                            <div className="text-[10px] text-gray-550 dark:text-gray-400 font-normal">
-                              Invoice: <span 
-                                className="cursor-pointer hover:underline text-indigo-650 dark:text-indigo-400 font-medium"
-                                onClick={() => router.push(`/dashboard/invoice/${shipment.id}`)}
-                              >
-                                {shipment.invoiceNumber}
-                              </span>
-                            </div>
                           </td>
-                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 max-w-[200px] truncate">
-                            <div className="font-semibold text-slate-800 dark:text-slate-100">{truncateName(shipment.senderName, 18)}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">To: {truncateName(shipment.recipientName, 18)}</div>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 max-w-[200px]">
+                            <div className="flex items-center gap-3">
+                              {/* Initials Circle */}
+                              <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-300 shrink-0">
+                                {getInitials(shipment.senderName)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-slate-800 dark:text-slate-100 truncate">
+                                  {truncateName(shipment.senderName, 18)}
+                                </div>
+                                <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                                  <ArrowRight className="h-3 w-3 shrink-0 text-slate-400" />
+                                  <span className="truncate">
+                                    {truncateName(shipment.recipientName, 18)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
                           </td>
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
                             {shipment.destination}
@@ -800,18 +817,28 @@ const DashboardPage = () => {
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
                             {shipment.totalWeight} kg
                           </td>
-                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap font-mono text-[10px] sm:text-xs">
-                            {shipment.serviceMode && (
-                              <div className="mb-1 text-gray-500 dark:text-gray-400">{shipment.serviceMode}</div>
-                            )}
-                            <a 
-                              href={getTrackingUrl(shipment.serviceMode, shipment.trackingId)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                            >
-                              Track Shipment <ArrowRight className="w-3 h-3" />
-                            </a>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-mono text-[10px] sm:text-xs">
+                            <div className="flex min-w-0 flex-col items-start gap-1">
+                              {getTrackingUrl(shipment) ? (
+                                <a
+                                  href={getTrackingUrl(shipment)!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block max-w-full truncate font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                                >
+                                  <span className="hidden sm:inline">{shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}</span>
+                                  <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
+                                </a>
+                              ) : (
+                                <button
+                                  onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                                  className="block max-w-full truncate text-left font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                                >
+                                  <span className="hidden sm:inline">{shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}</span>
+                                  <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold text-slate-900 dark:text-white">
                             {(shipment.totalCost || shipment.amount || 0).toLocaleString()}
