@@ -670,7 +670,7 @@ const SignupPage = () => {
                         </span>
                         <span className="text-xs text-muted-foreground font-semibold">/month</span>
                       </div>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold flex items-center justify-start flex-wrap gap-1">
                         {(() => {
                           const discountPercent = features.yearlyDiscountPercent !== undefined 
                             ? parseFloat(features.yearlyDiscountPercent) 
@@ -685,7 +685,12 @@ const SignupPage = () => {
                           else if (currency === "GBP") formattedPrice = `£${calculatedAnnualPrice.toFixed(2)}`;
                           else formattedPrice = `${currency} ${Math.round(calculatedAnnualPrice).toLocaleString()}`;
                           
-                          return `${formattedPrice}/year (save ${discountPercent}%)`;
+                          return (
+                            <>
+                              <span>{formattedPrice}/year</span>
+                              <span className="text-green-600 dark:text-green-400 font-bold ml-0.5">(save {discountPercent}%)</span>
+                            </>
+                          );
                         })()}
                       </p>
                     </div>
