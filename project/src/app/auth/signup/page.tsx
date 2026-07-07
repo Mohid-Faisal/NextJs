@@ -660,7 +660,12 @@ const SignupPage = () => {
                         <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
                           {(() => {
                             const currency = (plan.features as any)?.currency || "PKR";
-                            const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
+                            const discountPercent = features.yearlyDiscountPercent !== undefined 
+                              ? parseFloat(features.yearlyDiscountPercent) 
+                              : (features.annualPrice && plan.priceMonthlyUsd > 0 
+                                ? Math.round((1 - (features.annualPrice / (plan.priceMonthlyUsd * 12))) * 100) 
+                                : 20);
+                            const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * (1 - (discountPercent / 100)));
                             const monthlyRateUnderAnnual = calculatedAnnualPrice / 12;
                             const priceToDisplay = isAnnual ? monthlyRateUnderAnnual : plan.priceMonthlyUsd;
 
@@ -673,7 +678,14 @@ const SignupPage = () => {
                         <span className="text-xs text-muted-foreground font-semibold">/month</span>
                       </div>
                       <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
-                        {isAnnual ? "Billed annually" : "Billed monthly"}
+                        {(() => {
+                          const discountPercent = features.yearlyDiscountPercent !== undefined 
+                            ? parseFloat(features.yearlyDiscountPercent) 
+                            : (features.annualPrice && plan.priceMonthlyUsd > 0 
+                              ? Math.round((1 - (features.annualPrice / (plan.priceMonthlyUsd * 12))) * 100) 
+                              : 20);
+                          return isAnnual ? `Billed annually (${discountPercent}% off)` : "Billed monthly";
+                        })()}
                       </p>
                     </div>
 
@@ -753,7 +765,15 @@ const SignupPage = () => {
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Selected Plan</span>
                       <h4 className="text-sm font-extrabold capitalize text-slate-800 dark:text-white mt-0.5">{chosenPlan.name} Plan</h4>
                       <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5 block">
-                        {isAnnual ? "Billed annually (20% discount applied)" : "Billed monthly"}
+                        {(() => {
+                          const features = chosenPlan.features || {};
+                          const discountPercent = features.yearlyDiscountPercent !== undefined 
+                            ? parseFloat(features.yearlyDiscountPercent) 
+                            : (features.annualPrice && chosenPlan.priceMonthlyUsd > 0 
+                              ? Math.round((1 - (features.annualPrice / (chosenPlan.priceMonthlyUsd * 12))) * 100) 
+                              : 20);
+                          return isAnnual ? `Billed annually (${discountPercent}% discount applied)` : "Billed monthly";
+                        })()}
                       </span>
                     </div>
                     <div className="text-right">
@@ -761,7 +781,12 @@ const SignupPage = () => {
                       <p className="text-base font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
                         {(() => {
                           const currency = (chosenPlan.features as any)?.currency || "PKR";
-                          const annualPrice = chosenPlan.features?.annualPrice ?? (chosenPlan.priceMonthlyUsd * 12 * 0.8);
+                          const discountPercent = chosenPlan.features?.yearlyDiscountPercent !== undefined 
+                            ? parseFloat(chosenPlan.features.yearlyDiscountPercent) 
+                            : (chosenPlan.features?.annualPrice && chosenPlan.priceMonthlyUsd > 0 
+                              ? Math.round((1 - (chosenPlan.features.annualPrice / (chosenPlan.priceMonthlyUsd * 12))) * 100) 
+                              : 20);
+                          const annualPrice = chosenPlan.features?.annualPrice ?? (chosenPlan.priceMonthlyUsd * 12 * (1 - (discountPercent / 100)));
                           const dueAmount = isAnnual ? annualPrice : chosenPlan.priceMonthlyUsd;
                           return `${currency} ${Math.round(dueAmount).toLocaleString()}`;
                         })()}

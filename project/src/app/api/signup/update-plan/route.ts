@@ -59,7 +59,12 @@ export async function POST(request: NextRequest) {
     if (paymentMethod && referenceId) {
       const isAnnual = billingCycle === "annually";
       const features = plan.features ? (plan.features as any) : {};
-      const annualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
+      const discountPercent = features.yearlyDiscountPercent !== undefined 
+        ? parseFloat(features.yearlyDiscountPercent) 
+        : (features.annualPrice && plan.priceMonthlyUsd > 0 
+          ? Math.round((1 - (features.annualPrice / (plan.priceMonthlyUsd * 12))) * 100) 
+          : 20);
+      const annualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * (1 - (discountPercent / 100)));
       const amount = isAnnual ? annualPrice : plan.priceMonthlyUsd;
 
       await prisma.paymentProof.create({

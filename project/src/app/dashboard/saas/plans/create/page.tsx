@@ -156,7 +156,12 @@ export default function CreatePlanPage() {
           gracePeriodDays: parseInt(gracePeriodDays || "0", 10),
           quarterlyPrice: quarterlyPrice ? parseFloat(quarterlyPrice) : null,
           semiannualPrice: semiannualPrice ? parseFloat(semiannualPrice) : null,
-          annualPrice: annualPrice ? parseFloat(annualPrice) : null,
+          annualPrice: (() => {
+            const monthlyVal = parseFloat(monthlyPrice) || 0;
+            const discountPercent = parseFloat(annualPrice) || 0;
+            return monthlyVal * 12 * (1 - (discountPercent / 100));
+          })(),
+          yearlyDiscountPercent: parseFloat(annualPrice) || 0,
           featuresList,
           maxBranches: maxBranchesValue,
           additionalLimits,
@@ -346,16 +351,17 @@ export default function CreatePlanPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="annualPrice" className="font-semibold">Annual Price</Label>
+                <Label htmlFor="annualPrice" className="font-semibold">Yearly Plan Discount (%)</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">$</span>
                   <Input 
                     id="annualPrice" 
-                    placeholder="Optional"
-                    className="pl-7"
+                    placeholder="e.g. 20"
+                    className="pr-7"
                     value={annualPrice}
                     onChange={(e) => setAnnualPrice(e.target.value)}
+                    type="number"
                   />
+                  <span className="absolute right-3 top-2.5 text-muted-foreground text-sm">%</span>
                 </div>
               </div>
             </CardContent>

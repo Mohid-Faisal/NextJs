@@ -122,7 +122,11 @@ export default function SaasPlansPage() {
     setEditingPlan(plan);
     setEditName(plan.name);
     setEditPriceMonthly(String(plan.priceMonthlyUsd));
-    setEditPriceAnnual(String(features.annualPrice ?? (plan.priceMonthlyUsd * 10 * 1.2)));
+    const implicitDiscount = plan.priceMonthlyUsd > 0 && features.annualPrice !== undefined
+      ? Math.round((1 - (features.annualPrice / (plan.priceMonthlyUsd * 12))) * 100)
+      : 20;
+    const discountVal = features.yearlyDiscountPercent ?? implicitDiscount;
+    setEditPriceAnnual(String(discountVal));
     setEditMaxUsers(String(plan.maxUsers));
     setEditMaxShipments(String(plan.maxShipmentsPerMonth));
     setEditMaxBranches(String(features.maxBranches ?? (plan.code === "starter" ? 1 : plan.code === "growth" ? 3 : 5)));
@@ -164,9 +168,13 @@ export default function SaasPlansPage() {
 
     try {
       const features = editingPlan?.features || {};
+      const monthlyVal = parseFloat(editPriceMonthly);
+      const discountPercent = parseFloat(editPriceAnnual) || 0;
+      const calculatedAnnualPrice = monthlyVal * 12 * (1 - (discountPercent / 100));
+
       const updatedPayload = {
         name: editName.trim(),
-        priceMonthlyUsd: parseFloat(editPriceMonthly),
+        priceMonthlyUsd: monthlyVal,
         maxUsers: parseInt(editMaxUsers, 10),
         maxShipmentsPerMonth: parseInt(editMaxShipments, 10),
         features: {
@@ -176,7 +184,8 @@ export default function SaasPlansPage() {
           accounts: editAccounts,
           bulkUpload: editBulkUpload,
           isActive: editIsActive,
-          annualPrice: parseFloat(editPriceAnnual),
+          annualPrice: calculatedAnnualPrice,
+          yearlyDiscountPercent: discountPercent,
           maxBranches: parseInt(editMaxBranches, 10),
           currency: editCurrency.trim() || "PKR",
           description: editDescription.trim(),
@@ -385,11 +394,21 @@ export default function SaasPlansPage() {
                   <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">
                     {(() => {
                       const currency = features.currency || "PKR";
-                      if (currency === "USD") return `$${annualPrice.toFixed(2)}`;
-                      if (currency === "EUR") return `€${annualPrice.toFixed(2)}`;
-                      if (currency === "GBP") return `£${annualPrice.toFixed(2)}`;
-                      return `${currency} ${annualPrice.toLocaleString()}`;
-                    })()}/annual
+                      const discountPercent = features.yearlyDiscountPercent !== undefined 
+                        ? parseFloat(features.yearlyDiscountPercent) 
+                        : (features.annualPrice && plan.priceMonthlyUsd > 0 
+                          ? Math.round((1 - (features.annualPrice / (plan.priceMonthlyUsd * 12))) * 100) 
+                          : 20);
+                      const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * (1 - (discountPercent / 100)));
+                      
+                      let formattedPrice = "";
+                      if (currency === "USD") formattedPrice = `$${calculatedAnnualPrice.toFixed(2)}`;
+                      else if (currency === "EUR") formattedPrice = `€${calculatedAnnualPrice.toFixed(2)}`;
+                      else if (currency === "GBP") formattedPrice = `£${calculatedAnnualPrice.toFixed(2)}`;
+                      else formattedPrice = `${currency} ${calculatedAnnualPrice.toLocaleString()}`;
+
+                      return `${formattedPrice}/annual (${discountPercent}% off)`;
+                    })()}
                   </span>
                 </div>
 
@@ -501,14 +520,18 @@ export default function SaasPlansPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="editPriceAnnual" className="font-semibold text-slate-800 dark:text-slate-200">Annual Price</Label>
-                <Input 
-                  id="editPriceAnnual" 
-                  value={editPriceAnnual} 
-                  onChange={(e) => setEditPriceAnnual(e.target.value)} 
-                  type="number"
-                  step="0.01"
-                />
+                <Label htmlFor="editPriceAnnual" className="font-semibold text-slate-800 dark:text-slate-200">Yearly Plan Discount (%)</Label>
+                <div className="relative">
+                  <Input 
+                    id="editPriceAnnual" 
+                    value={editPriceAnnual} 
+                    onChange={(e) => setEditPriceAnnual(e.target.value)} 
+                    type="number"
+                    step="0.01"
+                    className="pr-7"
+                  />
+                  <span className="absolute right-3 top-2.5 text-muted-foreground text-sm">%</span>
+                </div>
               </div>
             </div>
 
