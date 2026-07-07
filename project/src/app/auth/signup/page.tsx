@@ -533,7 +533,7 @@ const SignupPage = () => {
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         
-        <motion.div className="w-full max-w-[1300px] relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <motion.div className="w-full max-w-[1480px] relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="flex justify-center w-full mb-6 pb-4 border-b border-slate-200/50 dark:border-slate-800/40">
             <div className="flex items-center gap-6 text-left max-w-4xl">
               <Button 
@@ -577,10 +577,10 @@ const SignupPage = () => {
           </div>
 
           {/* Self-adjusting pricing grid */}
-          <div className="flex flex-wrap justify-center items-stretch gap-6 w-full max-w-7xl mx-auto mb-0">
+          <div className="flex flex-wrap xl:flex-nowrap justify-center items-stretch gap-4 w-full max-w-[1440px] mx-auto mb-0">
             {/* Free Trial Card */}
             <Card 
-              className="relative flex flex-col justify-between p-5 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[280px] md:w-[290px] hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)] transition-all duration-300"
+              className="relative flex flex-col justify-between p-5 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[230px] md:w-[245px] xl:w-auto xl:flex-1 xl:max-w-[270px] hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)] transition-all duration-300"
             >
               <div className="space-y-3 flex-1 flex flex-col">
                 <div>
@@ -637,7 +637,7 @@ const SignupPage = () => {
               return (
                 <Card 
                   key={plan.id}
-                  className={`relative flex flex-col justify-between p-5 transition-all duration-300 w-full sm:w-[280px] md:w-[290px] rounded-2xl ${
+                  className={`relative flex flex-col justify-between p-5 transition-all duration-300 w-full sm:w-[230px] md:w-[245px] xl:w-auto xl:flex-1 xl:max-w-[270px] rounded-2xl ${
                     isGrowth 
                       ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md" 
                       : "border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)]"
