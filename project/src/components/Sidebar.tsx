@@ -53,6 +53,7 @@ const links = [
   { href: "/dashboard/vendors", label: "Vendors", icon: Building2 },
   { href: "/dashboard/users", label: "Users & Teams", icon: Users },
   { href: "/dashboard/roles-permissions", label: "Roles & Permissions", icon: ShieldCheck },
+  { href: "/dashboard/settings/billing", label: "Plan & Billing", icon: CreditCard },
 ];
 
 interface DecodedToken {
