@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { 
   Wallet, Check, Zap, AlertTriangle, Landmark, 
   Smartphone, DollarSign, UploadCloud, Loader2,
-  MoreVertical
+  MoreVertical, Sparkles
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -97,6 +97,26 @@ function CircularProgress({ used, max, label }: { used: number; max: number; lab
     </div>
   );
 }
+
+const getChecklistForPlan = (plan: any): string[] => {
+  if (plan.features && Array.isArray(plan.features.featuresList) && plan.features.featuresList.length > 0) {
+    return plan.features.featuresList;
+  }
+  const code = plan.code;
+  switch (code) {
+    case "starter":
+      return ["100 shipments/month", "1 user limit", "1 branch limit", "All core features", "Excludes Remote Area & Finances"];
+    case "growth":
+      return ["300 shipments/month", "5 users limit", "3 branches limit", "Remote Area Lookup included", "Excludes Finances"];
+    case "pro":
+      return ["500 shipments/month", "10 users limit", "5 branches limit", "Remote Area Lookup included", "Finances & Reports included", "All features enabled"];
+    case "pro-plus":
+    case "pro+":
+      return ["Unlimited shipments", "Unlimited users", "Unlimited branches", "Remote Area Lookup included", "Finances & Reports included", "Dedicated Support", "All features enabled"];
+    default:
+      return [];
+  }
+};
 
 function BillingPageInner() {
   const searchParams = useSearchParams();
@@ -254,7 +274,7 @@ function BillingPageInner() {
   };
 
   return (
-    <div className="p-6 space-y-8 max-w-7xl mx-auto">
+    <div className="p-6 space-y-8 w-full">
       {/* Header section with top-right current plan circular indicators */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1 flex-1">
@@ -370,11 +390,7 @@ function BillingPageInner() {
           {plans.map((p) => {
             const isCurrent = plan?.code === p.code;
             const isGrowth = p.code === "growth";
-            
-            const hasFinance = (p.features as any)?.accounts === true;
-            const hasBulk = (p.features as any)?.bulkUpload === true;
-            const hasMap = (p.features as any)?.map === true;
-            const hasLogs = (p.features as any)?.activityLogs !== false;
+            const description = (p.features as any)?.description || "";
 
             const discountPercent = (p.features as any)?.yearlyDiscountPercent !== undefined 
               ? parseFloat((p.features as any).yearlyDiscountPercent) 
@@ -398,113 +414,89 @@ function BillingPageInner() {
             else if (currency === "GBP") formattedAnnualPrice = `£${calculatedAnnualPrice.toFixed(1)}`;
             else formattedAnnualPrice = `${currency} ${Math.round(calculatedAnnualPrice).toLocaleString()}`;
 
-            const maxBranches = (p.features as any)?.maxBranches !== undefined 
-              ? (p.features as any).maxBranches 
-              : (p.code === "starter" ? 1 : p.code === "growth" ? 3 : 5);
-
             return (
               <Card 
                 key={p.id} 
-                className={`relative overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:shadow-lg rounded-2xl border flex flex-col p-5 bg-white dark:bg-slate-900 ${
+                className={`relative flex flex-col justify-between p-5 transition-all duration-300 rounded-2xl ${
                   isCurrent 
-                    ? "border-indigo-600 shadow-md shadow-indigo-500/5 ring-1 ring-indigo-600" 
+                    ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md" 
                     : isGrowth 
-                      ? "border-indigo-500/40 shadow-sm" 
-                      : "border-slate-200 dark:border-slate-800"
+                      ? "border border-indigo-500/50 dark:border-indigo-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md" 
+                      : "border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-955/45 backdrop-blur-md hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)]"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-xl text-slate-900 dark:text-white capitalize">{p.name}</span>
-                    {isCurrent && (
-                      <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-full font-bold text-[9px] border border-emerald-100 uppercase tracking-wider px-2 py-0.5">
-                        Active
-                      </Badge>
-                    )}
+                {isGrowth && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10px] font-bold px-3.5 py-1.5 rounded-full uppercase flex items-center gap-1 shadow-md shadow-indigo-500/10">
+                    <Sparkles className="w-3 h-3 fill-white" /> Popular
                   </div>
-                  <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-250 cursor-pointer">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold capitalize mt-0.5">{p.code}</p>
-                
-                <p className="text-3xl font-black text-slate-900 dark:text-white mt-4 tracking-tight">
-                  {formattedPrice}
-                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 ml-1">/monthly</span>
-                </p>
-                {billingPeriod === "yearly" ? (
-                  <p className="text-[11px] text-green-600 dark:text-green-400 font-bold mt-1">
-                    Billed annually as {formattedAnnualPrice}
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold mt-1">
-                    {formattedAnnualPrice}/annual ({discountPercent}% off)
-                  </p>
                 )}
 
-                <hr className="border-slate-100 dark:border-slate-800/40 my-4" />
-
-                <div className="space-y-2 flex-1 flex flex-col justify-between">
-                  {/* Table features block */}
-                  <div className="space-y-1.5 py-1">
-                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
-                      <span className="text-slate-500 dark:text-slate-400">Max Users/Staff:</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200">{p.maxUsers <= 0 ? "Unlimited" : p.maxUsers}</span>
+                <div className="space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-base text-gray-900 dark:text-white capitalize">{p.name}</span>
+                        {isCurrent && (
+                          <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-full font-bold text-[9px] border border-emerald-100 uppercase tracking-wider px-2 py-0.5 animate-pulse">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-250 cursor-pointer">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
-                      <span className="text-slate-500 dark:text-slate-400">Max Shipments/mo:</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200">{p.maxShipmentsPerMonth <= 0 ? "Unlimited" : p.maxShipmentsPerMonth.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
-                      <span className="text-slate-500 dark:text-slate-400">Max Branches limit:</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200">{maxBranches <= 0 ? "Unlimited" : maxBranches}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
-                      <span className="text-slate-500 dark:text-slate-400">Finance Module:</span>
-                      {hasFinance ? (
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Enabled</span>
-                      ) : (
-                        <span className="font-semibold text-slate-400 dark:text-slate-500">Disabled</span>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
-                      <span className="text-slate-500 dark:text-slate-400">Bulk Actions:</span>
-                      {hasBulk ? (
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Enabled</span>
-                      ) : (
-                        <span className="font-semibold text-slate-400 dark:text-slate-500">Disabled</span>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
-                      <span className="text-slate-500 dark:text-slate-400">Remote Area Lookup:</span>
-                      {hasMap ? (
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Enabled</span>
-                      ) : (
-                        <span className="font-semibold text-slate-400 dark:text-slate-500">Disabled</span>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center text-xs py-1">
-                      <span className="text-slate-500 dark:text-slate-400">Activity Audit Logs:</span>
-                      {hasLogs ? (
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Enabled</span>
-                      ) : (
-                        <span className="font-semibold text-slate-400 dark:text-slate-500">Disabled</span>
-                      )}
-                    </div>
+                    {description && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[28px] leading-normal">{description}</p>
+                    )}
                   </div>
 
+                  <div className="pt-2">
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                        {formattedPrice}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-semibold">/month</span>
+                    </div>
+                    {billingPeriod === "yearly" ? (
+                      <p className="text-[10px] text-green-650 dark:text-green-400 font-bold mt-1">
+                        Billed annually as {formattedAnnualPrice}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold flex items-center justify-start flex-wrap gap-1">
+                        <span>{formattedAnnualPrice}/year</span>
+                        <span className="text-green-650 dark:text-green-400 font-bold ml-0.5">(save {discountPercent}%)</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <hr className="border-slate-100 dark:border-slate-800/50 my-1" />
+
+                  <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400 flex-1 py-1">
+                    {getChecklistForPlan(p).map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+
                   <Button
-                    className={`w-full mt-4 py-5 rounded-xl font-bold cursor-pointer transition-all ${
+                    className={`w-full mt-4 py-3.5 rounded-xl font-bold cursor-pointer transition-all ${
                       isCurrent
                         ? "bg-slate-100 hover:bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed border border-slate-205 dark:border-slate-700"
                         : isGrowth
                           ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10"
-                          : "bg-slate-955 hover:bg-slate-850 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 shadow-md"
+                          : "bg-slate-950 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 shadow-md"
                     }`}
                     disabled={!canManage || isCurrent || checkoutPlan !== null}
                     onClick={() => upgrade(p.code, billingPeriod)}
                   >
-                    <Zap className="h-4 w-4 shrink-0 mr-1.5" />
+                    {checkoutPlan === p.code ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                    ) : (
+                      <Zap className="h-4 w-4 shrink-0 mr-1.5" />
+                    )}
                     {isCurrent
                       ? "Current Plan"
                       : checkoutPlan === p.code
