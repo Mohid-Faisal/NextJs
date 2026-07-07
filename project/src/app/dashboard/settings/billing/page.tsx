@@ -330,8 +330,8 @@ function BillingPageInner() {
   return (
     <div className="p-6 space-y-8 w-full transition-all duration-300 ease-in-out">
       {/* Header section with top-right current plan circular indicators */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-300 ease-in-out">
-        <div className="space-y-1 flex-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 w-full transition-all duration-300 ease-in-out">
+        <div className="space-y-1 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl text-indigo-600 dark:text-indigo-400">
               <Wallet className="h-7 w-7" />
@@ -347,7 +347,7 @@ function BillingPageInner() {
 
         {/* Top-right Current Plan & Limits card */}
         {usage && (
-          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-5 min-w-0 flex flex-row items-center gap-8 transition-all duration-300 ease-in-out">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-5 flex-1 min-w-0 flex flex-row items-center gap-8 transition-all duration-300 ease-in-out">
             <div className="flex items-center gap-4">
               <CircularProgress
                 label="Shipments"
@@ -641,7 +641,7 @@ function BillingPageInner() {
             {/* Submission Form Column */}
             <form onSubmit={handleManualSubmit} className="space-y-4 pl-0 md:pl-2 min-w-0 overflow-hidden">
               <h3 className="font-bold text-xs uppercase text-slate-400 dark:text-slate-500 tracking-wider">Submit Payment Proof</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="cycleSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Billing Cycle</Label>
                   <Select value={manualCycle} onValueChange={setManualCycle}>
