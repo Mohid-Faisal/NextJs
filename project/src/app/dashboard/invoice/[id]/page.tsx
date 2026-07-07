@@ -27,6 +27,7 @@ interface Invoice {
   status?: string;
   lineItems?: any[];
   shipment?: Shipment;
+  organization?: any;
 }
 
 export default function InvoicePage() {
@@ -47,7 +48,7 @@ export default function InvoicePage() {
     }
   }, []);
 
-  const isPssOrg = !org || org.slug === "pss" || org.name?.toLowerCase().includes("pss");
+  const isPssOrg = !invoice?.organization || invoice.organization.slug === "pss" || invoice.organization.name?.toLowerCase().includes("pss");
 
   useEffect(() => {
     fetch("/api/org/current")
@@ -68,7 +69,7 @@ export default function InvoicePage() {
           throw new Error('Failed to fetch invoice');
         }
         const data = await response.json();
-        setInvoice(data);
+        setInvoice(data.invoice || data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -900,8 +901,8 @@ export default function InvoicePage() {
   const lineItems = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
   const hasLineItems = lineItems.length > 0;
 
-  const logoUrl = org?.logoUrl || "/logo_final.png";
-  const companyName = org?.name || "PSS";
+  const logoUrl = invoice?.organization?.logoUrl || "/logo_final.png";
+  const companyName = invoice?.organization?.name || "PSS";
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 print:p-0">
