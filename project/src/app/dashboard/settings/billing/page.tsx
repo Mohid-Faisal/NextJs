@@ -133,6 +133,7 @@ function BillingPageInner() {
   const [manualMethod, setManualMethod] = useState("");
   const [manualAmount, setManualAmount] = useState("");
   const [manualRefId, setManualRefId] = useState("");
+  const [manualCycle, setManualCycle] = useState("monthly");
   const [receiptUrl, setReceiptUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [submittingProof, setSubmittingProof] = useState(false);
@@ -237,6 +238,7 @@ function BillingPageInner() {
           method: manualMethod,
           referenceId: manualRefId,
           receiptUrl,
+          billingCycle: manualCycle,
         }),
       });
       const data = await res.json();
@@ -248,6 +250,7 @@ function BillingPageInner() {
       setManualMethod("");
       setManualAmount("");
       setManualRefId("");
+      setManualCycle("monthly");
       setReceiptUrl("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to submit proof");
@@ -587,21 +590,35 @@ function BillingPageInner() {
             {/* Submission Form Column */}
             <form onSubmit={handleManualSubmit} className="space-y-4 pl-0 md:pl-2">
               <h3 className="font-bold text-xs uppercase text-slate-400 dark:text-slate-500 tracking-wider">Submit Payment Proof</h3>
-              
-              <div className="space-y-1">
-                <Label htmlFor="planSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Target Plan</Label>
-                <Select value={manualPlan} onValueChange={setManualPlan}>
-                  <SelectTrigger id="planSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
-                    <SelectValue placeholder="Select plan" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-                    {plans.map((p) => (
-                      <SelectItem key={p.code} value={p.code}>
-                        <span className="capitalize">{p.name}</span> ({getPlanPriceLabel(p)})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="planSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Target Plan</Label>
+                  <Select value={manualPlan} onValueChange={setManualPlan}>
+                    <SelectTrigger id="planSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
+                      <SelectValue placeholder="Select plan" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-905">
+                      {plans.map((p) => (
+                        <SelectItem key={p.code} value={p.code}>
+                          <span className="capitalize">{p.name}</span> ({getPlanPriceLabel(p)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="cycleSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Billing Cycle</Label>
+                  <Select value={manualCycle} onValueChange={setManualCycle}>
+                    <SelectTrigger id="cycleSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
+                      <SelectValue placeholder="Select billing cycle" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-955">
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-1">

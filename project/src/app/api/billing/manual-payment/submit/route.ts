@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { planCode, amount, method, referenceId, receiptUrl } = body;
+    const { planCode, amount, method, referenceId, receiptUrl, billingCycle } = body;
 
     if (!planCode || !amount || !method || !referenceId) {
       return NextResponse.json(
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
         referenceId: String(referenceId).trim(),
         receiptUrl: receiptUrl ? String(receiptUrl).trim() : null,
         status: "pending",
+        notes: billingCycle ? `Billing Cycle: ${String(billingCycle).toUpperCase()}` : null,
       },
     });
 
