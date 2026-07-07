@@ -5,7 +5,7 @@ import { sendUserApprovalEmail } from "@/lib/email";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, organizationId, planCode, paymentMethod, referenceId, receiptUrl } = body;
+    const { userId, organizationId, planCode, paymentMethod, referenceId, receiptUrl, billingCycle } = body;
 
     if (!userId || !organizationId || !planCode) {
       return NextResponse.json(
@@ -57,11 +57,16 @@ export async function POST(request: NextRequest) {
 
     // Create payment proof if payment details are present
     if (paymentMethod && referenceId) {
+      const isAnnual = billingCycle === "annually";
+      const features = plan.features ? (plan.features as any) : {};
+      const annualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
+      const amount = isAnnual ? annualPrice : plan.priceMonthlyUsd;
+
       await prisma.paymentProof.create({
         data: {
           organizationId: parseInt(organizationId, 10),
           planId: plan.id,
-          amount: plan.priceMonthlyUsd,
+          amount: amount,
           method: String(paymentMethod).toUpperCase(),
           referenceId: String(referenceId).trim(),
           receiptUrl: receiptUrl || null,

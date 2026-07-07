@@ -320,6 +320,7 @@ const SignupPage = () => {
           paymentMethod,
           referenceId: referenceId.trim(),
           receiptUrl,
+          billingCycle: isAnnual ? "annually" : "monthly",
         }),
       });
 
@@ -587,28 +588,8 @@ const SignupPage = () => {
           </div>
 
           {/* Stepper */}
-          <div className="mb-10 w-full max-w-md bg-white/45 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl p-4 border border-white/60 dark:border-white/10 shadow-xs">
+          <div className="mb-12 w-full max-w-md bg-white/45 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl p-4 border border-white/60 dark:border-white/10 shadow-xs">
             <StepIndicator currentStep={2} totalSteps={4} labels={orgStepLabels} />
-          </div>
-
-          {/* Dynamic Billing Switch */}
-          <div className="flex items-center gap-3 mb-10">
-            <span className={`text-sm font-semibold transition-colors ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>Monthly</span>
-            <button 
-              type="button" 
-              onClick={() => setIsAnnual(!isAnnual)}
-              className="relative w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors duration-300 focus:outline-none cursor-pointer"
-            >
-              <motion.div 
-                className="absolute top-1 left-1 w-4 h-4 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
-                animate={{ x: isAnnual ? 24 : 0 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            </button>
-            <span className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>
-              Annually 
-              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400 rounded-md">Save 20%</span>
-            </span>
           </div>
 
           {/* Self-adjusting pricing grid */}
@@ -667,12 +648,6 @@ const SignupPage = () => {
             {sortedPlans.map((plan) => {
               const features = plan.features || {};
               const isGrowth = plan.code === "growth";
-              
-              // 20% discount on Annual rate
-              const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
-              const monthlyRateUnderAnnual = calculatedAnnualPrice / 12;
-
-              const priceToDisplay = isAnnual ? monthlyRateUnderAnnual : plan.priceMonthlyUsd;
               const planDescription = features.description || "";
 
               return (
@@ -701,16 +676,16 @@ const SignupPage = () => {
                         <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
                           {(() => {
                             const currency = (plan.features as any)?.currency || "PKR";
-                            if (currency === "USD") return `$${priceToDisplay.toFixed(2)}`;
-                            if (currency === "EUR") return `€${priceToDisplay.toFixed(2)}`;
-                            if (currency === "GBP") return `£${priceToDisplay.toFixed(2)}`;
-                            return `${currency} ${Math.round(priceToDisplay).toLocaleString()}`;
+                            if (currency === "USD") return `$${plan.priceMonthlyUsd.toFixed(2)}`;
+                            if (currency === "EUR") return `€${plan.priceMonthlyUsd.toFixed(2)}`;
+                            if (currency === "GBP") return `£${plan.priceMonthlyUsd.toFixed(2)}`;
+                            return `${currency} ${Math.round(plan.priceMonthlyUsd).toLocaleString()}`;
                           })()}
                         </span>
                         <span className="text-xs text-muted-foreground font-semibold">/month</span>
                       </div>
                       <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
-                        {isAnnual ? "Billed annually" : "Billed monthly"}
+                        Billed monthly
                       </p>
                     </div>
 
@@ -783,11 +758,52 @@ const SignupPage = () => {
           <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
             <CardContent className="p-8 space-y-6">
               
-              {/* Plan Summary */}
+              {/* Plan Summary with Billing Cycle Selector */}
               {chosenPlan && (
-                <div className="bg-white/40 dark:bg-slate-950/40 rounded-2xl p-4 border border-white/60 dark:border-white/10 space-y-1">
-                  <div className="flex justify-between text-xs text-slate-400 font-semibold uppercase"><span>Selected Plan</span><span>Amount Due</span></div>
-                  <div className="flex justify-between items-center"><span className="text-sm font-bold capitalize text-slate-700 dark:text-white">{chosenPlan.name} Plan</span><span className="text-base font-extrabold text-indigo-600 dark:text-indigo-400">{((chosenPlan.features as any)?.currency || "PKR")} {chosenPlan.priceMonthlyUsd.toLocaleString()} /mo</span></div>
+                <div className="bg-white/40 dark:bg-slate-950/40 rounded-2xl p-5 border border-white/60 dark:border-white/10 space-y-4">
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+                    <div>
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Selected Plan</span>
+                      <h4 className="text-base font-extrabold capitalize text-slate-800 dark:text-white mt-0.5">{chosenPlan.name} Plan</h4>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Amount Due</span>
+                      <p className="text-lg font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+                        {(() => {
+                          const currency = (chosenPlan.features as any)?.currency || "PKR";
+                          const annualPrice = chosenPlan.features?.annualPrice ?? (chosenPlan.priceMonthlyUsd * 12 * 0.8);
+                          const dueAmount = isAnnual ? annualPrice : chosenPlan.priceMonthlyUsd;
+                          return `${currency} ${Math.round(dueAmount).toLocaleString()}`;
+                        })()}
+                        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 ml-1">
+                          {isAnnual ? "/year" : "/month"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Billing Cycle Switch on Payment Page */}
+                  <div className="flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-350">Billing Cycle</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[11px] font-bold transition-colors ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-450"}`}>Monthly</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsAnnual(!isAnnual)}
+                        className="relative w-10 h-5.5 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors duration-300 focus:outline-none cursor-pointer"
+                      >
+                        <motion.div 
+                          className="absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
+                          animate={{ x: isAnnual ? 18 : 0 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        />
+                      </button>
+                      <span className={`text-[11px] font-bold transition-colors flex items-center gap-1 ${isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-450"}`}>
+                        Annually
+                        <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400 rounded-md">Save 20%</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 
