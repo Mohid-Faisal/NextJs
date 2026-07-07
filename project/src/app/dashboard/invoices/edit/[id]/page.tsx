@@ -63,7 +63,12 @@ export default function EditInvoicePage() {
   const [packages, setPackages] = useState<any[]>([]);
   const [calculatedValues, setCalculatedValues] = useState<any>({});
   const [disclaimer, setDisclaimer] = useState('Any discrepancy in invoice must be notified within 03 days of receipt of this invoice. You are requested to pay the invoice amount through cash payment or cross cheque in favor of PSS with immediate effect.');
-  const [note, setNote] = useState('No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.');
+  const [note, setNote] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("brand_invoice_disclaimer") || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.';
+    }
+    return 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.';
+  });
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [updating, setUpdating] = useState(false);
   const fscInputRef = useRef<HTMLInputElement>(null);
@@ -246,9 +251,7 @@ export default function EditInvoicePage() {
         }
 
         // Set note if available
-        if (data.note) {
-          setNote(data.note);
-        }
+        setNote(data.note || localStorage.getItem("brand_invoice_disclaimer") || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.');
       } else {
         console.error('Failed to fetch invoice data');
       }
@@ -371,7 +374,8 @@ export default function EditInvoicePage() {
         print: 'true',
         support_email: supportEmail,
         support_phone: supportPhone,
-        support_address: supportAddress
+        support_address: supportAddress,
+        disclaimer: note || localStorage.getItem("brand_invoice_disclaimer") || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.'
       });
       
       window.open(`/api/accounts/invoices/${shipmentId}/invoice?${queryParams.toString()}`, '_blank');

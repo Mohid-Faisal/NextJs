@@ -28,6 +28,8 @@ interface Invoice {
   lineItems?: any[];
   shipment?: Shipment;
   organization?: any;
+  note?: string;
+  disclaimer?: string;
 }
 
 export default function InvoicePage() {
@@ -39,12 +41,14 @@ export default function InvoicePage() {
   const [brandEmail, setBrandEmail] = useState("info@psswwe.com");
   const [brandPhone, setBrandPhone] = useState("+92 (21) 111-222-333");
   const [brandAddress, setBrandAddress] = useState("LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore");
+  const [brandDisclaimer, setBrandDisclaimer] = useState("No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setBrandEmail(localStorage.getItem("brand_support_email") || "info@psswwe.com");
       setBrandPhone(localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333");
       setBrandAddress(localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore");
+      setBrandDisclaimer(localStorage.getItem("brand_invoice_disclaimer") || "No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.");
     }
   }, []);
 
@@ -431,7 +435,7 @@ export default function InvoicePage() {
             </div>
             
             <div class="terms">
-              No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.
+              ${invoice.note || brandDisclaimer}
             </div>
             
              ${isPssOrg ? `
@@ -822,7 +826,7 @@ export default function InvoicePage() {
             </div>
             
             <div class="terms">
-              No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.
+              ${invoice.note || brandDisclaimer}
             </div>
             
              ${isPssOrg ? `
@@ -1071,7 +1075,7 @@ export default function InvoicePage() {
           {/* Terms and Conditions - Exactly like the image */}
           <div className="px-8 pb-8 print:px-4">
             <p className="text-xs text-gray-500 text-center leading-relaxed">
-              No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.
+              {invoice.note || brandDisclaimer}
             </p>
           </div>
 

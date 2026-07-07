@@ -121,6 +121,7 @@ export async function GET(
     const supportEmail = searchParams.get('support_email') || 'info@psswwe.com';
     const supportPhone = searchParams.get('support_phone') || '+92 (21) 111-222-333';
     const supportAddress = searchParams.get('support_address') || 'LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore';
+    const disclaimer = searchParams.get('disclaimer') || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.';
 
     // Convert logo and footer to base64
     const logoBase64 = await getLogoAsBase64(org?.logoUrl);
@@ -537,7 +538,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
     <div style="margin-top: 40px;" class="row">
       <!-- accepted payments column -->
       <div style="font-weight: bold;" class="col-12">
-        <div style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: 1.5; word-wrap: break-word; font-weight: bold;" class="lead">${String(invoice.note || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <div style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: 1.5; word-wrap: break-word; font-weight: bold;" class="lead">${String(invoice.note || disclaimer).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
       </div>
       <!-- /.col -->
     </div>
