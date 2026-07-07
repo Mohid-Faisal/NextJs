@@ -140,6 +140,26 @@ function BillingPageInner() {
 
   const canManage = MANAGE_ROLES.includes(role);
 
+  useEffect(() => {
+    if (!manualPlan) return;
+    const selected = plans.find((p) => p.code === manualPlan);
+    if (!selected) return;
+
+    const basePrice = selected.priceMonthlyUsd || 0;
+    const discountPercent = (selected.features as any)?.yearlyDiscountPercent !== undefined 
+      ? parseFloat((selected.features as any).yearlyDiscountPercent) 
+      : 15;
+
+    let targetAmt = 0;
+    if (manualCycle === "yearly") {
+      targetAmt = Math.round(basePrice * 12 * (1 - (discountPercent / 100)));
+    } else {
+      targetAmt = basePrice;
+    }
+
+    setManualAmount(String(targetAmt));
+  }, [manualPlan, manualCycle, plans]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -266,14 +286,45 @@ function BillingPageInner() {
   const trialExpired = subStatus === "trialing" && trialEnds && trialEnds.getTime() < Date.now();
   const inactive = subStatus === "past_due" || subStatus === "canceled";
 
-  // Quick helper to format prices with custom currency
-  const getPlanPriceLabel = (p: any) => {
+  // Quick helper to format prices with custom currency and cycle
+  const getPlanPriceLabel = (p: any, cycle?: string) => {
     const currency = (p.features as any)?.currency || "PKR";
-    const price = p.priceMonthlyUsd || 0;
-    if (currency === "USD") return `$${price} / month`;
-    if (currency === "EUR") return `€${price} / month`;
-    if (currency === "GBP") return `£${price} / month`;
-    return `${currency} ${price.toLocaleString()} / month`;
+    const basePrice = p.priceMonthlyUsd || 0;
+    const discountPercent = (p.features as any)?.yearlyDiscountPercent !== undefined 
+      ? parseFloat((p.features as any).yearlyDiscountPercent) 
+      : 15;
+
+    if (cycle === "yearly") {
+      const annualPrice = basePrice * 12 * (1 - (discountPercent / 100));
+      const monthlyEquivalent = basePrice * (1 - (discountPercent / 100));
+
+      let formattedAnnual = "";
+      let formattedEquivalent = "";
+
+      if (currency === "USD") {
+        formattedAnnual = `$${annualPrice.toFixed(1)}`;
+        formattedEquivalent = `$${monthlyEquivalent.toFixed(2)}`;
+      } else if (currency === "EUR") {
+        formattedAnnual = `€${annualPrice.toFixed(1)}`;
+        formattedEquivalent = `€${monthlyEquivalent.toFixed(2)}`;
+      } else if (currency === "GBP") {
+        formattedAnnual = `£${annualPrice.toFixed(1)}`;
+        formattedEquivalent = `£${monthlyEquivalent.toFixed(2)}`;
+      } else {
+        formattedAnnual = `${currency} ${Math.round(annualPrice).toLocaleString()}`;
+        formattedEquivalent = `${currency} ${Math.round(monthlyEquivalent).toLocaleString()}`;
+      }
+
+      return `${formattedEquivalent} / month (${formattedAnnual} / year)`;
+    } else {
+      let formattedPrice = "";
+      if (currency === "USD") formattedPrice = `$${basePrice.toFixed(2)}`;
+      else if (currency === "EUR") formattedPrice = `€${basePrice.toFixed(2)}`;
+      else if (currency === "GBP") formattedPrice = `£${basePrice.toFixed(2)}`;
+      else formattedPrice = `${currency} ${basePrice.toLocaleString()}`;
+
+      return `${formattedPrice} / month`;
+    }
   };
 
   return (
@@ -600,7 +651,7 @@ function BillingPageInner() {
                     <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-905">
                       {plans.map((p) => (
                         <SelectItem key={p.code} value={p.code}>
-                          <span className="capitalize">{p.name}</span> ({getPlanPriceLabel(p)})
+                          <span className="capitalize">{p.name}</span> ({getPlanPriceLabel(p, manualCycle)})
                         </SelectItem>
                       ))}
                     </SelectContent>
