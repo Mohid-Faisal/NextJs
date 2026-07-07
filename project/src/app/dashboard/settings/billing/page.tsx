@@ -56,42 +56,42 @@ const MANAGE_ROLES = ["OWNER", "ADMIN"];
 function CircularProgress({ used, max, label }: { used: number; max: number; label: string }) {
   const unlimited = max < 0;
   const pct = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(1, max)) * 100));
-  const radius = 18;
+  const radius = 24;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = unlimited ? 0 : circumference - (pct / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="relative w-12 h-12 flex items-center justify-center">
-        <svg className="w-12 h-12 transform -rotate-90">
+      <div className="relative w-16 h-16 flex items-center justify-center">
+        <svg className="w-16 h-16 transform -rotate-90">
           {/* Background circle */}
           <circle
-            cx="24"
-            cy="24"
+            cx="32"
+            cy="32"
             r={radius}
             className="stroke-slate-100 dark:stroke-slate-800 fill-none"
-            strokeWidth="3.5"
+            strokeWidth="4"
           />
           {/* Progress circle */}
           <circle
-            cx="24"
-            cy="24"
+            cx="32"
+            cy="32"
             r={radius}
             className={`fill-none transition-all duration-500 ${pct >= 100 ? "stroke-rose-500" : pct > 80 ? "stroke-amber-500" : "stroke-indigo-600"}`}
-            strokeWidth="3.5"
+            strokeWidth="4"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
           />
         </svg>
-        <span className="absolute text-[10px] font-bold text-slate-700 dark:text-slate-200">
+        <span className="absolute text-xs font-extrabold text-slate-700 dark:text-slate-200">
           {unlimited ? "∞" : `${pct}%`}
         </span>
       </div>
-      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap">
+      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap">
         {label}
       </span>
-      <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
+      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
         {used} / {unlimited ? "∞" : max}
       </span>
     </div>
@@ -296,7 +296,7 @@ function BillingPageInner() {
 
         {/* Top-right Current Plan & Limits card */}
         {usage && (
-          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-4 shrink-0 flex flex-row items-center gap-6">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-5 shrink-0 flex flex-row items-center gap-8">
             <div className="flex items-center gap-4">
               <CircularProgress
                 label="Shipments"
@@ -314,14 +314,14 @@ function BillingPageInner() {
                 max={subStatus === "trialing" ? -1 : (usage.maxBranches || 0)}
               />
             </div>
-            <div className="h-10 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="h-14 w-px bg-slate-200 dark:bg-slate-800" />
             <div className="flex flex-col justify-center pl-1">
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Current Plan</p>
-              <p className="text-sm font-black text-slate-800 dark:text-white capitalize mt-0.5">
+              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Current Plan</p>
+              <p className="text-base font-black text-slate-800 dark:text-white capitalize mt-0.5">
                 {subStatus === "trialing" ? "Free Trial" : plan?.name ?? "—"}
               </p>
               {subStatus && (
-                <Badge className="mt-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-100 w-max">
+                <Badge className="mt-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-100 w-max">
                   {subStatus === "trialing" ? "trial" : subStatus}
                 </Badge>
               )}
