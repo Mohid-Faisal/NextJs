@@ -9,6 +9,7 @@ import { usePermissions, getRequiredPermission } from "@/components/PermissionCo
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock, Sparkles, ArrowUpRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 export const routeFeatures: Record<string, string> = {
   "/dashboard/chart-of-accounts": "accounts",
@@ -26,7 +27,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
-  const { hasPermission, hasFeature, loading } = usePermissions();
+  const { hasPermission, hasFeature, loading, isTrialExpired } = usePermissions();
 
   const requiredPermission = getRequiredPermission(pathname);
   const isAuthorized = requiredPermission ? hasPermission(requiredPermission) : true;
@@ -133,6 +134,32 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
           )}
         </main>
       </div>
+      {/* Global Trial Expired Modal overlay */}
+      {isTrialExpired && pathname !== "/dashboard/settings/billing" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl overflow-hidden p-8 text-center flex flex-col items-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-6">
+              <Sparkles className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">
+              Free Trial Ended
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 leading-relaxed">
+              Your free trial period has completed. To keep creating shipments and accessing the courier dashboard, please select a subscription plan.
+            </p>
+            <Button
+              onClick={() => router.push("/dashboard/settings/billing")}
+              className="mt-6 w-full py-6 rounded-xl font-bold bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-md shadow-indigo-500/10 cursor-pointer"
+            >
+              Choose Plan & Upgrade
+            </Button>
+          </motion.div>
+        </div>
+      )}
     </>
   );
 };

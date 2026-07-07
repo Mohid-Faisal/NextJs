@@ -14,6 +14,7 @@ interface PermissionContextType {
   planFeatures: Record<string, any> | null;
   hasFeature: (key: string) => boolean;
   loading: boolean;
+  isTrialExpired: boolean;
 }
 
 const PermissionContext = createContext<PermissionContextType>({
@@ -25,6 +26,7 @@ const PermissionContext = createContext<PermissionContextType>({
   planFeatures: null,
   hasFeature: () => false,
   loading: true,
+  isTrialExpired: false,
 });
 
 export const usePermissions = () => useContext(PermissionContext);
@@ -75,6 +77,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
   const [permissions, setPermissions] = useState<string[]>([]);
   const [planFeatures, setPlanFeatures] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isTrialExpired, setIsTrialExpired] = useState(false);
 
   useEffect(() => {
     const fetchPermissionsAndPlan = async () => {
@@ -114,6 +117,8 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
             const orgId = orgData.organization.id;
             const sub = orgData.organization.subscription;
             const isTrialActive = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) > new Date();
+            const trialExpiredCheck = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) < new Date();
+            setIsTrialExpired(!!trialExpiredCheck);
 
             if (orgId === 1 || isTrialActive) {
               setPlanFeatures({
@@ -172,6 +177,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
         planFeatures,
         hasFeature,
         loading,
+        isTrialExpired,
       }}
     >
       {children}
