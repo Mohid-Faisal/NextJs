@@ -529,12 +529,12 @@ const SignupPage = () => {
       .sort((a, b) => a.priceMonthlyUsd - b.priceMonthlyUsd);
 
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+      <div className={`h-screen max-h-screen overflow-hidden flex flex-col items-center justify-center px-4 py-4 relative overflow-y-auto lg:overflow-y-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         
         <motion.div className="w-full max-w-[1300px] relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="flex justify-center w-full mb-10 pb-6 border-b border-slate-200/50 dark:border-slate-800/40">
+          <div className="flex justify-center w-full mb-6 pb-4 border-b border-slate-200/50 dark:border-slate-800/40">
             <div className="flex items-center gap-6 text-left max-w-4xl">
               <Button 
                 type="button"
@@ -557,12 +557,12 @@ const SignupPage = () => {
           </div>
 
           {/* Dynamic Billing Switch */}
-          <div className="flex items-center justify-center gap-3 mb-10 bg-slate-100/80 dark:bg-slate-900/40 p-2.5 rounded-full border border-slate-200 dark:border-slate-800 shadow-xs max-w-[260px] mx-auto">
+          <div className="flex items-center justify-center gap-3 mb-6 bg-slate-100/80 dark:bg-slate-900/40 p-2.5 rounded-full border border-slate-200 dark:border-slate-800 shadow-xs max-w-[260px] mx-auto">
             <span className={`text-xs font-bold transition-colors ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>Monthly</span>
             <button 
               type="button" 
               onClick={() => setIsAnnual(!isAnnual)}
-              className="relative w-10 h-5.5 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors duration-300 focus:outline-none cursor-pointer"
+              className="relative w-10 h-5.5 rounded-full bg-slate-200 dark:bg-slate-850 transition-colors duration-300 focus:outline-none cursor-pointer"
             >
               <motion.div 
                 className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
@@ -577,15 +577,15 @@ const SignupPage = () => {
           </div>
 
           {/* Self-adjusting pricing grid */}
-          <div className="flex flex-wrap justify-center items-stretch gap-6 w-full max-w-7xl mx-auto mb-10">
+          <div className="flex flex-wrap justify-center items-stretch gap-6 w-full max-w-7xl mx-auto mb-0">
             {/* Free Trial Card */}
             <Card 
-              className="relative flex flex-col justify-between p-6 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[280px] md:w-[290px] hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)] transition-all duration-300"
+              className="relative flex flex-col justify-between p-5 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[280px] md:w-[290px] hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)] transition-all duration-300"
             >
-              <div className="space-y-4 flex-1 flex flex-col">
+              <div className="space-y-3 flex-1 flex flex-col">
                 <div>
-                  <h3 className="font-extrabold text-lg text-indigo-600 dark:text-indigo-400 capitalize">14-Day Trial</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[32px] leading-relaxed">
+                  <h3 className="font-extrabold text-base text-indigo-600 dark:text-indigo-400 capitalize">14-Day Trial</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[28px] leading-normal">
                     Test the system with full features. No credit card required upfront.
                   </p>
                 </div>
@@ -599,9 +599,9 @@ const SignupPage = () => {
                   </div>
                 </div>
 
-                <hr className="border-slate-100 dark:border-slate-800/50 my-2" />
+                <hr className="border-slate-100 dark:border-slate-800/50 my-1" />
 
-                <ul className="space-y-3.5 text-xs text-slate-600 dark:text-slate-400 flex-1 py-2">
+                <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400 flex-1 py-1">
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
                     <span>14 Days Access</span>
@@ -617,11 +617,11 @@ const SignupPage = () => {
                 </ul>
               </div>
 
-              <div className="pt-6">
+              <div className="pt-4">
                 <Button 
                   onClick={handleSelectFreeTrial}
                   disabled={isLoading}
-                  className="w-full py-5 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer"
+                  className="w-full py-3.5 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer"
                 >
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Free Trial"}
                 </Button>
@@ -637,7 +637,7 @@ const SignupPage = () => {
               return (
                 <Card 
                   key={plan.id}
-                  className={`relative flex flex-col justify-between p-6 transition-all duration-300 w-full sm:w-[280px] md:w-[290px] rounded-2xl ${
+                  className={`relative flex flex-col justify-between p-5 transition-all duration-300 w-full sm:w-[280px] md:w-[290px] rounded-2xl ${
                     isGrowth 
                       ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md" 
                       : "border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)]"
@@ -649,10 +649,10 @@ const SignupPage = () => {
                     </div>
                   )}
 
-                  <div className="space-y-4 flex-1 flex flex-col">
+                  <div className="space-y-3 flex-1 flex flex-col">
                     <div>
-                      <h3 className="font-extrabold text-lg text-gray-900 dark:text-white capitalize">{plan.name}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[32px] leading-relaxed">{planDescription}</p>
+                      <h3 className="font-extrabold text-base text-gray-900 dark:text-white capitalize">{plan.name}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[28px] leading-normal">{planDescription}</p>
                     </div>
 
                     <div className="pt-2">
@@ -677,9 +677,9 @@ const SignupPage = () => {
                       </p>
                     </div>
 
-                    <hr className="border-slate-100 dark:border-slate-800/50 my-2" />
+                    <hr className="border-slate-100 dark:border-slate-800/50 my-1" />
 
-                    <ul className="space-y-3.5 text-xs text-slate-600 dark:text-slate-400 flex-1 py-2">
+                    <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400 flex-1 py-1">
                       {getChecklistForPlan(plan).map((item, idx) => (
                         <li key={idx} className="flex items-start gap-2">
                           <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
@@ -689,11 +689,11 @@ const SignupPage = () => {
                     </ul>
                   </div>
 
-                  <div className="pt-6">
+                  <div className="pt-4">
                     <Button
                       onClick={() => handleSelectPaidPlan(plan.code)}
                       disabled={isLoading}
-                      className={`w-full py-5 rounded-xl font-bold transition-all cursor-pointer ${
+                      className={`w-full py-3.5 rounded-xl font-bold transition-all cursor-pointer ${
                         isGrowth 
                           ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10" 
                           : "bg-slate-950 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
@@ -716,7 +716,7 @@ const SignupPage = () => {
     const chosenPlan = plans.find((p) => p.code === selectedPlan);
     
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-start px-4 pt-4 pb-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+      <div className={`h-screen max-h-screen overflow-hidden flex flex-col items-center justify-center px-4 pt-4 pb-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         
@@ -745,18 +745,20 @@ const SignupPage = () => {
 
           <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
             <CardContent className="p-6 pt-4 space-y-6">
-              
-              {/* Plan Summary with Billing Cycle Selector */}
+              {/* Plan Summary without Billing Cycle Selector */}
               {chosenPlan && (
-                <div className="bg-white/40 dark:bg-slate-950/40 rounded-2xl p-5 border border-white/60 dark:border-white/10 space-y-4">
-                  <div className="flex justify-between items-center pb-3 border-b border-slate-200/50 dark:border-slate-800/50">
+                <div className="bg-white/40 dark:bg-slate-950/40 rounded-xl p-3 border border-white/60 dark:border-white/10 space-y-2">
+                  <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Selected Plan</span>
-                      <h4 className="text-base font-extrabold capitalize text-slate-800 dark:text-white mt-0.5">{chosenPlan.name} Plan</h4>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Selected Plan</span>
+                      <h4 className="text-sm font-extrabold capitalize text-slate-800 dark:text-white mt-0.5">{chosenPlan.name} Plan</h4>
+                      <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5 block">
+                        {isAnnual ? "Billed annually (20% discount applied)" : "Billed monthly"}
+                      </span>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Amount Due</span>
-                      <p className="text-lg font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Amount Due</span>
+                      <p className="text-base font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
                         {(() => {
                           const currency = (chosenPlan.features as any)?.currency || "PKR";
                           const annualPrice = chosenPlan.features?.annualPrice ?? (chosenPlan.priceMonthlyUsd * 12 * 0.8);
@@ -767,29 +769,6 @@ const SignupPage = () => {
                           {isAnnual ? "/year" : "/month"}
                         </span>
                       </p>
-                    </div>
-                  </div>
-
-                  {/* Billing Cycle Switch on Payment Page */}
-                  <div className="flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-350">Billing Cycle</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[11px] font-bold transition-colors ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-450"}`}>Monthly</span>
-                      <button 
-                        type="button" 
-                        onClick={() => setIsAnnual(!isAnnual)}
-                        className="relative w-10 h-5.5 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors duration-300 focus:outline-none cursor-pointer"
-                      >
-                        <motion.div 
-                          className="absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
-                          animate={{ x: isAnnual ? 18 : 0 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        />
-                      </button>
-                      <span className={`text-[11px] font-bold transition-colors flex items-center gap-1 ${isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-450"}`}>
-                        Annually
-                        <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400 rounded-md">Save 20%</span>
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -872,8 +851,8 @@ const SignupPage = () => {
               )}
 
               {/* Reference ID input */}
-              <div className="space-y-2">
-                <Label htmlFor="referenceId" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Transaction Reference ID</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="referenceId" className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Transaction Reference ID</Label>
                 <div className="relative group">
                   <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   <Input
@@ -881,34 +860,34 @@ const SignupPage = () => {
                     value={referenceId}
                     onChange={(e) => setReferenceId(e.target.value)}
                     placeholder="Enter 12-digit transaction ID"
-                    className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm"
+                    className="pl-9 h-9 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm"
                   />
                 </div>
               </div>
 
               {/* Screenshot Selector */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Upload Receipt Screenshot <span className="text-slate-400 dark:text-slate-500">(Optional)</span></Label>
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Upload Receipt Screenshot <span className="text-slate-400 dark:text-slate-500">(Optional)</span></Label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all hover:border-indigo-400/80 bg-white/40 dark:bg-slate-950/20 ${
+                  className={`border border-dashed rounded-xl p-3 text-center cursor-pointer transition-all hover:border-indigo-400/80 bg-white/40 dark:bg-slate-950/20 ${
                     receiptPreview
                       ? "border-green-400 bg-green-50/20 dark:bg-green-950/10"
-                      : "border-slate-200 dark:border-slate-800"
+                      : "border-slate-205 dark:border-slate-800"
                   }`}
                 >
                   {receiptPreview ? (
-                    <div className="space-y-3">
-                      <img src={receiptPreview} alt="Receipt preview" className="max-h-24 mx-auto rounded-lg shadow-sm" />
+                    <div className="space-y-1">
+                      <img src={receiptPreview} alt="Receipt preview" className="max-h-12 mx-auto rounded-lg shadow-sm" />
                       <p className="text-xs text-green-600 dark:text-green-400 font-bold flex items-center justify-center gap-1.5">
-                        <CheckCircle2 className="w-4.5 h-4.5" /> Receipt Attached
+                        <CheckCircle2 className="w-4 h-4" /> Receipt Attached
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <Upload className="w-8 h-8 text-slate-350 dark:text-slate-700 mx-auto" />
+                    <div className="space-y-1">
+                      <Upload className="w-5 h-5 text-slate-350 dark:text-slate-700 mx-auto" />
                       <p className="text-xs font-semibold text-slate-550 dark:text-slate-400">Click to upload screenshot</p>
-                      <p className="text-[10px] text-slate-400">PNG, JPG, JPEG up to 5MB</p>
+                      <p className="text-[9px] text-slate-400">PNG, JPG up to 5MB</p>
                     </div>
                   )}
                 </div>
@@ -918,12 +897,12 @@ const SignupPage = () => {
               <Button
                 onClick={handlePaymentSubmit}
                 disabled={!paymentMethod || !referenceId.trim() || isLoading || uploadingReceipt}
-                className="w-full h-12 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-650 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full h-10 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-650 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {isLoading || uploadingReceipt ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />{uploadingReceipt ? "Uploading..." : "Processing..."}</>
                 ) : (
-                  <>Submit Details & Complete Workspace Setup <CheckCircle2 className="w-4 h-4" /></>
+                  <>Submit Details & Complete Setup <CheckCircle2 className="w-4 h-4" /></>
                 )}
               </Button>
             </CardContent>
