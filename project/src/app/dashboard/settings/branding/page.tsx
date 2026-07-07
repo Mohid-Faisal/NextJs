@@ -64,6 +64,7 @@ export default function BrandingSettingsPage() {
   const [invoiceDisclaimer, setInvoiceDisclaimer] = useState("");
   const [invoiceSupportEmail, setInvoiceSupportEmail] = useState("");
   const [invoiceSupportPhone, setInvoiceSupportPhone] = useState("");
+  const [invoiceSupportAddress, setInvoiceSupportAddress] = useState("");
 
   // Saved / DB states for robust dirty checking
   const [savedName, setSavedName] = useState("");
@@ -73,6 +74,7 @@ export default function BrandingSettingsPage() {
   const [savedDisclaimer, setSavedDisclaimer] = useState("");
   const [savedSupportEmail, setSavedSupportEmail] = useState("");
   const [savedSupportPhone, setSavedSupportPhone] = useState("");
+  const [savedSupportAddress, setSavedSupportAddress] = useState("");
 
   // Fix hydration mismatch for next-themes
   useEffect(() => {
@@ -83,16 +85,19 @@ export default function BrandingSettingsPage() {
       "Any discrepancy in invoice must be notified within 03 days of receipt of this invoice. You are requested to pay the invoice amount through cash payment or cross cheque with immediate effect.";
     const email = localStorage.getItem("brand_support_email") || "info@psswwe.com";
     const phone = localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333";
+    const address = localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore";
 
     setAccentColor(color);
     setInvoiceDisclaimer(disclaimer);
     setInvoiceSupportEmail(email);
     setInvoiceSupportPhone(phone);
+    setInvoiceSupportAddress(address);
 
     setSavedAccentColor(color);
     setSavedDisclaimer(disclaimer);
     setSavedSupportEmail(email);
     setSavedSupportPhone(phone);
+    setSavedSupportAddress(address);
   }, []);
 
   const canManage = MANAGE_ROLES.includes(role);
@@ -232,6 +237,7 @@ export default function BrandingSettingsPage() {
       localStorage.setItem("brand_invoice_disclaimer", invoiceDisclaimer);
       localStorage.setItem("brand_support_email", invoiceSupportEmail);
       localStorage.setItem("brand_support_phone", invoiceSupportPhone);
+      localStorage.setItem("brand_support_address", invoiceSupportAddress);
 
       // 3. Update saved states for dirty calculation
       setSavedName(name);
@@ -241,6 +247,7 @@ export default function BrandingSettingsPage() {
       setSavedDisclaimer(invoiceDisclaimer);
       setSavedSupportEmail(invoiceSupportEmail);
       setSavedSupportPhone(invoiceSupportPhone);
+      setSavedSupportAddress(invoiceSupportAddress);
 
       // Trigger a custom event to tell the navbar/sidebar to reload the logo
       window.dispatchEvent(new Event("orgBrandingUpdated"));
@@ -274,7 +281,8 @@ export default function BrandingSettingsPage() {
     accentColor !== savedAccentColor ||
     invoiceDisclaimer !== savedDisclaimer ||
     invoiceSupportEmail !== savedSupportEmail ||
-    invoiceSupportPhone !== savedSupportPhone;
+    invoiceSupportPhone !== savedSupportPhone ||
+    invoiceSupportAddress !== savedSupportAddress;
 
   return (
     <div className="p-6 space-y-6 bg-slate-50/50 dark:bg-zinc-950/20 min-h-screen">
@@ -414,7 +422,7 @@ export default function BrandingSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="supportEmail">Support Email</Label>
                   <Input
@@ -434,6 +442,17 @@ export default function BrandingSettingsPage() {
                     onChange={(e) => setInvoiceSupportPhone(e.target.value)}
                     disabled={!canManage}
                     placeholder="e.g. +92 21 111-222"
+                    className="bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supportAddress">Support Address</Label>
+                  <Input
+                    id="supportAddress"
+                    value={invoiceSupportAddress}
+                    onChange={(e) => setInvoiceSupportAddress(e.target.value)}
+                    disabled={!canManage}
+                    placeholder="e.g. LG-44, Land Mark Plaza, Lahore"
                     className="bg-white dark:bg-slate-950"
                   />
                 </div>
@@ -571,7 +590,7 @@ export default function BrandingSettingsPage() {
                 </div>
                 <div className="border-t border-dashed my-2"></div>
                 <div className="text-[8px] text-muted-foreground text-center">
-                  Support: {invoiceSupportEmail} | {invoiceSupportPhone}
+                  Support: {invoiceSupportEmail} | {invoiceSupportPhone} | {invoiceSupportAddress}
                 </div>
               </div>
             </CardContent>

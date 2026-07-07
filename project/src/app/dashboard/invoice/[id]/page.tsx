@@ -35,6 +35,17 @@ export default function InvoicePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [org, setOrg] = useState<any>(null);
+  const [brandEmail, setBrandEmail] = useState("info@psswwe.com");
+  const [brandPhone, setBrandPhone] = useState("+92 (21) 111-222-333");
+  const [brandAddress, setBrandAddress] = useState("LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBrandEmail(localStorage.getItem("brand_support_email") || "info@psswwe.com");
+      setBrandPhone(localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333");
+      setBrandAddress(localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore");
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/org/current")
@@ -424,20 +435,18 @@ export default function InvoicePage() {
               <div class="footer-grid">
                 <div class="footer-section">
                   <div class="footer-icon">📍</div>
-                  <div class="footer-text">LG-44, Land Mark Plaza</div>
-                  <div class="footer-subtext">5-6 Jail Road, Lahore</div>
+                  <div class="footer-text">${brandAddress.split(',')[0]?.trim() || ""}</div>
+                  <div class="footer-subtext">${brandAddress.split(',').slice(1).join(',').trim() || ""}</div>
                 </div>
                 
                 <div class="footer-section">
                   <div class="footer-icon">📞</div>
-                  <div class="footer-text">+92 42 35716494</div>
-                  <div class="footer-subtext">+92 300 8482321</div>
+                  <div class="footer-text">${brandPhone}</div>
                 </div>
                 
                 <div class="footer-section">
                   <div class="footer-icon">✉️</div>
-                  <div class="footer-text">Info@psswwe.com</div>
-                  <div class="footer-subtext">www.psswwe.com</div>
+                  <div class="footer-text">${brandEmail}</div>
                 </div>
               </div>
             </div>
@@ -811,20 +820,18 @@ export default function InvoicePage() {
               <div class="footer-grid">
                 <div class="footer-section">
                   <div class="footer-icon">📍</div>
-                  <div class="footer-text">LG-44, Land Mark Plaza</div>
-                  <div class="footer-subtext">5-6 Jail Road, Lahore</div>
+                  <div class="footer-text">${brandAddress.split(',')[0]?.trim() || ""}</div>
+                  <div class="footer-subtext">${brandAddress.split(',').slice(1).join(',').trim() || ""}</div>
                 </div>
                 
                 <div class="footer-section">
                   <div class="footer-icon">📞</div>
-                  <div class="footer-text">+92 42 35716494</div>
-                  <div class="footer-subtext">+92 300 8482321</div>
+                  <div class="footer-text">${brandPhone}</div>
                 </div>
                 
                 <div class="footer-section">
                   <div class="footer-icon">✉️</div>
-                  <div class="footer-text">Info@psswwe.com</div>
-                  <div class="footer-subtext">www.psswwe.com</div>
+                  <div class="footer-text">${brandEmail}</div>
                 </div>
               </div>
             </div>
@@ -1061,8 +1068,8 @@ export default function InvoicePage() {
                 <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                 </div>
-                <p className="text-sm font-semibold">LG-44, Land Mark Plaza</p>
-                <p className="text-sm opacity-90">5-6 Jail Road, Lahore</p>
+                <p className="text-sm font-semibold">{brandAddress.split(',')[0]?.trim() || ""}</p>
+                <p className="text-sm opacity-90">{brandAddress.split(',').slice(1).join(',').trim() || ""}</p>
               </div>
               
               {/* Middle Section - Phone */}
@@ -1070,8 +1077,7 @@ export default function InvoicePage() {
                 <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
                   <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
                 </div>
-                <p className="text-sm font-semibold">+92 42 35716494</p>
-                <p className="text-sm opacity-90">+92 300 8482321</p>
+                <p className="text-sm font-semibold">{brandPhone}</p>
               </div>
               
               {/* Right Section - Email/Website */}
@@ -1079,8 +1085,7 @@ export default function InvoicePage() {
                 <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
                   <div className="w-3 h-2 bg-blue-600 rounded-sm"></div>
                 </div>
-                <p className="text-sm font-semibold">Info@psswwe.com</p>
-                <p className="text-sm opacity-90">www.psswwe.com</p>
+                <p className="text-sm font-semibold">{brandEmail}</p>
               </div>
             </div>
           </div>
