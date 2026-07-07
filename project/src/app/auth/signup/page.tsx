@@ -441,7 +441,7 @@ const SignupPage = () => {
   // --- STEP: Pending Approval ---
   if (step === "pending") {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         <motion.div className="w-full max-w-lg relative z-10 text-center" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
@@ -475,7 +475,7 @@ const SignupPage = () => {
   // --- STEP: Verification ---
   if (step === "verification") {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         <motion.div className="w-full max-w-[440px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -526,7 +526,7 @@ const SignupPage = () => {
       .sort((a, b) => a.priceMonthlyUsd - b.priceMonthlyUsd);
 
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         
@@ -685,7 +685,7 @@ const SignupPage = () => {
     const chosenPlan = plans.find((p) => p.code === selectedPlan);
     
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         
@@ -898,7 +898,7 @@ const SignupPage = () => {
 
   // --- STEP: Signup Form (Step 1) ---
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
+    <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
       <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
       <Background />
       
