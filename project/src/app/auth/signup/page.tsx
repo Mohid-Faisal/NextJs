@@ -952,7 +952,7 @@ const SignupPage = () => {
               <Button
                 onClick={handlePaymentSubmit}
                 disabled={!paymentMethod || !referenceId.trim() || isLoading || uploadingReceipt}
-                className="w-full h-10 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-650 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full h-10 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {isLoading || uploadingReceipt ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />{uploadingReceipt ? "Uploading..." : "Processing..."}</>

@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { 
   Wallet, Check, Zap, AlertTriangle, Landmark, 
-  Smartphone, DollarSign, UploadCloud, Loader2 
+  Smartphone, DollarSign, UploadCloud, Loader2,
+  MoreVertical
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -52,26 +53,47 @@ type Plan = {
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
 
-function UsageBar({ label, used, max }: { label: string; used: number; max: number }) {
+function CircularProgress({ used, max, label }: { used: number; max: number; label: string }) {
   const unlimited = max < 0;
   const pct = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(1, max)) * 100));
-  const over = !unlimited && used >= max;
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = unlimited ? 0 : circumference - (pct / 100) * circumference;
+
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className={over ? "font-semibold text-destructive" : ""}>
-          {used.toLocaleString()} {unlimited ? "/ ∞" : `/ ${max.toLocaleString()}`}
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative w-12 h-12 flex items-center justify-center">
+        <svg className="w-12 h-12 transform -rotate-90">
+          {/* Background circle */}
+          <circle
+            cx="24"
+            cy="24"
+            r={radius}
+            className="stroke-slate-100 dark:stroke-slate-800 fill-none"
+            strokeWidth="3.5"
+          />
+          {/* Progress circle */}
+          <circle
+            cx="24"
+            cy="24"
+            r={radius}
+            className={`fill-none transition-all duration-500 ${pct >= 100 ? "stroke-rose-500" : pct > 80 ? "stroke-amber-500" : "stroke-indigo-600"}`}
+            strokeWidth="3.5"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <span className="absolute text-[10px] font-bold text-slate-700 dark:text-slate-200">
+          {unlimited ? "∞" : `${pct}%`}
         </span>
       </div>
-      {!unlimited && (
-        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-          <div
-            className={`h-full rounded-full ${over ? "bg-destructive" : pct > 80 ? "bg-amber-500" : "bg-primary"}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      )}
+      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 text-center whitespace-nowrap">
+        {label}
+      </span>
+      <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
+        {used} / {unlimited ? "∞" : max}
+      </span>
     </div>
   );
 }
@@ -231,21 +253,57 @@ function BillingPageInner() {
 
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto">
-      {/* Header section */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl text-indigo-600 dark:text-indigo-400">
-            <Wallet className="h-7 w-7" />
+      {/* Header section with top-right current plan circular indicators */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1 flex-1">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl text-indigo-600 dark:text-indigo-400">
+              <Wallet className="h-7 w-7" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              Plan & Billing
+            </h1>
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-            Plan & Billing
-          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 pl-1">
+            Monitor organization limits, change subscription tiers, or submit local bank transfer proofs.
+          </p>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 pl-1">
-          Monitor your organization's resource usage, change subscription tiers, or submit local bank transfer proofs.
-        </p>
-        <hr className="border-slate-100 dark:border-slate-800/40 my-3" />
+
+        {/* Top-right Current Plan & Limits card */}
+        {usage && (
+          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-4 shrink-0 flex items-center gap-6">
+            <div className="pr-4 border-r border-slate-105 dark:border-slate-800">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Current Plan</p>
+              <p className="text-sm font-black text-slate-800 dark:text-white capitalize mt-0.5">
+                {subStatus === "trialing" ? "Free Trial" : plan?.name ?? "—"}
+              </p>
+              {subStatus && (
+                <Badge className="mt-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-55 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-100">
+                  {subStatus === "trialing" ? "trial" : subStatus}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <CircularProgress
+                label="Shipments"
+                used={usage.shipmentsThisMonth}
+                max={subStatus === "trialing" ? -1 : usage.maxShipmentsPerMonth}
+              />
+              <CircularProgress
+                label="Members"
+                used={usage.members}
+                max={subStatus === "trialing" ? -1 : usage.maxUsers}
+              />
+              <CircularProgress
+                label="Branches"
+                used={usage.branches || 0}
+                max={subStatus === "trialing" ? -1 : (usage.maxBranches || 0)}
+              />
+            </div>
+          </Card>
+        )}
       </div>
+      <hr className="border-slate-200/60 dark:border-slate-800/40 my-3" />
 
       {(trialExpired || inactive) && (
         <Card className="border-rose-200 dark:border-rose-900/30 bg-rose-50/40 dark:bg-rose-950/10 rounded-2xl overflow-hidden shadow-sm">
@@ -260,70 +318,10 @@ function BillingPageInner() {
         </Card>
       )}
 
-      {/* Current plan and usage limits */}
-      <Card className="border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Current Plan</p>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white capitalize mt-1">
-                {subStatus === "trialing" ? "14-Day Free Trial" : plan?.name ?? "—"}
-              </h2>
-            </div>
-            {subStatus && (
-              <Badge
-                variant={inactive ? "destructive" : subStatus === "trialing" ? "secondary" : "default"}
-                className={`capitalize font-bold px-3 py-1 rounded-full ${
-                  inactive 
-                    ? "bg-rose-50 text-rose-700 border border-rose-200" 
-                    : subStatus === "trialing" 
-                      ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" 
-                      : "bg-indigo-50 text-indigo-700 border border-indigo-250 dark:bg-indigo-950/20 dark:text-indigo-400"
-                }`}
-              >
-                {subStatus === "trialing" ? "trial" : subStatus}
-              </Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5 pt-2">
-          {usage && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-4 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50/40 dark:bg-slate-950/10">
-                <UsageBar
-                  label="Shipments this month"
-                  used={usage.shipmentsThisMonth}
-                  max={subStatus === "trialing" ? -1 : usage.maxShipmentsPerMonth}
-                />
-              </div>
-              <div className="p-4 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50/40 dark:bg-slate-950/10">
-                <UsageBar 
-                  label="Team members" 
-                  used={usage.members} 
-                  max={subStatus === "trialing" ? -1 : usage.maxUsers} 
-                />
-              </div>
-              <div className="p-4 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50/40 dark:bg-slate-950/10">
-                <UsageBar 
-                  label="Branches limit" 
-                  used={usage.branches || 0} 
-                  max={subStatus === "trialing" ? -1 : (usage.maxBranches || 0)} 
-                />
-              </div>
-            </div>
-          )}
-          {trialEnds && subStatus === "trialing" && !trialExpired && (
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-950/20 px-3 py-2 rounded-xl inline-block">
-              Trial ends on {trialEnds.toLocaleDateString()}.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Upgrade Options List */}
       <div className="space-y-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Select a Plan</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Upgrade Tiers</h2>
           {!canManage ? (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               Only organization owners and administrators can change subscription plans.
@@ -338,100 +336,126 @@ function BillingPageInner() {
           {plans.map((p) => {
             const isCurrent = plan?.code === p.code;
             const isGrowth = p.code === "growth";
+            
+            const hasFinance = (p.features as any)?.accounts === true;
+            const hasBulk = (p.features as any)?.bulkUpload === true;
+            const hasMap = (p.features as any)?.map === true;
+            const hasLogs = (p.features as any)?.activityLogs !== false;
+
+            const discountPercent = (p.features as any)?.yearlyDiscountPercent !== undefined 
+              ? parseFloat((p.features as any).yearlyDiscountPercent) 
+              : 15;
+
+            const currency = (p.features as any)?.currency || "PKR";
+            let formattedPrice = "";
+            if (currency === "USD") formattedPrice = `$${p.priceMonthlyUsd.toFixed(2)}`;
+            else if (currency === "EUR") formattedPrice = `€${p.priceMonthlyUsd.toFixed(2)}`;
+            else if (currency === "GBP") formattedPrice = `£${p.priceMonthlyUsd.toFixed(2)}`;
+            else formattedPrice = `${currency} ${p.priceMonthlyUsd.toLocaleString()}`;
+
+            const calculatedAnnualPrice = p.priceMonthlyUsd * 12 * (1 - (discountPercent / 100));
+            let formattedAnnualPrice = "";
+            if (currency === "USD") formattedAnnualPrice = `$${calculatedAnnualPrice.toFixed(1)}`;
+            else if (currency === "EUR") formattedAnnualPrice = `€${calculatedAnnualPrice.toFixed(1)}`;
+            else if (currency === "GBP") formattedAnnualPrice = `£${calculatedAnnualPrice.toFixed(1)}`;
+            else formattedAnnualPrice = `${currency} ${Math.round(calculatedAnnualPrice).toLocaleString()}`;
+
+            const maxBranches = (p.features as any)?.maxBranches !== undefined 
+              ? (p.features as any).maxBranches 
+              : (p.code === "starter" ? 1 : p.code === "growth" ? 3 : 5);
+
             return (
               <Card 
                 key={p.id} 
-                className={`relative overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:shadow-lg rounded-2xl border flex flex-col ${
+                className={`relative overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:shadow-lg rounded-2xl border flex flex-col p-5 bg-white dark:bg-slate-900 ${
                   isCurrent 
-                    ? "border-indigo-600 bg-white dark:bg-slate-900 shadow-md shadow-indigo-500/5" 
+                    ? "border-indigo-600 shadow-md shadow-indigo-500/5 ring-1 ring-indigo-600" 
                     : isGrowth 
-                      ? "border-indigo-500/50 bg-white dark:bg-slate-900 shadow-sm" 
-                      : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                      ? "border-indigo-500/40 shadow-sm" 
+                      : "border-slate-200 dark:border-slate-800"
                 }`}
               >
-                {isGrowth && (
-                  <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-                    Popular
-                  </div>
-                )}
-                <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-lg text-slate-900 dark:text-white capitalize">{p.name}</p>
+                    <span className="font-extrabold text-xl text-slate-900 dark:text-white capitalize">{p.name}</span>
                     {isCurrent && (
-                      <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 rounded-full font-bold text-[10px] border border-indigo-105">
-                        Current
+                      <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-full font-bold text-[9px] border border-emerald-100 uppercase tracking-wider px-2 py-0.5">
+                        Active
                       </Badge>
                     )}
                   </div>
-                  <p className="text-3xl font-black text-slate-900 dark:text-white mt-2">
-                    {(() => {
-                      const currency = (p.features as any)?.currency || "PKR";
-                      if (currency === "USD") return `$${p.priceMonthlyUsd.toFixed(2)}`;
-                      if (currency === "EUR") return `€${p.priceMonthlyUsd.toFixed(2)}`;
-                      if (currency === "GBP") return `£${p.priceMonthlyUsd.toFixed(2)}`;
-                      return `${currency} ${p.priceMonthlyUsd.toLocaleString()}`;
-                    })()}
-                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 ml-1">/month</span>
-                  </p>
-                  {(() => {
-                    const discountPercent = (p.features as any)?.yearlyDiscountPercent !== undefined 
-                      ? parseFloat((p.features as any).yearlyDiscountPercent) 
-                      : 20;
-                    return (
-                      <div className="mt-1">
-                        <span className="text-[10px] text-green-600 dark:text-green-400 font-bold bg-green-50 dark:bg-green-950/20 px-2.5 py-0.5 rounded-full inline-block">
-                          Save {discountPercent}% on yearly
-                        </span>
-                      </div>
-                    );
-                  })()}
-                </CardHeader>
-                <CardContent className="space-y-4 flex-1 flex flex-col justify-between pt-0">
-                  <ul className="space-y-2.5 text-sm py-2">
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-slate-600 dark:text-slate-300 text-xs">
-                        {p.maxShipmentsPerMonth <= 0
-                          ? "Unlimited shipments"
-                          : `${p.maxShipmentsPerMonth.toLocaleString()} shipments / mo`}
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-slate-600 dark:text-slate-300 text-xs">
-                        {p.maxUsers <= 0 ? "Unlimited members" : `${p.maxUsers} team members`}
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-slate-600 dark:text-slate-300 text-xs">
-                        {(() => {
-                          const mb = (p.features as { maxBranches?: number })?.maxBranches;
-                          const resolvedBranches = mb !== undefined ? mb : (p.code === "starter" ? 1 : p.code === "growth" ? 3 : 5);
-                          return `${resolvedBranches} branches allowance`;
-                        })()}
-                      </span>
-                    </li>
-                    {(p.features as { map?: boolean })?.map && (
-                      <li className="flex items-start gap-2.5">
-                        <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                        <span className="text-slate-600 dark:text-slate-300 text-xs">Remote Area Lookup</span>
-                      </li>
-                    )}
-                    {(p.features as { accounts?: boolean })?.accounts && (
-                      <li className="flex items-start gap-2.5">
-                        <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                        <span className="text-slate-600 dark:text-slate-300 text-xs">Accounting Ledger</span>
-                      </li>
-                    )}
-                  </ul>
+                  <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-250 cursor-pointer">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold capitalize mt-0.5">{p.code}</p>
+                
+                <p className="text-3xl font-black text-slate-900 dark:text-white mt-4 tracking-tight">
+                  {formattedPrice}
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 ml-1">/monthly</span>
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold mt-1">
+                  {formattedAnnualPrice}/annual ({discountPercent}% off)
+                </p>
+
+                <hr className="border-slate-100 dark:border-slate-800/40 my-4" />
+
+                <div className="space-y-2 flex-1 flex flex-col justify-between">
+                  {/* Table features block */}
+                  <div className="space-y-1.5 py-1">
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400">Max Users/Staff:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{p.maxUsers <= 0 ? "Unlimited" : p.maxUsers}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400">Max Shipments/mo:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{p.maxShipmentsPerMonth <= 0 ? "Unlimited" : p.maxShipmentsPerMonth.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400">Max Branches limit:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{maxBranches <= 0 ? "Unlimited" : maxBranches}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400">Finance Module:</span>
+                      {hasFinance ? (
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Enabled</span>
+                      ) : (
+                        <span className="font-semibold text-slate-400 dark:text-slate-500">Disabled</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400">Bulk Actions:</span>
+                      {hasBulk ? (
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Enabled</span>
+                      ) : (
+                        <span className="font-semibold text-slate-400 dark:text-slate-500">Disabled</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-100 dark:border-slate-800/40">
+                      <span className="text-slate-500 dark:text-slate-400">Remote Area Lookup:</span>
+                      {hasMap ? (
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Enabled</span>
+                      ) : (
+                        <span className="font-semibold text-slate-400 dark:text-slate-500">Disabled</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center text-xs py-1">
+                      <span className="text-slate-500 dark:text-slate-400">Activity Audit Logs:</span>
+                      {hasLogs ? (
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Enabled</span>
+                      ) : (
+                        <span className="font-semibold text-slate-400 dark:text-slate-500">Disabled</span>
+                      )}
+                    </div>
+                  </div>
+
                   <Button
                     className={`w-full mt-4 py-5 rounded-xl font-bold cursor-pointer transition-all ${
                       isCurrent
-                        ? "bg-slate-100 hover:bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                        ? "bg-slate-100 hover:bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed border border-slate-205 dark:border-slate-700"
                         : isGrowth
                           ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10"
-                          : "bg-slate-950 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 shadow-md"
+                          : "bg-slate-955 hover:bg-slate-850 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 shadow-md"
                     }`}
                     disabled={!canManage || isCurrent || checkoutPlan !== null}
                     onClick={() => upgrade(p.code)}
@@ -443,7 +467,7 @@ function BillingPageInner() {
                       ? "Redirecting…"
                       : "Upgrade Plan"}
                   </Button>
-                </CardContent>
+                </div>
               </Card>
             );
           })}
@@ -623,7 +647,7 @@ function BillingPageInner() {
 
               <Button 
                 type="submit" 
-                className="w-full mt-4 h-11 rounded-xl bg-indigo-650 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-500/10 cursor-pointer" 
+                className="w-full mt-4 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-500/10 cursor-pointer" 
                 disabled={submittingProof || uploading}
               >
                 {submittingProof ? (

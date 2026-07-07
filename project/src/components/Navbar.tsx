@@ -334,7 +334,7 @@ const Navbar = ({
               <div className="text-xs text-muted-foreground truncate mt-0.5">
                 {userEmail}
               </div>
-              <div className="text-[10px] font-bold text-indigo-650 dark:text-indigo-400 mt-1 uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded w-max">
+              <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mt-1 uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded w-max">
                 {orgRole === "OWNER" ? "Org Owner" : isSuperAdmin ? "Super Admin" : "User / Staff"}
               </div>
             </div>

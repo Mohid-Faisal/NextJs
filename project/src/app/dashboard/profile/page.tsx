@@ -428,7 +428,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-gray-50 dark:border-zinc-850">
                 <div>
                   <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Default Currency</span>
-                  <span className="block text-sm font-mono font-bold text-indigo-650 dark:text-indigo-400 mt-1">{orgCurrency}</span>
+                  <span className="block text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400 mt-1">{orgCurrency}</span>
                 </div>
               </div>
 

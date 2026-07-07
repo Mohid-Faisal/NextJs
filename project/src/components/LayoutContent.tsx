@@ -93,7 +93,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <div className="absolute top-0 right-0 p-4 opacity-15">
                   <Sparkles className="w-24 h-24 text-indigo-500 animate-pulse" />
                 </div>
-                <div className="h-2 bg-indigo-650" />
+                <div className="h-2 bg-indigo-600" />
                 <CardContent className="pt-8 pb-8 px-8 flex flex-col items-center text-center">
                   <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 flex items-center justify-center mb-6 shadow-sm">
                     <Sparkles className="w-8 h-8" />

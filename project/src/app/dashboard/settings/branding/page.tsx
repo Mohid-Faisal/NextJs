@@ -294,7 +294,7 @@ export default function BrandingSettingsPage() {
           <Button 
             disabled={!isDirty || saving} 
             onClick={saveBranding}
-            className="self-end sm:self-auto bg-indigo-650 text-white font-semibold flex items-center gap-2"
+            className="self-end sm:self-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2"
           >
             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Changes
