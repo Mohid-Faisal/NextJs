@@ -21,27 +21,29 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const Background = ({ isDark }: { isDark: boolean }) => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-    {/* Grid pattern background */}
-    <div 
-      className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70"
-    />
-    {/* Soft glowing ambient blobs */}
-    <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] rounded-full bg-indigo-300/40 dark:bg-indigo-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[55%] rounded-full bg-purple-300/40 dark:bg-purple-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
-    <div className="absolute top-[20%] left-[20%] w-[45%] h-[45%] rounded-full bg-blue-300/25 dark:bg-blue-600/10 blur-[100px] pointer-events-none" />
-    {isDark ? (
-      <Particles
-        particleColors={['#ffffff', '#4f8fff', '#a78bfa']}
-        particleCount={80}
-        particleSpread={10}
-        speed={0.05}
-        particleBaseSize={60}
-        moveParticlesOnHover={false}
-        alphaParticles={true}
-        sizeRandomness={1}
-        cameraDistance={20}
-      />
-    ) : null}
+    {isDark && (
+      <>
+        {/* Grid pattern background */}
+        <div 
+          className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70"
+        />
+        {/* Soft glowing ambient blobs */}
+        <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] rounded-full bg-indigo-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[55%] rounded-full bg-purple-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+        <div className="absolute top-[20%] left-[20%] w-[45%] h-[45%] rounded-full bg-blue-600/10 blur-[100px] pointer-events-none" />
+        <Particles
+          particleColors={['#ffffff', '#4f8fff', '#a78bfa']}
+          particleCount={80}
+          particleSpread={10}
+          speed={0.05}
+          particleBaseSize={60}
+          moveParticlesOnHover={false}
+          alphaParticles={true}
+          sizeRandomness={1}
+          cameraDistance={20}
+        />
+      </>
+    )}
   </div>
 );
 
@@ -121,7 +123,7 @@ const LoginPage = () => {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-[440px] relative z-10"
+        className="w-full max-w-[440px] relative z-10 flex flex-col items-center"
       >
         <Link
           href="/"
@@ -131,7 +133,7 @@ const LoginPage = () => {
           Back to home
         </Link>
 
-        <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden">
+        <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
           <CardContent className="p-8 space-y-6">
             {/* Header info */}
             <div className="flex flex-col items-center justify-center text-center">

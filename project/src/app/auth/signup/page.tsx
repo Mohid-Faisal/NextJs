@@ -414,27 +414,29 @@ const SignupPage = () => {
 
   const Background = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {/* Grid Pattern Background */}
-      <div 
-        className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70"
-      />
-      {/* Vibrant glowing ambient blobs behind the card */}
-      <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] rounded-full bg-indigo-300/40 dark:bg-indigo-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[55%] rounded-full bg-purple-300/40 dark:bg-purple-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
-      <div className="absolute top-[20%] left-[20%] w-[45%] h-[45%] rounded-full bg-blue-300/25 dark:bg-blue-600/10 blur-[100px] pointer-events-none" />
-      {isDark ? (
-        <Particles
-          particleColors={["#ffffff", "#4f8fff", "#a78bfa"]}
-          particleCount={100}
-          particleSpread={10}
-          speed={0.05}
-          particleBaseSize={60}
-          moveParticlesOnHover={false}
-          alphaParticles={true}
-          sizeRandomness={1}
-          cameraDistance={20}
-        />
-      ) : null}
+      {isDark && (
+        <>
+          {/* Grid Pattern Background */}
+          <div 
+            className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70"
+          />
+          {/* Vibrant glowing ambient blobs behind the card */}
+          <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] rounded-full bg-indigo-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[55%] rounded-full bg-purple-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+          <div className="absolute top-[20%] left-[20%] w-[45%] h-[45%] rounded-full bg-blue-600/10 blur-[100px] pointer-events-none" />
+          <Particles
+            particleColors={["#ffffff", "#4f8fff", "#a78bfa"]}
+            particleCount={100}
+            particleSpread={10}
+            speed={0.05}
+            particleBaseSize={60}
+            moveParticlesOnHover={false}
+            alphaParticles={true}
+            sizeRandomness={1}
+            cameraDistance={20}
+          />
+        </>
+      )}
     </div>
   );
 
@@ -531,20 +533,19 @@ const SignupPage = () => {
         <Background />
         
         <motion.div className="w-full max-w-[1300px] relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          
-          <button 
-            onClick={() => setStep("verification")} 
-            className={`inline-flex items-center gap-2 text-xs mb-8 font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md self-start ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to verification
-          </button>
+          <div className="text-center max-w-2xl mx-auto space-y-4 mb-8 flex flex-col items-center">
+            <button 
+              onClick={() => setStep("verification")} 
+              className={`inline-flex items-center gap-2 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to verification
+            </button>
 
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-6">
-            <h1 className={`text-3xl sm:text-4xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
+            <h1 className={`text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter uppercase ${isDark ? "text-white" : "text-gray-900"}`}>
               Simple, transparent pricing
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-550 dark:text-slate-400">
               Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
             </p>
           </div>
@@ -690,18 +691,17 @@ const SignupPage = () => {
         <Background />
         
         <motion.div className="w-full max-w-xl relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          
-          <button 
-            onClick={() => setStep("plan")} 
-            className={`inline-flex items-center gap-2 text-xs mb-8 font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md self-start ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to plans
-          </button>
+          <div className="text-center space-y-3 mb-6 flex flex-col items-center">
+            <button 
+              onClick={() => setStep("plan")} 
+              className={`inline-flex items-center gap-2 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to plans
+            </button>
 
-          <div className="text-center space-y-2 mb-6">
             <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Submit Payment Details</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-455">
+            <p className="text-xs text-slate-550 dark:text-slate-455">
               Please send the plan subscription fee and paste the transaction details below.
             </p>
           </div>
@@ -903,13 +903,13 @@ const SignupPage = () => {
       <Background />
       
       <motion.div className="w-full max-w-[500px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-        <Link href="/" className={`inline-flex items-center gap-2 text-xs font-semibold mb-6 transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}>
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to home
-        </Link>
-
-        {/* Title */}
-        <div className="text-center mb-6 space-y-2">
+        {/* Title & Header */}
+        <div className="text-center mb-6 space-y-3 flex flex-col items-center">
+          <Link href="/" className={`inline-flex items-center gap-2 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}>
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to home
+          </Link>
+          
           <h1 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
             Create Account
           </h1>
