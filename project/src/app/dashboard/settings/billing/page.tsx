@@ -576,7 +576,7 @@ function BillingPageInner() {
               Transfer subscription fee directly to our regional accounts in Pakistan and upload your proof of payment for manual activation.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 overflow-hidden">
             {/* Account Details Column */}
             <div className="space-y-4 pr-0 md:pr-6 md:border-r border-slate-100 dark:border-slate-800/85">
               <h3 className="font-bold text-xs uppercase text-slate-400 dark:text-slate-500 tracking-wider">Our Accounts</h3>
@@ -639,7 +639,7 @@ function BillingPageInner() {
             </div>
 
             {/* Submission Form Column */}
-            <form onSubmit={handleManualSubmit} className="space-y-4 pl-0 md:pl-2">
+            <form onSubmit={handleManualSubmit} className="space-y-4 pl-0 md:pl-2 min-w-0 overflow-hidden">
               <h3 className="font-bold text-xs uppercase text-slate-400 dark:text-slate-500 tracking-wider">Submit Payment Proof</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -658,7 +658,7 @@ function BillingPageInner() {
                 <div className="space-y-1">
                   <Label htmlFor="planSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Target Plan</Label>
                   <Select value={manualPlan} onValueChange={setManualPlan}>
-                    <SelectTrigger id="planSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
+                    <SelectTrigger id="planSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800 [&>span]:truncate [&>span]:max-w-full">
                       <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-905">
