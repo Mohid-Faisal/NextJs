@@ -455,8 +455,8 @@ export default function InvoicePage() {
               </div>
             </div>
              ` : `
-            <div class="footer-single-line" style="text-align: center; font-size: 11px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 15px; margin-top: 20px; font-family: Arial, sans-serif; line-height: 1.5;">
-              Support: ${brandAddress} | ${brandPhone} | ${brandEmail}
+            <div class="footer-single-line" style="text-align: center; font-size: 14px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 20px; margin-top: 45px; font-family: Arial, sans-serif; line-height: 1.5;">
+              ${brandAddress} | ${brandPhone} | ${brandEmail}
             </div>
              `}
           </div>
@@ -846,8 +846,8 @@ export default function InvoicePage() {
               </div>
             </div>
              ` : `
-            <div class="footer-single-line" style="text-align: center; font-size: 11px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 15px; margin-top: 20px; font-family: Arial, sans-serif; line-height: 1.5;">
-              Support: ${brandAddress} | ${brandPhone} | ${brandEmail}
+            <div class="footer-single-line" style="text-align: center; font-size: 14px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 20px; margin-top: 45px; font-family: Arial, sans-serif; line-height: 1.5;">
+              ${brandAddress} | ${brandPhone} | ${brandEmail}
             </div>
              `}
           </div>
@@ -1106,8 +1106,8 @@ export default function InvoicePage() {
               </div>
             </div>
           ) : (
-            <div className="p-6 text-center border-t border-dashed border-slate-200 dark:border-zinc-800 text-xs text-muted-foreground">
-              Support: {brandAddress} | {brandPhone} | {brandEmail}
+            <div className="p-6 text-center border-t border-dashed border-slate-200 dark:border-zinc-800 text-sm text-muted-foreground mt-8">
+              {brandAddress} | {brandPhone} | {brandEmail}
             </div>
           )}
         </div>
