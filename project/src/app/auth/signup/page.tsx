@@ -677,7 +677,15 @@ const SignupPage = () => {
                             : (features.annualPrice && plan.priceMonthlyUsd > 0 
                               ? Math.round((1 - (features.annualPrice / (plan.priceMonthlyUsd * 12))) * 100) 
                               : 20);
-                          return `Billed monthly (Save ${discountPercent}% on yearly)`;
+                          const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * (1 - (discountPercent / 100)));
+                          const currency = (plan.features as any)?.currency || "PKR";
+                          let formattedPrice = "";
+                          if (currency === "USD") formattedPrice = `$${calculatedAnnualPrice.toFixed(2)}`;
+                          else if (currency === "EUR") formattedPrice = `€${calculatedAnnualPrice.toFixed(2)}`;
+                          else if (currency === "GBP") formattedPrice = `£${calculatedAnnualPrice.toFixed(2)}`;
+                          else formattedPrice = `${currency} ${Math.round(calculatedAnnualPrice).toLocaleString()}`;
+                          
+                          return `${formattedPrice}/year (save ${discountPercent}%)`;
                         })()}
                       </p>
                     </div>
