@@ -294,17 +294,6 @@ function BillingPageInner() {
         {/* Top-right Current Plan & Limits card */}
         {usage && (
           <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-4 shrink-0 flex items-center gap-6">
-            <div className="pr-4 border-r border-slate-105 dark:border-slate-800">
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Current Plan</p>
-              <p className="text-sm font-black text-slate-800 dark:text-white capitalize mt-0.5">
-                {subStatus === "trialing" ? "Free Trial" : plan?.name ?? "—"}
-              </p>
-              {subStatus && (
-                <Badge className="mt-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-55 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-100">
-                  {subStatus === "trialing" ? "trial" : subStatus}
-                </Badge>
-              )}
-            </div>
             <div className="flex items-center gap-4">
               <CircularProgress
                 label="Shipments"
@@ -321,6 +310,18 @@ function BillingPageInner() {
                 used={usage.branches || 0}
                 max={subStatus === "trialing" ? -1 : (usage.maxBranches || 0)}
               />
+            </div>
+            <div className="h-10 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="flex flex-col justify-center pl-1">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Current Plan</p>
+              <p className="text-sm font-black text-slate-800 dark:text-white capitalize mt-0.5">
+                {subStatus === "trialing" ? "Free Trial" : plan?.name ?? "—"}
+              </p>
+              {subStatus && (
+                <Badge className="mt-1.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-100 w-max">
+                  {subStatus === "trialing" ? "trial" : subStatus}
+                </Badge>
+              )}
             </div>
           </Card>
         )}
