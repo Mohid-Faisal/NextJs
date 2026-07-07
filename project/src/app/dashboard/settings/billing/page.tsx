@@ -106,6 +106,7 @@ function BillingPageInner() {
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
 
   // Manual payment states
   const [manualPlan, setManualPlan] = useState("");
@@ -152,13 +153,14 @@ function BillingPageInner() {
     if (status === "cancelled") toast("Checkout cancelled.");
   }, [searchParams]);
 
-  const upgrade = async (planCode: string) => {
+  const upgrade = async (planCode: string, period?: "monthly" | "yearly") => {
+    const cycle = period || billingPeriod;
     setCheckoutPlan(planCode);
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planCode }),
+        body: JSON.stringify({ planCode, billingCycle: cycle }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not start checkout");
@@ -318,8 +320,8 @@ function BillingPageInner() {
         </Card>
       )}
 
-      {/* Upgrade Options List */}
-      <div className="space-y-4">
+      {/* Upgrade Tiers Header & Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Upgrade Tiers</h2>
           {!canManage ? (
@@ -332,6 +334,38 @@ function BillingPageInner() {
             </p>
           )}
         </div>
+
+        {/* Tab-style interval toggle */}
+        <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl self-start sm:self-auto border border-slate-200/20">
+          <button
+            type="button"
+            onClick={() => setBillingPeriod("monthly")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              billingPeriod === "monthly"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingPeriod("yearly")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              billingPeriod === "yearly"
+                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            Yearly
+            <span className="text-[9px] text-green-600 dark:text-green-400 font-extrabold bg-green-50 dark:bg-green-950/20 px-1 py-0.5 rounded">
+              Save 15%
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5">
           {plans.map((p) => {
             const isCurrent = plan?.code === p.code;
@@ -347,11 +381,15 @@ function BillingPageInner() {
               : 15;
 
             const currency = (p.features as any)?.currency || "PKR";
+            const baseMonthlyPrice = p.priceMonthlyUsd;
+            const yearlyDiscountedMonthlyPrice = baseMonthlyPrice * (1 - (discountPercent / 100));
+            const activePrice = billingPeriod === "yearly" ? yearlyDiscountedMonthlyPrice : baseMonthlyPrice;
+
             let formattedPrice = "";
-            if (currency === "USD") formattedPrice = `$${p.priceMonthlyUsd.toFixed(2)}`;
-            else if (currency === "EUR") formattedPrice = `€${p.priceMonthlyUsd.toFixed(2)}`;
-            else if (currency === "GBP") formattedPrice = `£${p.priceMonthlyUsd.toFixed(2)}`;
-            else formattedPrice = `${currency} ${p.priceMonthlyUsd.toLocaleString()}`;
+            if (currency === "USD") formattedPrice = `$${activePrice.toFixed(2)}`;
+            else if (currency === "EUR") formattedPrice = `€${activePrice.toFixed(2)}`;
+            else if (currency === "GBP") formattedPrice = `£${activePrice.toFixed(2)}`;
+            else formattedPrice = `${currency} ${Math.round(activePrice).toLocaleString()}`;
 
             const calculatedAnnualPrice = p.priceMonthlyUsd * 12 * (1 - (discountPercent / 100));
             let formattedAnnualPrice = "";
@@ -394,9 +432,15 @@ function BillingPageInner() {
                   {formattedPrice}
                   <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 ml-1">/monthly</span>
                 </p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold mt-1">
-                  {formattedAnnualPrice}/annual ({discountPercent}% off)
-                </p>
+                {billingPeriod === "yearly" ? (
+                  <p className="text-[11px] text-green-600 dark:text-green-400 font-bold mt-1">
+                    Billed annually as {formattedAnnualPrice}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold mt-1">
+                    {formattedAnnualPrice}/annual ({discountPercent}% off)
+                  </p>
+                )}
 
                 <hr className="border-slate-100 dark:border-slate-800/40 my-4" />
 
@@ -458,7 +502,7 @@ function BillingPageInner() {
                           : "bg-slate-955 hover:bg-slate-850 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 shadow-md"
                     }`}
                     disabled={!canManage || isCurrent || checkoutPlan !== null}
-                    onClick={() => upgrade(p.code)}
+                    onClick={() => upgrade(p.code, billingPeriod)}
                   >
                     <Zap className="h-4 w-4 shrink-0 mr-1.5" />
                     {isCurrent

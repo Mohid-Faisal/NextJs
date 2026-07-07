@@ -21,8 +21,13 @@ export function isStripeConfigured(): boolean {
  * plan's `features.stripePriceId`, then falls back to an env var per code
  * (e.g. STRIPE_PRICE_STARTER).
  */
-export function resolvePriceId(planCode: string, featurePriceId?: string): string | null {
-  if (featurePriceId) return featurePriceId;
+export function resolvePriceId(planCode: string, features?: any, billingCycle?: string): string | null {
+  if (billingCycle === "yearly") {
+    if (features?.stripePriceIdYearly) return features.stripePriceIdYearly;
+    const envKeyYearly = `STRIPE_PRICE_${planCode.toUpperCase()}_YEARLY`;
+    if (process.env[envKeyYearly]) return process.env[envKeyYearly];
+  }
+  if (features?.stripePriceId) return features.stripePriceId;
   const envKey = `STRIPE_PRICE_${planCode.toUpperCase()}`;
   return process.env[envKey] ?? null;
 }

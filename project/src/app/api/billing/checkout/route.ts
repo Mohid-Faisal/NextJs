@@ -39,13 +39,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Unknown plan" }, { status: 404 });
     }
 
-    const features = (plan.features ?? {}) as { stripePriceId?: string };
-    const priceId = resolvePriceId(plan.code, features.stripePriceId);
+    const billingCycle = String(body?.billingCycle || "monthly").trim();
+    const priceId = resolvePriceId(plan.code, plan.features, billingCycle);
     if (!priceId) {
       return NextResponse.json(
         {
           success: false,
-          error: `No Stripe price configured for plan "${plan.code}". Set features.stripePriceId or STRIPE_PRICE_${plan.code.toUpperCase()}.`,
+          error: `No Stripe price configured for plan "${plan.code}" (${billingCycle}). Set features.stripePriceId or STRIPE_PRICE_${plan.code.toUpperCase()}.`,
         },
         { status: 400 }
       );
