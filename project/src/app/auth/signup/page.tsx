@@ -219,6 +219,7 @@ const SignupPage = () => {
           userId,
           organizationId: orgId,
           planCode,
+          billingCycle: isAnnual ? "annually" : "monthly",
         })
       });
       const data = await res.json();
@@ -555,11 +556,31 @@ const SignupPage = () => {
             </div>
           </div>
 
+          {/* Dynamic Billing Switch */}
+          <div className="flex items-center justify-center gap-3 mb-10 bg-slate-100/80 dark:bg-slate-900/40 p-2.5 rounded-full border border-slate-200 dark:border-slate-800 shadow-xs max-w-[260px] mx-auto">
+            <span className={`text-xs font-bold transition-colors ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>Monthly</span>
+            <button 
+              type="button" 
+              onClick={() => setIsAnnual(!isAnnual)}
+              className="relative w-10 h-5.5 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors duration-300 focus:outline-none cursor-pointer"
+            >
+              <motion.div 
+                className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
+                animate={{ x: isAnnual ? 18 : 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            </button>
+            <span className={`text-xs font-bold transition-colors flex items-center gap-1.5 ${isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>
+              Annually 
+              <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400 rounded-md">Save 20%</span>
+            </span>
+          </div>
+
           {/* Self-adjusting pricing grid */}
           <div className="flex flex-wrap justify-center items-stretch gap-6 w-full max-w-7xl mx-auto mb-10">
             {/* Free Trial Card */}
             <Card 
-              className="relative flex flex-col justify-between p-6 border border-white/60 dark:border-white/10 shadow-md bg-white/45 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[280px] md:w-[290px] hover:border-white/80 dark:hover:border-white/20 transition-all duration-300"
+              className="relative flex flex-col justify-between p-6 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[280px] md:w-[290px] hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)] transition-all duration-300"
             >
               <div className="space-y-4 flex-1 flex flex-col">
                 <div>
@@ -618,8 +639,8 @@ const SignupPage = () => {
                   key={plan.id}
                   className={`relative flex flex-col justify-between p-6 transition-all duration-300 w-full sm:w-[280px] md:w-[290px] rounded-2xl ${
                     isGrowth 
-                      ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-white/45 dark:bg-slate-950/45 backdrop-blur-md" 
-                      : "border border-white/60 dark:border-white/10 shadow-md bg-white/45 dark:bg-slate-950/45 backdrop-blur-md hover:border-white/85 dark:hover:border-white/20"
+                      ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md" 
+                      : "border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)]"
                   }`}
                 >
                   {isGrowth && (
@@ -639,16 +660,20 @@ const SignupPage = () => {
                         <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
                           {(() => {
                             const currency = (plan.features as any)?.currency || "PKR";
-                            if (currency === "USD") return `$${plan.priceMonthlyUsd.toFixed(2)}`;
-                            if (currency === "EUR") return `€${plan.priceMonthlyUsd.toFixed(2)}`;
-                            if (currency === "GBP") return `£${plan.priceMonthlyUsd.toFixed(2)}`;
-                            return `${currency} ${Math.round(plan.priceMonthlyUsd).toLocaleString()}`;
+                            const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
+                            const monthlyRateUnderAnnual = calculatedAnnualPrice / 12;
+                            const priceToDisplay = isAnnual ? monthlyRateUnderAnnual : plan.priceMonthlyUsd;
+
+                            if (currency === "USD") return `$${priceToDisplay.toFixed(2)}`;
+                            if (currency === "EUR") return `€${priceToDisplay.toFixed(2)}`;
+                            if (currency === "GBP") return `£${priceToDisplay.toFixed(2)}`;
+                            return `${currency} ${Math.round(priceToDisplay).toLocaleString()}`;
                           })()}
                         </span>
                         <span className="text-xs text-muted-foreground font-semibold">/month</span>
                       </div>
                       <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
-                        Billed monthly
+                        {isAnnual ? "Billed annually" : "Billed monthly"}
                       </p>
                     </div>
 
@@ -711,8 +736,8 @@ const SignupPage = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-[36px] lg:text-[38px] font-black tracking-tight text-slate-900 dark:text-white leading-tight">
                   Submit payment details
                 </h2>
-                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
-                  Please send the plan subscription fee and paste the transaction details below.
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2 truncate max-w-full">
+                  Send subscription fee and enter transaction details below.
                 </p>
               </div>
             </div>
@@ -788,15 +813,15 @@ const SignupPage = () => {
                           method.value === "CARD" ? "col-span-2" : ""
                         } ${
                           isDisabled
-                            ? "opacity-40 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 cursor-not-allowed"
+                            ? "opacity-40 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 cursor-not-allowed"
                             : active
-                            ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20 cursor-pointer scale-[1.02]"
-                            : "border-slate-205 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white/40 dark:bg-slate-950/20 cursor-pointer"
+                            ? "border-indigo-600 bg-indigo-50/80 dark:bg-indigo-950/40 dark:border-indigo-500 ring-2 ring-indigo-500/10 cursor-pointer scale-[1.02] shadow-sm"
+                            : "border-slate-200 dark:border-slate-850 bg-slate-100/60 hover:bg-slate-100 hover:border-slate-300 dark:bg-slate-900/30 dark:hover:bg-slate-900/50 dark:hover:border-slate-700 cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <Icon className={`w-4 h-4 shrink-0 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`} />
-                          <span className={`text-xs font-bold ${active ? "text-indigo-650 dark:text-indigo-400" : "text-slate-700 dark:text-slate-300"}`}>{method.label}</span>
+                          <span className={`text-xs font-bold ${active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-700 dark:text-slate-300"}`}>{method.label}</span>
                         </div>
                         <p className="text-[9px] text-slate-400 mt-1 pl-6 leading-normal">{method.desc}</p>
                       </button>
@@ -810,7 +835,7 @@ const SignupPage = () => {
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
-                  className="bg-white/40 dark:bg-slate-950/60 border border-white/60 dark:border-white/10 rounded-2xl p-5 space-y-3"
+                  className="bg-slate-100/70 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-3 shadow-xs"
                 >
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Recipient Account Details</p>
                   
