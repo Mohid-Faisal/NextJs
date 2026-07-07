@@ -590,7 +590,7 @@ export default function BrandingSettingsPage() {
                 </div>
                 <div className="border-t border-dashed my-2"></div>
                 <div className="text-[8px] text-muted-foreground text-center">
-                  Support: {invoiceSupportEmail} | {invoiceSupportPhone} | {invoiceSupportAddress}
+                  Support: {invoiceSupportAddress} | {invoiceSupportPhone} | {invoiceSupportEmail}
                 </div>
               </div>
             </CardContent>

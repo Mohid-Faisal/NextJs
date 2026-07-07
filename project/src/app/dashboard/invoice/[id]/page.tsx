@@ -47,6 +47,8 @@ export default function InvoicePage() {
     }
   }, []);
 
+  const isPssOrg = !org || org.slug === "pss" || org.name?.toLowerCase().includes("pss");
+
   useEffect(() => {
     fetch("/api/org/current")
       .then((res) => res.json())
@@ -431,6 +433,7 @@ export default function InvoicePage() {
               No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.
             </div>
             
+             ${isPssOrg ? `
             <div class="footer">
               <div class="footer-grid">
                 <div class="footer-section">
@@ -450,6 +453,11 @@ export default function InvoicePage() {
                 </div>
               </div>
             </div>
+             ` : `
+            <div class="footer-single-line" style="text-align: center; font-size: 11px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 15px; margin-top: 20px; font-family: Arial, sans-serif; line-height: 1.5;">
+              Support: ${brandAddress} | ${brandPhone} | ${brandEmail}
+            </div>
+             `}
           </div>
         </body>
       </html>
@@ -816,6 +824,7 @@ export default function InvoicePage() {
               No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.
             </div>
             
+             ${isPssOrg ? `
             <div class="footer">
               <div class="footer-grid">
                 <div class="footer-section">
@@ -835,6 +844,11 @@ export default function InvoicePage() {
                 </div>
               </div>
             </div>
+             ` : `
+            <div class="footer-single-line" style="text-align: center; font-size: 11px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 15px; margin-top: 20px; font-family: Arial, sans-serif; line-height: 1.5;">
+              Support: ${brandAddress} | ${brandPhone} | ${brandEmail}
+            </div>
+             `}
           </div>
         </body>
       </html>
@@ -1061,34 +1075,40 @@ export default function InvoicePage() {
           </div>
 
           {/* Footer Section - Exactly like the image */}
-          <div className="bg-blue-600 text-white p-6 print:p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-              {/* Left Section - Location */}
-              <div className="flex flex-col items-center">
-                <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+          {isPssOrg ? (
+            <div className="bg-blue-600 text-white p-6 print:p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                {/* Left Section - Location */}
+                <div className="flex flex-col items-center">
+                  <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  </div>
+                  <p className="text-sm font-semibold">{brandAddress.split(',')[0]?.trim() || ""}</p>
+                  <p className="text-sm opacity-90">{brandAddress.split(',').slice(1).join(',').trim() || ""}</p>
                 </div>
-                <p className="text-sm font-semibold">{brandAddress.split(',')[0]?.trim() || ""}</p>
-                <p className="text-sm opacity-90">{brandAddress.split(',').slice(1).join(',').trim() || ""}</p>
-              </div>
-              
-              {/* Middle Section - Phone */}
-              <div className="flex flex-col items-center">
-                <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
-                  <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                
+                {/* Middle Section - Phone */}
+                <div className="flex flex-col items-center">
+                  <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
+                    <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                  </div>
+                  <p className="text-sm font-semibold">{brandPhone}</p>
                 </div>
-                <p className="text-sm font-semibold">{brandPhone}</p>
-              </div>
-              
-              {/* Right Section - Email/Website */}
-              <div className="flex flex-col items-center">
-                <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
-                  <div className="w-3 h-2 bg-blue-600 rounded-sm"></div>
+                
+                {/* Right Section - Email/Website */}
+                <div className="flex flex-col items-center">
+                  <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mb-2">
+                    <div className="w-3 h-2 bg-blue-600 rounded-sm"></div>
+                  </div>
+                  <p className="text-sm font-semibold">{brandEmail}</p>
                 </div>
-                <p className="text-sm font-semibold">{brandEmail}</p>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-6 text-center border-t border-dashed border-slate-200 dark:border-zinc-800 text-xs text-muted-foreground">
+              Support: {brandAddress} | {brandPhone} | {brandEmail}
+            </div>
+          )}
         </div>
       </div>
 
