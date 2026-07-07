@@ -351,7 +351,7 @@ export default function CreatePlanPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="annualPrice" className="font-semibold">Yearly Plan Discount (%)</Label>
+                <Label htmlFor="annualPrice" className="font-semibold whitespace-nowrap">Yearly Discount (%)</Label>
                 <div className="relative">
                   <Input 
                     id="annualPrice" 

@@ -520,7 +520,7 @@ export default function SaasPlansPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="editPriceAnnual" className="font-semibold text-slate-800 dark:text-slate-200">Yearly Plan Discount (%)</Label>
+                <Label htmlFor="editPriceAnnual" className="font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">Yearly Discount (%)</Label>
                 <div className="relative">
                   <Input 
                     id="editPriceAnnual" 

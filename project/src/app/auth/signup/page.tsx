@@ -579,54 +579,73 @@ const SignupPage = () => {
           {/* Self-adjusting pricing grid */}
           <div className="flex flex-wrap xl:flex-nowrap justify-center items-stretch gap-4 w-full max-w-[1440px] mx-auto mb-0">
             {/* Free Trial Card */}
-            <Card 
-              className="relative flex flex-col justify-between p-5 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[230px] md:w-[245px] xl:w-auto xl:flex-1 xl:max-w-[270px] hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)] transition-all duration-300"
-            >
-              <div className="space-y-3 flex-1 flex flex-col">
-                <div>
-                  <h3 className="font-extrabold text-base text-indigo-600 dark:text-indigo-400 capitalize">14-Day Trial</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[28px] leading-normal">
-                    Test the system with full features. No credit card required upfront.
-                  </p>
-                </div>
+            {(() => {
+              const trialPlan = plans.find((p) => p.code === "trial") || {
+                name: "14-Day Trial",
+                features: {
+                  trialDays: 14,
+                  description: "Test the system with full features. No credit card required upfront."
+                }
+              };
+              const trialFeatures = (trialPlan.features || {}) as any;
+              const trialDays = trialFeatures.trialDays ?? 14;
+              const trialDescription = trialFeatures.description || "Test the system with full features. No credit card required upfront.";
+              const trialChecklist: string[] = Array.isArray(trialFeatures.featuresList) 
+                ? trialFeatures.featuresList 
+                : ["14 Days Access", "Core Features Included", "Easy upgrade path"];
+              
+              const activeCurrency = sortedPlans[0]?.features?.currency || "PKR";
+              let trialPriceFormatted = "";
+              if (activeCurrency === "USD") trialPriceFormatted = "$0.00";
+              else if (activeCurrency === "EUR") trialPriceFormatted = "€0.00";
+              else if (activeCurrency === "GBP") trialPriceFormatted = "£0.00";
+              else trialPriceFormatted = `${activeCurrency} 0`;
 
-                <div className="pt-2">
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                      $0.00
-                    </span>
-                    <span className="text-xs text-muted-foreground font-semibold">/14 days</span>
-                  </div>
-                </div>
-
-                <hr className="border-slate-100 dark:border-slate-800/50 my-1" />
-
-                <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400 flex-1 py-1">
-                  <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                    <span>14 Days Access</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                    <span>Core Features Included</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                    <span>Easy upgrade path</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="pt-4">
-                <Button 
-                  onClick={handleSelectFreeTrial}
-                  disabled={isLoading}
-                  className="w-full py-3.5 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer"
+              return (
+                <Card 
+                  className="relative flex flex-col justify-between p-5 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.04)] bg-slate-50/50 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[230px] md:w-[245px] xl:w-auto xl:flex-1 xl:max-w-[270px] hover:border-indigo-500/50 dark:hover:border-indigo-500/30 hover:shadow-[0_15px_35px_rgba(99,102,241,0.08)] transition-all duration-300"
                 >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Free Trial"}
-                </Button>
-              </div>
-            </Card>
+                  <div className="space-y-3 flex-1 flex flex-col">
+                    <div>
+                      <h3 className="font-extrabold text-base text-indigo-600 dark:text-indigo-400 capitalize">{trialPlan.name}</h3>
+                      <p className="text-xs text-slate-550 dark:text-slate-400 mt-1 min-h-[28px] leading-normal">
+                        {trialDescription}
+                      </p>
+                    </div>
+
+                    <div className="pt-2">
+                      <div className="flex items-baseline gap-0.5">
+                        <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                          {trialPriceFormatted}
+                        </span>
+                        <span className="text-xs text-muted-foreground font-semibold">/{trialDays} days</span>
+                      </div>
+                    </div>
+
+                    <hr className="border-slate-100 dark:border-slate-800/50 my-1" />
+
+                    <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400 flex-1 py-1">
+                      {trialChecklist.map((item: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="pt-4">
+                    <Button 
+                      onClick={handleSelectFreeTrial}
+                      disabled={isLoading}
+                      className="w-full py-3.5 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer"
+                    >
+                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Free Trial"}
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })()}
 
             {/* Paid Plans */}
             {sortedPlans.map((plan) => {
