@@ -578,8 +578,9 @@ function BillingPageInner() {
           </CardHeader>
           <CardContent className="pt-2">
             <form onSubmit={handleManualSubmit} className="space-y-5">
-              {/* Row 1: Billing Cycle, Target Plan, Payment Method — equal width */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* All form fields in a single 3-column grid for perfect column alignment */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-5">
+                {/* Row 1 */}
                 <div className="space-y-1 min-w-0">
                   <Label htmlFor="cycleSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Billing Cycle</Label>
                   <Select value={manualCycle} onValueChange={setManualCycle}>
@@ -623,76 +624,74 @@ function BillingPageInner() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              {/* Account Info — shown based on selected payment method */}
-              {manualMethod === "BANK_TRANSFER" && (
-                <div className="p-4 border border-emerald-500/10 rounded-2xl bg-gradient-to-br from-emerald-600/90 to-teal-850 text-white shadow-md relative overflow-hidden">
-                  <div className="absolute right-[-10px] bottom-[-20px] opacity-10">
-                    <Landmark className="w-28 h-28" />
+                {/* Account info card — spans full width of the grid */}
+                {manualMethod === "BANK_TRANSFER" && (
+                  <div className="sm:col-span-3 p-4 border border-emerald-500/10 rounded-2xl bg-gradient-to-br from-emerald-600/90 to-teal-850 text-white shadow-md relative overflow-hidden">
+                    <div className="absolute right-[-10px] bottom-[-20px] opacity-10">
+                      <Landmark className="w-28 h-28" />
+                    </div>
+                    <div className="flex items-center justify-between font-bold text-base">
+                      <span>Meezan Bank</span>
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Main Account</span>
+                    </div>
+                    <div className="text-sm space-y-1 mt-3 font-mono">
+                      <p><span className="opacity-70">Title:</span> PSS ERP Solutions</p>
+                      <p><span className="opacity-70">Account:</span> 1209-082498234</p>
+                      <p><span className="opacity-70">IBAN:</span> PK73MEZN1209082498234</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between font-bold text-base">
-                    <span>Meezan Bank</span>
-                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Main Account</span>
-                  </div>
-                  <div className="text-sm space-y-1 mt-3 font-mono">
-                    <p><span className="opacity-70">Title:</span> PSS ERP Solutions</p>
-                    <p><span className="opacity-70">Account:</span> 1209-082498234</p>
-                    <p><span className="opacity-70">IBAN:</span> PK73MEZN1209082498234</p>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {manualMethod === "EASYPAISA" && (
-                <div className="p-4 border border-green-500/10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-700 text-white shadow-md relative overflow-hidden">
-                  <div className="absolute right-[-10px] bottom-[-25px] opacity-15">
-                    <Smartphone className="w-28 h-28" />
+                {manualMethod === "EASYPAISA" && (
+                  <div className="sm:col-span-3 p-4 border border-green-500/10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-700 text-white shadow-md relative overflow-hidden">
+                    <div className="absolute right-[-10px] bottom-[-25px] opacity-15">
+                      <Smartphone className="w-28 h-28" />
+                    </div>
+                    <div className="flex items-center justify-between font-bold text-base">
+                      <span>Easypaisa</span>
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Mobile Wallet</span>
+                    </div>
+                    <div className="text-sm space-y-1 mt-3 font-mono">
+                      <p><span className="opacity-70">Title:</span> Zeeshan Ahmad</p>
+                      <p><span className="opacity-70">Number:</span> 0300-1234567</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between font-bold text-base">
-                    <span>Easypaisa</span>
-                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Mobile Wallet</span>
-                  </div>
-                  <div className="text-sm space-y-1 mt-3 font-mono">
-                    <p><span className="opacity-70">Title:</span> Zeeshan Ahmad</p>
-                    <p><span className="opacity-70">Number:</span> 0300-1234567</p>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {manualMethod === "JAZZCASH" && (
-                <div className="p-4 border border-amber-500/10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-700 text-white shadow-md relative overflow-hidden">
-                  <div className="absolute right-[-10px] bottom-[-25px] opacity-15">
-                    <Smartphone className="w-28 h-28" />
+                {manualMethod === "JAZZCASH" && (
+                  <div className="sm:col-span-3 p-4 border border-amber-500/10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-700 text-white shadow-md relative overflow-hidden">
+                    <div className="absolute right-[-10px] bottom-[-25px] opacity-15">
+                      <Smartphone className="w-28 h-28" />
+                    </div>
+                    <div className="flex items-center justify-between font-bold text-base">
+                      <span>JazzCash</span>
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Mobile Wallet</span>
+                    </div>
+                    <div className="text-sm space-y-1 mt-3 font-mono">
+                      <p><span className="opacity-70">Title:</span> Zeeshan Ahmad</p>
+                      <p><span className="opacity-70">Number:</span> 0310-7654321</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between font-bold text-base">
-                    <span>JazzCash</span>
-                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Mobile Wallet</span>
-                  </div>
-                  <div className="text-sm space-y-1 mt-3 font-mono">
-                    <p><span className="opacity-70">Title:</span> Zeeshan Ahmad</p>
-                    <p><span className="opacity-70">Number:</span> 0310-7654321</p>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {manualMethod === "CASH" && (
-                <div className="p-4 border border-indigo-500/10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-700 text-white shadow-md relative overflow-hidden">
-                  <div className="absolute right-[-10px] bottom-[-20px] opacity-15">
-                    <DollarSign className="w-28 h-28" />
+                {manualMethod === "CASH" && (
+                  <div className="sm:col-span-3 p-4 border border-indigo-500/10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-700 text-white shadow-md relative overflow-hidden">
+                    <div className="absolute right-[-10px] bottom-[-20px] opacity-15">
+                      <DollarSign className="w-28 h-28" />
+                    </div>
+                    <div className="flex items-center justify-between font-bold text-base">
+                      <span>Cash Payment</span>
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Direct</span>
+                    </div>
+                    <p className="text-sm mt-3 opacity-90 leading-relaxed font-semibold">
+                      Contact platform super-admin directly at pss-admin@gmail.com for physical cash settlement.
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between font-bold text-base">
-                    <span>Cash Payment</span>
-                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Direct</span>
-                  </div>
-                  <p className="text-sm mt-3 opacity-90 leading-relaxed font-semibold">
-                    Contact platform super-admin directly at pss-admin@gmail.com for physical cash settlement.
-                  </p>
-                </div>
-              )}
+                )}
 
-              {/* Row 2: Amount, Transaction ID, Receipt — all in one line */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                <div className="space-y-1">
+                {/* Row 2 */}
+                <div className="space-y-1 min-w-0">
                   <Label htmlFor="amount" className="text-xs font-bold text-slate-600 dark:text-slate-400">Amount Paid (PKR)</Label>
                   <Input 
                     id="amount" 
@@ -704,7 +703,7 @@ function BillingPageInner() {
                     className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-0">
                   <Label htmlFor="refId" className="text-xs font-bold text-slate-600 dark:text-slate-400">Transaction ID / Ref #</Label>
                   <Input 
                     id="refId" 
@@ -716,9 +715,9 @@ function BillingPageInner() {
                     className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-0">
                   <Label htmlFor="receipt" className="text-xs font-bold text-slate-600 dark:text-slate-400">Receipt Screenshot</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 h-11">
                     <Button 
                       type="button" 
                       variant="outline" 
