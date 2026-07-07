@@ -578,9 +578,9 @@ function BillingPageInner() {
           </CardHeader>
           <CardContent className="pt-2">
             <form onSubmit={handleManualSubmit} className="space-y-5">
-              {/* Row 1: Billing Cycle, Target Plan, Payment Method */}
+              {/* Row 1: Billing Cycle, Target Plan, Payment Method — equal width */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-0">
                   <Label htmlFor="cycleSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Billing Cycle</Label>
                   <Select value={manualCycle} onValueChange={setManualCycle}>
                     <SelectTrigger id="cycleSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
@@ -593,7 +593,7 @@ function BillingPageInner() {
                   </Select>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-0">
                   <Label htmlFor="planSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Target Plan</Label>
                   <Select value={manualPlan} onValueChange={setManualPlan}>
                     <SelectTrigger id="planSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800 [&>span]:truncate [&>span]:max-w-full">
@@ -609,7 +609,7 @@ function BillingPageInner() {
                   </Select>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-0">
                   <Label htmlFor="methodSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Payment Method</Label>
                   <Select value={manualMethod} onValueChange={setManualMethod}>
                     <SelectTrigger id="methodSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
@@ -690,8 +690,8 @@ function BillingPageInner() {
                 </div>
               )}
 
-              {/* Row 2: Amount + Transaction ID */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Row 2: Amount, Transaction ID, Receipt — all in one line */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                 <div className="space-y-1">
                   <Label htmlFor="amount" className="text-xs font-bold text-slate-600 dark:text-slate-400">Amount Paid (PKR)</Label>
                   <Input 
@@ -716,42 +716,40 @@ function BillingPageInner() {
                     className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800"
                   />
                 </div>
-              </div>
-
-              {/* Receipt Upload */}
-              <div className="space-y-2">
-                <Label htmlFor="receipt" className="text-xs font-bold text-slate-600 dark:text-slate-400">Receipt Screenshot</Label>
-                <div className="flex items-center gap-3">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="relative cursor-pointer h-11 px-5 rounded-xl border-slate-200 dark:border-slate-800"
-                    disabled={uploading}
-                    asChild
-                  >
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      {uploading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <UploadCloud className="h-4 w-4" />
-                      )}
-                      <span>{receiptUrl ? "Change File" : "Upload File"}</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={handleFileUpload} 
-                        disabled={uploading}
-                      />
-                    </label>
-                  </Button>
-                  {receiptUrl ? (
-                    <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
-                      <Check className="h-4 w-4" /> Screenshot uploaded
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-400 dark:text-slate-500">Supported format: PNG, JPG</span>
-                  )}
+                <div className="space-y-1">
+                  <Label htmlFor="receipt" className="text-xs font-bold text-slate-600 dark:text-slate-400">Receipt Screenshot</Label>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="relative cursor-pointer h-11 px-4 rounded-xl border-slate-200 dark:border-slate-800 shrink-0"
+                      disabled={uploading}
+                      asChild
+                    >
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <UploadCloud className="h-4 w-4" />
+                        )}
+                        <span className="text-sm">{receiptUrl ? "Change" : "Upload"}</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleFileUpload} 
+                          disabled={uploading}
+                        />
+                      </label>
+                    </Button>
+                    {receiptUrl ? (
+                      <span className="text-xs text-green-600 font-semibold flex items-center gap-1 truncate">
+                        <Check className="h-3.5 w-3.5 shrink-0" /> Uploaded
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400 dark:text-slate-500 truncate">PNG, JPG</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
