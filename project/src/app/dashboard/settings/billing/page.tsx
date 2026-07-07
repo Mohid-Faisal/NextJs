@@ -576,72 +576,10 @@ function BillingPageInner() {
               Transfer subscription fee directly to our regional accounts in Pakistan and upload your proof of payment for manual activation.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 overflow-hidden">
-            {/* Account Details Column */}
-            <div className="space-y-4 pr-0 md:pr-6 md:border-r border-slate-100 dark:border-slate-800/85">
-              <h3 className="font-bold text-xs uppercase text-slate-400 dark:text-slate-500 tracking-wider">Our Accounts</h3>
-              
-              <div className="p-4 border border-emerald-500/10 rounded-2xl bg-gradient-to-br from-emerald-600/90 to-teal-850 text-white shadow-md relative overflow-hidden group">
-                <div className="absolute right-[-10px] bottom-[-20px] opacity-10">
-                  <Landmark className="w-32 h-32" />
-                </div>
-                <div className="flex items-center justify-between font-bold text-base">
-                  <span>Meezan Bank</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Main Account</span>
-                </div>
-                <div className="text-xs space-y-1.5 mt-4 font-mono">
-                  <p><span className="opacity-70">Title:</span> PSS ERP Solutions</p>
-                  <p><span className="opacity-70">Account:</span> 1209-082498234</p>
-                  <p><span className="opacity-70">IBAN:</span> PK73MEZN1209082498234</p>
-                </div>
-              </div>
-
-              <div className="p-4 border border-green-500/10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-700 text-white shadow-md relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-25px] opacity-15">
-                  <Smartphone className="w-32 h-32" />
-                </div>
-                <div className="flex items-center justify-between font-bold text-base">
-                  <span>Easypaisa</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Mobile Wallet</span>
-                </div>
-                <div className="text-xs space-y-1.5 mt-4 font-mono">
-                  <p><span className="opacity-70">Title:</span> Zeeshan Ahmad</p>
-                  <p><span className="opacity-70">Number:</span> 0300-1234567</p>
-                </div>
-              </div>
-
-              <div className="p-4 border border-amber-500/10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-700 text-white shadow-md relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-25px] opacity-15">
-                  <Smartphone className="w-32 h-32" />
-                </div>
-                <div className="flex items-center justify-between font-bold text-base">
-                  <span>JazzCash</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Mobile Wallet</span>
-                </div>
-                <div className="text-xs space-y-1.5 mt-4 font-mono">
-                  <p><span className="opacity-70">Title:</span> Zeeshan Ahmad</p>
-                  <p><span className="opacity-70">Number:</span> 0310-7654321</p>
-                </div>
-              </div>
-
-              <div className="p-4 border border-indigo-500/10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-700 text-white shadow-md relative overflow-hidden">
-                <div className="absolute right-[-10px] bottom-[-20px] opacity-15">
-                  <DollarSign className="w-32 h-32" />
-                </div>
-                <div className="flex items-center justify-between font-bold text-base">
-                  <span>Cash Payment</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Direct</span>
-                </div>
-                <p className="text-xs mt-3 opacity-90 leading-relaxed font-semibold">
-                  Contact platform super-admin directly at pss-admin@gmail.com for physical cash settlement.
-                </p>
-              </div>
-            </div>
-
-            {/* Submission Form Column */}
-            <form onSubmit={handleManualSubmit} className="space-y-4 pl-0 md:pl-2 min-w-0 overflow-hidden">
-              <h3 className="font-bold text-xs uppercase text-slate-400 dark:text-slate-500 tracking-wider">Submit Payment Proof</h3>
-              <div className="grid grid-cols-1 gap-4">
+          <CardContent className="pt-2">
+            <form onSubmit={handleManualSubmit} className="space-y-5">
+              {/* Row 1: Billing Cycle, Target Plan, Payment Method */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="cycleSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Billing Cycle</Label>
                   <Select value={manualCycle} onValueChange={setManualCycle}>
@@ -670,24 +608,90 @@ function BillingPageInner() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="methodSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Payment Method</Label>
+                  <Select value={manualMethod} onValueChange={setManualMethod}>
+                    <SelectTrigger id="methodSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
+                      <SelectValue placeholder="Select transfer method" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-955">
+                      <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                      <SelectItem value="EASYPAISA">Easypaisa</SelectItem>
+                      <SelectItem value="JAZZCASH">JazzCash</SelectItem>
+                      <SelectItem value="CASH">Cash</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="methodSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Payment Method</Label>
-                <Select value={manualMethod} onValueChange={setManualMethod}>
-                  <SelectTrigger id="methodSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
-                    <SelectValue placeholder="Select transfer method" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-955">
-                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                    <SelectItem value="EASYPAISA">Easypaisa</SelectItem>
-                    <SelectItem value="JAZZCASH">JazzCash</SelectItem>
-                    <SelectItem value="CASH">Cash</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Account Info — shown based on selected payment method */}
+              {manualMethod === "BANK_TRANSFER" && (
+                <div className="p-4 border border-emerald-500/10 rounded-2xl bg-gradient-to-br from-emerald-600/90 to-teal-850 text-white shadow-md relative overflow-hidden">
+                  <div className="absolute right-[-10px] bottom-[-20px] opacity-10">
+                    <Landmark className="w-28 h-28" />
+                  </div>
+                  <div className="flex items-center justify-between font-bold text-base">
+                    <span>Meezan Bank</span>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Main Account</span>
+                  </div>
+                  <div className="text-sm space-y-1 mt-3 font-mono">
+                    <p><span className="opacity-70">Title:</span> PSS ERP Solutions</p>
+                    <p><span className="opacity-70">Account:</span> 1209-082498234</p>
+                    <p><span className="opacity-70">IBAN:</span> PK73MEZN1209082498234</p>
+                  </div>
+                </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-4">
+              {manualMethod === "EASYPAISA" && (
+                <div className="p-4 border border-green-500/10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-700 text-white shadow-md relative overflow-hidden">
+                  <div className="absolute right-[-10px] bottom-[-25px] opacity-15">
+                    <Smartphone className="w-28 h-28" />
+                  </div>
+                  <div className="flex items-center justify-between font-bold text-base">
+                    <span>Easypaisa</span>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Mobile Wallet</span>
+                  </div>
+                  <div className="text-sm space-y-1 mt-3 font-mono">
+                    <p><span className="opacity-70">Title:</span> Zeeshan Ahmad</p>
+                    <p><span className="opacity-70">Number:</span> 0300-1234567</p>
+                  </div>
+                </div>
+              )}
+
+              {manualMethod === "JAZZCASH" && (
+                <div className="p-4 border border-amber-500/10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-700 text-white shadow-md relative overflow-hidden">
+                  <div className="absolute right-[-10px] bottom-[-25px] opacity-15">
+                    <Smartphone className="w-28 h-28" />
+                  </div>
+                  <div className="flex items-center justify-between font-bold text-base">
+                    <span>JazzCash</span>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Mobile Wallet</span>
+                  </div>
+                  <div className="text-sm space-y-1 mt-3 font-mono">
+                    <p><span className="opacity-70">Title:</span> Zeeshan Ahmad</p>
+                    <p><span className="opacity-70">Number:</span> 0310-7654321</p>
+                  </div>
+                </div>
+              )}
+
+              {manualMethod === "CASH" && (
+                <div className="p-4 border border-indigo-500/10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-700 text-white shadow-md relative overflow-hidden">
+                  <div className="absolute right-[-10px] bottom-[-20px] opacity-15">
+                    <DollarSign className="w-28 h-28" />
+                  </div>
+                  <div className="flex items-center justify-between font-bold text-base">
+                    <span>Cash Payment</span>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Direct</span>
+                  </div>
+                  <p className="text-sm mt-3 opacity-90 leading-relaxed font-semibold">
+                    Contact platform super-admin directly at pss-admin@gmail.com for physical cash settlement.
+                  </p>
+                </div>
+              )}
+
+              {/* Row 2: Amount + Transaction ID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="amount" className="text-xs font-bold text-slate-600 dark:text-slate-400">Amount Paid (PKR)</Label>
                   <Input 
@@ -714,6 +718,7 @@ function BillingPageInner() {
                 </div>
               </div>
 
+              {/* Receipt Upload */}
               <div className="space-y-2">
                 <Label htmlFor="receipt" className="text-xs font-bold text-slate-600 dark:text-slate-400">Receipt Screenshot</Label>
                 <div className="flex items-center gap-3">
@@ -752,7 +757,7 @@ function BillingPageInner() {
 
               <Button 
                 type="submit" 
-                className="w-full mt-4 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-500/10 cursor-pointer" 
+                className="w-full mt-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md shadow-indigo-500/10 cursor-pointer" 
                 disabled={submittingProof || uploading}
               >
                 {submittingProof ? (
