@@ -230,7 +230,7 @@ function BillingPageInner() {
   };
 
   return (
-    <div className="p-6 space-y-8 max-w-5xl mx-auto">
+    <div className="p-6 space-y-8 max-w-7xl mx-auto">
       {/* Header section */}
       <div className="space-y-1">
         <div className="flex items-center gap-3">
@@ -313,7 +313,7 @@ function BillingPageInner() {
             </div>
           )}
           {trialEnds && subStatus === "trialing" && !trialExpired && (
-            <p className="text-xs text-indigo-655 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-950/20 px-3 py-2 rounded-xl inline-block">
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-950/20 px-3 py-2 rounded-xl inline-block">
               Trial ends on {trialEnds.toLocaleDateString()}.
             </p>
           )}
@@ -334,7 +334,7 @@ function BillingPageInner() {
             </p>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-5">
           {plans.map((p) => {
             const isCurrent = plan?.code === p.code;
             const isGrowth = p.code === "growth";
@@ -343,14 +343,14 @@ function BillingPageInner() {
                 key={p.id} 
                 className={`relative overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:shadow-lg rounded-2xl border flex flex-col ${
                   isCurrent 
-                    ? "border-indigo-650 bg-white dark:bg-slate-900 shadow-md shadow-indigo-500/5" 
+                    ? "border-indigo-600 bg-white dark:bg-slate-900 shadow-md shadow-indigo-500/5" 
                     : isGrowth 
-                      ? "border-indigo-500/50 bg-white dark:bg-slate-900" 
+                      ? "border-indigo-500/50 bg-white dark:bg-slate-900 shadow-sm" 
                       : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                 }`}
               >
                 {isGrowth && (
-                  <div className="absolute top-0 right-0 bg-indigo-650 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                  <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
                     Popular
                   </div>
                 )}
@@ -379,7 +379,7 @@ function BillingPageInner() {
                       : 20;
                     return (
                       <div className="mt-1">
-                        <span className="text-[10px] text-green-650 dark:text-green-400 font-bold bg-green-50 dark:bg-green-950/20 px-2.5 py-0.5 rounded-full inline-block">
+                        <span className="text-[10px] text-green-600 dark:text-green-400 font-bold bg-green-50 dark:bg-green-950/20 px-2.5 py-0.5 rounded-full inline-block">
                           Save {discountPercent}% on yearly
                         </span>
                       </div>
@@ -390,21 +390,21 @@ function BillingPageInner() {
                   <ul className="space-y-2.5 text-sm py-2">
                     <li className="flex items-start gap-2.5">
                       <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-slate-600 dark:text-slate-300">
+                      <span className="text-slate-600 dark:text-slate-300 text-xs">
                         {p.maxShipmentsPerMonth <= 0
                           ? "Unlimited shipments"
-                          : `${p.maxShipmentsPerMonth.toLocaleString()} shipments / month`}
+                          : `${p.maxShipmentsPerMonth.toLocaleString()} shipments / mo`}
                       </span>
                     </li>
                     <li className="flex items-start gap-2.5">
                       <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-slate-600 dark:text-slate-300">
-                        {p.maxUsers <= 0 ? "Unlimited team members" : `${p.maxUsers} team members`}
+                      <span className="text-slate-600 dark:text-slate-300 text-xs">
+                        {p.maxUsers <= 0 ? "Unlimited members" : `${p.maxUsers} team members`}
                       </span>
                     </li>
                     <li className="flex items-start gap-2.5">
                       <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="text-slate-600 dark:text-slate-300">
+                      <span className="text-slate-600 dark:text-slate-300 text-xs">
                         {(() => {
                           const mb = (p.features as { maxBranches?: number })?.maxBranches;
                           const resolvedBranches = mb !== undefined ? mb : (p.code === "starter" ? 1 : p.code === "growth" ? 3 : 5);
@@ -415,31 +415,33 @@ function BillingPageInner() {
                     {(p.features as { map?: boolean })?.map && (
                       <li className="flex items-start gap-2.5">
                         <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                        <span className="text-slate-600 dark:text-slate-300">Remote Area Lookup</span>
+                        <span className="text-slate-600 dark:text-slate-300 text-xs">Remote Area Lookup</span>
                       </li>
                     )}
                     {(p.features as { accounts?: boolean })?.accounts && (
                       <li className="flex items-start gap-2.5">
                         <Check className="h-4.5 w-4.5 text-green-500 shrink-0 mt-0.5" />
-                        <span className="text-slate-600 dark:text-slate-300">Accounting & Invoice Ledger</span>
+                        <span className="text-slate-600 dark:text-slate-300 text-xs">Accounting Ledger</span>
                       </li>
                     )}
                   </ul>
                   <Button
                     className={`w-full mt-4 py-5 rounded-xl font-bold cursor-pointer transition-all ${
                       isCurrent
-                        ? "bg-slate-100 hover:bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed border border-slate-205 dark:border-slate-700"
-                        : "bg-indigo-650 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10"
+                        ? "bg-slate-100 hover:bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                        : isGrowth
+                          ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10"
+                          : "bg-slate-950 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 shadow-md"
                     }`}
                     disabled={!canManage || isCurrent || checkoutPlan !== null}
                     onClick={() => upgrade(p.code)}
                   >
                     <Zap className="h-4 w-4 shrink-0 mr-1.5" />
                     {isCurrent
-                      ? "Current plan"
+                      ? "Current Plan"
                       : checkoutPlan === p.code
                       ? "Redirecting…"
-                      : "Pay with Card"}
+                      : "Upgrade Plan"}
                   </Button>
                 </CardContent>
               </Card>

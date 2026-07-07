@@ -460,6 +460,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               if (link.href === "/dashboard/customers") return hasPermission("view_customers");
               if (link.href === "/dashboard/recipients") return hasPermission("view_customers");
               if (link.href === "/dashboard/vendors") return hasPermission("view_vendors");
+              if (link.href === "/dashboard/settings/billing") return !isSuperAdmin && orgRole === "OWNER";
               return true;
             })
             .map(({ href, label, icon: Icon }) => {
