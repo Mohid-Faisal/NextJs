@@ -296,7 +296,7 @@ function BillingPageInner() {
 
         {/* Top-right Current Plan & Limits card */}
         {usage && (
-          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-4 shrink-0 flex items-center gap-6">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-4 shrink-0 flex flex-row items-center gap-6">
             <div className="flex items-center gap-4">
               <CircularProgress
                 label="Shipments"
