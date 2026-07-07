@@ -63,44 +63,7 @@ const PAYMENT_METHODS = [
   { value: "CARD", label: "Credit / Debit Card", icon: CreditCard, desc: "Visa, Mastercard (Not Enabled)", disabled: true },
 ];
 
-const StepIndicator = ({ currentStep, totalSteps, labels }: { currentStep: number; totalSteps: number; labels: string[] }) => (
-  <div className="flex items-center justify-between w-full relative py-2">
-    {/* Progress Bar background line */}
-    <div className="absolute top-[18px] left-[5%] right-[5%] h-0.5 bg-slate-205 dark:bg-slate-800 -z-10" />
-    {/* Active Progress Bar line */}
-    <motion.div 
-      className="absolute top-[18px] left-[5%] h-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 -z-10" 
-      initial={{ width: "0%" }}
-      animate={{ width: `${(currentStep / (totalSteps - 1)) * 90}%` }}
-      transition={{ duration: 0.4 }}
-    />
-    
-    {labels.map((label, idx) => {
-      const isCompleted = idx < currentStep;
-      const isActive = idx === currentStep;
-      return (
-        <div key={idx} className="flex flex-col items-center flex-1">
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: isActive ? 1.05 : 1 }}
-            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-              isCompleted
-                ? "bg-green-500 text-white shadow-md shadow-green-500/20"
-                : isActive
-                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/20 ring-4 ring-indigo-100 dark:ring-indigo-950/50"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/50"
-            }`}
-          >
-            {isCompleted ? <Check className="w-4.5 h-4.5" /> : idx + 1}
-          </motion.div>
-          <span className={`text-[10px] font-bold mt-2 tracking-wide uppercase transition-colors duration-300 ${isActive ? "text-indigo-600 dark:text-indigo-400" : isCompleted ? "text-slate-700 dark:text-slate-300" : "text-slate-400"}`}>
-            {label}
-          </span>
-        </div>
-      );
-    })}
-  </div>
-);
+
 
 const SignupPage = () => {
   const router = useRouter();
@@ -558,7 +521,6 @@ const SignupPage = () => {
 
   // --- STEP: Plan Selection ---
   if (step === "plan") {
-    const orgStepLabels = ["Details", "Verify", "Plan", "Payment"];
     const sortedPlans = [...plans]
       .filter((p) => p.code !== "trial" && p.code !== "free")
       .sort((a, b) => a.priceMonthlyUsd - b.priceMonthlyUsd);
@@ -585,11 +547,6 @@ const SignupPage = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
             </p>
-          </div>
-
-          {/* Stepper */}
-          <div className="mb-12 w-full max-w-md bg-white/45 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl p-4 border border-white/60 dark:border-white/10 shadow-xs">
-            <StepIndicator currentStep={2} totalSteps={4} labels={orgStepLabels} />
           </div>
 
           {/* Self-adjusting pricing grid */}
@@ -726,7 +683,6 @@ const SignupPage = () => {
   // --- STEP: Payment ---
   if (step === "payment") {
     const chosenPlan = plans.find((p) => p.code === selectedPlan);
-    const orgStepLabels = ["Details", "Verify", "Plan", "Payment"];
     
     return (
       <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
@@ -745,14 +701,9 @@ const SignupPage = () => {
 
           <div className="text-center space-y-2 mb-6">
             <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Submit Payment Details</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-450">
+            <p className="text-xs text-slate-500 dark:text-slate-455">
               Please send the plan subscription fee and paste the transaction details below.
             </p>
-          </div>
-
-          {/* Stepper */}
-          <div className="mb-8 w-full bg-white/45 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl p-4 border border-white/60 dark:border-white/10 shadow-xs">
-            <StepIndicator currentStep={3} totalSteps={4} labels={orgStepLabels} />
           </div>
 
           <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
@@ -994,12 +945,7 @@ const SignupPage = () => {
               </button>
             </div>
 
-            {/* Step indicators inside details for org */}
-            {tab === "org" && (
-              <div className="p-3.5 bg-white/45 dark:bg-slate-950/40 border border-white/60 dark:border-white/10 rounded-2xl shadow-xs">
-                <StepIndicator currentStep={0} totalSteps={4} labels={["Details", "Verify", "Plan", "Payment"]} />
-              </div>
-            )}
+
 
             <div className="space-y-4">
               <AnimatePresence mode="wait">
