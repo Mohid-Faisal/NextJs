@@ -556,28 +556,9 @@ const SignupPage = () => {
             </div>
           </div>
 
-          {/* Dynamic Billing Switch */}
-          <div className="flex items-center justify-center gap-3 mb-6 bg-slate-100/80 dark:bg-slate-900/40 p-2.5 rounded-full border border-slate-200 dark:border-slate-800 shadow-xs max-w-[260px] mx-auto">
-            <span className={`text-xs font-bold transition-colors ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>Monthly</span>
-            <button 
-              type="button" 
-              onClick={() => setIsAnnual(!isAnnual)}
-              className="relative w-10 h-5.5 rounded-full bg-slate-200 dark:bg-slate-850 transition-colors duration-300 focus:outline-none cursor-pointer"
-            >
-              <motion.div 
-                className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
-                animate={{ x: isAnnual ? 18 : 0 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            </button>
-            <span className={`text-xs font-bold transition-colors flex items-center gap-1.5 ${isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>
-              Annually 
-              <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400 rounded-md">Save 20%</span>
-            </span>
-          </div>
 
           {/* Self-adjusting pricing grid */}
-          <div className="flex flex-wrap xl:flex-nowrap justify-center items-stretch gap-4 w-full max-w-[1440px] mx-auto mb-0">
+          <div className="flex flex-wrap xl:flex-nowrap justify-center items-stretch gap-4 w-full max-w-[1440px] mx-auto mt-4 mb-0">
             {/* Free Trial Card */}
             {(() => {
               const trialPlan = plans.find((p) => p.code === "trial") || {
@@ -679,14 +660,7 @@ const SignupPage = () => {
                         <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
                           {(() => {
                             const currency = (plan.features as any)?.currency || "PKR";
-                            const discountPercent = features.yearlyDiscountPercent !== undefined 
-                              ? parseFloat(features.yearlyDiscountPercent) 
-                              : (features.annualPrice && plan.priceMonthlyUsd > 0 
-                                ? Math.round((1 - (features.annualPrice / (plan.priceMonthlyUsd * 12))) * 100) 
-                                : 20);
-                            const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * (1 - (discountPercent / 100)));
-                            const monthlyRateUnderAnnual = calculatedAnnualPrice / 12;
-                            const priceToDisplay = isAnnual ? monthlyRateUnderAnnual : plan.priceMonthlyUsd;
+                            const priceToDisplay = plan.priceMonthlyUsd;
 
                             if (currency === "USD") return `$${priceToDisplay.toFixed(2)}`;
                             if (currency === "EUR") return `€${priceToDisplay.toFixed(2)}`;
@@ -703,7 +677,7 @@ const SignupPage = () => {
                             : (features.annualPrice && plan.priceMonthlyUsd > 0 
                               ? Math.round((1 - (features.annualPrice / (plan.priceMonthlyUsd * 12))) * 100) 
                               : 20);
-                          return isAnnual ? `Billed annually (${discountPercent}% off)` : "Billed monthly";
+                          return `Billed monthly (Save ${discountPercent}% on yearly)`;
                         })()}
                       </p>
                     </div>
@@ -778,12 +752,25 @@ const SignupPage = () => {
             <CardContent className="p-6 pt-4 space-y-6">
               {/* Plan Summary without Billing Cycle Selector */}
               {chosenPlan && (
-                <div className="bg-white/40 dark:bg-slate-950/40 rounded-xl p-3 border border-white/60 dark:border-white/10 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Selected Plan</span>
-                      <h4 className="text-sm font-extrabold capitalize text-slate-800 dark:text-white mt-0.5">{chosenPlan.name} Plan</h4>
-                      <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5 block">
+                <div className="bg-white/40 dark:bg-slate-950/40 rounded-xl p-3 border border-white/60 dark:border-white/10 space-y-2.5">
+                  {/* Billing Switcher inside Payment summary */}
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/50 dark:border-slate-800/40">
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-405 uppercase tracking-wider">Billing Cycle</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-450 dark:text-slate-500"}`}>Monthly</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsAnnual(!isAnnual)}
+                        className="relative w-8 h-4.5 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
+                      >
+                        <motion.div 
+                          className="absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-xs"
+                          animate={{ x: isAnnual ? 14 : 0 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        />
+                      </button>
+                      <span className={`text-[10px] font-bold flex items-center gap-1 ${isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-450 dark:text-slate-500"}`}>
+                        Yearly
                         {(() => {
                           const features = chosenPlan.features || {};
                           const discountPercent = features.yearlyDiscountPercent !== undefined 
@@ -791,9 +778,20 @@ const SignupPage = () => {
                             : (features.annualPrice && chosenPlan.priceMonthlyUsd > 0 
                               ? Math.round((1 - (features.annualPrice / (chosenPlan.priceMonthlyUsd * 12))) * 100) 
                               : 20);
-                          return isAnnual ? `Billed annually (${discountPercent}% discount applied)` : "Billed monthly";
+                          return (
+                            <span className="text-[8px] font-extrabold px-1 py-0.2 bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400 rounded">
+                              -{discountPercent}%
+                            </span>
+                          );
                         })()}
                       </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Selected Plan</span>
+                      <h4 className="text-sm font-extrabold capitalize text-slate-800 dark:text-white mt-0.5">{chosenPlan.name} Plan</h4>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Amount Due</span>
