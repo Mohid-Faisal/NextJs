@@ -51,6 +51,9 @@ const links = [
   { href: "/dashboard/customers", label: "Customers", icon: User },
   { href: "/dashboard/recipients", label: "Recipients", icon: Users },
   { href: "/dashboard/vendors", label: "Vendors", icon: Building2 },
+];
+
+const adminLinks = [
   { href: "/dashboard/users", label: "Users & Teams", icon: Users },
   { href: "/dashboard/roles-permissions", label: "Roles & Permissions", icon: ShieldCheck },
   { href: "/dashboard/settings/billing", label: "Plan & Billing", icon: CreditCard },
@@ -455,12 +458,9 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
           {/* Other Static Links */}
           {links
             .filter((link) => {
-              if (link.href === "/dashboard/users") return isSuperAdmin || orgRole === "OWNER";
-              if (link.href === "/dashboard/roles-permissions") return isSuperAdmin || orgRole === "OWNER";
               if (link.href === "/dashboard/customers") return hasPermission("view_customers");
               if (link.href === "/dashboard/recipients") return hasPermission("view_customers");
               if (link.href === "/dashboard/vendors") return hasPermission("view_vendors");
-              if (link.href === "/dashboard/settings/billing") return !isSuperAdmin && orgRole === "OWNER";
               return true;
             })
             .map(({ href, label, icon: Icon }) => {
@@ -767,6 +767,40 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
               </AnimatePresence>
             </div>
           )}
+
+          {/* Users & Teams, Roles & Permissions, Plan & Billing — after Reports, before Configuration */}
+          {adminLinks
+            .filter((link) => {
+              if (link.href === "/dashboard/users") return isSuperAdmin || orgRole === "OWNER";
+              if (link.href === "/dashboard/roles-permissions") return isSuperAdmin || orgRole === "OWNER";
+              if (link.href === "/dashboard/settings/billing") return !isSuperAdmin && orgRole === "OWNER";
+              return true;
+            })
+            .map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 group ${
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  }`}
+                >
+                  <Icon className="w-5 h-5 shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-200 ${
+                      shouldExpand
+                        ? "opacity-100"
+                        : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </Link>
+              );
+            })}
 
           {/* Settings Collapsible */}
           {(hasPermission("view_config") || hasPermission("manage_statuses") || hasPermission("manage_billing") || hasPermission("view_map") || hasPermission("manage_hscodes")) && (
