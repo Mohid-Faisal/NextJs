@@ -23,7 +23,6 @@ import {
   Phone,
   MapPin,
   Sparkles,
-  Zap,
   Clock,
   Upload,
   CreditCard,
@@ -32,7 +31,6 @@ import {
   Banknote,
   CheckCircle2,
   Loader2,
-  FileText,
 } from "lucide-react";
 import { ZodError } from "zod";
 import { signupSchema } from "@/zodschemas/signupSchema";
@@ -68,7 +66,7 @@ const PAYMENT_METHODS = [
 const StepIndicator = ({ currentStep, totalSteps, labels }: { currentStep: number; totalSteps: number; labels: string[] }) => (
   <div className="flex items-center justify-between w-full relative py-2">
     {/* Progress Bar background line */}
-    <div className="absolute top-[18px] left-[5%] right-[5%] h-0.5 bg-slate-200 dark:bg-slate-800 -z-10" />
+    <div className="absolute top-[18px] left-[5%] right-[5%] h-0.5 bg-slate-205 dark:bg-slate-800 -z-10" />
     {/* Active Progress Bar line */}
     <motion.div 
       className="absolute top-[18px] left-[5%] h-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 -z-10" 
@@ -452,11 +450,14 @@ const SignupPage = () => {
 
   const Background = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {/* Grid Pattern Background */}
       <div 
         className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70"
       />
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-600/10 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-purple-600/10 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+      {/* Vibrant glowing ambient blobs behind the card */}
+      <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] rounded-full bg-indigo-300/40 dark:bg-indigo-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[55%] rounded-full bg-purple-300/40 dark:bg-purple-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+      <div className="absolute top-[20%] left-[20%] w-[45%] h-[45%] rounded-full bg-blue-300/25 dark:bg-blue-600/10 blur-[100px] pointer-events-none" />
       {isDark ? (
         <Particles
           particleColors={["#ffffff", "#4f8fff", "#a78bfa"]}
@@ -476,11 +477,11 @@ const SignupPage = () => {
   // --- STEP: Pending Approval ---
   if (step === "pending") {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         <motion.div className="w-full max-w-lg relative z-10 text-center" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-          <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-3xl">
+          <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl">
             <CardContent className="p-10 space-y-6">
               <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg shadow-indigo-500/20">
                 <Clock className="w-10 h-10 text-white" />
@@ -492,12 +493,12 @@ const SignupPage = () => {
                 Thank you for signing up! Your payment and reference details are being reviewed by our finance department.
                 Approval usually takes between 1-3 business hours.
               </p>
-              <div className="bg-slate-50 dark:bg-slate-950/40 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 text-left space-y-2 text-xs">
-                <div className="flex justify-between"><span className="text-slate-400">Workspace:</span><span className="font-bold text-slate-700 dark:text-slate-350">{form.companyName}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Owner Name:</span><span className="font-bold text-slate-700 dark:text-slate-350">{form.name}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Status:</span><span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 font-bold uppercase tracking-wider text-[10px]">Under Review</span></div>
+              <div className="bg-white/50 dark:bg-slate-950/40 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 text-left space-y-2 text-xs">
+                <div className="flex justify-between"><span className="text-slate-400 font-semibold">Workspace:</span><span className="font-bold text-slate-700 dark:text-slate-350">{form.companyName}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400 font-semibold">Owner Name:</span><span className="font-bold text-slate-700 dark:text-slate-350">{form.name}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400 font-semibold">Status:</span><span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 font-bold uppercase tracking-wider text-[10px]">Under Review</span></div>
               </div>
-              <Button onClick={() => router.push("/auth/login")} className="w-full py-5 rounded-xl font-bold bg-indigo-650 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer">
+              <Button onClick={() => router.push("/auth/login")} className="w-full py-5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer">
                 Back to Login
               </Button>
             </CardContent>
@@ -510,11 +511,11 @@ const SignupPage = () => {
   // --- STEP: Verification ---
   if (step === "verification") {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         <motion.div className="w-full max-w-[440px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-3xl">
+          <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl">
             <CardContent className="p-8 space-y-6">
               <div className="text-center space-y-2">
                 <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Verify Email Address</h2>
@@ -540,7 +541,7 @@ const SignupPage = () => {
               </div>
 
               <div className="space-y-3">
-                <Button onClick={handleVerification} disabled={verificationCode.length < 6 || isLoading} className="w-full py-5 rounded-xl font-bold bg-indigo-650 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer flex items-center justify-center">
+                <Button onClick={handleVerification} disabled={verificationCode.length < 6 || isLoading} className="w-full py-5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer flex items-center justify-center">
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify Code"}
                 </Button>
                 <button onClick={() => handleSignup("free", true)} className="w-full text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
@@ -562,7 +563,7 @@ const SignupPage = () => {
       .sort((a, b) => a.priceMonthlyUsd - b.priceMonthlyUsd);
 
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         
@@ -586,11 +587,11 @@ const SignupPage = () => {
           </div>
 
           {/* Stepper */}
-          <div className="mb-10 w-full max-w-md bg-white/60 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-4 border border-slate-200/30 dark:border-slate-800/30 shadow-xs">
+          <div className="mb-10 w-full max-w-md bg-white/45 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl p-4 border border-white/60 dark:border-white/10 shadow-xs">
             <StepIndicator currentStep={2} totalSteps={4} labels={orgStepLabels} />
           </div>
 
-          {/* SOTA Dynamic Billing Switch */}
+          {/* Dynamic Billing Switch */}
           <div className="flex items-center gap-3 mb-10">
             <span className={`text-sm font-semibold transition-colors ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>Monthly</span>
             <button 
@@ -599,7 +600,7 @@ const SignupPage = () => {
               className="relative w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors duration-300 focus:outline-none cursor-pointer"
             >
               <motion.div 
-                className="absolute top-1 left-1 w-4 h-4 rounded-full bg-indigo-650 dark:bg-indigo-400 shadow-sm"
+                className="absolute top-1 left-1 w-4 h-4 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-sm"
                 animate={{ x: isAnnual ? 24 : 0 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
@@ -610,11 +611,11 @@ const SignupPage = () => {
             </span>
           </div>
 
-          {/* Self-adjusting in the middle flex layout */}
+          {/* Self-adjusting pricing grid */}
           <div className="flex flex-wrap justify-center items-stretch gap-6 w-full max-w-7xl mx-auto mb-10">
             {/* Free Trial Card */}
             <Card 
-              className="relative flex flex-col justify-between p-6 border border-slate-200/60 dark:border-slate-800/80 shadow-md bg-white/70 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl w-full sm:w-[280px] md:w-[290px] hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-300"
+              className="relative flex flex-col justify-between p-6 border border-white/60 dark:border-white/10 shadow-md bg-white/45 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl w-full sm:w-[280px] md:w-[290px] hover:border-white/80 dark:hover:border-white/20 transition-all duration-300"
             >
               <div className="space-y-4 flex-1 flex flex-col">
                 <div>
@@ -666,7 +667,6 @@ const SignupPage = () => {
             {sortedPlans.map((plan) => {
               const features = plan.features || {};
               const isGrowth = plan.code === "growth";
-              const isPro = plan.code === "pro";
               
               // 20% discount on Annual rate
               const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
@@ -680,8 +680,8 @@ const SignupPage = () => {
                   key={plan.id}
                   className={`relative flex flex-col justify-between p-6 transition-all duration-300 w-full sm:w-[280px] md:w-[290px] rounded-2xl ${
                     isGrowth 
-                      ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-white dark:bg-slate-900/90" 
-                      : "border border-slate-200/60 dark:border-slate-800/80 shadow-md bg-white/70 dark:bg-slate-900/80 backdrop-blur-md hover:border-slate-350 dark:hover:border-slate-700"
+                      ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-white/45 dark:bg-slate-950/45 backdrop-blur-md" 
+                      : "border border-white/60 dark:border-white/10 shadow-md bg-white/45 dark:bg-slate-950/45 backdrop-blur-md hover:border-white/85 dark:hover:border-white/20"
                   }`}
                 >
                   {isGrowth && (
@@ -716,7 +716,7 @@ const SignupPage = () => {
 
                     <hr className="border-slate-100 dark:border-slate-800/50 my-2" />
 
-                    <ul className="space-y-3.5 text-xs text-slate-650 dark:text-slate-450 flex-1 py-2">
+                    <ul className="space-y-3.5 text-xs text-slate-600 dark:text-slate-400 flex-1 py-2">
                       {getChecklistForPlan(plan).map((item, idx) => (
                         <li key={idx} className="flex items-start gap-2">
                           <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
@@ -754,7 +754,7 @@ const SignupPage = () => {
     const orgStepLabels = ["Details", "Verify", "Plan", "Payment"];
     
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         
@@ -770,22 +770,22 @@ const SignupPage = () => {
 
           <div className="text-center space-y-2 mb-6">
             <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Submit Payment Details</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-450">
               Please send the plan subscription fee and paste the transaction details below.
             </p>
           </div>
 
           {/* Stepper */}
-          <div className="mb-8 w-full bg-white/60 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-4 border border-slate-200/30 dark:border-slate-800/30 shadow-xs">
+          <div className="mb-8 w-full bg-white/45 dark:bg-slate-950/45 backdrop-blur-md rounded-2xl p-4 border border-white/60 dark:border-white/10 shadow-xs">
             <StepIndicator currentStep={3} totalSteps={4} labels={orgStepLabels} />
           </div>
 
-          <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-3xl overflow-hidden w-full">
+          <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
             <CardContent className="p-8 space-y-6">
               
               {/* Plan Summary */}
               {chosenPlan && (
-                <div className="bg-slate-50 dark:bg-slate-950/40 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-1">
+                <div className="bg-white/40 dark:bg-slate-950/40 rounded-2xl p-4 border border-white/60 dark:border-white/10 space-y-1">
                   <div className="flex justify-between text-xs text-slate-400 font-semibold uppercase"><span>Selected Plan</span><span>Amount Due</span></div>
                   <div className="flex justify-between items-center"><span className="text-sm font-bold capitalize text-slate-700 dark:text-white">{chosenPlan.name} Plan</span><span className="text-base font-extrabold text-indigo-600 dark:text-indigo-400">{((chosenPlan.features as any)?.currency || "PKR")} {chosenPlan.priceMonthlyUsd.toLocaleString()} /mo</span></div>
                 </div>
@@ -809,10 +809,10 @@ const SignupPage = () => {
                           method.value === "CARD" ? "col-span-2" : ""
                         } ${
                           isDisabled
-                            ? "opacity-40 border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 cursor-not-allowed"
+                            ? "opacity-40 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 cursor-not-allowed"
                             : active
                             ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20 cursor-pointer scale-[1.02]"
-                            : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white/40 dark:bg-slate-950/20 cursor-pointer"
+                            : "border-slate-205 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white/40 dark:bg-slate-950/20 cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -831,9 +831,9 @@ const SignupPage = () => {
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
-                  className="bg-slate-50 dark:bg-slate-950/60 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 space-y-3"
+                  className="bg-white/40 dark:bg-slate-950/60 border border-white/60 dark:border-white/10 rounded-2xl p-5 space-y-3"
                 >
-                  <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Recipient Account Details</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Recipient Account Details</p>
                   
                   {paymentMethod === "JAZZCASH" && (
                     <div className="space-y-1.5 text-xs">
@@ -855,7 +855,7 @@ const SignupPage = () => {
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between"><span className="text-slate-400">Bank:</span><span className="font-bold text-slate-700 dark:text-slate-350">Allied Bank Limited</span></div>
                       <div className="flex justify-between"><span className="text-slate-400">Account Name:</span><span className="font-bold text-slate-700 dark:text-slate-350">Prompt Survey & Services (PSS)</span></div>
-                      <div className="flex justify-between"><span className="text-slate-400">Account No:</span><span className="font-bold text-indigo-650 dark:text-indigo-400 select-all">053000010010882520025</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Account No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">053000010010882520025</span></div>
                       <div className="flex justify-between items-center gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
                         <span className="text-slate-400">IBAN:</span>
                         <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 select-all bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 px-2 py-0.5 rounded break-all">
@@ -871,7 +871,7 @@ const SignupPage = () => {
               <div className="space-y-2">
                 <Label htmlFor="referenceId" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Transaction Reference ID</Label>
                 <div className="relative group">
-                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   <Input
                     id="referenceId"
                     value={referenceId}
@@ -890,7 +890,7 @@ const SignupPage = () => {
                   className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all hover:border-indigo-400/80 bg-white/40 dark:bg-slate-950/20 ${
                     receiptPreview
                       ? "border-green-400 bg-green-50/20 dark:bg-green-950/10"
-                      : "border-slate-250 dark:border-slate-800"
+                      : "border-slate-200 dark:border-slate-800"
                   }`}
                 >
                   {receiptPreview ? (
@@ -902,8 +902,8 @@ const SignupPage = () => {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Upload className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto" />
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Click to upload screenshot</p>
+                      <Upload className="w-8 h-8 text-slate-350 dark:text-slate-700 mx-auto" />
+                      <p className="text-xs font-semibold text-slate-550 dark:text-slate-400">Click to upload screenshot</p>
                       <p className="text-[10px] text-slate-400">PNG, JPG, JPEG up to 5MB</p>
                     </div>
                   )}
@@ -914,7 +914,7 @@ const SignupPage = () => {
               <Button
                 onClick={handlePaymentSubmit}
                 disabled={!paymentMethod || !referenceId.trim() || isLoading || uploadingReceipt}
-                className="w-full h-12 text-sm bg-gradient-to-r from-indigo-650 to-purple-600 hover:from-indigo-650 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full h-12 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-650 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {isLoading || uploadingReceipt ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />{uploadingReceipt ? "Uploading..." : "Processing..."}</>
@@ -931,7 +931,7 @@ const SignupPage = () => {
 
   // --- STEP: Signup Form (Step 1) ---
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
+    <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]"}`}>
       <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
       <Background />
       
@@ -946,12 +946,12 @@ const SignupPage = () => {
           <h1 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
             Create Account
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[320px] mx-auto leading-relaxed">
+          <p className="text-xs text-slate-550 dark:text-slate-400 max-w-[320px] mx-auto leading-relaxed">
             Register to join an existing courier workspace or establish your own workspace.
           </p>
         </div>
 
-        <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-3xl overflow-hidden w-full">
+        <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
           <CardContent className="p-8 space-y-6">
             
             {/* Custom Tab Switcher */}
@@ -961,7 +961,7 @@ const SignupPage = () => {
                 onClick={() => setTab("user")}
                 className="flex-1 py-2 text-xs font-bold relative z-10 transition-colors text-center cursor-pointer focus:outline-none"
               >
-                <span className={tab === "user" ? "text-indigo-650 dark:text-indigo-400" : "text-slate-450 dark:text-slate-500"}>User Sign Up</span>
+                <span className={tab === "user" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}>User Sign Up</span>
                 {tab === "user" && (
                   <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm -z-10 border border-slate-200/10" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
                 )}
@@ -971,7 +971,7 @@ const SignupPage = () => {
                 onClick={() => setTab("org")}
                 className="flex-1 py-2 text-xs font-bold relative z-10 transition-colors text-center cursor-pointer focus:outline-none"
               >
-                <span className={tab === "org" ? "text-indigo-650 dark:text-indigo-400" : "text-slate-450 dark:text-slate-500"}>Create Workspace</span>
+                <span className={tab === "org" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}>Create Workspace</span>
                 {tab === "org" && (
                   <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm -z-10 border border-slate-200/10" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
                 )}
@@ -980,7 +980,7 @@ const SignupPage = () => {
 
             {/* Step indicators inside details for org */}
             {tab === "org" && (
-              <div className="p-3.5 bg-slate-50/55 dark:bg-slate-950/40 border border-slate-200/30 dark:border-slate-800/30 rounded-2xl shadow-xs">
+              <div className="p-3.5 bg-white/45 dark:bg-slate-950/40 border border-white/60 dark:border-white/10 rounded-2xl shadow-xs">
                 <StepIndicator currentStep={0} totalSteps={4} labels={["Details", "Verify", "Plan", "Payment"]} />
               </div>
             )}
@@ -997,24 +997,24 @@ const SignupPage = () => {
                     className="space-y-4 overflow-hidden"
                   >
                     <div className="space-y-2">
-                      <Label htmlFor="companyName" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Company Name</Label>
+                      <Label htmlFor="companyName" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Company Name</Label>
                       <div className="relative group">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                         <Input id="companyName" name="companyName" value={form.companyName} onChange={handleChange} placeholder="Acme Logistics Ltd" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Phone Number</Label>
+                        <Label htmlFor="phone" className="text-xs font-semibold text-slate-600 dark:text-slate-350">Phone Number</Label>
                         <div className="relative group">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                           <Input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="address" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Company Address</Label>
+                        <Label htmlFor="address" className="text-xs font-semibold text-slate-600 dark:text-slate-350">Company Address</Label>
                         <div className="relative group">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                           <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="123 Logistics Way" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                         </div>
                       </div>
@@ -1025,27 +1025,27 @@ const SignupPage = () => {
 
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Full Name</Label>
+                <Label htmlFor="name" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Full Name</Label>
                 <div className="relative group">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-455 group-focus-within:text-indigo-500 transition-colors" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                 </div>
               </div>
 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold text-slate-650 dark:text-slate-350">{tab === "org" ? "Work Email Address" : "Email Address"}</Label>
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-600 dark:text-slate-300">{tab === "org" ? "Work Email Address" : "Email Address"}</Label>
                 <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                 </div>
               </div>
 
               {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Password</Label>
+                <Label htmlFor="password" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Password</Label>
                 <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
                     {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
@@ -1065,7 +1065,7 @@ const SignupPage = () => {
 
               <Button
                 onClick={tab === "org" ? handleContinueToPlan : handleUserSignup}
-                className="w-full h-12 text-sm bg-gradient-to-r from-indigo-650 to-purple-650 hover:from-indigo-600 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
+                className="w-full h-12 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
                 disabled={strength === "weak" || isLoading}
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : tab === "org" ? (

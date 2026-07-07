@@ -26,8 +26,9 @@ const Background = ({ isDark }: { isDark: boolean }) => (
       className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70"
     />
     {/* Soft glowing ambient blobs */}
-    <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-600/10 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-purple-600/10 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+    <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] rounded-full bg-indigo-300/40 dark:bg-indigo-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[55%] h-[55%] rounded-full bg-purple-300/40 dark:bg-purple-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+    <div className="absolute top-[20%] left-[20%] w-[45%] h-[45%] rounded-full bg-blue-300/25 dark:bg-blue-600/10 blur-[100px] pointer-events-none" />
     {isDark ? (
       <Particles
         particleColors={['#ffffff', '#4f8fff', '#a78bfa']}
@@ -107,7 +108,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? 'bg-[#030014]' : 'bg-[#f8fafc]'}`}>
+    <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? 'bg-[#030014]' : 'bg-gradient-to-tr from-slate-50 via-indigo-50/20 to-purple-50/30 bg-[#f8fafc]'}`}>
       {/* Theme Toggle */}
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle />
@@ -130,7 +131,7 @@ const LoginPage = () => {
           Back to home
         </Link>
 
-        <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden">
+        <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden">
           <CardContent className="p-8 space-y-6">
             {/* Header info */}
             <div className="flex flex-col items-center justify-center text-center">
@@ -169,7 +170,7 @@ const LoginPage = () => {
                   <Label htmlFor="password" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Password</Label>
                   <Link
                     href="/auth/reset-password"
-                    className="text-xs font-semibold text-indigo-650 dark:text-indigo-400 hover:underline"
+                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                   >
                     Forgot password?
                   </Link>
