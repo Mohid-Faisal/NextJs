@@ -533,24 +533,24 @@ const SignupPage = () => {
         <Background />
         
         <motion.div className="w-full max-w-[1300px] relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="flex flex-col items-center w-full max-w-[1300px] mb-10 pb-5 border-b border-slate-200/50 dark:border-slate-800/40 text-center">
-            <div className="flex items-center justify-center gap-4">
-              <Button 
-                type="button"
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setStep("verification")}
-                className="rounded-full bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 shadow-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0 h-10 w-10"
-              >
-                <ArrowLeft className="h-4.5 w-4.5" />
-              </Button>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <div className="flex items-center gap-6 w-full max-w-[1300px] mb-10 pb-6 border-b border-slate-200/50 dark:border-slate-800/40 text-left">
+            <Button 
+              type="button"
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setStep("verification")}
+              className="rounded-full bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 shadow-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0 h-11 w-11"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[44px] font-black tracking-tight text-slate-900 dark:text-white leading-tight">
                 Simple, transparent pricing
               </h1>
+              <p className="text-sm sm:text-base text-slate-550 dark:text-slate-400 mt-2">
+                Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
+              </p>
             </div>
-            <p className="text-sm sm:text-base text-slate-550 dark:text-slate-400 mt-2 max-w-2xl">
-              Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
-            </p>
           </div>
 
           {/* Self-adjusting pricing grid */}
@@ -689,29 +689,29 @@ const SignupPage = () => {
     const chosenPlan = plans.find((p) => p.code === selectedPlan);
     
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-start px-4 pt-6 pb-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         
         <motion.div className="w-full max-w-xl relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="flex flex-col items-center w-full mb-8 pb-5 border-b border-slate-200/50 dark:border-slate-800/40 text-center">
-            <div className="flex items-center justify-center gap-4">
-              <Button 
-                type="button"
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setStep("plan")}
-                className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0 h-10 w-10"
-              >
-                <ArrowLeft className="h-4.5 w-4.5" />
-              </Button>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <div className="flex items-center gap-6 w-full mb-5 pb-5 border-b border-slate-200/50 dark:border-slate-800/40 text-left">
+            <Button 
+              type="button"
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setStep("plan")}
+              className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0 h-11 w-11"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
                 Submit payment details
               </h2>
+              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
+                Please send the plan subscription fee and paste the transaction details below.
+              </p>
             </div>
-            <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2 max-w-md">
-              Please send the plan subscription fee and paste the transaction details below.
-            </p>
           </div>
 
           <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
