@@ -24,23 +24,20 @@ import {
   MapPin,
   Sparkles,
   Zap,
-  Crown,
   Clock,
   Upload,
   CreditCard,
   Landmark,
   Smartphone,
   Banknote,
-  Shield,
   CheckCircle2,
   Loader2,
-  Image as ImageIcon,
+  FileText,
 } from "lucide-react";
 import { ZodError } from "zod";
 import { signupSchema } from "@/zodschemas/signupSchema";
 import Particles from "@/components/Particles";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { AuroraBackground } from "@/components/ui/aurora-background";
 
 type Plan = {
   id: number;
@@ -49,7 +46,7 @@ type Plan = {
   priceMonthlyUsd: number;
   maxUsers: number;
   maxShipmentsPerMonth: number;
-  features?: Record<string, unknown> | null;
+  features?: Record<string, any> | null;
 };
 
 const getPasswordStrength = (password: string) => {
@@ -65,35 +62,45 @@ const PAYMENT_METHODS = [
   { value: "EASYPAISA", label: "Easypaisa", icon: Smartphone, desc: "Mobile wallet" },
   { value: "JAZZCASH", label: "JazzCash", icon: Smartphone, desc: "Mobile wallet" },
   { value: "CASH", label: "Cash", icon: Banknote, desc: "Cash payment" },
-  { value: "CARD", label: "Credit / Debit Card", icon: CreditCard, desc: "Visa, Mastercard (Not Enabled Yet)", disabled: true },
+  { value: "CARD", label: "Credit / Debit Card", icon: CreditCard, desc: "Visa, Mastercard (Not Enabled)", disabled: true },
 ];
 
-// Step indicator showing progress
 const StepIndicator = ({ currentStep, totalSteps, labels }: { currentStep: number; totalSteps: number; labels: string[] }) => (
-  <div className="flex items-center justify-center gap-2 mb-8">
-    {labels.map((label, idx) => (
-      <div key={idx} className="flex items-center gap-2">
-        <div className="flex flex-col items-center gap-1">
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-              idx < currentStep
-                ? "bg-green-500 text-white"
-                : idx === currentStep
-                ? "bg-indigo-600 text-white ring-4 ring-indigo-200 dark:ring-indigo-900"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-400"
+  <div className="flex items-center justify-between w-full relative py-2">
+    {/* Progress Bar background line */}
+    <div className="absolute top-[18px] left-[5%] right-[5%] h-0.5 bg-slate-200 dark:bg-slate-800 -z-10" />
+    {/* Active Progress Bar line */}
+    <motion.div 
+      className="absolute top-[18px] left-[5%] h-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 -z-10" 
+      initial={{ width: "0%" }}
+      animate={{ width: `${(currentStep / (totalSteps - 1)) * 90}%` }}
+      transition={{ duration: 0.4 }}
+    />
+    
+    {labels.map((label, idx) => {
+      const isCompleted = idx < currentStep;
+      const isActive = idx === currentStep;
+      return (
+        <div key={idx} className="flex flex-col items-center flex-1">
+          <motion.div
+            initial={{ scale: 0.8 }}
+            animate={{ scale: isActive ? 1.05 : 1 }}
+            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+              isCompleted
+                ? "bg-green-500 text-white shadow-md shadow-green-500/20"
+                : isActive
+                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/20 ring-4 ring-indigo-100 dark:ring-indigo-950/50"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/50"
             }`}
           >
-            {idx < currentStep ? <Check className="w-4 h-4" /> : idx + 1}
-          </div>
-          <span className={`text-[10px] font-medium ${idx <= currentStep ? "text-gray-700 dark:text-gray-300" : "text-gray-400"}`}>
+            {isCompleted ? <Check className="w-4.5 h-4.5" /> : idx + 1}
+          </motion.div>
+          <span className={`text-[10px] font-bold mt-2 tracking-wide uppercase transition-colors duration-300 ${isActive ? "text-indigo-600 dark:text-indigo-400" : isCompleted ? "text-slate-700 dark:text-slate-300" : "text-slate-400"}`}>
             {label}
           </span>
         </div>
-        {idx < labels.length - 1 && (
-          <div className={`w-8 h-0.5 mt-[-16px] transition-all duration-300 ${idx < currentStep ? "bg-green-500" : "bg-gray-200 dark:bg-gray-700"}`} />
-        )}
-      </div>
-    ))}
+      );
+    })}
   </div>
 );
 
@@ -105,6 +112,7 @@ const SignupPage = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [isFreeTrial, setIsFreeTrial] = useState(false);
+  const [isAnnual, setIsAnnual] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<"signup" | "plan" | "payment" | "verification" | "pending">("signup");
   const [verificationCode, setVerificationCode] = useState("");
@@ -152,7 +160,8 @@ const SignupPage = () => {
     if (value.length > 1) return;
     const newCode = verificationCode.split("");
     newCode[index] = value;
-    setVerificationCode(newCode.join(""));
+    const finalCode = newCode.join("");
+    setVerificationCode(finalCode);
     if (value && index < 5) {
       document.getElementById(`verification-${index + 1}`)?.focus();
     }
@@ -203,7 +212,6 @@ const SignupPage = () => {
     }
   };
 
-  // Step 1 → Step 2 (for org tab only)
   const handleContinueToPlan = () => {
     if (!form.companyName.trim()) { toast.error("Company name is required."); return; }
     if (!form.phone.trim()) { toast.error("Phone number is required."); return; }
@@ -218,7 +226,6 @@ const SignupPage = () => {
     } catch (err) {
       if (err instanceof ZodError) { toast.error(err.issues[0].message); return; }
     }
-    // We sign up the user under default free plan to send verification code first
     handleSignup("free", true);
   };
 
@@ -242,7 +249,6 @@ const SignupPage = () => {
   const handleSelectPaidPlan = async (planCode: string) => {
     setSelectedPlan(planCode);
     setIsFreeTrial(false);
-    
     setIsLoading(true);
     try {
       const res = await fetch("/api/signup/update-plan", {
@@ -270,7 +276,6 @@ const SignupPage = () => {
   const handleSelectFreeTrial = async () => {
     setSelectedPlan("trial");
     setIsFreeTrial(true);
-    
     setIsLoading(true);
     try {
       const res = await fetch("/api/signup/update-plan", {
@@ -337,7 +342,6 @@ const SignupPage = () => {
   const handleSignup = async (planCode: string, trial: boolean, pMethod?: string, refId?: string, rcptUrl?: string | null) => {
     try {
       setIsLoading(true);
-
       let payload: any = {
         name: form.name.trim(),
         email: form.email.trim(),
@@ -386,7 +390,6 @@ const SignupPage = () => {
     }
   };
 
-  // Direct user signup (no org)
   const handleUserSignup = async () => {
     try {
       setIsLoading(true);
@@ -445,59 +448,57 @@ const SignupPage = () => {
   };
 
   const strength = getPasswordStrength(form.password);
-  const strengthColor = strength === "strong" ? "bg-green-600" : strength === "medium" ? "bg-yellow-500" : "bg-red-500";
+  const strengthColor = strength === "strong" ? "bg-green-500" : strength === "medium" ? "bg-amber-500" : "bg-rose-500";
 
-  const Background = () =>
-    isDark ? (
-      <div className="absolute inset-0 z-0">
+  const Background = () => (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <div 
+        className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70"
+      />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-400/20 dark:bg-indigo-600/10 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-purple-600/10 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+      {isDark ? (
         <Particles
           particleColors={["#ffffff", "#4f8fff", "#a78bfa"]}
-          particleCount={200}
+          particleCount={100}
           particleSpread={10}
-          speed={0.1}
-          particleBaseSize={100}
+          speed={0.05}
+          particleBaseSize={60}
           moveParticlesOnHover={false}
-          alphaParticles={false}
+          alphaParticles={true}
           sizeRandomness={1}
           cameraDistance={20}
         />
-      </div>
-    ) : (
-      <AuroraBackground />
-    );
+      ) : null}
+    </div>
+  );
 
   // --- STEP: Pending Approval ---
   if (step === "pending") {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
         <motion.div className="w-full max-w-lg relative z-10 text-center" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-          <Card className="backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-2xl">
-            <CardContent className="p-10">
-              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+          <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-3xl">
+            <CardContent className="p-10 space-y-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg shadow-indigo-500/20">
                 <Clock className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Awaiting Approval</h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">
-                Your workspace <span className="font-semibold text-indigo-600 dark:text-indigo-400">{form.companyName}</span> has been created successfully.
-                {isFreeTrial
-                  ? " Your 14-day free trial will begin once our team reviews and approves your account."
-                  : " Your payment proof has been submitted and is under review. Once approved, your workspace will be activated."}
+              <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
+                Account Pending Approval
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                Thank you for signing up! Your payment and reference details are being reviewed by our finance department.
+                Approval usually takes between 1-3 business hours.
               </p>
-              <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 mb-6 border border-indigo-100 dark:border-indigo-800">
-                <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
-                  <Shield className="w-4 h-4" />
-                  <span className="text-xs font-semibold">What happens next?</span>
-                </div>
-                <ul className="text-xs text-indigo-600 dark:text-indigo-400 mt-2 space-y-1 text-left">
-                  <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> Our team will review your application</li>
-                  <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> You'll receive an email once approved</li>
-                  <li className="flex items-start gap-2"><CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> Then you can log in and start using your workspace</li>
-                </ul>
+              <div className="bg-slate-50 dark:bg-slate-950/40 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 text-left space-y-2 text-xs">
+                <div className="flex justify-between"><span className="text-slate-400">Workspace:</span><span className="font-bold text-slate-700 dark:text-slate-350">{form.companyName}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Owner Name:</span><span className="font-bold text-slate-700 dark:text-slate-350">{form.name}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Status:</span><span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 font-bold uppercase tracking-wider text-[10px]">Under Review</span></div>
               </div>
-              <Button onClick={() => router.push("/auth/login")} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">
-                Go to Login
+              <Button onClick={() => router.push("/auth/login")} className="w-full py-5 rounded-xl font-bold bg-indigo-650 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer">
+                Back to Login
               </Button>
             </CardContent>
           </Card>
@@ -506,56 +507,45 @@ const SignupPage = () => {
     );
   }
 
-  // --- STEP: Email Verification ---
+  // --- STEP: Verification ---
   if (step === "verification") {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
-        <motion.div className="w-full max-w-md relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-          <Link href="/" className={`inline-flex items-center gap-2 text-sm mb-6 ${isDark ? "text-gray-300 hover:text-white" : "text-gray-500 hover:text-gray-900"}`}>
-            <ArrowLeft className="h-4 w-4" />
-            Back to home
-          </Link>
-          <h1 className={`text-3xl font-bold text-center mb-6 ${isDark ? "text-white" : "text-gray-900"}`}>Verify Your Email</h1>
-          {tab === "org" && (
-            <div className="mb-6 bg-white/5 dark:bg-slate-900/5 backdrop-blur-md rounded-2xl p-4 border border-slate-200/50 dark:border-slate-800/50">
-              <StepIndicator currentStep={1} totalSteps={4} labels={["Details", "Verify", "Plan", "Payment"]} />
-            </div>
-          )}
-          <Card className="backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-xl">
-            <CardContent className="p-6 space-y-4">
-              <div className="text-center mb-4">
-                <p className="text-gray-600 dark:text-gray-300 text-sm">We've sent a 6-digit verification code to:</p>
-                <p className="font-semibold text-primary mt-2">{form.email}</p>
+        <motion.div className="w-full max-w-[440px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-3xl">
+            <CardContent className="p-8 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Verify Email Address</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[280px] mx-auto leading-relaxed">
+                  We've sent a 6-digit confirmation code to <span className="font-bold text-slate-700 dark:text-slate-300">{form.email}</span>.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label>Verification Code</Label>
-                <div className="flex gap-2 justify-center" onPaste={handlePaste}>
-                  {[0, 1, 2, 3, 4, 5].map((index) => (
-                    <Input
-                      key={index}
-                      id={`verification-${index}`}
-                      type="text"
-                      inputMode="numeric"
-                      value={verificationCode[index] || ""}
-                      onChange={(e) => handleVerificationCodeChange(index, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(index, e)}
-                      placeholder="0"
-                      maxLength={1}
-                      className="w-12 h-12 text-center text-xl font-semibold border-2 focus:border-primary bg-white dark:bg-slate-950"
-                      autoComplete="off"
-                    />
-                  ))}
-                </div>
+
+              {/* 6 Digit Inputs */}
+              <div className="flex justify-between gap-2.5 py-2" onPaste={handlePaste}>
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <Input
+                    key={idx}
+                    id={`verification-${idx}`}
+                    type="text"
+                    maxLength={1}
+                    value={verificationCode[idx] || ""}
+                    onChange={(e) => handleVerificationCodeChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    className="w-12 h-14 text-center font-bold text-lg bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all"
+                  />
+                ))}
               </div>
-              <Button onClick={handleVerification} className="w-full mt-2 text-lg" disabled={verificationCode.length !== 6 || isLoading}>
-                {isLoading ? "Verifying..." : "Verify Email"}
-              </Button>
-              <div className="text-center">
-                <Button variant="ghost" onClick={() => setStep("signup")} className="text-sm text-slate-500">
-                  ← Back
+
+              <div className="space-y-3">
+                <Button onClick={handleVerification} disabled={verificationCode.length < 6 || isLoading} className="w-full py-5 rounded-xl font-bold bg-indigo-650 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer flex items-center justify-center">
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify Code"}
                 </Button>
+                <button onClick={() => handleSignup("free", true)} className="w-full text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                  Resend Verification Code
+                </button>
               </div>
             </CardContent>
           </Card>
@@ -564,7 +554,7 @@ const SignupPage = () => {
     );
   }
 
-  // --- STEP: Plan Selection (org only) ---
+  // --- STEP: Plan Selection ---
   if (step === "plan") {
     const orgStepLabels = ["Details", "Verify", "Plan", "Payment"];
     const sortedPlans = [...plans]
@@ -572,41 +562,65 @@ const SignupPage = () => {
       .sort((a, b) => a.priceMonthlyUsd - b.priceMonthlyUsd);
 
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
-        <motion.div className="w-full max-w-[1600px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        
+        <motion.div className="w-full max-w-[1300px] relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           
           <button 
             onClick={() => setStep("verification")} 
-            className={`inline-flex items-center gap-2 text-sm mb-6 font-semibold transition-colors ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
+            className={`inline-flex items-center gap-2 text-xs mb-8 font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md self-start ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             Back to verification
           </button>
 
-          <h1 className={`text-4xl sm:text-5xl font-extrabold text-center mb-3 tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
-            Simple, transparent pricing
-          </h1>
-          <p className="text-center text-muted-foreground text-base mb-10 max-w-2xl mx-auto">
-            Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
-          </p>
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-6">
+            <h1 className={`text-3xl sm:text-4xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
+              Simple, transparent pricing
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Choose the plan that fits your logistics operation. Start free, upgrade as you grow.
+            </p>
+          </div>
 
-          <div className="mb-12 max-w-xl mx-auto bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-4 border border-slate-250/30 dark:border-slate-800/30">
+          {/* Stepper */}
+          <div className="mb-10 w-full max-w-md bg-white/60 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-4 border border-slate-200/30 dark:border-slate-800/30 shadow-xs">
             <StepIndicator currentStep={2} totalSteps={4} labels={orgStepLabels} />
           </div>
 
-          {/* Centered flex pricing grid */}
-          <div className="flex flex-wrap justify-center gap-6 items-stretch mb-8">
+          {/* SOTA Dynamic Billing Switch */}
+          <div className="flex items-center gap-3 mb-10">
+            <span className={`text-sm font-semibold transition-colors ${!isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>Monthly</span>
+            <button 
+              type="button" 
+              onClick={() => setIsAnnual(!isAnnual)}
+              className="relative w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-800 transition-colors duration-300 focus:outline-none cursor-pointer"
+            >
+              <motion.div 
+                className="absolute top-1 left-1 w-4 h-4 rounded-full bg-indigo-650 dark:bg-indigo-400 shadow-sm"
+                animate={{ x: isAnnual ? 24 : 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            </button>
+            <span className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${isAnnual ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}`}>
+              Annually 
+              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400 rounded-md">Save 20%</span>
+            </span>
+          </div>
+
+          {/* Self-adjusting in the middle flex layout */}
+          <div className="flex flex-wrap justify-center items-stretch gap-6 w-full max-w-7xl mx-auto mb-10">
             {/* Free Trial Card */}
             <Card 
-              className="relative flex flex-col justify-between p-6 border border-slate-200 dark:border-slate-855 shadow-sm bg-white dark:bg-slate-900/90 w-full sm:w-[280px] md:w-[290px]"
+              className="relative flex flex-col justify-between p-6 border border-slate-200/60 dark:border-slate-800/80 shadow-md bg-white/70 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl w-full sm:w-[280px] md:w-[290px] hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-300"
             >
               <div className="space-y-4 flex-1 flex flex-col">
                 <div>
-                  <h3 className="font-extrabold text-xl text-indigo-600 dark:text-indigo-400 capitalize">14-Day Free Trial</h3>
-                  <p className="text-xs text-slate-500 mt-1 min-h-[32px] leading-normal">
-                    Get full access to all features of the site for testing and getting the feel of it.
+                  <h3 className="font-extrabold text-lg text-indigo-600 dark:text-indigo-400 capitalize">14-Day Trial</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[32px] leading-relaxed">
+                    Test the system with full features. No credit card required upfront.
                   </p>
                 </div>
 
@@ -615,24 +629,24 @@ const SignupPage = () => {
                     <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
                       $0.00
                     </span>
-                    <span className="text-xs text-muted-foreground">/14 days</span>
+                    <span className="text-xs text-muted-foreground font-semibold">/14 days</span>
                   </div>
                 </div>
 
-                <hr className="border-slate-100 dark:border-slate-800/80 my-2" />
+                <hr className="border-slate-100 dark:border-slate-800/50 my-2" />
 
-                <ul className="space-y-3.5 text-xs text-gray-650 dark:text-gray-400 flex-1 py-2">
+                <ul className="space-y-3.5 text-xs text-slate-600 dark:text-slate-400 flex-1 py-2">
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                    <span className="font-medium">14 Days Free Trial</span>
+                    <span>14 Days Access</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                    <span className="font-medium">Full access to all features</span>
+                    <span>Core Features Included</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                    <span className="font-medium">No payment info required upfront</span>
+                    <span>Easy upgrade path</span>
                   </li>
                 </ul>
               </div>
@@ -641,13 +655,9 @@ const SignupPage = () => {
                 <Button 
                   onClick={handleSelectFreeTrial}
                   disabled={isLoading}
-                  className="w-full py-5 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+                  className="w-full py-5 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 cursor-pointer"
                 >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                  ) : (
-                    "Start Free Trial"
-                  )}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Free Trial"}
                 </Button>
               </div>
             </Card>
@@ -656,28 +666,34 @@ const SignupPage = () => {
             {sortedPlans.map((plan) => {
               const features = plan.features || {};
               const isGrowth = plan.code === "growth";
-              const annualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
+              const isPro = plan.code === "pro";
+              
+              // 20% discount on Annual rate
+              const calculatedAnnualPrice = features.annualPrice ?? (plan.priceMonthlyUsd * 12 * 0.8);
+              const monthlyRateUnderAnnual = calculatedAnnualPrice / 12;
+
+              const priceToDisplay = isAnnual ? monthlyRateUnderAnnual : plan.priceMonthlyUsd;
               const planDescription = features.description || "";
 
               return (
                 <Card 
                   key={plan.id}
-                  className={`relative flex flex-col justify-between p-6 transition-all duration-300 w-full sm:w-[280px] md:w-[290px] ${
+                  className={`relative flex flex-col justify-between p-6 transition-all duration-300 w-full sm:w-[280px] md:w-[290px] rounded-2xl ${
                     isGrowth 
-                      ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl scale-[1.02] bg-white dark:bg-slate-900" 
-                      : "border border-slate-200 dark:border-slate-855 shadow-sm bg-white dark:bg-slate-900/90"
+                      ? "border-2 border-indigo-600 dark:border-indigo-500 shadow-xl bg-white dark:bg-slate-900/90" 
+                      : "border border-slate-200/60 dark:border-slate-800/80 shadow-md bg-white/70 dark:bg-slate-900/80 backdrop-blur-md hover:border-slate-350 dark:hover:border-slate-700"
                   }`}
                 >
                   {isGrowth && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase flex items-center gap-1 shadow-sm">
-                      <Sparkles className="w-3 h-3 fill-white" /> Most Popular
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10px] font-bold px-3.5 py-1.5 rounded-full uppercase flex items-center gap-1 shadow-md shadow-indigo-500/10">
+                      <Sparkles className="w-3 h-3 fill-white" /> Popular
                     </div>
                   )}
 
                   <div className="space-y-4 flex-1 flex flex-col">
                     <div>
-                      <h3 className="font-extrabold text-xl text-gray-900 dark:text-white capitalize">{plan.name}</h3>
-                      <p className="text-xs text-slate-500 mt-1 min-h-[32px] leading-normal">{planDescription}</p>
+                      <h3 className="font-extrabold text-lg text-gray-900 dark:text-white capitalize">{plan.name}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 min-h-[32px] leading-relaxed">{planDescription}</p>
                     </div>
 
                     <div className="pt-2">
@@ -685,32 +701,26 @@ const SignupPage = () => {
                         <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
                           {(() => {
                             const currency = (plan.features as any)?.currency || "PKR";
-                            if (currency === "USD") return `$${plan.priceMonthlyUsd.toFixed(2)}`;
-                            if (currency === "EUR") return `€${plan.priceMonthlyUsd.toFixed(2)}`;
-                            if (currency === "GBP") return `£${plan.priceMonthlyUsd.toFixed(2)}`;
-                            return `${currency} ${plan.priceMonthlyUsd.toLocaleString()}`;
+                            if (currency === "USD") return `$${priceToDisplay.toFixed(2)}`;
+                            if (currency === "EUR") return `€${priceToDisplay.toFixed(2)}`;
+                            if (currency === "GBP") return `£${priceToDisplay.toFixed(2)}`;
+                            return `${currency} ${Math.round(priceToDisplay).toLocaleString()}`;
                           })()}
                         </span>
-                        <span className="text-xs text-muted-foreground">/month</span>
+                        <span className="text-xs text-muted-foreground font-semibold">/month</span>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                        {(() => {
-                          const currency = (plan.features as any)?.currency || "PKR";
-                          if (currency === "USD") return `$${annualPrice.toFixed(2)}`;
-                          if (currency === "EUR") return `€${annualPrice.toFixed(2)}`;
-                          if (currency === "GBP") return `£${annualPrice.toFixed(2)}`;
-                          return `${currency} ${annualPrice.toLocaleString()}`;
-                        })()}/year (Save 20%)
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
+                        {isAnnual ? "Billed annually" : "Billed monthly"}
                       </p>
                     </div>
 
-                    <hr className="border-slate-100 dark:border-slate-800/80 my-2" />
+                    <hr className="border-slate-100 dark:border-slate-800/50 my-2" />
 
-                    <ul className="space-y-3.5 text-xs text-gray-650 dark:text-gray-400 flex-1 py-2">
+                    <ul className="space-y-3.5 text-xs text-slate-650 dark:text-slate-450 flex-1 py-2">
                       {getChecklistForPlan(plan).map((item, idx) => (
                         <li key={idx} className="flex items-start gap-2">
                           <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                          <span className="font-medium">{item}</span>
+                          <span>{item}</span>
                         </li>
                       ))}
                     </ul>
@@ -720,17 +730,13 @@ const SignupPage = () => {
                     <Button
                       onClick={() => handleSelectPaidPlan(plan.code)}
                       disabled={isLoading}
-                      className={`w-full py-5 rounded-xl font-bold transition-all ${
+                      className={`w-full py-5 rounded-xl font-bold transition-all cursor-pointer ${
                         isGrowth 
-                          ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none" 
+                          ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10" 
                           : "bg-slate-950 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
                       }`}
                     >
-                      {isLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                      ) : (
-                        "Choose Plan"
-                      )}
+                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Choose Plan"}
                     </Button>
                   </div>
                 </Card>
@@ -742,177 +748,178 @@ const SignupPage = () => {
     );
   }
 
-  // --- STEP: Payment (org with paid plan) ---
+  // --- STEP: Payment ---
   if (step === "payment") {
     const chosenPlan = plans.find((p) => p.code === selectedPlan);
+    const orgStepLabels = ["Details", "Verify", "Plan", "Payment"];
+    
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+      <div className={`min-h-screen flex flex-col items-center justify-start px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
         <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
         <Background />
-        <motion.div className="w-full max-w-lg relative z-10" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
-          <button onClick={() => setStep("plan")} className={`inline-flex items-center gap-2 text-sm mb-6 ${isDark ? "text-gray-300 hover:text-white" : "text-gray-500 hover:text-gray-900"}`}>
-            <ArrowLeft className="h-4 w-4" />
+        
+        <motion.div className="w-full max-w-xl relative z-10 flex flex-col items-center" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          
+          <button 
+            onClick={() => setStep("plan")} 
+            className={`inline-flex items-center gap-2 text-xs mb-8 font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md self-start ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
             Back to plans
           </button>
 
-          <h1 className={`text-3xl font-extrabold text-center mb-2 tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
-            Payment Details
-          </h1>
-          <p className="text-center text-muted-foreground text-sm mb-6">
-            Submit your payment proof for the <span className="font-semibold text-indigo-600 capitalize">{chosenPlan?.name}</span> plan.
-          </p>
+          <div className="text-center space-y-2 mb-6">
+            <h2 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Submit Payment Details</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Please send the plan subscription fee and paste the transaction details below.
+            </p>
+          </div>
 
-          <StepIndicator currentStep={3} totalSteps={4} labels={["Details", "Verify", "Plan", "Payment"]} />
+          {/* Stepper */}
+          <div className="mb-8 w-full bg-white/60 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-4 border border-slate-200/30 dark:border-slate-800/30 shadow-xs">
+            <StepIndicator currentStep={3} totalSteps={4} labels={orgStepLabels} />
+          </div>
 
-          <Card className="backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-2xl">
-            <CardContent className="p-6 space-y-5">
+          <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-3xl overflow-hidden w-full">
+            <CardContent className="p-8 space-y-6">
+              
               {/* Plan Summary */}
               {chosenPlan && (
-                <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-indigo-500 dark:text-indigo-400 font-semibold uppercase">Selected Plan</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">{chosenPlan.name}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
-                      {(() => {
-                        const currency = (chosenPlan.features as any)?.currency || "PKR";
-                        if (currency === "USD") return `$${chosenPlan.priceMonthlyUsd}`;
-                        if (currency === "EUR") return `€${chosenPlan.priceMonthlyUsd}`;
-                        if (currency === "GBP") return `£${chosenPlan.priceMonthlyUsd}`;
-                        return `${currency} ${chosenPlan.priceMonthlyUsd.toLocaleString()}`;
-                      })()}
-                    </p>
-                    <p className="text-xs text-gray-400">per month</p>
-                  </div>
+                <div className="bg-slate-50 dark:bg-slate-950/40 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-1">
+                  <div className="flex justify-between text-xs text-slate-400 font-semibold uppercase"><span>Selected Plan</span><span>Amount Due</span></div>
+                  <div className="flex justify-between items-center"><span className="text-sm font-bold capitalize text-slate-700 dark:text-white">{chosenPlan.name} Plan</span><span className="text-base font-extrabold text-indigo-600 dark:text-indigo-400">{((chosenPlan.features as any)?.currency || "PKR")} {chosenPlan.priceMonthlyUsd.toLocaleString()} /mo</span></div>
                 </div>
               )}
 
-              {/* Payment Method */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Payment Method</Label>
+              {/* Payment Methods Grid */}
+              <div className="space-y-3">
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Payment Option</Label>
                 <div className="grid grid-cols-2 gap-3">
                   {PAYMENT_METHODS.map((method) => {
-                    const active = paymentMethod === method.value;
                     const Icon = method.icon;
-                    const isDisabled = (method as any).disabled;
+                    const active = paymentMethod === method.value;
+                    const isDisabled = method.disabled;
                     return (
                       <button
                         key={method.value}
                         type="button"
                         onClick={isDisabled ? undefined : () => setPaymentMethod(method.value)}
                         disabled={isDisabled}
-                        className={`text-left rounded-xl border-2 p-3 transition-all focus:outline-none ${
+                        className={`text-left rounded-xl border p-3.5 transition-all focus:outline-none ${
                           method.value === "CARD" ? "col-span-2" : ""
                         } ${
                           isDisabled
-                            ? "opacity-50 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 cursor-not-allowed"
+                            ? "opacity-40 border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 cursor-not-allowed"
                             : active
-                              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 ring-1 ring-indigo-300 cursor-pointer"
-                              : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 bg-white dark:bg-slate-950 cursor-pointer"
+                            ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20 cursor-pointer scale-[1.02]"
+                            : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white/40 dark:bg-slate-950/20 cursor-pointer"
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <Icon className={`w-4 h-4 ${active ? "text-indigo-600" : "text-gray-400"}`} />
-                          <span className={`text-sm font-semibold ${active ? "text-indigo-600 dark:text-indigo-400" : "text-gray-700 dark:text-gray-300"}`}>{method.label}</span>
+                          <Icon className={`w-4 h-4 shrink-0 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400"}`} />
+                          <span className={`text-xs font-bold ${active ? "text-indigo-650 dark:text-indigo-400" : "text-slate-700 dark:text-slate-300"}`}>{method.label}</span>
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-0.5 ml-6">{method.desc}</p>
+                        <p className="text-[9px] text-slate-400 mt-1 pl-6 leading-normal">{method.desc}</p>
                       </button>
                     );
                   })}
                 </div>
-
-                {/* Selected Payment Method Account Details */}
-                {paymentMethod && paymentMethod !== "CASH" && paymentMethod !== "CARD" && (
-                  <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 space-y-2">
-                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Account Details for Transfer</p>
-                    
-                    {paymentMethod === "JAZZCASH" && (
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between"><span className="text-gray-500">Service:</span><span className="font-bold text-slate-800 dark:text-slate-200">JazzCash</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">Account Title:</span><span className="font-bold text-slate-800 dark:text-slate-200">Zeeshan Ahmad Chaudhry</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">Mobile No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">03008482321</span></div>
-                      </div>
-                    )}
-
-                    {paymentMethod === "EASYPAISA" && (
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between"><span className="text-gray-500">Service:</span><span className="font-bold text-slate-800 dark:text-slate-200">Easypaisa</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">Account Title:</span><span className="font-bold text-slate-800 dark:text-slate-200">Zeeshan Ahmad Chaudhry</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">Mobile No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">03008482321</span></div>
-                      </div>
-                    )}
-
-                    {paymentMethod === "BANK_TRANSFER" && (
-                      <div className="space-y-1.5 text-sm">
-                        <div className="flex justify-between"><span className="text-gray-500">Bank Name:</span><span className="font-bold text-slate-800 dark:text-slate-200">Allied Bank Limited</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">Account Title:</span><span className="font-bold text-slate-800 dark:text-slate-200">Prompt Survey & Services (PSS)</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">Account No:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all">053000010010882520025</span></div>
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="text-gray-500 shrink-0">IBAN:</span>
-                          <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 select-all text-[11px] bg-slate-100 dark:bg-slate-900/50 px-2 py-0.5 rounded break-all">
-                            PK37ABPA0010010882520025
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
-              {/* Reference ID */}
+              {/* Account Details Panel */}
+              {paymentMethod && paymentMethod !== "CASH" && paymentMethod !== "CARD" && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="bg-slate-50 dark:bg-slate-950/60 border border-slate-150 dark:border-slate-800 rounded-2xl p-5 space-y-3"
+                >
+                  <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Recipient Account Details</p>
+                  
+                  {paymentMethod === "JAZZCASH" && (
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between"><span className="text-slate-400">Mobile Wallet:</span><span className="font-bold text-slate-700 dark:text-slate-350">JazzCash</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Account Title:</span><span className="font-bold text-slate-700 dark:text-slate-350">Zeeshan Ahmad Chaudhry</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Mobile Number:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all tracking-wider">03008482321</span></div>
+                    </div>
+                  )}
+
+                  {paymentMethod === "EASYPAISA" && (
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between"><span className="text-slate-400">Mobile Wallet:</span><span className="font-bold text-slate-700 dark:text-slate-350">Easypaisa</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Account Title:</span><span className="font-bold text-slate-700 dark:text-slate-350">Zeeshan Ahmad Chaudhry</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Mobile Number:</span><span className="font-bold text-indigo-600 dark:text-indigo-400 select-all tracking-wider">03008482321</span></div>
+                    </div>
+                  )}
+
+                  {paymentMethod === "BANK_TRANSFER" && (
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between"><span className="text-slate-400">Bank:</span><span className="font-bold text-slate-700 dark:text-slate-350">Allied Bank Limited</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Account Name:</span><span className="font-bold text-slate-700 dark:text-slate-350">Prompt Survey & Services (PSS)</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Account No:</span><span className="font-bold text-indigo-650 dark:text-indigo-400 select-all">053000010010882520025</span></div>
+                      <div className="flex justify-between items-center gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
+                        <span className="text-slate-400">IBAN:</span>
+                        <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 select-all bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 px-2 py-0.5 rounded break-all">
+                          PK37ABPA0010010882520025
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Reference ID input */}
               <div className="space-y-2">
-                <Label htmlFor="referenceId" className="text-sm font-semibold">Transaction / Reference ID</Label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="referenceId" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Transaction Reference ID</Label>
+                <div className="relative group">
+                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
                   <Input
                     id="referenceId"
                     value={referenceId}
                     onChange={(e) => setReferenceId(e.target.value)}
-                    placeholder="Enter your transaction reference number"
-                    className="pl-9 bg-white dark:bg-slate-950"
+                    placeholder="Enter 12-digit transaction ID"
+                    className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm"
                   />
                 </div>
               </div>
 
-              {/* Receipt Upload */}
+              {/* Screenshot Selector */}
               <div className="space-y-2">
-                <Label className="text-sm font-semibold">Payment Receipt / Screenshot <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Upload Receipt Screenshot <span className="text-slate-400 dark:text-slate-500">(Optional)</span></Label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all hover:border-indigo-400 ${
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all hover:border-indigo-400/80 bg-white/40 dark:bg-slate-950/20 ${
                     receiptPreview
-                      ? "border-green-400 bg-green-50 dark:bg-green-950/20"
-                      : "border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-950"
+                      ? "border-green-400 bg-green-50/20 dark:bg-green-950/10"
+                      : "border-slate-250 dark:border-slate-800"
                   }`}
                 >
                   {receiptPreview ? (
-                    <div className="space-y-2">
-                      <img src={receiptPreview} alt="Receipt preview" className="max-h-32 mx-auto rounded-lg shadow-sm" />
-                      <p className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center justify-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Receipt uploaded
+                    <div className="space-y-3">
+                      <img src={receiptPreview} alt="Receipt preview" className="max-h-24 mx-auto rounded-lg shadow-sm" />
+                      <p className="text-xs text-green-600 dark:text-green-400 font-bold flex items-center justify-center gap-1.5">
+                        <CheckCircle2 className="w-4.5 h-4.5" /> Receipt Attached
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Upload className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Click to upload receipt screenshot</p>
-                      <p className="text-[10px] text-gray-400">PNG, JPG, PDF up to 5MB</p>
+                      <Upload className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto" />
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Click to upload screenshot</p>
+                      <p className="text-[10px] text-slate-400">PNG, JPG, JPEG up to 5MB</p>
                     </div>
                   )}
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*,.pdf" onChange={handleReceiptChange} className="hidden" />
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleReceiptChange} className="hidden" />
               </div>
 
               <Button
                 onClick={handlePaymentSubmit}
                 disabled={!paymentMethod || !referenceId.trim() || isLoading || uploadingReceipt}
-                className="w-full py-6 text-lg bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="w-full h-12 text-sm bg-gradient-to-r from-indigo-650 to-purple-600 hover:from-indigo-650 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {isLoading || uploadingReceipt ? (
-                  <><Loader2 className="w-5 h-5 animate-spin mr-2" />{uploadingReceipt ? "Uploading..." : "Processing..."}</>
+                  <><Loader2 className="w-4 h-4 animate-spin" />{uploadingReceipt ? "Uploading..." : "Processing..."}</>
                 ) : (
-                  <>Submit & Create Workspace <CheckCircle2 className="w-5 h-5 ml-2" /></>
+                  <>Submit Details & Complete Workspace Setup <CheckCircle2 className="w-4 h-4" /></>
                 )}
               </Button>
             </CardContent>
@@ -924,49 +931,56 @@ const SignupPage = () => {
 
   // --- STEP: Signup Form (Step 1) ---
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+    <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-[#f8fafc]"}`}>
       <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
       <Background />
-      <motion.div className="w-full max-w-xl relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-        <Link href="/" className={`inline-flex items-center gap-2 text-sm mb-6 ${isDark ? "text-gray-300 hover:text-white" : "text-gray-500 hover:text-gray-900"}`}>
-          <ArrowLeft className="h-4 w-4" />
+      
+      <motion.div className="w-full max-w-[500px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+        <Link href="/" className={`inline-flex items-center gap-2 text-xs font-semibold mb-6 transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}>
+          <ArrowLeft className="h-3.5 w-3.5" />
           Back to home
         </Link>
-        <h1 className={`text-3xl font-extrabold text-center mb-2 tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
-          Join Our Platform
-        </h1>
-        <p className="text-center text-muted-foreground text-sm mb-6">
-          Sign up to join an existing courier workspace or create a brand new one.
-        </p>
 
-        <Card className="backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-          <CardContent className="p-6">
-            {/* Tab Switcher */}
-            <div className="flex p-1 bg-slate-100 dark:bg-slate-950 rounded-xl mb-6 relative">
+        {/* Title */}
+        <div className="text-center mb-6 space-y-2">
+          <h1 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
+            Create Account
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[320px] mx-auto leading-relaxed">
+            Register to join an existing courier workspace or establish your own workspace.
+          </p>
+        </div>
+
+        <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/50 shadow-2xl rounded-3xl overflow-hidden w-full">
+          <CardContent className="p-8 space-y-6">
+            
+            {/* Custom Tab Switcher */}
+            <div className="flex p-1 bg-slate-100/80 dark:bg-slate-950/60 border border-slate-200/30 dark:border-slate-800/30 rounded-xl relative">
               <button
                 type="button"
                 onClick={() => setTab("user")}
-                className="flex-1 py-2 text-sm font-semibold relative z-10 transition-colors text-center cursor-pointer focus:outline-none"
+                className="flex-1 py-2 text-xs font-bold relative z-10 transition-colors text-center cursor-pointer focus:outline-none"
               >
-                <span className={tab === "user" ? "text-slate-900 dark:text-white" : "text-slate-500"}>User Sign Up</span>
+                <span className={tab === "user" ? "text-indigo-650 dark:text-indigo-400" : "text-slate-450 dark:text-slate-500"}>User Sign Up</span>
                 {tab === "user" && (
-                  <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg shadow-xs -z-10" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
+                  <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm -z-10 border border-slate-200/10" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
                 )}
               </button>
               <button
                 type="button"
                 onClick={() => setTab("org")}
-                className="flex-1 py-2 text-sm font-semibold relative z-10 transition-colors text-center cursor-pointer focus:outline-none"
+                className="flex-1 py-2 text-xs font-bold relative z-10 transition-colors text-center cursor-pointer focus:outline-none"
               >
-                <span className={tab === "org" ? "text-slate-900 dark:text-white" : "text-slate-500"}>Create Workspace</span>
+                <span className={tab === "org" ? "text-indigo-650 dark:text-indigo-400" : "text-slate-450 dark:text-slate-500"}>Create Workspace</span>
                 {tab === "org" && (
-                  <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg shadow-xs -z-10" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
+                  <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm -z-10 border border-slate-200/10" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
                 )}
               </button>
             </div>
 
+            {/* Step indicators inside details for org */}
             {tab === "org" && (
-              <div className="mb-6 bg-slate-50/50 dark:bg-slate-950/20 backdrop-blur-md rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+              <div className="p-3.5 bg-slate-50/55 dark:bg-slate-950/40 border border-slate-200/30 dark:border-slate-800/30 rounded-2xl shadow-xs">
                 <StepIndicator currentStep={0} totalSteps={4} labels={["Details", "Verify", "Plan", "Payment"]} />
               </div>
             )}
@@ -974,96 +988,106 @@ const SignupPage = () => {
             <div className="space-y-4">
               <AnimatePresence mode="wait">
                 {tab === "org" && (
-                  <motion.div key="org-fields" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} className="space-y-4">
+                  <motion.div 
+                    key="org-fields" 
+                    initial={{ opacity: 0, height: 0 }} 
+                    animate={{ opacity: 1, height: "auto" }} 
+                    exit={{ opacity: 0, height: 0 }} 
+                    transition={{ duration: 0.2 }} 
+                    className="space-y-4 overflow-hidden"
+                  >
                     <div className="space-y-2">
-                      <Label htmlFor="companyName">Company Name</Label>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input id="companyName" name="companyName" value={form.companyName} onChange={handleChange} placeholder="Acme Logistics" className="pl-9 bg-white dark:bg-slate-950" />
+                      <Label htmlFor="companyName" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Company Name</Label>
+                      <div className="relative group">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                        <Input id="companyName" name="companyName" value={form.companyName} onChange={handleChange} placeholder="Acme Logistics Ltd" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="pl-9 bg-white dark:bg-slate-950" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Phone Number</Label>
+                        <div className="relative group">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                          <Input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="123 Logistics Way, Suite 100" className="pl-9 bg-white dark:bg-slate-950" />
+                      <div className="space-y-2">
+                        <Label htmlFor="address" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Company Address</Label>
+                        <div className="relative group">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                          <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="123 Logistics Way" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                        </div>
                       </div>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
+              {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name">Your Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 bg-white dark:bg-slate-950" />
+                <Label htmlFor="name" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Full Name</Label>
+                <div className="relative group">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-455 group-focus-within:text-indigo-500 transition-colors" />
+                  <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                 </div>
               </div>
 
+              {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">{tab === "org" ? "Work Email" : "Email"}</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@example.com" className="pl-9 bg-white dark:bg-slate-950" />
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-650 dark:text-slate-350">{tab === "org" ? "Work Email Address" : "Email Address"}</Label>
+                <div className="relative group">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                  <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                 </div>
               </div>
 
+              {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 bg-white dark:bg-slate-950" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary focus:outline-none">
-                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                <Label htmlFor="password" className="text-xs font-semibold text-slate-650 dark:text-slate-350">Password</Label>
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-450 group-focus-within:text-indigo-500 transition-colors" />
+                  <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+                    {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
                   </button>
                 </div>
                 {form.password && (
-                  <>
-                    <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-slate-800 mt-2 overflow-hidden">
+                  <div className="space-y-1.5 pt-1.5">
+                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <motion.div className={`h-full ${strengthColor}`} initial={{ width: 0 }} animate={{ width: strength === "strong" ? "100%" : strength === "medium" ? "66%" : "33%" }} transition={{ duration: 0.4 }} />
                     </div>
-                    <p className={`text-xs font-semibold ${strength === "strong" ? "text-green-600" : strength === "medium" ? "text-yellow-500" : "text-red-500"}`}>
-                      Password strength: {strength}
+                    <p className={`text-[10px] font-bold uppercase tracking-wider ${strength === "strong" ? "text-green-600 dark:text-green-400" : strength === "medium" ? "text-amber-500" : "text-rose-500"}`}>
+                      Strength: {strength}
                     </p>
-                  </>
+                  </div>
                 )}
               </div>
 
-              {/* NO plan selection here anymore for org tab */}
-
               <Button
                 onClick={tab === "org" ? handleContinueToPlan : handleUserSignup}
-                className="w-full mt-4 text-lg py-6"
+                className="w-full h-12 text-sm bg-gradient-to-r from-indigo-650 to-purple-650 hover:from-indigo-600 hover:to-purple-600 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
                 disabled={strength === "weak" || isLoading}
               >
-                {isLoading ? "Please wait..." : tab === "org" ? (
-                  <>Continue <ArrowRight className="w-5 h-5 ml-2" /></>
-                ) : "Sign Up"}
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : tab === "org" ? (
+                  <>Continue <ArrowRight className="w-4 h-4 ml-2" /></>
+                ) : "Create Account"}
               </Button>
 
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground my-4">
-                <div className="h-px bg-gray-200 dark:bg-slate-800 w-full" />
-                or
-                <div className="h-px bg-gray-200 dark:bg-slate-800 w-full" />
+              <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground py-1">
+                <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 w-full" />
+                <span>or</span>
+                <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 w-full" />
               </div>
 
-              <Button variant="outline" className="w-full flex items-center gap-2 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                <FcGoogle size={20} />
+              <Button variant="outline" className="w-full h-11 border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/30 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 font-semibold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer">
+                <FcGoogle size={18} />
                 Continue with Google
               </Button>
 
-              <div className="text-sm text-center mt-6">
-                <p className="text-muted-foreground">
-                  Already a user?{" "}
-                  <Link href="/auth/login" className="text-primary hover:underline font-semibold">Log in</Link>
+              <div className="text-xs text-center pt-2">
+                <p className="text-slate-500 dark:text-slate-400 font-medium">
+                  Already have an account?{" "}
+                  <Link href="/auth/login" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Log in</Link>
                 </p>
               </div>
             </div>
