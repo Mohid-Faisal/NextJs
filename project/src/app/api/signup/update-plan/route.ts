@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendUserApprovalEmail } from "@/lib/email";
+import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,6 +55,25 @@ export async function POST(request: NextRequest) {
         status: isTrial ? "trial" : "pending",
       },
     });
+
+    // Ensure Chart of Accounts is initialized for the organization when upgrading
+    try {
+      const orgId = parseInt(organizationId, 10);
+      const existingCount = await prisma.chartOfAccount.count({
+        where: { organizationId: orgId }
+      });
+      if (existingCount === 0) {
+        await prisma.chartOfAccount.createMany({
+          data: defaultAccounts.map((account) => ({
+            ...account,
+            organizationId: orgId,
+            isActive: true,
+          })),
+        });
+      }
+    } catch (err) {
+      console.error("Failed to seed default accounts during plan upgrade:", err);
+    }
 
     // Create payment proof if payment details are present
     if (paymentMethod && referenceId) {

@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import jwt from "jsonwebtoken"
 import { Country, State } from "country-state-city"
+import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -1009,6 +1010,27 @@ export async function createJournalEntryForTransaction(
 ) {
   try {
     const orgFilter = organizationId != null ? { organizationId } : {};
+
+    // Ensure Chart of Accounts is initialized for this organization
+    if (organizationId != null) {
+      const existingCount = await prisma.chartOfAccount.count({
+        where: { organizationId }
+      });
+      if (existingCount === 0) {
+        console.log(`Initializing default accounts for organization ${organizationId} on the fly...`);
+        try {
+          await prisma.chartOfAccount.createMany({
+            data: defaultAccounts.map((account) => ({
+              ...account,
+              organizationId,
+              isActive: true,
+            })),
+          });
+        } catch (err) {
+          console.error(`Failed to initialize default accounts for organization ${organizationId} on the fly:`, err);
+        }
+      }
+    }
 
     const lastEntry = await prisma.journalEntry.findFirst({
       where: orgFilter,

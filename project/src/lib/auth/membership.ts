@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
 
 function slugify(name: string): string {
   return name
@@ -121,6 +122,19 @@ export async function createOrganizationForSignup(
       },
     },
   });
+
+  // Seed default Chart of Accounts for this organization so background calculations can occur immediately
+  try {
+    await prisma.chartOfAccount.createMany({
+      data: defaultAccounts.map((account) => ({
+        ...account,
+        organizationId: org.id,
+        isActive: true,
+      })),
+    });
+  } catch (err) {
+    console.error("Failed to seed default accounts during signup:", err);
+  }
 
   return { id: org.id, slug: org.slug };
 }

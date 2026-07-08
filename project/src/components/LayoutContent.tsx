@@ -35,11 +35,16 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
   // Plan feature check
   let isFeatureAllowed = true;
   let requiredFeatureKey = "";
-  for (const [route, featureKey] of Object.entries(routeFeatures)) {
-    if (pathname === route || pathname.startsWith(route + "/")) {
-      isFeatureAllowed = hasFeature(featureKey);
-      requiredFeatureKey = featureKey;
-      break;
+  if (pathname.startsWith("/dashboard/accounts") && !pathname.startsWith("/dashboard/accounts/payments")) {
+    isFeatureAllowed = hasFeature("accounts");
+    requiredFeatureKey = "accounts";
+  } else {
+    for (const [route, featureKey] of Object.entries(routeFeatures)) {
+      if (pathname === route || pathname.startsWith(route + "/")) {
+        isFeatureAllowed = hasFeature(featureKey);
+        requiredFeatureKey = featureKey;
+        break;
+      }
     }
   }
 
