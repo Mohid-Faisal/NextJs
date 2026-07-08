@@ -435,7 +435,7 @@ export default function InvoicePage() {
             </div>
             
             <div class="terms">
-              ${invoice.note || brandDisclaimer}
+              ${invoice?.note || brandDisclaimer}
             </div>
             
              ${isPssOrg ? `
@@ -826,7 +826,7 @@ export default function InvoicePage() {
             </div>
             
             <div class="terms">
-              ${invoice.note || brandDisclaimer}
+              ${invoice?.note || brandDisclaimer}
             </div>
             
              ${isPssOrg ? `

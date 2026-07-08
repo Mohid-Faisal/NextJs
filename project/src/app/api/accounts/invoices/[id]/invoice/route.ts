@@ -140,6 +140,9 @@ export async function GET(
     }
     
     // Generate HTML invoice content
+    if (invoice) {
+      (invoice as any).disclaimerFallback = disclaimer;
+    }
     const htmlContent = generateInvoiceHTML(invoice, lineItems, packages, calculatedValues, logoBase64, footerHTML, !!formData, print);
     
     // Return HTML content for display (not as download)
@@ -538,7 +541,7 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
     <div style="margin-top: 40px;" class="row">
       <!-- accepted payments column -->
       <div style="font-weight: bold;" class="col-12">
-        <div style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: 1.5; word-wrap: break-word; font-weight: bold;" class="lead">${String(invoice.note || disclaimer).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <div style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: 1.5; word-wrap: break-word; font-weight: bold;" class="lead">${String(invoice.note || invoice.disclaimerFallback).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
       </div>
       <!-- /.col -->
     </div>
