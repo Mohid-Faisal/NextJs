@@ -21,7 +21,6 @@ export async function GET(
       customer: true,
       vendor: true,
       shipment: true,
-      organization: true,
     });
 
     if (!invoice) {
