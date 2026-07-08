@@ -157,8 +157,11 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
   const hasFeature = (key: string): boolean => {
     if (loading) return false;
     if (platformRole === "SUPER_ADMIN") return true;
-    if (!planFeatures) return false;
-    return !!planFeatures[key];
+    if (key === "accounts") {
+      if (!planFeatures) return false;
+      return !!planFeatures.accounts;
+    }
+    return true;
   };
 
   return (
