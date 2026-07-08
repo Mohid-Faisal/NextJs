@@ -849,9 +849,14 @@ const DashboardPage = () => {
                                   <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
                                 </button>
                               )}
+                              {shipment.status && (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getDeliveryStatusColor(shipment.status)}`}>
+                                  {shipment.status}
+                                </span>
+                              )}
                             </div>
                           </td>
-                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold text-slate-900 dark:text-white">
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium text-slate-900 dark:text-white">
                              <div className="flex flex-col items-start gap-1">
                                <span>
                                  {(shipment.totalCost || shipment.amount || 0).toLocaleString()}
