@@ -110,7 +110,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
         }
 
         // Fetch current org to get plan features
-        const orgRes = await fetch("/api/org/current");
+        const orgRes = await fetch("/api/org/current", { cache: "no-store" });
         if (orgRes.ok) {
           const orgData = await orgRes.json();
           if (orgData.organization) {

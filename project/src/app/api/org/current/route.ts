@@ -33,7 +33,14 @@ export async function GET(req: NextRequest) {
     if (!org) {
       return NextResponse.json({ success: false, error: "Organization not found" }, { status: 404 });
     }
-    return NextResponse.json({ success: true, organization: org, role: session.orgRole });
+    return NextResponse.json(
+      { success: true, organization: org, role: session.orgRole },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching organization:", error);
     return NextResponse.json({ success: false, error: "Failed to fetch organization" }, { status: 500 });
