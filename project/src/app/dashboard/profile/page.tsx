@@ -44,8 +44,8 @@ export default function ProfilePage() {
   const [orgSlug, setOrgSlug] = useState("");
   const [orgCurrency, setOrgCurrency] = useState("USD");
   const [planName, setPlanName] = useState("Free Plan");
-  const [maxUsers, setMaxUsers] = useState(5);
-  const [maxShipments, setMaxShipments] = useState(100);
+  const [maxUsers, setMaxUsers] = useState<number | string>(5);
+  const [maxShipments, setMaxShipments] = useState<number | string>(100);
   const [loading, setLoading] = useState(true);
 
   // Profile details states

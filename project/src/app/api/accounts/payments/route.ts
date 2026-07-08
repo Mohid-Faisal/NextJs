@@ -37,14 +37,14 @@ export async function GET(request: NextRequest) {
 
     const orConditions: any[] = [
       // Category
-      { category: { contains: search, mode: "insensitive" } },
+      { category: { contains: search} },
       // From / To account names shown in table (customer/vendor or "Us")
-      { fromCustomer: { contains: search, mode: "insensitive" } },
-      { toVendor: { contains: search, mode: "insensitive" } },
+      { fromCustomer: { contains: search} },
+      { toVendor: { contains: search} },
       // Reference / Invoice / Description
-      { reference: { contains: search, mode: "insensitive" } },
-      { invoice: { contains: search, mode: "insensitive" } },
-      { description: { contains: search, mode: "insensitive" } },
+      { reference: { contains: search} },
+      { invoice: { contains: search} },
+      { description: { contains: search} },
     ];
 
     // Map textual search to transactionType enum (Income, Expense, etc.)

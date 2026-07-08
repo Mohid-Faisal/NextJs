@@ -12,7 +12,7 @@ async function main() {
   try {
     const apxCandidates = await prisma.vendors.findMany({
       where: {
-        CompanyName: { contains: "APX", mode: "insensitive" },
+        CompanyName: { contains: "APX"},
       },
       select: { id: true, CompanyName: true },
     });

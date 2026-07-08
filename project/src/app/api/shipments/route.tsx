@@ -80,24 +80,24 @@ export async function GET(req: Request) {
     console.log('Country codes for search:', countryCodes);
     
     const searchOr: any[] = [
-      { trackingId: { contains: search, mode: "insensitive" } },
-      { referenceNumber: { contains: search, mode: "insensitive" } },
-      { invoiceNumber: { contains: search, mode: "insensitive" } },
-      { agency: { contains: search, mode: "insensitive" } },
-      { office: { contains: search, mode: "insensitive" } },
-      { senderName: { contains: search, mode: "insensitive" } },
-      { senderAddress: { contains: search, mode: "insensitive" } },
-      { recipientName: { contains: search, mode: "insensitive" } },
-      { recipientAddress: { contains: search, mode: "insensitive" } },
-      { destination: { contains: search, mode: "insensitive" } },
-      { deliveryTime: { contains: search, mode: "insensitive" } },
-      { invoiceStatus: { contains: search, mode: "insensitive" } },
-      { deliveryStatus: { contains: search, mode: "insensitive" } },
-      { shippingMode: { contains: search, mode: "insensitive" } },
-      { packaging: { contains: search, mode: "insensitive" } },
-      { vendor: { contains: search, mode: "insensitive" } },
-      { serviceMode: { contains: search, mode: "insensitive" } },
-      { packageDescription: { contains: search, mode: "insensitive" } },
+      { trackingId: { contains: search} },
+      { referenceNumber: { contains: search} },
+      { invoiceNumber: { contains: search} },
+      { agency: { contains: search} },
+      { office: { contains: search} },
+      { senderName: { contains: search} },
+      { senderAddress: { contains: search} },
+      { recipientName: { contains: search} },
+      { recipientAddress: { contains: search} },
+      { destination: { contains: search} },
+      { deliveryTime: { contains: search} },
+      { invoiceStatus: { contains: search} },
+      { deliveryStatus: { contains: search} },
+      { shippingMode: { contains: search} },
+      { packaging: { contains: search} },
+      { vendor: { contains: search} },
+      { serviceMode: { contains: search} },
+      { packageDescription: { contains: search} },
     ];
     
     // If we found matching country codes, also search for those in destination
@@ -112,8 +112,8 @@ export async function GET(req: Request) {
   if (type === "domestic") {
     andConditions.push({
       OR: [
-        { destination: { equals: "PK", mode: "insensitive" } },
-        { destination: { equals: "Pakistan", mode: "insensitive" } }
+        { destination: { equals: "PK"} },
+        { destination: { equals: "Pakistan"} }
       ]
     });
   } else if (type === "international") {

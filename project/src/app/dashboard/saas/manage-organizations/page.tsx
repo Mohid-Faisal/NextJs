@@ -363,7 +363,7 @@ export default function SaasManageOrganizationsPage() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1.5">
                           <Button
-                            size="xs"
+                            size="sm"
                             variant="outline"
                             disabled={pendingId === org.id}
                             onClick={() => markPaid(org)}
@@ -374,7 +374,7 @@ export default function SaasManageOrganizationsPage() {
                           </Button>
                           {org.status === "suspended" ? (
                             <Button
-                              size="xs"
+                              size="sm"
                               variant="outline"
                               disabled={pendingId === org.id}
                               onClick={() => updateStatus(org, "active")}
@@ -384,7 +384,7 @@ export default function SaasManageOrganizationsPage() {
                             </Button>
                           ) : (
                             <Button
-                              size="xs"
+                              size="sm"
                               variant="secondary"
                               disabled={pendingId === org.id}
                               onClick={() => updateStatus(org, "suspended")}
@@ -394,7 +394,7 @@ export default function SaasManageOrganizationsPage() {
                             </Button>
                           )}
                           <Button
-                            size="xs"
+                            size="sm"
                             variant="destructive"
                             onClick={() => startDeleteOrg(org)}
                             className="h-7 text-[10px] px-2 flex items-center gap-1"

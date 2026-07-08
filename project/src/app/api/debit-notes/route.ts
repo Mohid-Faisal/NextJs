@@ -17,17 +17,17 @@ async function getAccountIds(session: SessionPayload) {
   try {
     const vendorExpenseAccount = await findOrgChartAccountByFilter(session, {
       category: "Expense",
-      accountName: { contains: "Vendor", mode: "insensitive" },
+      accountName: { contains: "Vendor"},
     });
 
     const cashAccount = await findOrgChartAccountByFilter(session, {
       category: "Asset",
-      accountName: { contains: "Cash", mode: "insensitive" },
+      accountName: { contains: "Cash"},
     });
 
     const otherIncomeAccount = await findOrgChartAccountByFilter(session, {
       category: "Revenue",
-      accountName: { contains: "Other Revenue", mode: "insensitive" },
+      accountName: { contains: "Other Revenue"},
     });
 
     return {
@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
     
     if (search) {
       where.OR = [
-        { debitNoteNumber: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { vendor: { PersonName: { contains: search, mode: "insensitive" } } },
-        { vendor: { CompanyName: { contains: search, mode: "insensitive" } } },
+        { debitNoteNumber: { contains: search} },
+        { description: { contains: search} },
+        { vendor: { PersonName: { contains: search} } },
+        { vendor: { CompanyName: { contains: search} } },
       ];
     }
 

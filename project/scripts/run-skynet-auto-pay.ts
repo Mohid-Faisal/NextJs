@@ -12,7 +12,7 @@ async function main() {
   try {
     const skynetCandidates = await prisma.vendors.findMany({
       where: {
-        CompanyName: { contains: "Skynet", mode: "insensitive" },
+        CompanyName: { contains: "Skynet"},
       },
       select: { id: true, CompanyName: true },
     });

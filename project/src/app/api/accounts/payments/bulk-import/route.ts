@@ -186,15 +186,14 @@ function resolveAccounts(
 
 async function getNextJournalEntrySeq(): Promise<number> {
   // Pull the largest numeric suffix found in JournalEntry.entryNumber
-  // and return seq = max + 1. Handles both "JE-0001" and "JE-<timestamp>" styles.
   try {
     const rows = await prisma.$queryRaw<{ max: bigint | null }[]>`
       SELECT MAX(
         CAST(
-          NULLIF(REGEXP_REPLACE("entryNumber", '[^0-9]', '', 'g'), '') AS BIGINT
+          NULLIF(REGEXP_REPLACE(\`entryNumber\`, '[^0-9]', ''), '') AS SIGNED
         )
-      )::bigint AS max
-      FROM "JournalEntry"
+      ) AS max
+      FROM \`JournalEntry\`
     `;
     const maxVal = rows?.[0]?.max;
     if (maxVal !== null && maxVal !== undefined) {

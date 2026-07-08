@@ -263,11 +263,11 @@ export async function GET(req: NextRequest) {
   if (search) {
     where.OR = [
       { zone: { equals: search } },
-      { zone: { contains: search, mode: "insensitive" } },
+      { zone: { contains: search} },
       { weight: { equals: parseFloat(search) || 0 } },
       { price: { equals: parseInt(search) || 0 } },
-      { docType: { contains: search, mode: "insensitive" } },
-      { vendor: { contains: search, mode: "insensitive" } },
+      { docType: { contains: search} },
+      { vendor: { contains: search} },
     ];
   }
 

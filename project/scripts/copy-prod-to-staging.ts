@@ -80,7 +80,7 @@ async function getColumns(prisma: PrismaClient, table: string) {
   const rows = await prisma.$queryRaw<{ column_name: string }[]>`
     SELECT column_name
     FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = ${table}
+    WHERE table_schema = DATABASE() AND table_name = ${table}
     ORDER BY ordinal_position
   `;
   return rows.map((r) => r.column_name);
@@ -88,7 +88,7 @@ async function getColumns(prisma: PrismaClient, table: string) {
 
 async function countRows(prisma: PrismaClient, table: string) {
   const [{ count }] = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
-    `SELECT COUNT(*)::bigint AS count FROM "${table}"`
+    `SELECT COUNT(*) AS count FROM \`${table}\``
   );
   return Number(count);
 }
@@ -106,25 +106,25 @@ async function copyTable(
   if (dryRun || prodCount === 0) return prodCount;
 
   if (stagingCount > 0) {
-    await staging.$executeRawUnsafe(`TRUNCATE TABLE "${table}" RESTART IDENTITY CASCADE`);
+    await staging.$executeRawUnsafe(`TRUNCATE TABLE \`${table}\``);
   }
 
   const columns = await getColumns(prod, table);
-  const colList = columns.map((c) => `"${c}"`).join(", ");
+  const colList = columns.map((c) => `\`${c}\``).join(", ");
 
   let offset = 0;
   let copied = 0;
 
   while (offset < prodCount) {
     const rows = await prod.$queryRawUnsafe<Record<string, unknown>[]>(
-      `SELECT ${colList} FROM "${table}" ORDER BY 1 LIMIT ${BATCH} OFFSET ${offset}`
+      `SELECT ${colList} FROM \`${table}\` ORDER BY 1 LIMIT ${BATCH} OFFSET ${offset}`
     );
     if (rows.length === 0) break;
 
     for (const row of rows) {
       const valueList = columns.map((col) => sqlLiteral(row[col])).join(", ");
       await staging.$executeRawUnsafe(
-        `INSERT INTO "${table}" (${colList}) VALUES (${valueList})`
+        `INSERT INTO \`${table}\` (${colList}) VALUES (${valueList})`
       );
     }
 
@@ -138,30 +138,9 @@ async function copyTable(
 }
 
 async function resetSequences(staging: PrismaClient) {
-  await staging.$executeRawUnsafe(`
-    DO $$
-    DECLARE r RECORD;
-    BEGIN
-      FOR r IN (
-        SELECT c.relname AS table_name, a.attname AS column_name
-        FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        JOIN pg_attribute a ON a.attrelid = c.oid
-        JOIN pg_depend d ON d.refobjid = c.oid
-        JOIN pg_class seq ON seq.oid = d.objid
-        WHERE n.nspname = 'public'
-          AND c.relkind = 'r'
-          AND seq.relkind = 'S'
-          AND a.attnum > 0
-          AND d.deptype = 'a'
-      ) LOOP
-        EXECUTE format(
-          'SELECT setval(pg_get_serial_sequence(%L, %L), COALESCE((SELECT MAX(%I) FROM %I), 1))',
-          r.table_name, r.column_name, r.column_name, r.table_name
-        );
-      END LOOP;
-    END $$;
-  `);
+  // MySQL automatically updates the internal auto-increment value 
+  // when explicit IDs are inserted, so no manual sequence resetting is required.
+  console.log("  MySQL auto-increment sequences are handled automatically.");
 }
 
 async function main() {

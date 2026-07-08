@@ -44,16 +44,16 @@ export async function GET(
       if (name) {
         recipient =
           (await prisma.recipients.findFirst({
-            where: orgWhere(session, { CompanyName: { equals: name, mode: "insensitive" } }),
+            where: orgWhere(session, { CompanyName: { equals: name} }),
           })) ||
           (await prisma.recipients.findFirst({
-            where: orgWhere(session, { PersonName: { equals: name, mode: "insensitive" } }),
+            where: orgWhere(session, { PersonName: { equals: name} }),
           })) ||
           (await prisma.recipients.findFirst({
             where: orgWhere(session, {
               OR: [
-                { CompanyName: { contains: name, mode: "insensitive" } },
-                { PersonName: { contains: name, mode: "insensitive" } },
+                { CompanyName: { contains: name} },
+                { PersonName: { contains: name} },
               ],
             }),
           }));

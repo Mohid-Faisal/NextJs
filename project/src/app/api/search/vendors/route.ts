@@ -28,11 +28,11 @@ export async function GET(req: Request) {
     const vendors = await prisma.vendors.findMany({
       where: orgWhere(session, {
         OR: [
-          { CompanyName: { contains: query, mode: "insensitive" } },
-          { PersonName: { contains: query, mode: "insensitive" } },
-          { Email: { contains: query, mode: "insensitive" } },
-          { Phone: { contains: query, mode: "insensitive" } },
-          { Country: { contains: query, mode: "insensitive" } },
+          { CompanyName: { contains: query} },
+          { PersonName: { contains: query} },
+          { Email: { contains: query} },
+          { Phone: { contains: query} },
+          { Country: { contains: query} },
           ...(countryCodes.length > 0 ? [{ Country: { in: countryCodes } }] : []),
         ],
       }),

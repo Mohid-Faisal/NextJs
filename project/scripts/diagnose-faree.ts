@@ -9,9 +9,9 @@ async function main() {
   const customers = await prisma.customers.findMany({
     where: {
       OR: [
-        { CompanyName: { contains: "Faree", mode: "insensitive" } },
-        { PersonName: { contains: "Farina", mode: "insensitive" } },
-        { PersonName: { contains: "Ghani", mode: "insensitive" } },
+        { CompanyName: { contains: "Faree"} },
+        { PersonName: { contains: "Farina"} },
+        { PersonName: { contains: "Ghani"} },
       ],
     },
     select: { id: true, CompanyName: true, PersonName: true, currentBalance: true },

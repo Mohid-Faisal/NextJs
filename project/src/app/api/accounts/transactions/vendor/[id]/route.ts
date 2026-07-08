@@ -87,7 +87,7 @@ export async function GET(
       if (matchingCountryCodes.length > 0 || search.trim()) {
         const invoiceSearchConditions: any = {
           OR: [
-            { destination: { contains: search, mode: 'insensitive' } }
+            { destination: { contains: search} }
           ]
         };
         if (matchingCountryCodes.length > 0) {
@@ -105,8 +105,8 @@ export async function GET(
       
       // Build search conditions
       const searchConditions: any[] = [
-        { description: { contains: search, mode: 'insensitive' } },
-        { reference: { contains: search, mode: 'insensitive' } }
+        { description: { contains: search} },
+        { reference: { contains: search} }
       ];
       
       // Add amount search (exact match or range)
@@ -843,7 +843,7 @@ export async function GET(
       if (matchingCountryCodes.length > 0 || search.trim()) {
         const invoiceSearchConditions: any = {
           OR: [
-            { destination: { contains: search, mode: 'insensitive' } }
+            { destination: { contains: search} }
           ]
         };
         if (matchingCountryCodes.length > 0) {
@@ -861,8 +861,8 @@ export async function GET(
       
       // Build search conditions
       const searchConditions: any[] = [
-        { description: { contains: search, mode: 'insensitive' } },
-        { reference: { contains: search, mode: 'insensitive' } }
+        { description: { contains: search} },
+        { reference: { contains: search} }
       ];
       
       // Add amount search (exact match or range)

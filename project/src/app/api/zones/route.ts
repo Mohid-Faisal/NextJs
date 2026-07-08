@@ -193,12 +193,17 @@ export async function GET(req: NextRequest) {
   let uploadTime = null;
   let filename = null;
   try {
-    const uploadResult = await prisma.$queryRaw`
-      SELECT "uploadedAt" FROM "ZoneUpload"
-      WHERE "organizationId" = ${session.organizationId} AND "service" = ${service.toLowerCase()}
-    `;
-    if (uploadResult && Array.isArray(uploadResult) && uploadResult.length > 0) {
-      uploadTime = uploadResult[0].uploadedAt;
+    const uploadResult = await prisma.zoneUpload.findUnique({
+      where: {
+        organizationId_service: {
+          organizationId: session.organizationId,
+          service: service.toLowerCase(),
+        }
+      },
+      select: { uploadedAt: true }
+    });
+    if (uploadResult) {
+      uploadTime = uploadResult.uploadedAt;
     }
   } catch (error) {
     console.log("Failed to fetch upload time:", error);
@@ -206,16 +211,19 @@ export async function GET(req: NextRequest) {
   // console.log("uploadTime", uploadTime);
 
   try {
-    const filenameResult = await prisma.$queryRaw`
-      SELECT "filename", "uploadedAt" FROM "filename"
-      WHERE "organizationId" = ${session.organizationId}
-        AND "service" = ${service.toLowerCase()} AND "fileType" = 'zone'
-    `;
-    if (filenameResult && Array.isArray(filenameResult) && filenameResult.length > 0) {
-      filename = filenameResult[0].filename;
+    const filenameResult = await prisma.filename.findFirst({
+      where: {
+        organizationId: session.organizationId,
+        service: service.toLowerCase(),
+        fileType: 'zone'
+      },
+      select: { filename: true, uploadedAt: true }
+    });
+    if (filenameResult) {
+      filename = filenameResult.filename;
       // Use filename upload time if available, otherwise use zone upload time
-      if (filenameResult[0].uploadedAt) {
-        uploadTime = filenameResult[0].uploadedAt;
+      if (filenameResult.uploadedAt) {
+        uploadTime = filenameResult.uploadedAt;
       }
     }
   } catch (error) {

@@ -51,9 +51,9 @@ export async function POST(req: NextRequest) {
       where: orgWhere(session, {
         category: "Equity",
         OR: [
-          { accountName: { contains: "Current year earnings", mode: "insensitive" } },
-          { accountName: { contains: "Current Year Earnings", mode: "insensitive" } },
-          { accountName: { contains: "Retained Earnings", mode: "insensitive" } }
+          { accountName: { contains: "Current year earnings"} },
+          { accountName: { contains: "Current Year Earnings"} },
+          { accountName: { contains: "Retained Earnings"} }
         ]
       })
     });

@@ -59,9 +59,9 @@ async function getJournalEntryBase(prisma: PrismaClient): Promise<number> {
   let maxExisting = 0;
   try {
     const rows = await prisma.$queryRaw<{ max: number | null }[]>`
-      SELECT MAX(CAST(SUBSTRING("entryNumber" FROM 4) AS BIGINT)) AS max
-      FROM "JournalEntry"
-      WHERE "entryNumber" ~ '^JE-[0-9]+$'
+      SELECT MAX(CAST(SUBSTRING(\`entryNumber\` FROM 4) AS SIGNED)) AS max
+      FROM \`JournalEntry\`
+      WHERE \`entryNumber\` REGEXP '^JE-[0-9]+$'
     `;
     maxExisting = Number(rows[0]?.max ?? 0) || 0;
   } catch {

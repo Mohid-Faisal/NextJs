@@ -92,14 +92,14 @@ export async function DELETE(req: NextRequest) {
     const [deletedRates] = await Promise.all([
       prisma.rate.deleteMany({
         where: orgWhere(session, {
-          vendor: { equals: record.vendor, mode: "insensitive" },
-          service: { equals: record.service, mode: "insensitive" },
+          vendor: { equals: record.vendor},
+          service: { equals: record.service},
         }),
       }),
       prisma.filename.deleteMany({
         where: orgWhere(session, {
-          vendor: { equals: record.vendor, mode: "insensitive" },
-          service: { equals: record.service, mode: "insensitive" },
+          vendor: { equals: record.vendor},
+          service: { equals: record.service},
           fileType: "rate",
         }),
       }).catch(() => {}),

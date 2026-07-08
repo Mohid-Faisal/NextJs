@@ -69,9 +69,7 @@ export async function POST(req: NextRequest) {
     const zoneInfos = await prisma.zone.findMany({
       where: orgWhere(session, {
         code: {
-          contains: finalDestination,
-          mode: "insensitive",
-        },
+          contains: finalDestination, },
         service: serviceMode.toLowerCase(),
       }),
       select: {

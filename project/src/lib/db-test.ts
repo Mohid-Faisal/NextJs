@@ -22,10 +22,10 @@ export async function testDatabaseConnection() {
 
 export async function checkTables() {
   try {
-    const tables = await prisma.$queryRaw`
+    const tables = await prisma.$queryRaw<{ table_name: string }[]>`
       SELECT table_name 
       FROM information_schema.tables 
-      WHERE table_schema = 'public'
+      WHERE table_schema = DATABASE()
       ORDER BY table_name
     `;
     console.log('📋 Available tables:', tables);

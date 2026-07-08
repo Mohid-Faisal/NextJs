@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
     const searchTrimmed = search.trim();
     if (searchTrimmed) {
       where.OR = [
-        { invoiceNumber: { contains: searchTrimmed, mode: "insensitive" } },
-        { vendor: { PersonName: { contains: searchTrimmed, mode: "insensitive" } } },
-        { vendor: { CompanyName: { contains: searchTrimmed, mode: "insensitive" } } },
+        { invoiceNumber: { contains: searchTrimmed} },
+        { vendor: { PersonName: { contains: searchTrimmed} } },
+        { vendor: { CompanyName: { contains: searchTrimmed} } },
       ];
     } else {
       return NextResponse.json({ bills: [] });

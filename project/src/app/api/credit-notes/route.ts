@@ -17,7 +17,7 @@ async function getAccountIds(session: SessionPayload) {
   try {
     let cashAccount = await findOrgChartAccountByFilter(session, {
       category: "Asset",
-      accountName: { contains: "Cash", mode: "insensitive" },
+      accountName: { contains: "Cash"},
     });
     if (!cashAccount) {
       cashAccount = await findOrgChartAccountByFilter(session, { category: "Asset" });
@@ -25,7 +25,7 @@ async function getAccountIds(session: SessionPayload) {
 
     let revenueAccount = await findOrgChartAccountByFilter(session, {
       category: "Revenue",
-      accountName: { contains: "Logistic", mode: "insensitive" },
+      accountName: { contains: "Logistic"},
     });
     if (!revenueAccount) {
       revenueAccount = await findOrgChartAccountByFilter(session, { category: "Revenue" });
@@ -33,7 +33,7 @@ async function getAccountIds(session: SessionPayload) {
 
     let expenseAccount = await findOrgChartAccountByFilter(session, {
       category: "Expense",
-      accountName: { contains: "Other Expense", mode: "insensitive" },
+      accountName: { contains: "Other Expense"},
     });
     if (!expenseAccount) {
       expenseAccount = await findOrgChartAccountByFilter(session, { category: "Expense" });
@@ -80,10 +80,10 @@ export async function GET(request: NextRequest) {
     
     if (search) {
       where.OR = [
-        { creditNoteNumber: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { customer: { PersonName: { contains: search, mode: "insensitive" } } },
-        { customer: { CompanyName: { contains: search, mode: "insensitive" } } },
+        { creditNoteNumber: { contains: search} },
+        { description: { contains: search} },
+        { customer: { PersonName: { contains: search} } },
+        { customer: { CompanyName: { contains: search} } },
       ];
     }
 

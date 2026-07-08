@@ -37,11 +37,11 @@ export async function GET(req: Request) {
     const countryCodes = matchingCountries.map(country => country.isoCode);
     
     where.OR = [
-      { CompanyName: { contains: search, mode: "insensitive" } },
-      { PersonName: { contains: search, mode: "insensitive" } },
-      { Phone: { contains: search, mode: "insensitive" } },
-      { City: { contains: search, mode: "insensitive" } },
-      { Country: { contains: search, mode: "insensitive" } },
+      { CompanyName: { contains: search} },
+      { PersonName: { contains: search} },
+      { Phone: { contains: search} },
+      { City: { contains: search} },
+      { Country: { contains: search} },
     ];
     
     // If we found matching country codes, also search for those

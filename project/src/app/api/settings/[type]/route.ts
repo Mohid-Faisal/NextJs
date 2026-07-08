@@ -124,13 +124,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ t
         prisma.zone.deleteMany({
           where: {
             organizationId: orgId,
-            service: { equals: svc, mode: "insensitive" },
+            service: { equals: svc},
           },
         }),
         prisma.rate.deleteMany({
           where: {
             organizationId: orgId,
-            service: { equals: svc, mode: "insensitive" },
+            service: { equals: svc},
           },
         }),
       ]);
@@ -141,7 +141,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ t
         prisma.vendorservice.deleteMany({
           where: {
             organizationId: orgId,
-            service: { equals: svc, mode: "insensitive" },
+            service: { equals: svc},
           },
         }),
       ]);

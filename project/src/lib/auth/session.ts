@@ -105,8 +105,9 @@ export async function getSession(req?: Request): Promise<SessionPayload | null> 
     where: { id: userId },
     select: { platformRole: true, status: true, isApproved: true },
   });
+  if (!user) return null;
   const userStatus = user.status?.toUpperCase() || "";
-  if (!user || !user.isApproved || (userStatus !== "ACTIVE" && !userStatus.startsWith("PENDING_2FA_"))) return null;
+  if (!user.isApproved || (userStatus !== "ACTIVE" && !userStatus.startsWith("PENDING_2FA_"))) return null;
 
   const org = await prisma.organization.findUnique({
     where: { id: organizationId },

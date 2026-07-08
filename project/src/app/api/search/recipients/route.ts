@@ -20,9 +20,7 @@ export async function GET(req: Request) {
     const recipients = await prisma.recipients.findMany({
       where: orgWhere(session, {
         CompanyName: {
-          contains: query,
-          mode: "insensitive",
-        },
+          contains: query, },
       }),
       take: 10,
       select: {

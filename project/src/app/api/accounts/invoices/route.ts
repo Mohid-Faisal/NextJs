@@ -61,19 +61,19 @@ export async function GET(req: NextRequest) {
       
       // Create search conditions that don't override the profile filter
       const searchConditions: any[] = [
-        { invoiceNumber: { contains: search, mode: "insensitive" } },
-        { trackingNumber: { contains: search, mode: "insensitive" } },
-        { destination: { contains: search, mode: "insensitive" } },
+        { invoiceNumber: { contains: search} },
+        { trackingNumber: { contains: search} },
+        { destination: { contains: search} },
         { customer: { 
           OR: [
-            { CompanyName: { contains: search, mode: "insensitive" } },
-            { PersonName: { contains: search, mode: "insensitive" } }
+            { CompanyName: { contains: search} },
+            { PersonName: { contains: search} }
           ]
         } },
         { vendor: { 
           OR: [
-            { CompanyName: { contains: search, mode: "insensitive" } },
-            { PersonName: { contains: search, mode: "insensitive" } }
+            { CompanyName: { contains: search} },
+            { PersonName: { contains: search} }
           ]
         } },
       ];
