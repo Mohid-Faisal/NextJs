@@ -133,7 +133,7 @@ export async function GET(
       footerHTML = footerBase64 ? `<img src="${footerBase64}" width="100%" alt="Footer" style="display: block;">` : '<div style="width: 100%; height: 100px; background-color: #007bff; color: white; text-align: center; padding: 20px;">PSS Payment Solutions Footer</div>';
     } else {
       footerHTML = `
-        <div class="footer-single-line" style="text-align: center; font-size: 14px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 20px; margin-top: 45px; font-family: Arial, sans-serif; line-height: 1.5; width: 100%;">
+        <div class="footer-single-line" style="text-align: center; font-size: 16px; color: #4b5563; border-top: 1px dashed #d1d5db; padding-top: 20px; margin-top: 45px; font-family: Arial, sans-serif; line-height: 1.5; width: 100%;">
           ${supportAddress} | ${supportPhone} | ${supportEmail}
         </div>
       `;

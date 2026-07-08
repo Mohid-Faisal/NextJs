@@ -589,7 +589,7 @@ export default function BrandingSettingsPage() {
                   </div>
                 </div>
                 <div className="border-t border-dashed my-2"></div>
-                <div className="text-[10px] text-muted-foreground text-center mt-3">
+                <div className="text-xs text-muted-foreground text-center mt-3">
                   {invoiceSupportAddress} | {invoiceSupportPhone} | {invoiceSupportEmail}
                 </div>
               </div>
