@@ -772,11 +772,22 @@ const DashboardPage = () => {
                           className="bg-gray-50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all rounded-lg"
                         >
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap">
-                            {new Date(shipment.shipmentDate || shipment.createdAt).toLocaleDateString('en-GB', {
-                              year: '2-digit',
-                              month: '2-digit',
-                              day: '2-digit',
-                            }).split('/').join('/')}
+                            <div className="flex flex-col">
+                              <span className="text-gray-800 dark:text-gray-200">
+                                {new Date(shipment.shipmentDate || shipment.createdAt).toLocaleDateString('en-GB', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                }).split('/').join('/')}
+                              </span>
+                              <span className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 font-medium">
+                                {new Date(shipment.createdAt).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
                             <span 
@@ -841,8 +852,17 @@ const DashboardPage = () => {
                             </div>
                           </td>
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold text-slate-900 dark:text-white">
-                            {(shipment.totalCost || shipment.amount || 0).toLocaleString()}
-                          </td>
+                             <div className="flex flex-col items-start gap-1">
+                               <span>
+                                 {(shipment.totalCost || shipment.amount || 0).toLocaleString()}
+                               </span>
+                               {shipment.invoiceStatus && (
+                                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getInvoiceColor(shipment.invoiceStatus)}`}>
+                                   {shipment.invoiceStatus}
+                                 </span>
+                               )}
+                             </div>
+                           </td>
                         </motion.tr>
                       ))
                     )}
