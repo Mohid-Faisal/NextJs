@@ -88,61 +88,80 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
           return;
         }
 
-        const decoded = jwtDecode<any>(token);
-        const uOrgRole = decoded.orgRole || null;
-        const uPlatformRole = decoded.platformRole || null;
-        
-        setOrgRole(uOrgRole);
-        setPlatformRole(uPlatformRole);
+        // 1. Decode token and resolve role
+        let resolvedRole = "Employee";
+        try {
+          const decoded = jwtDecode<any>(token);
+          const uOrgRole = decoded.orgRole || null;
+          const uPlatformRole = decoded.platformRole || null;
+          
+          setOrgRole(uOrgRole);
+          setPlatformRole(uPlatformRole);
 
-        const resolvedRole = resolveRoleName(uOrgRole, uPlatformRole);
-        setRole(resolvedRole);
-
-        // Fetch permissions mapping
-        const res = await fetch("/api/settings/custom?key=settings_role_permissions");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.value) {
-            const mapping = JSON.parse(data.value);
-            const list = mapping[resolvedRole] || [];
-            setPermissions(list);
-          }
+          resolvedRole = resolveRoleName(uOrgRole, uPlatformRole);
+          setRole(resolvedRole as any);
+        } catch (tokenErr) {
+          console.error("Error decoding session token:", tokenErr);
         }
 
-        // Fetch current org to get plan features - with cache busting query param
-        const orgRes = await fetch(`/api/org/current?t=${Date.now()}`, { cache: "no-store" });
-        if (orgRes.ok) {
-          const orgData = await orgRes.json();
-          if (orgData.organization) {
-            const orgId = orgData.organization.id;
-            const sub = orgData.organization.subscription;
-            const isTrialActive = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) > new Date();
-            const trialExpiredCheck = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) < new Date();
-            setIsTrialExpired(false);
-
-            if (orgId === 1 || isTrialActive) {
-              setPlanFeatures({
-                accounts: true,
-                bulkUpload: true,
-                map: true,
-                analytics: true,
-                activityLogs: true,
-                customersPage: true,
-                vendorsPage: true,
-                recipientsPage: true,
-              });
-            } else {
-              let features = sub?.plan?.features || {};
-              if (typeof features === "string") {
-                try {
-                  features = JSON.parse(features);
-                } catch (e) {
-                  features = {};
-                }
+        // 2. Fetch permissions mapping
+        try {
+          const res = await fetch("/api/settings/custom?key=settings_role_permissions");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.value) {
+              try {
+                const mapping = JSON.parse(data.value);
+                const list = mapping[resolvedRole] || [];
+                setPermissions(list);
+              } catch (parseErr) {
+                console.error("Error parsing permissions mapping:", parseErr);
               }
-              setPlanFeatures(features);
             }
           }
+        } catch (permErr) {
+          console.error("Error fetching permissions mapping:", permErr);
+        }
+
+        // 3. Fetch current org to get plan features - with cache busting query param
+        try {
+          const orgRes = await fetch(`/api/org/current?t=${Date.now()}`, { cache: "no-store" });
+          if (orgRes.ok) {
+            const orgData = await orgRes.json();
+            if (orgData && orgData.organization) {
+              const orgId = orgData.organization.id;
+              const sub = orgData.organization.subscription;
+              const isTrialActive = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) > new Date();
+              setIsTrialExpired(false);
+
+              if (orgId === 1 || isTrialActive) {
+                setPlanFeatures({
+                  accounts: true,
+                  bulkUpload: true,
+                  map: true,
+                  analytics: true,
+                  activityLogs: true,
+                  customersPage: true,
+                  vendorsPage: true,
+                  recipientsPage: true,
+                });
+              } else {
+                let features = sub?.plan?.features || {};
+                if (typeof features === "string") {
+                  try {
+                    features = JSON.parse(features);
+                  } catch (e) {
+                    features = {};
+                  }
+                }
+                setPlanFeatures(features);
+              }
+            }
+          } else {
+            console.error("Failed to fetch current organization features: status", orgRes.status);
+          }
+        } catch (orgErr) {
+          console.error("Error fetching organization features:", orgErr);
         }
       } catch (err) {
         console.error("Error loading permissions context:", err);
