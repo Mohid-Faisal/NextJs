@@ -584,7 +584,7 @@ function BillingPageInner() {
                 <div className="space-y-1 min-w-0">
                   <Label htmlFor="cycleSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Billing Cycle</Label>
                   <Select value={manualCycle} onValueChange={setManualCycle}>
-                    <SelectTrigger id="cycleSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
+                    <SelectTrigger id="cycleSelect" className="w-full h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
                       <SelectValue placeholder="Select billing cycle" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-955">
@@ -597,7 +597,7 @@ function BillingPageInner() {
                 <div className="space-y-1 min-w-0">
                   <Label htmlFor="planSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Target Plan</Label>
                   <Select value={manualPlan} onValueChange={setManualPlan}>
-                    <SelectTrigger id="planSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800 [&>span]:truncate [&>span]:max-w-full">
+                    <SelectTrigger id="planSelect" className="w-full h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800 [&>span]:truncate [&>span]:max-w-full">
                       <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-905">
@@ -613,7 +613,7 @@ function BillingPageInner() {
                 <div className="space-y-1 min-w-0">
                   <Label htmlFor="methodSelect" className="text-xs font-bold text-slate-600 dark:text-slate-400">Payment Method</Label>
                   <Select value={manualMethod} onValueChange={setManualMethod}>
-                    <SelectTrigger id="methodSelect" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
+                    <SelectTrigger id="methodSelect" className="w-full h-11 rounded-xl bg-slate-50 dark:bg-slate-955 border-slate-205 dark:border-slate-800">
                       <SelectValue placeholder="Select transfer method" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-955">
