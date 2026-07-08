@@ -47,6 +47,10 @@ type Invoice = {
     shipmentDate: string | Date;
   };
 };
+const toLocalISOString = (d: Date | string) => {
+  const dateObj = typeof d === 'string' ? new Date(d) : d;
+  return new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
 
 type ChartOfAccount = {
   id: number;
@@ -82,7 +86,7 @@ export default function ExpensePaymentsPage() {
     invoice: "",
     reference: "",
     description: "",
-    paymentDate: new Date().toISOString().split('T')[0], // Default to today
+    paymentDate: toLocalISOString(new Date()), // Default to current date and time
   });
 
   useEffect(() => {
@@ -138,9 +142,7 @@ export default function ExpensePaymentsPage() {
         // Set payment date to shipment date if available
         if (invoice.shipment?.shipmentDate) {
           const shipmentDate = invoice.shipment.shipmentDate;
-          const dateStr = shipmentDate instanceof Date 
-            ? shipmentDate.toISOString().split('T')[0]
-            : new Date(shipmentDate).toISOString().split('T')[0];
+          const dateStr = toLocalISOString(shipmentDate);
           setFormData((prev) => ({
             ...prev,
             paymentDate: dateStr,
@@ -188,9 +190,7 @@ export default function ExpensePaymentsPage() {
                 // Set payment date to shipment date if available
                 if (foundInvoice.shipment?.shipmentDate) {
                   const shipmentDate = foundInvoice.shipment.shipmentDate;
-                  const dateStr = shipmentDate instanceof Date 
-                    ? shipmentDate.toISOString().split('T')[0]
-                    : new Date(shipmentDate).toISOString().split('T')[0];
+                  const dateStr = toLocalISOString(shipmentDate);
                   setFormData((prev) => ({
                     ...prev,
                     paymentDate: dateStr,
@@ -230,9 +230,7 @@ export default function ExpensePaymentsPage() {
         // Set payment date to shipment date if available
         if (invoice.shipment?.shipmentDate) {
           const shipmentDate = invoice.shipment.shipmentDate;
-          const dateStr = shipmentDate instanceof Date 
-            ? shipmentDate.toISOString().split('T')[0]
-            : new Date(shipmentDate).toISOString().split('T')[0];
+          const dateStr = toLocalISOString(shipmentDate);
           setFormData((prev) => ({
             ...prev,
             paymentDate: dateStr,
@@ -275,9 +273,7 @@ export default function ExpensePaymentsPage() {
                 // Set payment date to shipment date if available
                 if (foundInvoice.shipment?.shipmentDate) {
                   const shipmentDate = foundInvoice.shipment.shipmentDate;
-                  const dateStr = shipmentDate instanceof Date 
-                    ? shipmentDate.toISOString().split('T')[0]
-                    : new Date(shipmentDate).toISOString().split('T')[0];
+                  const dateStr = toLocalISOString(shipmentDate);
                   setFormData((prev) => ({
                     ...prev,
                     paymentDate: dateStr,
@@ -507,7 +503,7 @@ export default function ExpensePaymentsPage() {
           invoice: "",
           reference: "",
           description: "",
-          paymentDate: new Date().toISOString().split('T')[0],
+          paymentDate: toLocalISOString(new Date()),
         });
         setPaymentDialogOpen(false);
         
@@ -657,9 +653,7 @@ export default function ExpensePaymentsPage() {
                       // Set payment date to shipment date if available
                       if (invoice.shipment?.shipmentDate) {
                         const shipmentDate = invoice.shipment.shipmentDate;
-                        const dateStr = shipmentDate instanceof Date 
-                          ? shipmentDate.toISOString().split('T')[0]
-                          : new Date(shipmentDate).toISOString().split('T')[0];
+                        const dateStr = toLocalISOString(shipmentDate);
                         setFormData((prev) => ({
                           ...prev,
                           paymentDate: dateStr,
@@ -790,11 +784,11 @@ export default function ExpensePaymentsPage() {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="paymentDate" className="text-sm font-medium">
-                    Payment Date
+                    Payment Date & Time
                   </Label>
                   <Input
                     id="paymentDate"
-                    type="date"
+                    type="datetime-local"
                     value={formData.paymentDate}
                     onChange={(e) =>
                       setFormData((prev) => ({

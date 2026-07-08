@@ -143,6 +143,13 @@ export default function CustomerTransactionsPage() {
         
         // Same voucher date
         if (dateDiff === 0) {
+          // Compare exact creation time (latest first if sorting desc)
+          const timeA = new Date(a.createdAt).getTime();
+          const timeB = new Date(b.createdAt).getTime();
+          const timeDiff = sortOrder === "desc" ? timeB - timeA : timeA - timeB;
+          if (timeDiff !== 0) {
+            return timeDiff;
+          }
           // 1) CREDIT (payment) rows should appear above DEBIT (shipment) rows
           if (a.type === "DEBIT" && b.type === "CREDIT") return 1;
           if (a.type === "CREDIT" && b.type === "DEBIT") return -1;
@@ -1010,6 +1017,13 @@ export default function CustomerTransactionsPage() {
         // CREDIT (payment) transactions come before DEBIT (shipment/invoice) transactions
         // This matches the table's same-date ordering
         if (dateDiff === 0) {
+          // Compare exact creation time (oldest first, latest last/down)
+          const timeA = new Date(a.createdAt).getTime();
+          const timeB = new Date(b.createdAt).getTime();
+          const timeDiff = timeA - timeB;
+          if (timeDiff !== 0) {
+            return timeDiff;
+          }
           if (a.type === "DEBIT" && b.type === "CREDIT") return -1;  // DEBIT comes after (below) CREDIT
           if (a.type === "CREDIT" && b.type === "DEBIT") return 1; // CREDIT comes before (above) DEBIT
           // If both are shipments (DEBIT with invoice), sort by invoice number (smaller first)
@@ -1071,7 +1085,16 @@ export default function CustomerTransactionsPage() {
       };
       const dateA = new Date(getVoucherDate(a)).getTime();
       const dateB = new Date(getVoucherDate(b)).getTime();
-      return dateA - dateB; // Oldest first
+      const dateDiff = dateA - dateB; // Oldest first
+      if (dateDiff === 0) {
+        const timeA = new Date(a.createdAt).getTime();
+        const timeB = new Date(b.createdAt).getTime();
+        const timeDiff = timeA - timeB;
+        if (timeDiff !== 0) {
+          return timeDiff;
+        }
+      }
+      return dateDiff;
     });
     const { headers, data } = getTransactionExportData(sortedForExport);
     exportToPDF(data, headers, 'Customer Transactions Report', total);

@@ -339,6 +339,12 @@ export async function GET(
           if (dateDiff !== 0) {
             return validSortOrder === "desc" ? -dateDiff : dateDiff;
           }
+          // Same date, compare exact creation time (latest first for desc order)
+          const timeDiff =
+            a.createdAt.getTime() - b.createdAt.getTime();
+          if (timeDiff !== 0) {
+            return validSortOrder === "desc" ? -timeDiff : timeDiff;
+          }
           if (a.type === "DEBIT" && b.type === "CREDIT") {
             return validSortOrder === "desc" ? 1 : -1;
           }
@@ -713,6 +719,12 @@ export async function GET(
       if (a.type === "DEBIT" && b.type === "CREDIT") return 1;
       if (a.type === "CREDIT" && b.type === "DEBIT") return -1;
 
+      // Same date, same type – compare exact creation time (oldest first, latest last)
+      const timeDiff = a.createdAt.getTime() - b.createdAt.getTime();
+      if (timeDiff !== 0) {
+        return timeDiff;
+      }
+
       // Same date, same type – use invoice number ascending when available
       if (a.invoice && b.invoice) {
         const invA = parseInt(a.invoice, 10);
@@ -919,6 +931,11 @@ export async function GET(
         const dateDiff = a.voucherDate.getTime() - b.voucherDate.getTime();
         if (dateDiff !== 0) {
           return validSortOrder === 'desc' ? -dateDiff : dateDiff;
+        }
+        // Same date, compare exact creation time (latest first for desc order)
+        const timeDiff = a.createdAt.getTime() - b.createdAt.getTime();
+        if (timeDiff !== 0) {
+          return validSortOrder === 'desc' ? -timeDiff : timeDiff;
         }
         // Same date: DEBIT (shipment/invoice) before CREDIT (payment)
         if (a.type === "DEBIT" && b.type === "CREDIT") return validSortOrder === 'desc' ? 1 : -1;
