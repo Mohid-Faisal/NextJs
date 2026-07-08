@@ -129,15 +129,11 @@ export default function IncomeRevenuePage() {
             paymentAmount: remainingAmount.toString(),
           }));
         }
-        // Set payment date to shipment date if available
-        if (invoice.shipment?.shipmentDate) {
-          const shipmentDate = invoice.shipment.shipmentDate;
-          const dateStr = toLocalISOString(shipmentDate);
-          setFormData((prev) => ({
-            ...prev,
-            paymentDate: dateStr,
-          }));
-        }
+        // Set payment date to current date and time
+        setFormData((prev) => ({
+          ...prev,
+          paymentDate: toLocalISOString(new Date()),
+        }));
         // Set default accounts for the selected invoice
         if (accountsInitialized && accounts.length > 0) {
           setDefaultAccountsForInvoice(accounts, invoice);
@@ -172,15 +168,11 @@ export default function IncomeRevenuePage() {
                     paymentAmount: remainingAmount.toString(),
                   }));
                 }
-                // Set payment date to shipment date if available
-                if (foundInvoice.shipment?.shipmentDate) {
-                  const shipmentDate = foundInvoice.shipment.shipmentDate;
-                  const dateStr = toLocalISOString(shipmentDate);
-                  setFormData((prev) => ({
-                    ...prev,
-                    paymentDate: dateStr,
-                  }));
-                }
+                // Set payment date to current date and time
+                setFormData((prev) => ({
+                  ...prev,
+                  paymentDate: toLocalISOString(new Date()),
+                }));
                 // Set default accounts for the selected invoice
                 if (accountsInitialized && accounts.length > 0) {
                   setDefaultAccountsForInvoice(accounts, foundInvoice);
@@ -551,15 +543,11 @@ export default function IncomeRevenuePage() {
                           paymentAmount: remainingAmount.toString(),
                         }));
                       }
-                      // Set payment date to shipment date if available
-                      if (invoice.shipment?.shipmentDate) {
-                        const shipmentDate = invoice.shipment.shipmentDate;
-                        const dateStr = toLocalISOString(shipmentDate);
-                        setFormData((prev) => ({
-                          ...prev,
-                          paymentDate: dateStr,
-                        }));
-                      }
+                      // Set payment date to current date and time
+                      setFormData((prev) => ({
+                        ...prev,
+                        paymentDate: toLocalISOString(new Date()),
+                      }));
                       if (accountsInitialized && accounts.length > 0) {
                         setDefaultAccountsForInvoice(accounts, invoice);
                       }
