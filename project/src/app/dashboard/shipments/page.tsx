@@ -951,65 +951,65 @@ export default function ShipmentsPage() {
 
   if (typeParam === "domestic" && orgId !== null && orgId !== 1) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] lg:h-[calc(100vh-160px)] w-full p-4 bg-slate-50/40 dark:bg-zinc-950/10 overflow-hidden">
-        <div className="max-w-2xl w-full text-center relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl p-6 sm:p-10">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-160px)] w-full p-4 bg-slate-50/40 dark:bg-zinc-950/10">
+        <div className="max-w-xl w-full text-center relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl p-6 sm:p-8">
           {/* Decorative glowing gradient backdrop */}
           <div className="absolute -top-40 -left-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
 
           {/* Coming Soon Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 mb-6 border border-indigo-100/50 dark:border-indigo-950/20 relative z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 mb-4 border border-indigo-100/50 dark:border-indigo-950/20 relative z-10">
             <Sparkles className="w-3.5 h-3.5 animate-pulse" />
             Coming Soon
           </div>
 
           {/* Animated illustration/icon */}
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-500 to-blue-600 text-white flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/20 relative group hover:scale-105 transition-transform duration-300 z-10">
-            <Truck className="w-10 h-10" />
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-blue-600 text-white flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-500/20 relative group hover:scale-105 transition-transform duration-300 z-10">
+            <Truck className="w-8 h-8" />
           </div>
 
           {/* Header */}
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight relative z-10">
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight relative z-10">
             Domestic Shipping is <span className="bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">Coming Soon</span>
           </h2>
           
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-4 leading-relaxed max-w-lg mx-auto relative z-10">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-3 leading-relaxed max-w-md mx-auto relative z-10">
             We are expanding our local network to bring you super-fast, reliable domestic courier and cargo services. Your city-to-city shipping experience is about to get a whole lot smoother.
           </p>
 
           {/* Highlight features */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto mt-8 text-left border-t border-slate-100 dark:border-slate-800 pt-6 relative z-10">
-            <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-              <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center shrink-0">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md mx-auto mt-6 text-left border-t border-slate-100 dark:border-slate-800 pt-5 relative z-10">
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+              <div className="w-4.5 h-4.5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
               Same-day city delivery
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-              <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center shrink-0">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+              <div className="w-4.5 h-4.5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
               Cash on Delivery (COD)
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-              <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center shrink-0">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+              <div className="w-4.5 h-4.5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
               Bulk route optimization
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-              <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center shrink-0">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+              <div className="w-4.5 h-4.5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center shrink-0">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
               Real-time SMS alerts
             </div>
           </div>
 
           {/* Action Button */}
-          <div className="mt-8 relative z-10">
+          <div className="mt-6 relative z-10">
             <Button
               onClick={() => router.push("/dashboard")}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-6 rounded-2xl shadow-lg shadow-indigo-500/10 cursor-pointer"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-4.5 rounded-xl shadow-lg shadow-indigo-500/10 cursor-pointer"
             >
               Back to Dashboard
             </Button>
