@@ -109,8 +109,8 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
           }
         }
 
-        // Fetch current org to get plan features
-        const orgRes = await fetch("/api/org/current", { cache: "no-store" });
+        // Fetch current org to get plan features - with cache busting query param
+        const orgRes = await fetch(`/api/org/current?t=${Date.now()}`, { cache: "no-store" });
         if (orgRes.ok) {
           const orgData = await orgRes.json();
           if (orgData.organization) {
@@ -132,7 +132,14 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
                 recipientsPage: true,
               });
             } else {
-              const features = sub?.plan?.features || {};
+              let features = sub?.plan?.features || {};
+              if (typeof features === "string") {
+                try {
+                  features = JSON.parse(features);
+                } catch (e) {
+                  features = {};
+                }
+              }
               setPlanFeatures(features);
             }
           }
