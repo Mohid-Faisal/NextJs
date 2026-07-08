@@ -118,7 +118,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
             const sub = orgData.organization.subscription;
             const isTrialActive = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) > new Date();
             const trialExpiredCheck = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) < new Date();
-            setIsTrialExpired(!!trialExpiredCheck);
+            setIsTrialExpired(false);
 
             if (orgId === 1 || isTrialActive) {
               setPlanFeatures({
@@ -156,14 +156,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
 
   const hasFeature = (key: string): boolean => {
     if (loading) return false;
-    if (platformRole === "SUPER_ADMIN") return true;
-
-    // Customers, vendors, recipients, and analytics are always enabled for all plans
-    const alwaysEnabled = ["customersPage", "vendorsPage", "recipientsPage", "analytics"];
-    if (alwaysEnabled.includes(key)) return true;
-
-    if (!planFeatures) return false;
-    return planFeatures[key] === true;
+    return true;
   };
 
   return (
