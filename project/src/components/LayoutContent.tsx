@@ -35,7 +35,12 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
   // Plan feature check
   let isFeatureAllowed = true;
   let requiredFeatureKey = "";
-  if (pathname.startsWith("/dashboard/accounts") && !pathname.startsWith("/dashboard/accounts/payments")) {
+  if (
+    pathname.startsWith("/dashboard/accounts") &&
+    !pathname.startsWith("/dashboard/accounts/payments") &&
+    !pathname.startsWith("/dashboard/accounts/transactions/customer") &&
+    !pathname.startsWith("/dashboard/accounts/transactions/vendor")
+  ) {
     isFeatureAllowed = hasFeature("accounts");
     requiredFeatureKey = "accounts";
   } else {
