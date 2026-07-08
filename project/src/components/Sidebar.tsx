@@ -705,7 +705,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
           )}
 
           {/* Reports Collapsible */}
-          {(hasPermission("view_analytics") || hasPermission("view_revenue")) && (
+          {(hasPermission("view_analytics") || hasPermission("view_revenue")) && hasFeature("accounts") && (
             <div>
               <button
                 onClick={() => setReportsOpen(!reportsOpen)}
