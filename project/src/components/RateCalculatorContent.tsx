@@ -41,7 +41,8 @@ function FlagIcon({ country, className }: { country: any; className?: string }) 
 const documentTypes = [
   "Document",
   "Non Document",
-  "FedEx Pak"
+  "FedEx Pak",
+  "Envelope"
 ];
 
 function getLogoForService(service: string | undefined): string | null {
@@ -325,11 +326,12 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
             {/* Package type selector */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold tracking-wide text-slate-600">Type</Label><div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <Label className="text-xs font-bold tracking-wide text-slate-600">Type</Label><div className="grid grid-cols-4 gap-2 sm:gap-3">
                 {([
                   { value: "Document", label: "Document", icon: Mail },
                   { value: "Non Document", label: "Non Document", icon: Package },
                   { value: "FedEx Pak", label: "FedEx Pak", icon: FileText },
+                  { value: "Envelope", label: "Envelope", icon: Mail },
                 ] as const).map((pkg) => {
                   const Icon = pkg.icon;
                   const selected = form.docType === pkg.value;
@@ -655,11 +657,12 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
             {/* Package type selector */}
             <div className="space-y-1.5">
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-4 gap-2 sm:gap-3">
                 {([
                   { value: "Document", label: "Document", icon: Mail },
                   { value: "Non Document", label: "Non Document", icon: Package },
                   { value: "FedEx Pak", label: "FedEx Pak", icon: FileText },
+                  { value: "Envelope", label: "Envelope", icon: Mail },
                 ] as const).map((pkg) => {
                   const Icon = pkg.icon;
                   const selected = form.docType === pkg.value;

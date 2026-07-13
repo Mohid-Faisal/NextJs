@@ -64,6 +64,9 @@ export async function POST(req: NextRequest) {
     else if (packaging === "FedEx Pak" || packaging === "fedex pak"){
       docType = "FedEx Pak";
     }
+    else if (packaging === "Envelope" || packaging === "envelope"){
+      docType = "Envelope";
+    }
 
     // Step 1: Find all zones for the destination country
     const zoneInfos = await prisma.zone.findMany({
