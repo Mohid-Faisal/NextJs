@@ -235,8 +235,9 @@ export default function RedesignedSettingsPage() {
     }
     try {
       const isAgencyOrOffice = type === "agency" || type === "office";
+      const pluralType = type === "agency" ? "agencies" : type === "office" ? "offices" : `${type}s`;
       const endpoint = isAgencyOrOffice
-        ? (editingId ? `/api/${type}s/${editingId}` : `/api/${type}s`)
+        ? (editingId ? `/api/${pluralType}/${editingId}` : `/api/${pluralType}`)
         : `/api/settings/${type}`;
 
       const method = editingId ? "PUT" : "POST";
@@ -292,8 +293,9 @@ export default function RedesignedSettingsPage() {
     if (!window.confirm("Are you sure you want to delete this setting?")) return;
     try {
       const isAgencyOrOffice = type === "agency" || type === "office";
+      const pluralType = type === "agency" ? "agencies" : type === "office" ? "offices" : `${type}s`;
       const endpoint = isAgencyOrOffice
-        ? `/api/${type}s/${id}`
+        ? `/api/${pluralType}/${id}`
         : `/api/settings/${type}?id=${id}`;
 
       const res = await fetch(endpoint, { method: "DELETE" });
