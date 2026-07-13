@@ -36,6 +36,8 @@ import {
   Check,
   Download,
   Sparkles,
+  XCircle,
+  PackageCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Country } from "country-state-city";
@@ -704,6 +706,82 @@ export default function ShipmentsPage() {
       }
     } catch (error) {
       console.error("Error marking shipment as delivered:", error);
+      toast.error("Error updating delivery status");
+    }
+  };
+
+  const handleMarkAsBooked = async (
+    shipment: Shipment & { invoices: { id: number; status: string }[] }
+  ) => {
+    try {
+      const res = await fetch("/api/update-shipment", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: shipment.id,
+          deliveryStatus: "Booked",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Shipment marked as booked!");
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: pageSize === 'all' ? 'all' : String(pageSize),
+          ...(searchTerm && { search: searchTerm }),
+          ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
+          ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+          ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+          sortField,
+          sortOrder,
+        });
+        const refreshRes = await fetch(`/api/shipments?${params}`);
+        const { shipments, total } = await refreshRes.json();
+        setShipments(shipments);
+        setTotal(total);
+      } else {
+        toast.error(data.message || "Failed to update delivery status");
+      }
+    } catch (error) {
+      console.error("Error marking shipment as booked:", error);
+      toast.error("Error updating delivery status");
+    }
+  };
+
+  const handleMarkAsCancelled = async (
+    shipment: Shipment & { invoices: { id: number; status: string }[] }
+  ) => {
+    try {
+      const res = await fetch("/api/update-shipment", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: shipment.id,
+          deliveryStatus: "Cancelled",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Shipment marked as cancelled!");
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: pageSize === 'all' ? 'all' : String(pageSize),
+          ...(searchTerm && { search: searchTerm }),
+          ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
+          ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+          ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+          sortField,
+          sortOrder,
+        });
+        const refreshRes = await fetch(`/api/shipments?${params}`);
+        const { shipments, total } = await refreshRes.json();
+        setShipments(shipments);
+        setTotal(total);
+      } else {
+        toast.error(data.message || "Failed to update delivery status");
+      }
+    } catch (error) {
+      console.error("Error marking shipment as cancelled:", error);
       toast.error("Error updating delivery status");
     }
   };
@@ -1500,6 +1578,10 @@ export default function ShipmentsPage() {
                               <Edit className="mr-2 h-4 w-4" />
                               Tracking Status
                             </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleMarkAsBooked(shipment)} className="text-purple-600 dark:text-purple-400">
+                              <PackageCheck className="mr-2 h-4 w-4" />
+                              Mark as Booked
+                            </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => handleMarkAsInTransit(shipment)} className="text-blue-600">
                               <Truck className="mr-2 h-4 w-4" />
                               Mark as In Transit
@@ -1507,6 +1589,10 @@ export default function ShipmentsPage() {
                             <DropdownMenuItem onSelect={() => handleMarkAsDelivered(shipment)} className="text-green-600">
                               <CheckCircle className="mr-2 h-4 w-4" />
                               Mark as Delivered
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleMarkAsCancelled(shipment)} className="text-red-500">
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Mark as Cancelled
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => handleDelete(shipment)} className="text-red-600">
                               <Trash2 className="mr-2 h-4 w-4" />
