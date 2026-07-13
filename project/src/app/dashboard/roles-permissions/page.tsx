@@ -351,7 +351,7 @@ export default function RolesAndPermissionsPage() {
               placeholder="Search permissions..." 
               value={permSearch}
               onChange={(e) => setPermSearch(e.target.value)}
-              className="pl-9 h-9 text-sm rounded-lg border-gray-250 dark:border-zinc-850 bg-white dark:bg-zinc-900"
+              className="pl-9 h-9 text-sm rounded-lg border-gray-300 dark:border-zinc-800 bg-white dark:bg-zinc-900"
             />
           </div>
         </div>
@@ -415,7 +415,7 @@ export default function RolesAndPermissionsPage() {
                         transition={{ delay: idx * 0.02 }}
                         className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/10 text-gray-750 dark:text-zinc-300 border-b border-gray-100/50 dark:border-zinc-800/50"
                       >
-                        <td className="px-5 py-3.5 pl-9 font-medium text-gray-800 dark:text-gray-250">{perm.name}</td>
+                        <td className="px-5 py-3.5 pl-9 font-medium text-gray-800 dark:text-gray-200">{perm.name}</td>
                         {(["Customer", "Vendor", "Employee", "Admin"] as RoleName[]).map((role) => {
                           const isChecked = (rolePermissions[role] || []).includes(perm.code);
 
