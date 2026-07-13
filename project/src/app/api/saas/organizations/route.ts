@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
         subscription: {
           select: {
             status: true,
+            currentPeriodEnd: true,
             plan: { select: { code: true, name: true } },
           },
         },
@@ -58,9 +59,102 @@ export async function GET(req: NextRequest) {
         ? { code: org.subscription.plan.code, name: org.subscription.plan.name }
         : null,
       subscriptionStatus: org.subscription?.status ?? null,
+      currentPeriodEnd: org.subscription?.currentPeriodEnd ?? null,
     }));
 
-    return NextResponse.json({ success: true, organizations: data });
+    // Calculate real stats from database
+    const now = new Date();
+    const monthsArray = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const startOfMonth = new Date(year, month, 1);
+      const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
+      monthsArray.push({
+        label,
+        start: startOfMonth,
+        end: endOfMonth,
+        revenue: 0,
+      });
+    }
+
+    // Fetch approved payment proofs
+    const approvedProofs = await prisma.paymentProof.findMany({
+      where: {
+        status: "approved",
+      },
+      include: {
+        organization: { select: { name: true } },
+        plan: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Populate chart data
+    for (const proof of approvedProofs) {
+      const proofTime = proof.createdAt.getTime();
+      for (const m of monthsArray) {
+        if (proofTime >= m.start.getTime() && proofTime <= m.end.getTime()) {
+          m.revenue += proof.amount;
+          break;
+        }
+      }
+    }
+
+    const chartData = monthsArray.map((m) => ({
+      name: m.label,
+      revenue: m.revenue,
+    }));
+
+    // Calculate revenue this month and this year
+    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfCurrentYear = new Date(now.getFullYear(), 0, 1);
+
+    const revenueThisMonth = approvedProofs
+      .filter((p) => p.createdAt >= startOfCurrentMonth)
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const revenueThisYear = approvedProofs
+      .filter((p) => p.createdAt >= startOfCurrentYear)
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    // Get latest transactions (approved payment proofs)
+    const transactions = approvedProofs.slice(0, 5).map((p) => ({
+      id: p.id,
+      organizationName: p.organization.name,
+      planName: p.plan.name,
+      amount: p.amount,
+      createdAt: p.createdAt.toISOString(),
+    }));
+
+    const activeSubsCount = data.filter(
+      (org) => org.status === "active" || org.status === "trial"
+    ).length;
+
+    const gracePeriodCount = data.filter(
+      (org) =>
+        org.subscriptionStatus?.toLowerCase() === "grace" ||
+        org.subscriptionStatus?.toLowerCase() === "past_due" ||
+        org.subscriptionStatus?.toLowerCase() === "grace_period"
+    ).length;
+
+    const noSubCount = data.filter((org) => !org.plan).length;
+    const readOnlyCount = data.filter((org) => org.status === "suspended").length;
+
+    const stats = {
+      revenueThisMonth,
+      revenueThisYear,
+      activeSubsCount,
+      gracePeriodCount,
+      readOnlyCount,
+      noSubCount,
+      chartData,
+      transactions,
+    };
+
+    return NextResponse.json({ success: true, organizations: data, stats });
   } catch (error) {
     console.error("Error listing organizations:", error);
     return NextResponse.json(

@@ -37,6 +37,7 @@ type Organization = {
   shipmentCount: number;
   plan: { code: string; name: string } | null;
   subscriptionStatus: string | null;
+  currentPeriodEnd: string | null;
 };
 
 // Mock chart data matching the user's screenshot exactly
@@ -68,8 +69,26 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
   }
 }
 
+type DashboardStats = {
+  revenueThisMonth: number;
+  revenueThisYear: number;
+  activeSubsCount: number;
+  gracePeriodCount: number;
+  readOnlyCount: number;
+  noSubCount: number;
+  chartData: { name: string; revenue: number }[];
+  transactions: {
+    id: number;
+    organizationName: string;
+    planName: string;
+    amount: number;
+    createdAt: string;
+  }[];
+};
+
 export default function SaasOrganizationsPage() {
   const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [pendingId, setPendingId] = useState<number | null>(null);
@@ -87,6 +106,7 @@ export default function SaasOrganizationsPage() {
       if (!res.ok) throw new Error(data.error || "Failed to load organizations");
       setForbidden(false);
       setOrgs(data.organizations ?? []);
+      setStats(data.stats ?? null);
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Failed to load organizations");
@@ -181,6 +201,15 @@ export default function SaasOrganizationsPage() {
   const noSubs = orgs.filter(o => !o.plan).length;
   const suspendedCount = orgs.filter(o => o.status === "suspended").length;
 
+  // Calculate expiring subscriptions dynamically (next 7 days)
+  const expiringOrgs = orgs.filter((o) => {
+    if (!o.currentPeriodEnd) return false;
+    const expiryTime = new Date(o.currentPeriodEnd).getTime();
+    const nowTime = Date.now();
+    const sevenDaysFromNow = nowTime + 7 * 24 * 60 * 60 * 1000;
+    return expiryTime > nowTime && expiryTime <= sevenDaysFromNow;
+  });
+
   return (
     <div className="p-6 space-y-6 bg-slate-50/50 dark:bg-zinc-950/20 min-h-screen">
       
@@ -247,7 +276,9 @@ export default function SaasOrganizationsPage() {
               <DollarSign className="w-4.5 h-4.5" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-lg font-extrabold tracking-tight leading-none">$0.00</span>
+              <span className="text-lg font-extrabold tracking-tight leading-none">
+                ${(stats ? stats.revenueThisMonth : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
               <span className="text-xs text-muted-foreground font-medium truncate mt-0.5">This Month</span>
             </div>
           </CardContent>
@@ -260,7 +291,9 @@ export default function SaasOrganizationsPage() {
               <TrendingUp className="w-4.5 h-4.5" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-lg font-extrabold tracking-tight leading-none">$91.00</span>
+              <span className="text-lg font-extrabold tracking-tight leading-none">
+                ${(stats ? stats.revenueThisYear : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
               <span className="text-xs text-muted-foreground font-medium truncate mt-0.5">This Year</span>
             </div>
           </CardContent>
@@ -273,7 +306,9 @@ export default function SaasOrganizationsPage() {
               <CheckCircle2 className="w-4.5 h-4.5" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-lg font-extrabold tracking-tight leading-none">{activeSubs}</span>
+              <span className="text-lg font-extrabold tracking-tight leading-none">
+                {stats ? stats.activeSubsCount : activeSubs}
+              </span>
               <span className="text-xs text-muted-foreground font-medium truncate mt-0.5">Active Subs</span>
             </div>
           </CardContent>
@@ -286,7 +321,9 @@ export default function SaasOrganizationsPage() {
               <AlertTriangle className="w-4.5 h-4.5" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-lg font-extrabold tracking-tight leading-none">0</span>
+              <span className="text-lg font-extrabold tracking-tight leading-none">
+                {stats ? stats.gracePeriodCount : 0}
+              </span>
               <span className="text-xs text-muted-foreground font-medium truncate mt-0.5">Grace Period</span>
             </div>
           </CardContent>
@@ -299,7 +336,9 @@ export default function SaasOrganizationsPage() {
               <Lock className="w-4.5 h-4.5" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-lg font-extrabold tracking-tight leading-none">{suspendedCount}</span>
+              <span className="text-lg font-extrabold tracking-tight leading-none">
+                {stats ? stats.readOnlyCount : suspendedCount}
+              </span>
               <span className="text-xs text-muted-foreground font-medium truncate mt-0.5">Read Only</span>
             </div>
           </CardContent>
@@ -312,7 +351,9 @@ export default function SaasOrganizationsPage() {
               <HelpCircle className="w-4.5 h-4.5" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-lg font-extrabold tracking-tight leading-none">{noSubs}</span>
+              <span className="text-lg font-extrabold tracking-tight leading-none">
+                {stats ? stats.noSubCount : noSubs}
+              </span>
               <span className="text-xs text-muted-foreground font-medium truncate mt-0.5">No Sub</span>
             </div>
           </CardContent>
@@ -329,14 +370,18 @@ export default function SaasOrganizationsPage() {
               <p className="text-xs text-muted-foreground">Revenue This Year</p>
             </div>
             <div className="text-right">
-              <span className="text-3xl font-extrabold tracking-tight">$91.00</span>
-              <p className="text-xs text-muted-foreground">Revenue This Month: $0.00</p>
+              <span className="text-3xl font-extrabold tracking-tight">
+                ${(stats ? stats.revenueThisYear : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <p className="text-xs text-muted-foreground">
+                Revenue This Month: ${(stats ? stats.revenueThisMonth : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
             </div>
           </div>
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={stats ? stats.chartData : chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="purpleG" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
@@ -395,9 +440,26 @@ export default function SaasOrganizationsPage() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-sm text-muted-foreground py-4 text-center">
-              No subscriptions or trials are expiring in the next 7 days.
-            </div>
+            {expiringOrgs.length > 0 ? (
+              expiringOrgs.map((org) => (
+                <div key={org.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                  <div>
+                    <p className="font-semibold text-sm">{org.name}</p>
+                    <p className="text-xs text-muted-foreground">Plan: {org.plan?.name || "N/A"}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-amber-600">Expires Soon</span>
+                    <p className="text-[10px] text-muted-foreground">
+                      {org.currentPeriodEnd ? new Date(org.currentPeriodEnd).toLocaleDateString() : ""}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground py-4 text-center">
+                No subscriptions or trials are expiring in the next 7 days.
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -413,22 +475,20 @@ export default function SaasOrganizationsPage() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
-            {orgs.filter(o => o.plan).slice(0, 3).map((org) => {
-              const amount = org.plan?.code === "pro" ? 99 : org.plan?.code === "business" ? 49 : 19;
-              return (
-                <div key={org.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+            {stats && stats.transactions.length > 0 ? (
+              stats.transactions.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
                   <div>
-                    <p className="font-semibold text-sm">{org.name}</p>
-                    <p className="text-xs text-muted-foreground">Plan: {org.plan?.name}</p>
+                    <p className="font-semibold text-sm">{tx.organizationName}</p>
+                    <p className="text-xs text-muted-foreground">Plan: {tx.planName}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-bold text-emerald-600">+${amount}.00</span>
-                    <p className="text-[10px] text-muted-foreground">{new Date(org.createdAt).toLocaleDateString()}</p>
+                    <span className="text-sm font-bold text-emerald-600">+${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <p className="text-[10px] text-muted-foreground">{new Date(tx.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
-              );
-            })}
-            {orgs.filter(o => o.plan).length === 0 && (
+              ))
+            ) : (
               <div className="text-sm text-muted-foreground py-4 text-center">
                 No recent payment transactions recorded.
               </div>
