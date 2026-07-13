@@ -192,12 +192,29 @@ export async function POST(req: NextRequest) {
     });
 
     try {
-      await prisma.$executeRaw`
-        INSERT INTO "filename" ("organizationId", "filename", "vendor", "service", "fileType", "uploadedAt")
-        VALUES (${session.organizationId}, ${file.name}, ${vendor}, ${service}, 'rate', ${new Date()})
-        ON CONFLICT ("organizationId", "vendor", "service", "fileType")
-        DO UPDATE SET "filename" = ${file.name}, "uploadedAt" = ${new Date()}
-      `;
+      const now = new Date();
+      await prisma.filename.upsert({
+        where: {
+          organizationId_vendor_service_fileType: {
+            organizationId: session.organizationId,
+            vendor: vendor,
+            service: service,
+            fileType: 'rate',
+          },
+        },
+        update: {
+          filename: file.name,
+          uploadedAt: now,
+        },
+        create: {
+          organizationId: session.organizationId,
+          filename: file.name,
+          vendor: vendor,
+          service: service,
+          fileType: 'rate',
+          uploadedAt: now,
+        },
+      });
     } catch (error) {
       console.warn("⚠️ Failed to store filename, but rates were uploaded successfully:", error);
     }

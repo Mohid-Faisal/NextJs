@@ -117,24 +117,50 @@ export async function POST(req: NextRequest) {
 
     const uploadTime = new Date();
     try {
-      await prisma.$executeRaw`
-        INSERT INTO "ZoneUpload" ("organizationId", "service", "uploadedAt") 
-        VALUES (${session.organizationId}, ${service.toLowerCase()}, ${uploadTime})
-        ON CONFLICT ("organizationId", "service") 
-        DO UPDATE SET "uploadedAt" = ${uploadTime}
-      `;
+      await prisma.zoneUpload.upsert({
+        where: {
+          organizationId_service: {
+            organizationId: session.organizationId,
+            service: service.toLowerCase(),
+          },
+        },
+        update: {
+          uploadedAt: uploadTime,
+        },
+        create: {
+          organizationId: session.organizationId,
+          service: service.toLowerCase(),
+          uploadedAt: uploadTime,
+        },
+      });
     } catch (error) {
       console.log("Upload time tracking failed, but zones were saved:", error);
     }
 
-    // Store filename information using raw SQL
+    // Store filename information using Prisma Client
     try {
-      await prisma.$executeRaw`
-        INSERT INTO "filename" ("organizationId", "filename", "vendor", "service", "fileType", "uploadedAt")
-        VALUES (${session.organizationId}, ${filename}, '', ${service.toLowerCase()}, 'zone', ${uploadTime})
-        ON CONFLICT ("organizationId", "service", "fileType")
-        DO UPDATE SET "filename" = ${filename}, "uploadedAt" = ${uploadTime}
-      `;
+      await prisma.filename.upsert({
+        where: {
+          organizationId_vendor_service_fileType: {
+            organizationId: session.organizationId,
+            vendor: '',
+            service: service.toLowerCase(),
+            fileType: 'zone',
+          },
+        },
+        update: {
+          filename: filename,
+          uploadedAt: uploadTime,
+        },
+        create: {
+          organizationId: session.organizationId,
+          filename: filename,
+          vendor: '',
+          service: service.toLowerCase(),
+          fileType: 'zone',
+          uploadedAt: uploadTime,
+        },
+      });
     } catch (error) {
       console.log("Filename tracking failed, but zones were saved:", error);
     }
@@ -279,21 +305,25 @@ export async function DELETE(req: NextRequest) {
     });
 
     try {
-      await prisma.$executeRaw`
-        DELETE FROM "ZoneUpload"
-        WHERE "organizationId" = ${session.organizationId} AND "service" = ${service.toLowerCase()}
-      `;
+      await prisma.zoneUpload.deleteMany({
+        where: {
+          organizationId: session.organizationId,
+          service: service.toLowerCase(),
+        },
+      });
     } catch (error) {
       console.log("Failed to delete upload time record:", error);
     }
 
     // Delete filename record
     try {
-      await prisma.$executeRaw`
-        DELETE FROM "filename"
-        WHERE "organizationId" = ${session.organizationId}
-          AND "service" = ${service.toLowerCase()} AND "fileType" = 'zone'
-      `;
+      await prisma.filename.deleteMany({
+        where: {
+          organizationId: session.organizationId,
+          service: service.toLowerCase(),
+          fileType: 'zone',
+        },
+      });
     } catch (error) {
       console.log("Failed to delete filename record:", error);
     }

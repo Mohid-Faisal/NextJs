@@ -124,24 +124,34 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ t
         prisma.zone.deleteMany({
           where: {
             organizationId: orgId,
-            service: { equals: svc},
+            service: { equals: svc },
           },
         }),
         prisma.rate.deleteMany({
           where: {
             organizationId: orgId,
-            service: { equals: svc},
+            service: { equals: svc },
           },
         }),
       ]);
 
       await Promise.all([
-        prisma.$executeRaw`DELETE FROM "ZoneUpload" WHERE "organizationId" = ${orgId} AND LOWER("service") = ${svc}`.catch(() => {}),
-        prisma.$executeRaw`DELETE FROM "filename" WHERE "organizationId" = ${orgId} AND LOWER("service") = ${svc}`.catch(() => {}),
+        prisma.zoneUpload.deleteMany({
+          where: {
+            organizationId: orgId,
+            service: { equals: svc },
+          },
+        }).catch(() => {}),
+        prisma.filename.deleteMany({
+          where: {
+            organizationId: orgId,
+            service: { equals: svc },
+          },
+        }).catch(() => {}),
         prisma.vendorservice.deleteMany({
           where: {
             organizationId: orgId,
-            service: { equals: svc},
+            service: { equals: svc },
           },
         }),
       ]);
