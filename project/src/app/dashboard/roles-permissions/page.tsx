@@ -270,8 +270,8 @@ export default function RolesAndPermissionsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 xl:p-10 w-full min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ml-0 lg:ml-0 min-h-[calc(100vh-64px)]">
       
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+      {/* Page Header & Role Indicator Cards */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
         <div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
             <ShieldCheck className="w-8 sm:w-10 h-8 sm:h-10 text-blue-600" />
@@ -284,56 +284,79 @@ export default function RolesAndPermissionsPage() {
             Configure system capabilities across 4 standard user roles
           </p>
         </div>
-      </div>
 
-      {/* Role Indicator Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {(["Customer", "Vendor", "Employee", "Admin"] as RoleName[]).map((r) => {
-          const styles = getRoleCardClass(r);
-          const Icon = getRoleIcon(r);
-          const permList = rolePermissions[r] || [];
-          const maxAllowedCount = getPlanAllowedPermissionsCount();
-          const allowedPermList = permList.filter(code => {
-            if (orgPlan) {
-              const features = orgPlan.features || {};
-              if (code === "view_revenue" || code === "manage_billing") {
-                return features.accounts === true;
+        {/* Compact Role Indicator Cards with Circular Bars */}
+        <div className="flex items-center gap-3 flex-wrap w-full xl:w-auto xl:justify-end">
+          {(["Customer", "Vendor", "Employee", "Admin"] as RoleName[]).map((r) => {
+            const styles = getRoleCardClass(r);
+            const Icon = getRoleIcon(r);
+            const permList = rolePermissions[r] || [];
+            const maxAllowedCount = getPlanAllowedPermissionsCount();
+            const allowedPermList = permList.filter(code => {
+              if (orgPlan) {
+                const features = orgPlan.features || {};
+                if (code === "view_revenue" || code === "manage_billing") {
+                  return features.accounts === true;
+                }
+                if (code === "bulk_delete") {
+                  return features.bulkUpload === true;
+                }
               }
-              if (code === "bulk_delete") {
-                return features.bulkUpload === true;
-              }
-            }
-            return true;
-          });
-          const checkedCount = r === "Super Admin" ? maxAllowedCount : allowedPermList.length;
-          const progressPct = Math.round((checkedCount / maxAllowedCount) * 100);
+              return true;
+            });
+            const checkedCount = allowedPermList.length;
+            const progressPct = Math.round((checkedCount / maxAllowedCount) * 100);
 
-          return (
-            <Card key={r} className={`shadow-sm border rounded-xl p-4 flex flex-col justify-between relative bg-white dark:bg-zinc-900 ${styles?.bg}`}>
-              <div className="flex justify-between items-start">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${styles?.iconBg}`}>
-                  <Icon className="w-5 h-5" />
+            // Radius for circle is 12, circumference is 2 * PI * 12 = 75.398
+            const strokeDashoffset = 75.398 - (progressPct / 100) * 75.398;
+
+            return (
+              <Card key={r} className={`shadow-sm border rounded-xl p-3 flex items-center gap-3 bg-white dark:bg-zinc-900 ${styles?.bg} h-[68px] min-w-[150px] shrink-0`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${styles?.iconBg}`}>
+                  <Icon className="w-4 h-4" />
                 </div>
-                {r === "Super Admin" && <Lock className="w-3.5 h-3.5 text-indigo-400 absolute top-3.5 right-3.5" />}
-              </div>
-
-              <div className="mt-4">
-                <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider">{r}</h4>
-                <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-xl font-extrabold text-gray-900 dark:text-white">
-                    {r === "Super Admin" ? "All" : `${checkedCount} / ${maxAllowedCount}`}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">{r}</h4>
+                  <p className="text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                    {checkedCount}/{maxAllowedCount}
+                  </p>
+                </div>
+                {/* Circular Progress Bar */}
+                <div className="relative flex items-center justify-center shrink-0 w-8 h-8">
+                  <svg className="w-8 h-8 transform -rotate-90">
+                    <circle
+                      cx="16"
+                      cy="16"
+                      r="12"
+                      className="stroke-gray-100 dark:stroke-zinc-800"
+                      strokeWidth="2.5"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="16"
+                      cy="16"
+                      r="12"
+                      className={`${
+                        r === 'Customer' ? 'stroke-pink-500' :
+                        r === 'Vendor' ? 'stroke-amber-500' :
+                        r === 'Employee' ? 'stroke-emerald-500' :
+                        'stroke-blue-500'
+                      } transition-all duration-300`}
+                      strokeWidth="2.5"
+                      strokeDasharray={75.398}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                      fill="transparent"
+                    />
+                  </svg>
+                  <span className="absolute text-[8px] font-bold text-gray-700 dark:text-zinc-350">
+                    {progressPct}%
                   </span>
                 </div>
-
-                {/* Progress line */}
-                <div className="w-full bg-gray-200/85 dark:bg-zinc-805 h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div className={`h-full ${styles?.progressBg}`} style={{ width: `${progressPct}%` }} />
-                </div>
-                <span className="text-xs text-gray-400 mt-1.5 block">{progressPct}% access</span>
-              </div>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       {/* Permissions Matrix */}
