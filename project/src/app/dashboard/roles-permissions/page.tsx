@@ -425,7 +425,7 @@ export default function RolesAndPermissionsPage() {
                                 <Checkbox
                                   checked={isChecked}
                                   onCheckedChange={(checked) => handleTogglePermission(role, perm.code, !!checked)}
-                                  className="h-4 w-4 data-[state=checked]:bg-blue-650 dark:data-[state=checked]:bg-blue-500 border-gray-350 dark:border-zinc-700"
+                                  className="h-4 w-4 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:bg-blue-500 dark:data-[state=checked]:border-blue-500 dark:data-[state=checked]:text-white border-gray-300 dark:border-zinc-700"
                                 />
                               </div>
                             </td>
