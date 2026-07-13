@@ -113,19 +113,19 @@ const LoginPage = () => {
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
       {/* Left panel - Punchline & Logo (Hidden on mobile, visible on lg/xl) */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-zinc-900 text-white flex-col justify-between p-12 select-none">
-        {/* Background Image with Dark Overlay */}
+          {/* Background Image with Dark Overlay */}
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-multiply"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-60"
           style={{ backgroundImage: `url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000')` }}
         />
         {/* Top Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-0" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-slate-900/20 z-0" />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col h-full justify-between">
           {/* Logo container */}
-          <div className="bg-zinc-950/80 p-4 rounded-xl max-w-[280px] shadow-lg border border-zinc-800/80">
-            <img src="/SaaS-Logo.jpg" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
+          <div className="bg-white p-4 rounded-xl max-w-[280px] shadow-lg border border-slate-100">
+            <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
           </div>
 
           {/* Punchline */}
