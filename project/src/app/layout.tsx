@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeInitializer } from "@/components/theme-initializer";
 import { Toaster } from "@/components/ui/sonner";
 import PublicLayout from "@/components/PublicLayout";
+import NextTopLoader from "nextjs-toploader";
 import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -23,6 +24,12 @@ export default function RootLayout({
       <body
         className={`min-h-screen font-sans antialiased ${inter.className}`}
       >
+        <NextTopLoader
+          color="#dc2626"
+          height={3}
+          showSpinner={false}
+          shadow="0 0 10px #dc2626, 0 0 5px #dc2626"
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
