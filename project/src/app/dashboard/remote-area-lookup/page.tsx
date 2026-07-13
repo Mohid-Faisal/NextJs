@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Country } from "country-state-city";
+import { useTopLoader } from "@/hooks/useTopLoader";
 
 function FlagIcon({ country, className }: { country: { isoCode?: string; name?: string }; className?: string }) {
   if (!country?.isoCode) return null;
@@ -43,6 +44,7 @@ const RemoteAreaLookupPage = () => {
     companies?: Array<{ company: string; area: any }>;
   } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  useTopLoader(isSearching);
 
   // Get all countries
   const countries = Country.getAllCountries();

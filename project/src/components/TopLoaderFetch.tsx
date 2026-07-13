@@ -1,32 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import NProgress from "nprogress";
+import { startProgress, stopProgress } from "@/lib/toploader";
 
 /**
  * This component patches the global `fetch` so that any fetch request
- * automatically triggers the top progress bar (NProgress).
- * It tracks concurrent requests and only finishes when all are done.
+ * automatically triggers the top progress bar.
+ * Uses ref-counting so the bar stays open if a page is also holding it.
  */
 export default function TopLoaderFetch() {
   useEffect(() => {
     const originalFetch = window.fetch;
-    let activeRequests = 0;
 
     window.fetch = async (...args) => {
-      activeRequests++;
-      if (activeRequests === 1) {
-        NProgress.start();
-      }
+      startProgress();
 
       try {
         const response = await originalFetch(...args);
         return response;
       } finally {
-        activeRequests--;
-        if (activeRequests === 0) {
-          NProgress.done();
-        }
+        stopProgress();
       }
     };
 
