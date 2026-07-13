@@ -124,8 +124,8 @@ const LoginPage = () => {
         {/* Content */}
         <div className="relative z-10 flex flex-col h-full justify-between">
           {/* Logo container */}
-          <div className="bg-white/95 dark:bg-zinc-900/90 p-4 rounded-xl max-w-[280px] shadow-lg">
-            <img src="/logo.jpg" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
+          <div className="bg-zinc-950/80 p-4 rounded-xl max-w-[280px] shadow-lg border border-zinc-800/80">
+            <img src="/SaaS-Logo.jpg" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
           </div>
 
           {/* Punchline */}
