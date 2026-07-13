@@ -51,7 +51,8 @@ import {
   Layers,
   Clock,
   Briefcase,
-  Hash
+  Hash,
+  Lock
 } from "lucide-react";
 
 // Left Menu Navigation Tabs
@@ -1291,9 +1292,20 @@ export default function RedesignedSettingsPage() {
 
               {/* Tab 5: Booking Numbers */}
               {activeTab === "bookingNumbering" && (
-                <div className="space-y-6 animate-fadeIn">
+                <div className="space-y-6 animate-fadeIn relative min-h-[300px] w-full">
                   
-                  <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
+                  {/* Coming Soon Overlay */}
+                  <div className="absolute inset-0 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xs flex flex-col items-center justify-center z-50 text-center p-6 rounded-xl">
+                    <div className="bg-blue-50 dark:bg-blue-950/80 p-4 rounded-full border border-blue-100 dark:border-blue-900/60 mb-4 shadow-xs">
+                      <Lock className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-pulse" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Coming Soon</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-sm">
+                      We are working on dynamic booking sequence configuration. Default sequential booking numbers are used for now.
+                    </p>
+                  </div>
+
+                  <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl blur-xs select-none pointer-events-none">
                     <CardHeader className="border-b border-gray-100 dark:border-zinc-800 pb-5">
                       <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">Booking numbering</CardTitle>
                       <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">

@@ -433,22 +433,7 @@ const AddShipmentPage = () => {
         toast.error("Failed to load vendor services data. Please try again.");
       }
 
-      // Fetch booking numbering configuration to auto-populate next booking number
-      try {
-        const bookingRes = await fetch("/api/settings/custom?key=settings_booking_numbering");
-        if (bookingRes.ok) {
-          const d = await bookingRes.json();
-          if (d.value) {
-            const config = JSON.parse(d.value);
-            const numStr = String(config.nextNumber || 1);
-            const padded = numStr.padStart(Number(config.padding) || 0, "0");
-            const generatedBookingNumber = `${config.prefix || ""}${padded}${config.suffix || ""}`;
-            setForm(prev => ({ ...prev, invoiceNumber: generatedBookingNumber }));
-          }
-        }
-      } catch (err) {
-        console.error("Error loading booking sequence:", err);
-      }
+      // Prefill booking number is disabled (Coming Soon)
     };
 
     fetchData();
