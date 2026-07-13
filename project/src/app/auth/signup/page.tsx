@@ -985,7 +985,7 @@ const SignupPage = () => {
         {/* Content */}
         <div className="relative z-10 flex flex-col h-full justify-between">
           {/* Logo container */}
-          <div className="bg-white p-4 rounded-xl max-w-[280px] shadow-lg border border-slate-100">
+          <div className="max-w-[280px] select-none">
             <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
           </div>
 
