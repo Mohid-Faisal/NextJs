@@ -88,7 +88,7 @@ export default function ShipmentsPage() {
   const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("In Transit");
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("All");
   const isFromDashboardRef = useRef(false);
   const [grandTotal, setGrandTotal] = useState(0);
   const [bookedCount, setBookedCount] = useState(0);

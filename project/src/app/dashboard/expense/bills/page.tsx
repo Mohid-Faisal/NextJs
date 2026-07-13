@@ -290,7 +290,7 @@ export default function ExpenseBillsPage() {
       ? 1
       : Math.max(1, Math.ceil(total / (pageSize as number)));
 
-  const [statusFilter, setStatusFilter] = useState("Unpaid");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
