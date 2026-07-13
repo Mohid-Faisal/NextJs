@@ -87,7 +87,7 @@ function getOriginFromService(service: string | undefined): string {
   if (s.includes("LHR")) return "London";
   if (s.includes("EU")) return "Germany";
   if (s.includes("SIN")) return "Singapore";
-  if (s.includes("NY")) return "New York";
+  if (s.includes("NY") || s.includes("USA") || s.includes("US")) return "USA";
   if (s.includes("KUL")) return "Kuala Lumpur";
   return "Pakistan";
 }
@@ -163,7 +163,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFixedCharges, setShowFixedCharges] = useState(true);
-  const [publicResultsTab, setPublicResultsTab] = useState<"all" | "express" | "economy">("express");
+  const [publicResultsTab, setPublicResultsTab] = useState<"all" | "express" | "standard" | "economy">("express");
   const [infoModalOpen, setInfoModalOpen] = useState(false);
 
   useEffect(() => {
@@ -429,7 +429,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 sm:mt-6 space-y-3 sm:space-y-4"
             >
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setPublicResultsTab("express")}
@@ -440,6 +440,17 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                   }`}
                 >
                   Express
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPublicResultsTab("standard")}
+                  className={`rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold border transition-colors ${
+                    publicResultsTab === "standard"
+                      ? "bg-indigo-500 text-white border-indigo-500 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  Standard
                 </button>
                 <button
                   type="button"
@@ -467,22 +478,26 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
 
               {(() => {
                 const allRates = results.allRates || [];
-                const EXPRESS_SERVICES = ["ups_c2s", "dhl_lhe", "fedex_lhe"];
-                const ECONOMY_SERVICES = ["snwwe"];
+                const EXPRESS_SERVICES = ["ups_pk", "dhl_pk", "fedex_pk"];
+                const STANDARD_SERVICES = ["skynet", "dpex"];
                 const expressRates = allRates.filter(
                   (rate) => rate.service && EXPRESS_SERVICES.includes(rate.service.toLowerCase())
                 );
+                const standardRates = allRates.filter(
+                  (rate) => rate.service && STANDARD_SERVICES.includes(rate.service.toLowerCase())
+                );
                 const economyRates = allRates.filter((rate) => {
-                  if (rate.service && ECONOMY_SERVICES.includes(rate.service.toLowerCase())) return true;
                   const origin = getOriginFromService(rate.service).toUpperCase();
-                  return origin === "DUBAI" || origin === "LONDON" || origin === "UK" || origin === "SINGAPORE";
+                  return origin === "DUBAI" || origin === "LONDON" || origin === "UK" || origin === "SINGAPORE" || origin === "USA";
                 });
                 const rawDisplayRates =
-                  publicResultsTab === "express" && expressRates.length > 0
+                  publicResultsTab === "express"
                     ? expressRates
-                    : publicResultsTab === "economy" && economyRates.length > 0
-                      ? economyRates
-                      : allRates;
+                    : publicResultsTab === "standard"
+                      ? standardRates
+                      : publicResultsTab === "economy"
+                        ? economyRates
+                        : allRates;
                 const byService = new Map<string, typeof allRates[0]>();
                 for (const rate of rawDisplayRates) {
                   const key = rate.service ?? rate.vendor ?? String(Math.random());
@@ -499,10 +514,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                   <div className="space-y-3">
                     {displayRates.map((rate, index) => {
                       const logoSrc = getLogoForService(rate.service);
-                      const origin =
-                        publicResultsTab === "express"
-                          ? "Lahore"
-                          : getOriginFromService(rate.service);
+                      const origin = getOriginFromService(rate.service);
                       const rank = index < 3 ? index + 1 : null;
                       return (
                         <div
@@ -829,7 +841,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4">
                     <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                      {(["express", "economy", "all"] as const).map((tab) => (
+                      {(["express", "standard", "economy", "all"] as const).map((tab) => (
                         <button
                           key={tab}
                           type="button"
@@ -838,9 +850,11 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                             publicResultsTab === tab
                               ? tab === "express"
                                 ? "bg-sky-400 text-white border-sky-400 shadow-sm"
-                                : tab === "economy"
-                                  ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
-                                  : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-sm"
+                                : tab === "standard"
+                                  ? "bg-indigo-500 text-white border-indigo-500 shadow-sm"
+                                  : tab === "economy"
+                                    ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
+                                    : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-sm"
                               : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700"
                           }`}
                         >
@@ -860,19 +874,20 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     )}
                   </div>
                   {(() => {
-                    const EXPRESS_SERVICES = ["ups_c2s", "dhl_lhe", "fedex_lhe"];
-                    const ECONOMY_SERVICES = ["snwwe"];
+                    const EXPRESS_SERVICES = ["ups_pk", "dhl_pk", "fedex_pk"];
+                    const STANDARD_SERVICES = ["skynet", "dpex"];
                     const allRates = results.allRates || [];
                     const filteredRates =
                       publicResultsTab === "express"
                         ? allRates.filter((r) => r.service && EXPRESS_SERVICES.includes(r.service.toLowerCase()))
-                        : publicResultsTab === "economy"
-                          ? allRates.filter((r) => {
-                              if (r.service && ECONOMY_SERVICES.includes(r.service.toLowerCase())) return true;
-                              const origin = getOriginFromService(r.service).toUpperCase();
-                              return origin === "DUBAI" || origin === "LONDON" || origin === "UK" || origin === "SINGAPORE";
-                            })
-                          : allRates;
+                        : publicResultsTab === "standard"
+                          ? allRates.filter((r) => r.service && STANDARD_SERVICES.includes(r.service.toLowerCase()))
+                          : publicResultsTab === "economy"
+                            ? allRates.filter((r) => {
+                                const origin = getOriginFromService(r.service).toUpperCase();
+                                return origin === "DUBAI" || origin === "LONDON" || origin === "UK" || origin === "SINGAPORE" || origin === "USA";
+                              })
+                            : allRates;
                     const displayRates = filteredRates;
 
                     return (
