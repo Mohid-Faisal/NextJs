@@ -70,7 +70,7 @@ const SignupPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<"user" | "org">("org");
-  const [form, setForm] = useState({ companyName: "", name: "", email: "", password: "", phone: "", address: "" });
+  const [form, setForm] = useState({ companyName: "", name: "", email: "", password: "", confirmPassword: "", phone: "", address: "" });
   const [agreeMarketing, setAgreeMarketing] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
@@ -182,6 +182,7 @@ const SignupPage = () => {
     if (!form.name.trim()) { toast.error("Your name is required."); return; }
     if (!form.email.trim()) { toast.error("Email is required."); return; }
     if (!form.password) { toast.error("Password is required."); return; }
+    if (form.password !== form.confirmPassword) { toast.error("Passwords do not match."); return; }
     const strength = getPasswordStrength(form.password);
     if (strength === "weak") { toast.error("Password is too weak."); return; }
     try {
@@ -974,7 +975,7 @@ const SignupPage = () => {
     <div className="min-h-screen w-full flex items-center justify-center px-4 py-16 relative bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
       {/* Top-left SaaS logo */}
       <div className="absolute top-8 left-8 z-20 select-none hidden sm:block">
-        <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="h-10 w-auto object-contain" />
+        <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="h-14 w-auto object-contain" />
       </div>
 
       {/* Theme Toggle */}
@@ -985,7 +986,7 @@ const SignupPage = () => {
           <CardContent className="p-8 sm:p-10 space-y-6">
             {/* Top-left SaaS logo on mobile when absolute header is hidden */}
             <div className="sm:hidden flex justify-center mb-2">
-              <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="h-10 w-auto object-contain" />
+              <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="h-14 w-auto object-contain" />
             </div>
 
             <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
@@ -1038,44 +1039,55 @@ const SignupPage = () => {
                 </div>
               </div>
 
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Full Name</Label>
-                <div className="relative group">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Work Email Address</Label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
-                    {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
-                  </button>
-                </div>
-                {form.password && (
-                  <div className="space-y-1.5 pt-1.5">
-                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <motion.div className={`h-full ${strengthColor}`} initial={{ width: 0 }} animate={{ width: strength === "strong" ? "100%" : strength === "medium" ? "66%" : "33%" }} transition={{ duration: 0.4 }} />
-                    </div>
-                    <p className={`text-[10px] font-bold uppercase tracking-wider ${strength === "strong" ? "text-green-600 dark:text-green-400" : strength === "medium" ? "text-amber-500" : "text-rose-500"}`}>
-                      Strength: {strength}
-                    </p>
+              {/* Name & Email in one line */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Full Name</Label>
+                  <div className="relative group">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                   </div>
-                )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Work Email Address</Label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Passwords grid (Password & Confirm Password) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+                      {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                    </button>
+                  </div>
+                  {form.password && (
+                    <div className="space-y-1.5 pt-1.5">
+                      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <motion.div className={`h-full ${strengthColor}`} initial={{ width: 0 }} animate={{ width: strength === "strong" ? "100%" : strength === "medium" ? "66%" : "33%" }} transition={{ duration: 0.4 }} />
+                      </div>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${strength === "strong" ? "text-green-600 dark:text-green-400" : strength === "medium" ? "text-amber-500" : "text-rose-500"}`}>
+                        Strength: {strength}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Confirm Password</Label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Input id="confirmPassword" name="confirmPassword" type={showPassword ? "text" : "password"} value={form.confirmPassword} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  </div>
+                </div>
               </div>
 
               {/* WhatsApp/SMS updates agreement checkbox */}
