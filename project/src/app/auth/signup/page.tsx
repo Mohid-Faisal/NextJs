@@ -971,140 +971,184 @@ const SignupPage = () => {
 
   // --- STEP: Signup Form (Step 1) ---
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-zinc-950" : "bg-[#F4F5F9]"}`}>
-      <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
-      
-      <motion.div className="w-full max-w-[500px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-        <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
-          <CardContent className="p-8 sm:p-10 space-y-6">
-            <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
-              Register
-            </h1>
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
+      {/* Left panel - Punchline & Logo (Hidden on mobile, visible on lg/xl) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-zinc-900 text-white flex-col justify-between p-12 select-none">
+        {/* Background Image with Dark Overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-multiply"
+          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000')` }}
+        />
+        {/* Top Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-0" />
 
-            {/* Google Authentication - Centered with no text */}
-            <Button
-              variant="outline"
-              type="button"
-              className="w-full h-11 border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
-            >
-              <FcGoogle size={20} />
-            </Button>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col h-full justify-between">
+          {/* Logo container */}
+          <div className="bg-white/95 dark:bg-zinc-900/90 p-4 rounded-xl max-w-[280px] shadow-lg">
+            <img src="/logo.jpg" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
+          </div>
 
-            {/* OR Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white dark:bg-zinc-900 px-4 text-slate-400">or</span>
-              </div>
+          {/* Punchline */}
+          <div className="space-y-4 max-w-xl pr-6">
+            <div className="flex items-center gap-2">
+              <span className="h-0.5 w-6 bg-amber-500 rounded-full" />
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-500">
+                Reliable Operations For Your Business
+              </span>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="companyName" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Company Name</Label>
-                  <div className="relative group">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <Input id="companyName" name="companyName" value={form.companyName} onChange={handleChange} placeholder="Acme Logistics Ltd" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Phone Number</Label>
-                    <div className="relative group">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                      <Input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Company Address</Label>
-                    <div className="relative group">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                      <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="123 Logistics Way" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <h2 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+              Courier, Cargo & Logistics Management Software
+            </h2>
+            <p className="text-sm text-slate-300 leading-relaxed max-w-md">
+              Effortlessly manage your delivery operations with iCargos, an all-in-one White Label Courier Tracking System designed to streamline your supply chain.
+            </p>
+          </div>
 
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Full Name</Label>
-                <div className="relative group">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                </div>
-              </div>
+          {/* Footer of Left Panel */}
+          <div className="text-xs text-slate-400">
+            © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
+          </div>
+        </div>
+      </div>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Work Email Address</Label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                </div>
-              </div>
+      {/* Right panel - Form container */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative">
+        <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
 
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
-                    {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
-                  </button>
-                </div>
-                {form.password && (
-                  <div className="space-y-1.5 pt-1.5">
-                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <motion.div className={`h-full ${strengthColor}`} initial={{ width: 0 }} animate={{ width: strength === "strong" ? "100%" : strength === "medium" ? "66%" : "33%" }} transition={{ duration: 0.4 }} />
-                    </div>
-                    <p className={`text-[10px] font-bold uppercase tracking-wider ${strength === "strong" ? "text-green-600 dark:text-green-400" : strength === "medium" ? "text-amber-500" : "text-rose-500"}`}>
-                      Strength: {strength}
-                    </p>
-                  </div>
-                )}
-              </div>
+        <motion.div className="w-full max-w-[500px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+          <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
+            <CardContent className="p-8 sm:p-10 space-y-6">
+              <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
+                Register
+              </h1>
 
-              {/* WhatsApp/SMS updates agreement checkbox */}
-              <div className="flex items-start gap-2.5 pt-2 text-left">
-                <Checkbox
-                  id="agreeMarketing"
-                  checked={agreeMarketing}
-                  onCheckedChange={(checked) => setAgreeMarketing(!!checked)}
-                  className="mt-1 accent-indigo-600 focus:ring-indigo-500 h-4 w-4 rounded border-slate-300"
-                />
-                <Label htmlFor="agreeMarketing" className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed cursor-pointer select-none">
-                  I agree to receive product updates and special offers via WhatsApp and SMS. You can withdraw consent anytime. More info in <span className="text-indigo-600 dark:text-indigo-400 hover:underline">Privacy Policy</span>.
-                </Label>
-              </div>
-
-              {/* Register Button */}
+              {/* Google Authentication - Centered with no text */}
               <Button
-                onClick={handleContinueToPlan}
-                className="w-full h-11 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
-                disabled={strength === "weak" || isLoading}
+                variant="outline"
+                type="button"
+                className="w-full h-11 border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
               >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Register"}
+                <FcGoogle size={20} />
               </Button>
 
-              {/* Terms of Service & Privacy Policy agreement footer */}
-              <div className="text-xs text-center text-slate-400 dark:text-slate-500 leading-relaxed pt-2">
-                By continuing you agree with our <span className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Terms of Service</span> and confirm that you have read our <span className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Privacy Policy</span>. We may send you product updates and special offers via email. You can opt out anytime (see Privacy Policy).
+              {/* OR Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-zinc-900 px-4 text-slate-400">or</span>
+                </div>
               </div>
 
-              {/* Bottom links */}
-              <div className="text-sm text-center pt-4">
-                <p className="text-slate-500 dark:text-slate-400 font-medium">
-                  Already have an account?{" "}
-                  <Link href="/auth/login" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Log in</Link>
-                </p>
+              <div className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Company Name</Label>
+                    <div className="relative group">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                      <Input id="companyName" name="companyName" value={form.companyName} onChange={handleChange} placeholder="Acme Logistics Ltd" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Phone Number</Label>
+                      <div className="relative group">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                        <Input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Company Address</Label>
+                      <div className="relative group">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                        <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="123 Logistics Way" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Full Name</Label>
+                  <div className="relative group">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Work Email Address</Label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+                      {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                    </button>
+                  </div>
+                  {form.password && (
+                    <div className="space-y-1.5 pt-1.5">
+                      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <motion.div className={`h-full ${strengthColor}`} initial={{ width: 0 }} animate={{ width: strength === "strong" ? "100%" : strength === "medium" ? "66%" : "33%" }} transition={{ duration: 0.4 }} />
+                      </div>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${strength === "strong" ? "text-green-600 dark:text-green-400" : strength === "medium" ? "text-amber-500" : "text-rose-500"}`}>
+                        Strength: {strength}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* WhatsApp/SMS updates agreement checkbox */}
+                <div className="flex items-start gap-2.5 pt-2 text-left">
+                  <Checkbox
+                    id="agreeMarketing"
+                    checked={agreeMarketing}
+                    onCheckedChange={(checked) => setAgreeMarketing(!!checked)}
+                    className="mt-1 accent-indigo-600 focus:ring-indigo-500 h-4 w-4 rounded border-slate-300"
+                  />
+                  <Label htmlFor="agreeMarketing" className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed cursor-pointer select-none">
+                    I agree to receive product updates and special offers via WhatsApp and SMS. You can withdraw consent anytime. More info in <span className="text-indigo-650 dark:text-indigo-400 hover:underline">Privacy Policy</span>.
+                  </Label>
+                </div>
+
+                {/* Register Button */}
+                <Button
+                  onClick={handleContinueToPlan}
+                  className="w-full h-11 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-750 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
+                  disabled={strength === "weak" || isLoading}
+                >
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Register"}
+                </Button>
+
+                {/* Terms of Service & Privacy Policy agreement footer */}
+                <div className="text-xs text-center text-slate-405 dark:text-slate-500 leading-relaxed pt-2">
+                  By continuing you agree with our <span className="text-indigo-650 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Terms of Service</span> and confirm that you have read our <span className="text-indigo-650 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Privacy Policy</span>. We may send you product updates and special offers via email. You can opt out anytime (see Privacy Policy).
+                </div>
+
+                {/* Bottom links */}
+                <div className="text-sm text-center pt-4">
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">
+                    Already have an account?{" "}
+                    <Link href="/auth/login" className="text-indigo-650 dark:text-indigo-400 font-bold hover:underline">Log in</Link>
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 };

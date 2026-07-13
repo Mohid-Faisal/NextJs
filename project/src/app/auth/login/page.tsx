@@ -110,135 +110,179 @@ const LoginPage = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? 'bg-zinc-950' : 'bg-[#F4F5F9]'}`}>
-      {/* Theme Toggle */}
-      <div className="absolute top-6 right-6 z-20">
-        <ThemeToggle />
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
+      {/* Left panel - Punchline & Logo (Hidden on mobile, visible on lg/xl) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-zinc-900 text-white flex-col justify-between p-12 select-none">
+        {/* Background Image with Dark Overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-multiply"
+          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000')` }}
+        />
+        {/* Top Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-0" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col h-full justify-between">
+          {/* Logo container */}
+          <div className="bg-white/95 dark:bg-zinc-900/90 p-4 rounded-xl max-w-[280px] shadow-lg">
+            <img src="/logo.jpg" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
+          </div>
+
+          {/* Punchline */}
+          <div className="space-y-4 max-w-xl pr-6">
+            <div className="flex items-center gap-2">
+              <span className="h-0.5 w-6 bg-amber-500 rounded-full" />
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-500">
+                Reliable Operations For Your Business
+              </span>
+            </div>
+
+            <h2 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+              Courier, Cargo & Logistics Management Software
+            </h2>
+            <p className="text-sm text-slate-300 leading-relaxed max-w-md">
+              Effortlessly manage your delivery operations with iCargos, an all-in-one White Label Courier Tracking System designed to streamline your supply chain.
+            </p>
+          </div>
+
+          {/* Footer of Left Panel */}
+          <div className="text-xs text-slate-400">
+            © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
+          </div>
+        </div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-[460px] relative z-10"
-      >
-        <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
-          <CardContent className="p-8 sm:p-10 space-y-6">
-            <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
-              Log in
-            </h1>
+      {/* Right panel - Form container */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative">
+        {/* Theme Toggle */}
+        <div className="absolute top-6 right-6 z-20">
+          <ThemeToggle />
+        </div>
 
-            {/* Google Authentication - Centered with no text */}
-            <Button
-              variant="outline"
-              type="button"
-              className="w-full h-11 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
-            >
-              <FcGoogle size={20} />
-            </Button>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="w-full max-w-[460px] relative z-10"
+        >
+          <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
+            <CardContent className="p-8 sm:p-10 space-y-6">
+              <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
+                Log in
+              </h1>
 
-            {/* OR Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white dark:bg-zinc-900 px-4 text-slate-400">or</span>
-              </div>
-            </div>
+              {/* Google Authentication - Centered with no text */}
+              <Button
+                variant="outline"
+                type="button"
+                className="w-full h-11 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <FcGoogle size={20} />
+              </Button>
 
-            <div className="space-y-4">
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Email address</Label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    placeholder="name@company.com"
-                    className="pl-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
-                  />
+              {/* OR Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-zinc-900 px-4 text-slate-400">or</span>
                 </div>
               </div>
 
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={form.password}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    className="pl-10 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors focus:outline-none"
+              <div className="space-y-4">
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Email address</Label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="name@company.com"
+                      className="pl-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={form.password}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      className="pl-10 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors focus:outline-none"
+                    >
+                      {showPassword ? (
+                        <FaEyeSlash size={16} />
+                      ) : (
+                        <FaEye size={16} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Forgot Password Link - Underneath the password field aligned to start */}
+                <div className="text-left pt-1">
+                  <Link
+                    href="/auth/reset-password"
+                    className="text-xs font-bold text-indigo-600 dark:text-indigo-450 hover:underline"
                   >
-                    {showPassword ? (
-                      <FaEyeSlash size={16} />
-                    ) : (
-                      <FaEye size={16} />
-                    )}
-                  </button>
+                    Forgot password?
+                  </Link>
                 </div>
+
+                {/* Login Button */}
+                <Button 
+                  onClick={handleLogin} 
+                  disabled={loading}
+                  className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all text-sm mt-4 flex items-center justify-center cursor-pointer"
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "Log in"
+                  )}
+                </Button>
               </div>
 
-              {/* Forgot Password Link - Underneath the password field aligned to start */}
-              <div className="text-left pt-1">
+              {/* Bottom Links */}
+              <div className="text-sm text-center space-y-3 pt-4">
                 <Link
                   href="/auth/reset-password"
-                  className="text-xs font-bold text-indigo-600 dark:text-indigo-450 hover:underline"
+                  className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline block"
                 >
-                  Forgot password?
+                  Can't Access Your Account?
                 </Link>
+                
+                <p className="text-slate-500 dark:text-slate-400 font-medium">
+                  Don't have an account?{" "}
+                  <Link
+                    href="/auth/signup"
+                    className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline"
+                  >
+                    Sign Up
+                  </Link>
+                </p>
               </div>
-
-              {/* Login Button */}
-              <Button 
-                onClick={handleLogin} 
-                disabled={loading}
-                className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all text-sm mt-4 flex items-center justify-center cursor-pointer"
-              >
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  "Log in"
-                )}
-              </Button>
-            </div>
-
-            {/* Bottom Links */}
-            <div className="text-sm text-center space-y-3 pt-4">
-              <Link
-                href="/auth/reset-password"
-                className="text-indigo-600 dark:text-indigo-450 font-bold hover:underline block"
-              >
-                Can't Access Your Account?
-              </Link>
-              
-              <p className="text-slate-500 dark:text-slate-400 font-medium">
-                Don't have an account?{" "}
-                <Link
-                  href="/auth/signup"
-                  className="text-indigo-600 dark:text-indigo-450 font-bold hover:underline"
-                >
-                  Sign Up
-                </Link>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 };
