@@ -5,6 +5,7 @@ import { ThemeInitializer } from "@/components/theme-initializer";
 import { Toaster } from "@/components/ui/sonner";
 import PublicLayout from "@/components/PublicLayout";
 import NextTopLoader from "nextjs-toploader";
+import TopLoaderFetch from "@/components/TopLoaderFetch";
 import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -30,6 +31,7 @@ export default function RootLayout({
           showSpinner={false}
           shadow="0 0 10px #3b82f6, 0 0 5px #3b82f6"
         />
+        <TopLoaderFetch />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
