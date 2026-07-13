@@ -432,6 +432,23 @@ const AddShipmentPage = () => {
         console.error("Error fetching vendor services:", error);
         toast.error("Failed to load vendor services data. Please try again.");
       }
+
+      // Fetch booking numbering configuration to auto-populate next booking number
+      try {
+        const bookingRes = await fetch("/api/settings/custom?key=settings_booking_numbering");
+        if (bookingRes.ok) {
+          const d = await bookingRes.json();
+          if (d.value) {
+            const config = JSON.parse(d.value);
+            const numStr = String(config.nextNumber || 1);
+            const padded = numStr.padStart(Number(config.padding) || 0, "0");
+            const generatedBookingNumber = `${config.prefix || ""}${padded}${config.suffix || ""}`;
+            setForm(prev => ({ ...prev, trackingId: generatedBookingNumber }));
+          }
+        }
+      } catch (err) {
+        console.error("Error loading booking sequence:", err);
+      }
     };
 
     fetchData();
@@ -633,7 +650,7 @@ const AddShipmentPage = () => {
 
     // Validate required fields
     if (!form.trackingId || form.trackingId.trim() === "") {
-      toast.error("Please enter a tracking ID");
+      toast.error("Please enter a booking number");
       return;
     }
 
@@ -1280,9 +1297,9 @@ const AddShipmentPage = () => {
                 </div>
 
 
-                {/* Tracking ID */}
+                {/* Booking ID */}
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium mb-1">Tracking #</Label>
+                  <Label className="text-sm font-medium mb-1">Booking #</Label>
                   <Input
                     id="trackingId"
                     name="trackingId"
@@ -1290,7 +1307,7 @@ const AddShipmentPage = () => {
                     onChange={handleChange}
                     required
                     className="bg-muted"
-                    placeholder="Enter tracking"
+                    placeholder="Enter booking number"
                   />
                 </div>
 

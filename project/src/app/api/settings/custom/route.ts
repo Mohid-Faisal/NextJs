@@ -46,6 +46,16 @@ export async function GET(req: NextRequest) {
       };
       return NextResponse.json({ value: JSON.stringify(defaultPermissions) });
     }
+    if (key === "settings_booking_numbering") {
+      const defaultBookingNumbering = {
+        prefix: "BK",
+        suffix: "",
+        padding: 8,
+        nextNumber: 1,
+        reset: "Never"
+      };
+      return NextResponse.json({ value: JSON.stringify(defaultBookingNumbering) });
+    }
     return NextResponse.json({ value: null });
   }
 

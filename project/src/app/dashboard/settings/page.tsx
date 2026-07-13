@@ -50,11 +50,12 @@ import {
   Package,
   Layers,
   Clock,
-  Briefcase
+  Briefcase,
+  Hash
 } from "lucide-react";
 
 // Left Menu Navigation Tabs
-type TabId = "statuses" | "services" | "notifications" | "billing";
+type TabId = "statuses" | "services" | "notifications" | "billing" | "bookingNumbering";
 
 interface TabItem {
   id: TabId;
@@ -68,6 +69,7 @@ const tabsList: TabItem[] = [
   { id: "services", label: "Services", description: "Manage air, land, sea and custom services", icon: Truck },
   { id: "notifications", label: "Notifications", description: "Manage notification rules and templates", icon: Bell },
   { id: "billing", label: "Billing", description: "Manage currency, tax, invoice design", icon: CreditCard },
+  { id: "bookingNumbering", label: "Booking Numbers", description: "Prefix, padding and next number for booking numbers", icon: Hash },
 ];
 
 export default function RedesignedSettingsPage() {
@@ -88,6 +90,14 @@ export default function RedesignedSettingsPage() {
     paymentTerms: "Payment is due upon receipt.",
     invoiceFooter: "Thank you for your business.",
     invoiceDesign: "MODERN PURPLE"
+  });
+
+  const [bookingNumbering, setBookingNumbering] = useState<any>({
+    prefix: "BK",
+    suffix: "",
+    padding: 8,
+    nextNumber: 1,
+    reset: "Never"
   });
 
   // Services Nested Sub-Tabs
@@ -162,6 +172,13 @@ export default function RedesignedSettingsPage() {
 
       const officeRes = await fetch("/api/offices");
       if (officeRes.ok) setOffices(await officeRes.json());
+
+      // 6. Load Booking Numbering
+      const bookingRes = await fetch("/api/settings/custom?key=settings_booking_numbering");
+      if (bookingRes.ok) {
+        const d = await bookingRes.json();
+        if (d.value) setBookingNumbering(JSON.parse(d.value));
+      }
 
     } catch (err) {
       console.error(err);
@@ -344,6 +361,30 @@ export default function RedesignedSettingsPage() {
     } catch {
       toast.error("Something went wrong");
     }
+  };
+
+  const handleSaveBookingNumbering = async () => {
+    try {
+      const res = await fetch("/api/settings/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "settings_booking_numbering", value: JSON.stringify(bookingNumbering) }),
+      });
+      if (res.ok) {
+        toast.success("Booking numbering sequence updated successfully!");
+      } else {
+        toast.error("Failed to save booking numbering settings");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    }
+  };
+
+  const getBookingNumberPreview = () => {
+    const { prefix, suffix, padding, nextNumber } = bookingNumbering;
+    const numStr = String(nextNumber || 1);
+    const padded = numStr.padStart(Number(padding) || 0, "0");
+    return `${prefix || ""}${padded}${suffix || ""}`;
   };
 
   // Helper status color mapping
@@ -1245,6 +1286,111 @@ export default function RedesignedSettingsPage() {
                     </CardContent>
                   </Card>
 
+                </div>
+              )}
+
+              {/* Tab 5: Booking Numbers */}
+              {activeTab === "bookingNumbering" && (
+                <div className="space-y-6 animate-fadeIn">
+                  
+                  <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
+                    <CardHeader className="border-b border-gray-100 dark:border-zinc-800 pb-5">
+                      <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">Booking numbering</CardTitle>
+                      <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Prefix, padding and next number for booking numbers.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6 space-y-6">
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">PREFIX</Label>
+                          <Input 
+                            value={bookingNumbering.prefix}
+                            onChange={(e) => setBookingNumbering((prev: any) => ({ ...prev, prefix: e.target.value }))}
+                            placeholder="e.g. TRK, BK"
+                            className="text-sm rounded-lg"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Letters shown before the number (e.g. TRK, DEP).</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">SUFFIX</Label>
+                          <Input 
+                            value={bookingNumbering.suffix}
+                            onChange={(e) => setBookingNumbering((prev: any) => ({ ...prev, suffix: e.target.value }))}
+                            placeholder="e.g. suffix"
+                            className="text-sm rounded-lg"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Letters shown after the number (optional).</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">PADDING</Label>
+                          <Input 
+                            type="number"
+                            value={bookingNumbering.padding}
+                            onChange={(e) => setBookingNumbering((prev: any) => ({ ...prev, padding: parseInt(e.target.value) || 0 }))}
+                            placeholder="e.g. 8"
+                            className="text-sm rounded-lg"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Minimum digits; shorter numbers are zero-padded.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">NEXT #</Label>
+                          <Input 
+                            type="number"
+                            value={bookingNumbering.nextNumber}
+                            onChange={(e) => setBookingNumbering((prev: any) => ({ ...prev, nextNumber: parseInt(e.target.value) || 1 }))}
+                            placeholder="e.g. 45"
+                            className="text-sm rounded-lg"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">The number that will be used on the next booking number generated.</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-gray-700 dark:text-zinc-300">RESET</Label>
+                        <Select 
+                          value={bookingNumbering.reset} 
+                          onValueChange={(val) => setBookingNumbering((prev: any) => ({ ...prev, reset: val }))}
+                        >
+                          <SelectTrigger className="w-full text-sm">
+                            <SelectValue placeholder="Select reset interval" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Never">Never</SelectItem>
+                            <SelectItem value="Daily">Daily</SelectItem>
+                            <SelectItem value="Monthly">Monthly</SelectItem>
+                            <SelectItem value="Yearly">Yearly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-400 mt-1">Automatically resets the counter to 1 on the chosen interval.</p>
+                      </div>
+
+                      {/* Preview Card */}
+                      <Card className="shadow-none border border-gray-150 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-850/30 rounded-lg p-4">
+                        <div className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Next Number Preview</div>
+                        <div className="text-lg font-bold text-gray-800 dark:text-gray-200 mt-1.5 font-mono">
+                          {getBookingNumberPreview()}
+                        </div>
+                      </Card>
+
+                      {/* Submit */}
+                      <div className="mt-8 flex justify-end">
+                        <Button 
+                          onClick={handleSaveBookingNumbering}
+                          className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-2.5 font-semibold rounded-lg text-sm"
+                        >
+                          Update booking sequence
+                        </Button>
+                      </div>
+
+                    </CardContent>
+                  </Card>
                 </div>
               )}
 
