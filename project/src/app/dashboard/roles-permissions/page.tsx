@@ -281,14 +281,14 @@ export default function RolesAndPermissionsPage() {
             Define access levels and manage permission sets for each role
           </p>
           <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium">
-            Configure system capabilities across 5 standard user roles
+            Configure system capabilities across 4 standard user roles
           </p>
         </div>
       </div>
 
       {/* Role Indicator Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {(["Customer", "Vendor", "Employee", "Admin"] as RoleName[]).map((r) => {
           const styles = getRoleCardClass(r);
           const Icon = getRoleIcon(r);
           const permList = rolePermissions[r] || [];
@@ -361,7 +361,7 @@ export default function RolesAndPermissionsPage() {
             <thead>
               <tr className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase">
                 <th className="px-5 py-4 w-1/3">Feature / Permission</th>
-                {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((r) => (
+                {(["Customer", "Vendor", "Employee", "Admin"] as RoleName[]).map((r) => (
                   <th key={r} className="px-5 py-4 text-center font-bold text-gray-900 dark:text-white">
                     {r}
                   </th>
@@ -397,7 +397,7 @@ export default function RolesAndPermissionsPage() {
                         setCollapsedSections(prev => ({ ...prev, [category.code]: !prev[category.code] }));
                       }}
                     >
-                      <td colSpan={6} className="px-5 py-3 rounded-lg flex items-center gap-2">
+                      <td colSpan={5} className="px-5 py-3 rounded-lg flex items-center gap-2">
                         {isCollapsed ? <ChevronRight className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                         <span className="text-xs uppercase tracking-wider font-bold text-gray-650 dark:text-gray-400">{category.name}</span>
                         <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 text-xs px-2 py-0.5 rounded-full font-bold">
@@ -416,24 +416,17 @@ export default function RolesAndPermissionsPage() {
                         className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/10 text-gray-750 dark:text-zinc-300 border-b border-gray-100/50 dark:border-zinc-800/50"
                       >
                         <td className="px-5 py-3.5 pl-9 font-medium text-gray-800 dark:text-gray-250">{perm.name}</td>
-                        {(["Customer", "Vendor", "Employee", "Admin", "Super Admin"] as RoleName[]).map((role) => {
-                          const isChecked = role === "Super Admin" || (rolePermissions[role] || []).includes(perm.code);
-                          const isDisabled = role === "Super Admin";
+                        {(["Customer", "Vendor", "Employee", "Admin"] as RoleName[]).map((role) => {
+                          const isChecked = (rolePermissions[role] || []).includes(perm.code);
 
                           return (
                             <td key={role} className="px-5 py-3.5 text-center">
                               <div className="flex justify-center items-center">
-                                {isDisabled ? (
-                                  <div className="w-4 h-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200/50 rounded flex items-center justify-center">
-                                    <Lock className="w-2.5 h-2.5 text-indigo-500" />
-                                  </div>
-                                ) : (
-                                  <Checkbox
-                                    checked={isChecked}
-                                    onCheckedChange={(checked) => handleTogglePermission(role, perm.code, !!checked)}
-                                    className="h-4 w-4 data-[state=checked]:bg-blue-650 dark:data-[state=checked]:bg-blue-500 border-gray-350 dark:border-zinc-700"
-                                  />
-                                )}
+                                <Checkbox
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => handleTogglePermission(role, perm.code, !!checked)}
+                                  className="h-4 w-4 data-[state=checked]:bg-blue-650 dark:data-[state=checked]:bg-blue-500 border-gray-350 dark:border-zinc-700"
+                                />
                               </div>
                             </td>
                           );
