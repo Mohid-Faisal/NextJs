@@ -365,23 +365,6 @@ export async function POST(req: NextRequest) {
       }),
     });
     
-     // Increment the next booking number sequence if configured
-    try {
-      const setting = await prisma.appSetting.findUnique({
-        where: { key: "settings_booking_numbering" }
-      });
-      if (setting && setting.value) {
-        const config = JSON.parse(setting.value);
-        config.nextNumber = (parseInt(config.nextNumber) || 1) + 1;
-        await prisma.appSetting.update({
-          where: { key: "settings_booking_numbering" },
-          data: { value: JSON.stringify(config) }
-        });
-      }
-    } catch (seqErr) {
-      console.error("Error incrementing booking number sequence:", seqErr);
-    }
-
     console.log('Shipment saved to database:', {
       id: shipment.id,
       trackingId: shipment.trackingId,

@@ -19,7 +19,30 @@ export function decodeToken(token: string) {
 
 // Function to generate unique invoice numbers
 export async function generateInvoiceNumber(prisma: any): Promise<string> {
-  // Get the highest invoice number from the database
+  try {
+    const setting = await prisma.appSetting.findUnique({
+      where: { key: "settings_booking_numbering" }
+    });
+    if (setting && setting.value) {
+      const config = JSON.parse(setting.value);
+      const numStr = String(config.nextNumber || 1);
+      const padded = numStr.padStart(Number(config.padding) || 0, "0");
+      const generated = `${config.prefix || ""}${padded}${config.suffix || ""}`;
+
+      // Increment nextNumber in the database immediately
+      config.nextNumber = (parseInt(config.nextNumber) || 1) + 1;
+      await prisma.appSetting.update({
+        where: { key: "settings_booking_numbering" },
+        data: { value: JSON.stringify(config) }
+      });
+
+      return generated;
+    }
+  } catch (err) {
+    console.error("Error reading/updating settings_booking_numbering in generateInvoiceNumber:", err);
+  }
+
+  // Fallback to old logic
   const lastShipment = await prisma.shipment.findFirst({
     where: {
       invoiceNumber: {
@@ -41,7 +64,7 @@ export async function generateInvoiceNumber(prisma: any): Promise<string> {
     const currentNumber = parseInt(lastShipment.invoiceNumber, 10);
     nextNumber = currentNumber + 5;
   } else {
-    // Start from 420000 if no shipments exist
+    // Start from 600000 if no shipments exist
     nextNumber = 600000;
   }
 

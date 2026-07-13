@@ -443,7 +443,7 @@ const AddShipmentPage = () => {
             const numStr = String(config.nextNumber || 1);
             const padded = numStr.padStart(Number(config.padding) || 0, "0");
             const generatedBookingNumber = `${config.prefix || ""}${padded}${config.suffix || ""}`;
-            setForm(prev => ({ ...prev, trackingId: generatedBookingNumber }));
+            setForm(prev => ({ ...prev, invoiceNumber: generatedBookingNumber }));
           }
         }
       } catch (err) {
@@ -650,7 +650,7 @@ const AddShipmentPage = () => {
 
     // Validate required fields
     if (!form.trackingId || form.trackingId.trim() === "") {
-      toast.error("Please enter a booking number");
+      toast.error("Please enter a tracking ID");
       return;
     }
 
@@ -1297,9 +1297,9 @@ const AddShipmentPage = () => {
                 </div>
 
 
-                {/* Booking ID */}
+                {/* Tracking ID */}
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium mb-1">Booking #</Label>
+                  <Label className="text-sm font-medium mb-1">Tracking #</Label>
                   <Input
                     id="trackingId"
                     name="trackingId"
@@ -1307,7 +1307,7 @@ const AddShipmentPage = () => {
                     onChange={handleChange}
                     required
                     className="bg-muted"
-                    placeholder="Enter booking number"
+                    placeholder="Enter tracking"
                   />
                 </div>
 
