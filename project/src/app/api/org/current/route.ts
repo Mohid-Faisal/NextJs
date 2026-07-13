@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
         status: true,
         currency: true,
         logoUrl: true,
+        website: true,
         createdAt: true,
         subscription: {
           select: {
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** PATCH /api/org/current — update name, logo, currency. OWNER/ADMIN only. */
+/** PATCH /api/org/current — update name, logo, currency, website. OWNER/ADMIN only. */
 export async function PATCH(req: NextRequest) {
   const auth = await requireApiSession(req);
   if (auth.error) return auth.error;
@@ -59,7 +60,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const data: { name?: string; logoUrl?: string | null; currency?: string } = {};
+    const data: { name?: string; logoUrl?: string | null; currency?: string; website?: string | null } = {};
 
     if (typeof body.name === "string") {
       const trimmed = body.name.trim();
@@ -75,6 +76,10 @@ export async function PATCH(req: NextRequest) {
       const logo = typeof body.logoUrl === "string" ? body.logoUrl.trim() : null;
       data.logoUrl = logo || null;
     }
+    if (body.website === null || typeof body.website === "string") {
+      const web = typeof body.website === "string" ? body.website.trim() : null;
+      data.website = web || null;
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ success: false, error: "No valid fields to update" }, { status: 400 });
@@ -83,12 +88,12 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.organization.update({
       where: { id: session.organizationId },
       data,
-      select: { id: true, name: true, slug: true, status: true, currency: true, logoUrl: true },
+      select: { id: true, name: true, slug: true, status: true, currency: true, logoUrl: true, website: true },
     });
 
     return NextResponse.json({ success: true, organization: updated });
   } catch (error) {
-    console.error("Error updating organization:", error);
+    console.error("Error patching organization:", error);
     return NextResponse.json({ success: false, error: "Failed to update organization" }, { status: 500 });
   }
 }

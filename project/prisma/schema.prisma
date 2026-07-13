@@ -34,6 +34,7 @@ model Organization {
   logoUrl       String?
   currency      String   @default("PKR")
   invoicePrefix String?
+  website       String?
   createdAt     DateTime @default(now())
   members       OrganizationMember[]
   subscription  Subscription?

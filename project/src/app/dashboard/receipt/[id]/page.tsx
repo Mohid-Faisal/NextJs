@@ -1199,7 +1199,9 @@ export default function ReceiptPage() {
               <img src={org?.logoUrl || "/logo_final.png"} alt={`${org?.name || "PSS"} Logo`} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
             </div>
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <a href="https://www.psswwe.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>www.psswwe.com</a>
+              <a href={org?.website ? (org.website.startsWith("http") ? org.website : `https://${org.website}`) : "https://www.psswwe.com"} target="_blank" rel="noopener noreferrer" style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>
+                {org?.website || "www.psswwe.com"}
+              </a>
             </div>
             {packagingLabel && (
               <div
@@ -1262,7 +1264,7 @@ export default function ReceiptPage() {
                   The shipper declares that this shipment contains no money, explosives, weapons, jewelry, narcotics, or other prohibited items. Any customs duties, taxes, penalties, or charges arising from detention or seizure shall be borne by the shipper/consignee.
                   <br />
                   <br />
-                  PSS Worldwide's liability is limited to USD 0.00–100.00 as per company appraisal and criteria. PSS Worldwide is not responsible for loss, breakage, or damage to the shipment. The shipper authorizes visual inspection of the shipment by PSS Worldwide or its agents.
+                  {org?.name || "PSS Worldwide"}'s liability is limited to USD 0.00–100.00 as per company appraisal and criteria. {org?.name || "PSS Worldwide"} is not responsible for loss, breakage, or damage to the shipment. The shipper authorizes visual inspection of the shipment by {org?.name || "PSS Worldwide"} or its agents.
                 </div>
                 <div className="signature-line">
                   <span>SENDER'S SIGNATURE</span>
@@ -1349,7 +1351,7 @@ export default function ReceiptPage() {
               <div className="section-header text-center" style={{ borderLeft: '2px solid white', boxSizing: 'border-box' }}>
                 CUSTOMER REFERENCE
               </div>
-              <div className="ref-box">{referenceNumber || 'PSS'}</div>
+              <div className="ref-box">{referenceNumber || org?.name || 'PSS'}</div>
 
               {/* Service Type */}
               <div className="service-section">

@@ -29,6 +29,7 @@ type OrgData = {
   status: string;
   currency: string;
   logoUrl: string | null;
+  website?: string | null;
   createdAt: string;
 };
 
@@ -58,6 +59,7 @@ export default function BrandingSettingsPage() {
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("PKR");
   const [logoUrl, setLogoUrl] = useState("");
+  const [website, setWebsite] = useState("");
 
   // Recommended Settings (Stored in LocalStorage / Mocked for Brand customization)
   const [accentColor, setAccentColor] = useState("blue");
@@ -70,6 +72,7 @@ export default function BrandingSettingsPage() {
   const [savedName, setSavedName] = useState("");
   const [savedCurrency, setSavedCurrency] = useState("PKR");
   const [savedLogoUrl, setSavedLogoUrl] = useState("");
+  const [savedWebsite, setSavedWebsite] = useState("");
   const [savedAccentColor, setSavedAccentColor] = useState("blue");
   const [savedDisclaimer, setSavedDisclaimer] = useState("");
   const [savedSupportEmail, setSavedSupportEmail] = useState("");
@@ -114,10 +117,12 @@ export default function BrandingSettingsPage() {
       setName(o.name);
       setCurrency(o.currency || "PKR");
       setLogoUrl(o.logoUrl || "");
+      setWebsite(o.website || "");
 
       setSavedName(o.name);
       setSavedCurrency(o.currency || "PKR");
       setSavedLogoUrl(o.logoUrl || "");
+      setSavedWebsite(o.website || "");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load organization");
     } finally {
@@ -227,7 +232,7 @@ export default function BrandingSettingsPage() {
       const res = await fetch("/api/org/current", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, currency, logoUrl: logoUrl || null }),
+        body: JSON.stringify({ name, currency, website: website || null, logoUrl: logoUrl || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
@@ -243,6 +248,7 @@ export default function BrandingSettingsPage() {
       setSavedName(name);
       setSavedCurrency(currency);
       setSavedLogoUrl(logoUrl);
+      setSavedWebsite(website);
       setSavedAccentColor(accentColor);
       setSavedDisclaimer(invoiceDisclaimer);
       setSavedSupportEmail(invoiceSupportEmail);
@@ -277,6 +283,7 @@ export default function BrandingSettingsPage() {
   const isDirty =
     name !== savedName ||
     currency !== savedCurrency ||
+    website !== savedWebsite ||
     logoUrl !== savedLogoUrl ||
     accentColor !== savedAccentColor ||
     invoiceDisclaimer !== savedDisclaimer ||
@@ -379,13 +386,24 @@ export default function BrandingSettingsPage() {
               </div>
 
               {/* Core Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="orgName">Organization Name</Label>
                   <Input
                     id="orgName"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    disabled={!canManage}
+                    className="bg-white dark:bg-slate-950"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="orgWebsite">Organization Website (Domain)</Label>
+                  <Input
+                    id="orgWebsite"
+                    placeholder="e.g. www.example.com"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
                     disabled={!canManage}
                     className="bg-white dark:bg-slate-950"
                   />
