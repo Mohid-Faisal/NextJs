@@ -12,9 +12,12 @@ export async function middleware(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   const pathname = req.nextUrl.pathname;
 
-  const isProtected = pathname.startsWith("/dashboard");
+  // Exclude static assets, auth pages, and API routes
+  const isAuthPage = pathname.startsWith("/auth");
+  const isApiRoute = pathname.startsWith("/api");
+  const isStaticFile = pathname.includes(".");
 
-  if (!isProtected) {
+  if (isAuthPage || isApiRoute || isStaticFile) {
     return NextResponse.next();
   }
 
@@ -37,6 +40,10 @@ export async function middleware(req: NextRequest) {
       return res;
     }
 
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
     const res = NextResponse.next();
     if (claims.organizationId != null) {
       res.headers.set("x-organization-id", String(claims.organizationId));
@@ -46,10 +53,24 @@ export async function middleware(req: NextRequest) {
     }
     return res;
   } catch {
-    return NextResponse.redirect(new URL("/auth/login", req.url));
+    const loginUrl = new URL("/auth/login", req.url);
+    const res = NextResponse.redirect(loginUrl);
+    res.cookies.delete("token");
+    return res;
   }
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - auth (authentication routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - Files with extension (e.g. .*\\..*$)
+     */
+    "/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\..*$).*)",
+  ],
 };

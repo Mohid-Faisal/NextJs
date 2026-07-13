@@ -68,8 +68,9 @@ const PAYMENT_METHODS = [
 const SignupPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<"user" | "org">("user");
+  const [tab, setTab] = useState<"user" | "org">("org");
   const [form, setForm] = useState({ companyName: "", name: "", email: "", password: "", phone: "", address: "" });
+  const [agreeMarketing, setAgreeMarketing] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [isFreeTrial, setIsFreeTrial] = useState(false);
@@ -969,117 +970,86 @@ const SignupPage = () => {
 
   // --- STEP: Signup Form (Step 1) ---
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-[#030014]" : "bg-white"}`}>
+    <div className={`min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden transition-colors duration-500 ${isDark ? "bg-zinc-950" : "bg-[#F4F5F9]"}`}>
       <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
-      <Background />
       
       <motion.div className="w-full max-w-[500px] relative z-10" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-        {/* Title & Header */}
-        <div className="text-center mb-6 space-y-3 flex flex-col items-center">
-          <Link href="/" className={`inline-flex items-center gap-2 text-xs font-semibold transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"}`}>
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to home
-          </Link>
-          
-          <h1 className={`text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
-            Create Account
-          </h1>
-          <p className="text-xs text-slate-550 dark:text-slate-400 max-w-[320px] mx-auto leading-relaxed">
-            Register to join an existing courier workspace or establish your own workspace.
-          </p>
-        </div>
+        <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
+          <CardContent className="p-8 sm:p-10 space-y-6">
+            <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
+              Register
+            </h1>
 
-        <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
-          <CardContent className="p-8 space-y-6">
-            
-            {/* Custom Tab Switcher */}
-            <div className="flex p-1 bg-slate-100/80 dark:bg-slate-950/60 border border-slate-200/30 dark:border-slate-800/30 rounded-xl relative">
-              <button
-                type="button"
-                onClick={() => setTab("user")}
-                className="flex-1 py-2 text-xs font-bold relative z-10 transition-colors text-center cursor-pointer focus:outline-none"
-              >
-                <span className={tab === "user" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}>User Sign Up</span>
-                {tab === "user" && (
-                  <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm -z-10 border border-slate-200/10" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("org")}
-                className="flex-1 py-2 text-xs font-bold relative z-10 transition-colors text-center cursor-pointer focus:outline-none"
-              >
-                <span className={tab === "org" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"}>Create Workspace</span>
-                {tab === "org" && (
-                  <motion.div layoutId="activeTabBg" className="absolute inset-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm -z-10 border border-slate-200/10" transition={{ type: "spring", stiffness: 380, damping: 30 }} />
-                )}
-              </button>
+            {/* Google Authentication - Centered with no text */}
+            <Button
+              variant="outline"
+              type="button"
+              className="w-full h-11 border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
+            >
+              <FcGoogle size={20} />
+            </Button>
+
+            {/* OR Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white dark:bg-zinc-900 px-4 text-slate-400">or</span>
+              </div>
             </div>
 
-
-
             <div className="space-y-4">
-              <AnimatePresence mode="wait">
-                {tab === "org" && (
-                  <motion.div 
-                    key="org-fields" 
-                    initial={{ opacity: 0, height: 0 }} 
-                    animate={{ opacity: 1, height: "auto" }} 
-                    exit={{ opacity: 0, height: 0 }} 
-                    transition={{ duration: 0.2 }} 
-                    className="space-y-4 overflow-hidden"
-                  >
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Company Name</Label>
-                      <div className="relative group">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                        <Input id="companyName" name="companyName" value={form.companyName} onChange={handleChange} placeholder="Acme Logistics Ltd" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                      </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="companyName" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Company Name</Label>
+                  <div className="relative group">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <Input id="companyName" name="companyName" value={form.companyName} onChange={handleChange} placeholder="Acme Logistics Ltd" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Phone Number</Label>
+                    <div className="relative group">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                      <Input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-xs font-semibold text-slate-600 dark:text-slate-350">Phone Number</Label>
-                        <div className="relative group">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                          <Input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="address" className="text-xs font-semibold text-slate-600 dark:text-slate-350">Company Address</Label>
-                        <div className="relative group">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                          <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="123 Logistics Way" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                        </div>
-                      </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Company Address</Label>
+                    <div className="relative group">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                      <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="123 Logistics Way" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+                </div>
+              </div>
 
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Full Name</Label>
+                <Label htmlFor="name" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Full Name</Label>
                 <div className="relative group">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                 </div>
               </div>
 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold text-slate-600 dark:text-slate-300">{tab === "org" ? "Work Email Address" : "Email Address"}</Label>
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Work Email Address</Label>
                 <div className="relative group">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                 </div>
               </div>
 
               {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Password</Label>
+                <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
                 <div className="relative group">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                  <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
                     {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
                   </button>
@@ -1096,28 +1066,35 @@ const SignupPage = () => {
                 )}
               </div>
 
-              <Button
-                onClick={tab === "org" ? handleContinueToPlan : handleUserSignup}
-                className="w-full h-12 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
-                disabled={strength === "weak" || isLoading}
-              >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : tab === "org" ? (
-                  <>Continue <ArrowRight className="w-4 h-4 ml-2" /></>
-                ) : "Create Account"}
-              </Button>
-
-              <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground py-1">
-                <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 w-full" />
-                <span>or</span>
-                <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 w-full" />
+              {/* WhatsApp/SMS updates agreement checkbox */}
+              <div className="flex items-start gap-2.5 pt-2 text-left">
+                <Checkbox
+                  id="agreeMarketing"
+                  checked={agreeMarketing}
+                  onCheckedChange={(checked) => setAgreeMarketing(!!checked)}
+                  className="mt-1 accent-indigo-600 focus:ring-indigo-500 h-4 w-4 rounded border-slate-300"
+                />
+                <Label htmlFor="agreeMarketing" className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed cursor-pointer select-none">
+                  I agree to receive product updates and special offers via WhatsApp and SMS. You can withdraw consent anytime. More info in <span className="text-indigo-600 dark:text-indigo-400 hover:underline">Privacy Policy</span>.
+                </Label>
               </div>
 
-              <Button variant="outline" className="w-full h-11 border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/30 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 font-semibold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer">
-                <FcGoogle size={18} />
-                Continue with Google
+              {/* Register Button */}
+              <Button
+                onClick={handleContinueToPlan}
+                className="w-full h-11 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center"
+                disabled={strength === "weak" || isLoading}
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Register"}
               </Button>
 
-              <div className="text-xs text-center pt-2">
+              {/* Terms of Service & Privacy Policy agreement footer */}
+              <div className="text-xs text-center text-slate-400 dark:text-slate-500 leading-relaxed pt-2">
+                By continuing you agree with our <span className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Terms of Service</span> and confirm that you have read our <span className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Privacy Policy</span>. We may send you product updates and special offers via email. You can opt out anytime (see Privacy Policy).
+              </div>
+
+              {/* Bottom links */}
+              <div className="text-sm text-center pt-4">
                 <p className="text-slate-500 dark:text-slate-400 font-medium">
                   Already have an account?{" "}
                   <Link href="/auth/login" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Log in</Link>

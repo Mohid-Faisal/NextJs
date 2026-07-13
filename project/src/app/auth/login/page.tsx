@@ -110,48 +110,47 @@ const LoginPage = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? 'bg-[#030014]' : 'bg-white'}`}>
+    <div className={`min-h-screen flex items-center justify-center px-4 relative overflow-hidden transition-colors duration-500 ${isDark ? 'bg-zinc-950' : 'bg-[#F4F5F9]'}`}>
       {/* Theme Toggle */}
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle />
       </div>
 
-      {/* Premium background */}
-      <Background isDark={isDark} />
-
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-[440px] relative z-10 flex flex-col items-center"
+        className="w-full max-w-[460px] relative z-10"
       >
-        <Link
-          href="/"
-          className={`inline-flex items-center gap-2 text-xs font-semibold mb-6 transition-colors px-2 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md ${isDark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to home
-        </Link>
+        <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
+          <CardContent className="p-8 sm:p-10 space-y-6">
+            <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
+              Log in
+            </h1>
 
-        <Card className="backdrop-blur-xl bg-white/45 dark:bg-slate-950/45 border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] rounded-3xl overflow-hidden w-full">
-          <CardContent className="p-8 space-y-6">
-            {/* Header info */}
-            <div className="flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 dark:shadow-none mb-4">
-                <Sparkles className="w-5 h-5 text-white" />
+            {/* Google Authentication - Centered with no text */}
+            <Button
+              variant="outline"
+              type="button"
+              className="w-full h-11 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
+            >
+              <FcGoogle size={20} />
+            </Button>
+
+            {/* OR Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
               </div>
-              <h1 className={`text-2xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Welcome back
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 max-w-[280px] leading-relaxed">
-                Log in to access your dashboard, shipments, and billing settings.
-              </p>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white dark:bg-zinc-900 px-4 text-slate-400">or</span>
+              </div>
             </div>
 
-            <div className="space-y-4 pt-2">
+            <div className="space-y-4">
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Email Address</Label>
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Email address</Label>
                 <div className="relative group">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
                   <Input
@@ -161,22 +160,14 @@ const LoginPage = () => {
                     value={form.email}
                     onChange={handleChange}
                     placeholder="name@company.com"
-                    className="pl-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
+                    className="pl-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
                   />
                 </div>
               </div>
 
               {/* Password */}
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="password" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Password</Label>
-                  <Link
-                    href="/auth/reset-password"
-                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
                 <div className="relative group">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
                   <Input
@@ -186,7 +177,7 @@ const LoginPage = () => {
                     value={form.password}
                     onChange={handleChange}
                     placeholder="••••••••"
-                    className="pl-10 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
+                    className="pl-10 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
                   />
                   <button
                     type="button"
@@ -202,53 +193,49 @@ const LoginPage = () => {
                 </div>
               </div>
 
+              {/* Forgot Password Link - Underneath the password field aligned to start */}
+              <div className="text-left pt-1">
+                <Link
+                  href="/auth/reset-password"
+                  className="text-xs font-bold text-indigo-600 dark:text-indigo-450 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
               {/* Login Button */}
               <Button 
                 onClick={handleLogin} 
                 disabled={loading}
-                className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all text-sm mt-2 flex items-center justify-center cursor-pointer"
+                className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all text-sm mt-4 flex items-center justify-center cursor-pointer"
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  "Sign In"
+                  "Log in"
                 )}
               </Button>
             </div>
 
-            {/* OR Divider */}
-            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground py-1">
-              <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 w-full" />
-              <span>or</span>
-              <div className="h-[1px] bg-slate-200 dark:bg-slate-800/80 w-full" />
-            </div>
-
-            {/* Google Authentication */}
-            <Button
-              variant="outline"
-              className="w-full h-11 border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/30 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 font-semibold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer"
-            >
-              <FcGoogle size={18} />
-              Continue with Google
-            </Button>
-
             {/* Bottom Links */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="text-xs text-center pt-2"
-            >
+            <div className="text-sm text-center space-y-3 pt-4">
+              <Link
+                href="/auth/reset-password"
+                className="text-indigo-600 dark:text-indigo-450 font-bold hover:underline block"
+              >
+                Can't Access Your Account?
+              </Link>
+              
               <p className="text-slate-500 dark:text-slate-400 font-medium">
-                New to our platform?{" "}
+                Don't have an account?{" "}
                 <Link
                   href="/auth/signup"
-                  className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                  className="text-indigo-600 dark:text-indigo-450 font-bold hover:underline"
                 >
-                  Create an account
+                  Sign Up
                 </Link>
               </p>
-            </motion.div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
