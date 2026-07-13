@@ -311,15 +311,17 @@ export default function RolesAndPermissionsPage() {
             const strokeDashoffset = 75.398 - (progressPct / 100) * 75.398;
 
             return (
-              <Card key={r} className={`shadow-sm border rounded-xl p-3 flex items-center gap-3 bg-white dark:bg-zinc-900 ${styles?.bg} h-[68px] min-w-[150px] shrink-0`}>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${styles?.iconBg}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">{r}</h4>
-                  <p className="text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
-                    {checkedCount}/{maxAllowedCount}
-                  </p>
+              <div key={r} className={`shadow-sm border rounded-xl p-3 flex items-center justify-between gap-3 bg-white dark:bg-zinc-900 ${styles?.bg} h-[68px] min-w-[150px] shrink-0`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${styles?.iconBg}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">{r}</h4>
+                    <p className="text-sm font-extrabold text-gray-900 dark:text-white mt-0.5">
+                      {checkedCount}/{maxAllowedCount}
+                    </p>
+                  </div>
                 </div>
                 {/* Circular Progress Bar */}
                 <div className="relative flex items-center justify-center shrink-0 w-8 h-8">
@@ -349,11 +351,11 @@ export default function RolesAndPermissionsPage() {
                       fill="transparent"
                     />
                   </svg>
-                  <span className="absolute text-[8px] font-bold text-gray-700 dark:text-zinc-350">
+                  <span className="absolute text-[8px] font-bold text-gray-700 dark:text-zinc-300">
                     {progressPct}%
                   </span>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>
