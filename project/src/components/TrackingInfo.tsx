@@ -95,7 +95,7 @@ export default function ShipmentInfoSection({
             {/* List of Agencies */}
             <div className="flex flex-col gap-2 w-full">
               <Label className="text-sm font-medium mb-1">
-                List of Agencies
+                List of Branches
               </Label>
               <Select
                 defaultValue={form.agency}
@@ -103,7 +103,7 @@ export default function ShipmentInfoSection({
                 value={form.agency}
               >
                 <SelectTrigger className="bg-muted w-full">
-                  <SelectValue placeholder="Select agency" />
+                  <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PSS">PSS</SelectItem>

@@ -1189,7 +1189,7 @@ const AddShipmentPage = () => {
                 {/* List of Agencies */}
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium mb-1">
-                    Branch / Agencies
+                    Branch
                   </Label>
                   <Select
                     onValueChange={(value) => handleSelect("agency", value)}
@@ -1197,7 +1197,7 @@ const AddShipmentPage = () => {
                     key={form.agency || "agency-empty"}
                   >
                     <SelectTrigger className="bg-muted w-full">
-                      <SelectValue placeholder="Select agency" />
+                      <SelectValue placeholder="Select branch" />
                     </SelectTrigger>
                     <SelectContent>
                       {agencies.map((agency) => (

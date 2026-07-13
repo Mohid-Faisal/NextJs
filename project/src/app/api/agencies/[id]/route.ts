@@ -35,10 +35,11 @@ export async function PUT(
 
     return NextResponse.json(agency);
   } catch (error: any) {
+    console.error("Error updating agency:", error);
     if (error.code === "P2002") {
       return NextResponse.json({ error: "Agency code already exists" }, { status: 400 });
     }
-    return NextResponse.json({ error: "Failed to update agency" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Failed to update agency" }, { status: 500 });
   }
 }
 
@@ -66,7 +67,8 @@ export async function DELETE(
     });
 
     return NextResponse.json({ message: "Agency deleted successfully" });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to delete agency" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Error deleting agency:", error);
+    return NextResponse.json({ error: error.message || "Failed to delete agency" }, { status: 500 });
   }
 }

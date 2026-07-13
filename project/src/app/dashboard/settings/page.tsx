@@ -256,9 +256,11 @@ export default function RedesignedSettingsPage() {
         setEditingId(null);
         loadAllSettings();
       } else {
-        toast.error("Failed to save");
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData.error || "Failed to save");
       }
-    } catch {
+    } catch (error) {
+      console.error("Save error:", error);
       toast.error("Something went wrong");
     }
   };
@@ -523,7 +525,7 @@ export default function RedesignedSettingsPage() {
                         { id: "deliveryTimes", label: "Delivery Times", icon: Clock },
                         { id: "packagingTypes", label: "Packaging Types", icon: Package },
                         { id: "vendorServices", label: "Vendor Services", icon: Briefcase },
-                        { id: "agencies", label: "Agencies", icon: Building },
+                        { id: "agencies", label: "Branches", icon: Building },
                         { id: "offices", label: "Offices", icon: Building }
                       ].map((subTab) => (
                         <button
@@ -880,7 +882,7 @@ export default function RedesignedSettingsPage() {
                       <div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                           <div>
-                            <h3 className="text-xl font-bold text-gray-905 dark:text-white">Agencies</h3>
+                            <h3 className="text-xl font-bold text-gray-905 dark:text-white">Branches</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage regional offices or agent branches.</p>
                           </div>
                           <Button 
@@ -888,7 +890,7 @@ export default function RedesignedSettingsPage() {
                             className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
                           >
                             <Plus className="w-4 h-4" />
-                            Add Agency
+                            Add Branch
                           </Button>
                         </div>
 
@@ -896,7 +898,7 @@ export default function RedesignedSettingsPage() {
                           <table className="w-full text-left border-collapse">
                             <thead>
                               <tr className="bg-gray-50 dark:bg-zinc-800/40 text-xs font-bold text-gray-500 dark:text-zinc-400 border-b border-gray-100 dark:border-zinc-800">
-                                <th className="px-5 py-3.5">Agency Name</th>
+                                <th className="px-5 py-3.5">Branch Name</th>
                                 <th className="px-5 py-3.5">Short Code</th>
                                 <th className="px-5 py-3.5 text-right">Actions</th>
                               </tr>
@@ -1416,7 +1418,7 @@ export default function RedesignedSettingsPage() {
                 openModal === "shippingMode" ? "Shipping Mode" :
                 openModal === "deliveryTime" ? "Delivery Time" :
                 openModal === "packagingType" ? "Packaging Type" :
-                openModal === "agency" ? "Agency" : "Office"
+                openModal === "agency" ? "Branch" : "Office"
               }
             </DialogTitle>
           </DialogHeader>
