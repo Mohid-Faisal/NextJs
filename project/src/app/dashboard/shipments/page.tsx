@@ -1437,8 +1437,8 @@ export default function ShipmentsPage() {
                       onClick={() => handleSort("trackingId")}
                       className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
                     >
-                      <span className="hidden sm:inline">Tracking</span>
-                      <span className="sm:hidden">T</span>
+                      <span className="hidden sm:inline">Booking</span>
+                      <span className="sm:hidden">B</span>
                       {getSortIcon("trackingId")}
                     </button>
                   </th>
@@ -1664,7 +1664,7 @@ export default function ShipmentsPage() {
           {shipmentForManageTracking && (
             <div className="space-y-4 py-2">
               <p className="text-sm text-muted-foreground">
-                Tracking: <strong>{shipmentForManageTracking.trackingId}</strong>
+                Booking: <strong>{shipmentForManageTracking.trackingId}</strong>
               </p>
               {loadingHistory ? (
                 <p className="text-sm text-muted-foreground">Loading history…</p>
@@ -1837,7 +1837,7 @@ export default function ShipmentsPage() {
           {shipmentForTracking && (
             <div className="grid gap-4 py-2">
               <p className="text-sm text-muted-foreground">
-                Add a status update for <strong>{shipmentForTracking.trackingId}</strong>
+                Add a booking status update for <strong>{shipmentForTracking.trackingId}</strong>
               </p>
               <div className="grid gap-2">
                 <Label>Status</Label>
