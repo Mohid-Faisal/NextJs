@@ -25,10 +25,10 @@ export default function RootLayout({
         className={`min-h-screen font-sans antialiased ${inter.className}`}
       >
         <NextTopLoader
-          color="#dc2626"
+          color="#3b82f6"
           height={3}
           showSpinner={false}
-          shadow="0 0 10px #dc2626, 0 0 5px #dc2626"
+          shadow="0 0 10px #3b82f6, 0 0 5px #3b82f6"
         />
         <ThemeProvider
           attribute="class"
