@@ -37,6 +37,13 @@ export async function GET(req: NextRequest) {
     if (profile) {
       where.profile = profile;
     }
+
+    const agency = searchParams.get("agency");
+    if (agency && agency !== "All") {
+      where.shipment = {
+        agency: agency
+      };
+    }
     
     if (search) {
       // Try to parse as number for price search

@@ -69,6 +69,8 @@ export default function ShipmentsPage() {
   const typeParam = searchParams.get("type") || "";
   const { hasPermission, hasFeature, loading: permissionsLoading } = usePermissions();
   const [orgId, setOrgId] = useState<number | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState("All");
+  const [branches, setBranches] = useState<any[]>([]);
 
   useEffect(() => {
     fetch("/api/org/current")
@@ -79,6 +81,16 @@ export default function ShipmentsPage() {
         }
       })
       .catch((err) => console.error("Error fetching org settings:", err));
+
+    // Fetch branches
+    fetch("/api/agencies")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setBranches(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching branches:", err));
   }, []);
   const [shipments, setShipments] = useState<
     (Shipment & { invoices: { id: number; status: string }[] })[]
@@ -262,6 +274,7 @@ export default function ShipmentsPage() {
         sortField,
         sortOrder,
         ...(typeParam && { type: typeParam }),
+        ...(selectedBranch !== "All" && { agency: selectedBranch }),
       });
 
       const res = await fetch(`/api/shipments?${params}`);
@@ -281,7 +294,7 @@ export default function ShipmentsPage() {
     };
 
     fetchShipments();
-  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate, typeParam]);
+  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate, typeParam, selectedBranch]);
 
   useEffect(() => {
     setPage(1);
@@ -1251,7 +1264,28 @@ export default function ShipmentsPage() {
           </div>
 
           {/* Date Range Filter */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            {/* Branch Filter */}
+            <Select
+              value={selectedBranch}
+              onValueChange={(value) => {
+                setSelectedBranch(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Select Branch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Branches</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.code || b.id.toString()}>
+                    {b.code || b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select
               value={periodType}
               onValueChange={(value: string) => {

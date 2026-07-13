@@ -284,6 +284,19 @@ export default function IncomeInvoicesPage() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [allStatusCount, setAllStatusCount] = useState(0);
+  const [selectedBranch, setSelectedBranch] = useState("All");
+  const [branches, setBranches] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/agencies")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setBranches(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching branches:", err));
+  }, []);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(10);
@@ -407,6 +420,7 @@ export default function IncomeInvoicesPage() {
         ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
         sortField: sortField,
         sortOrder: sortOrder,
+        ...(selectedBranch !== "All" && { agency: selectedBranch }),
       });
 
       const res = await fetch(`/api/accounts/invoices?${params.toString()}`);
@@ -440,6 +454,7 @@ export default function IncomeInvoicesPage() {
     dateRange,
     sortField,
     sortOrder,
+    selectedBranch,
   ]);
 
   const handleSort = (field: SortField) => {
@@ -803,6 +818,27 @@ export default function IncomeInvoicesPage() {
 
           {/* Date Range Filter */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            {/* Branch Filter */}
+            <Select
+              value={selectedBranch}
+              onValueChange={(value) => {
+                setSelectedBranch(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Select Branch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Branches</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.code || b.id.toString()}>
+                    {b.code || b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select
               value={periodType}
               onValueChange={(value: string) => {

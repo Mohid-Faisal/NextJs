@@ -52,6 +52,11 @@ export async function GET(req: Request) {
   if (status) where.deliveryStatus = status;
   if (invoiceStatus) where.invoiceStatus = invoiceStatus;
   
+  const agency = searchParams.get("agency");
+  if (agency && agency !== "All") {
+    where.agency = agency;
+  }
+  
   // Date range filtering - use shipmentDate instead of createdAt
   if (fromDate || toDate) {
     where.shipmentDate = {};
