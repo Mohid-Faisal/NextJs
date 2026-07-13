@@ -1196,22 +1196,23 @@ export default function VendorTransactionsPage() {
   return (
     <div className="w-full min-h-full p-4 sm:p-6 lg:p-8 xl:p-10 bg-white dark:bg-zinc-900">
       <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start gap-4">
-        <div>
+        <div className="flex items-center gap-4">
           <Button
-            variant="outline"
+            variant="ghost"
+            size="icon"
             onClick={() => router.back()}
-            className="mb-4"
+            className="rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm shrink-0"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2">
-            Vendor Transactions
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-            {vendor.CompanyName} - {vendor.PersonName}
-          </p>
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-1">
+              Vendor Transactions
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              {vendor.CompanyName} - {vendor.PersonName}
+            </p>
+          </div>
         </div>
 
         {/* Balance Display - Top Right */}
