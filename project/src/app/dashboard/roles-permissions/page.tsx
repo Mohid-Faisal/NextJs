@@ -286,7 +286,7 @@ export default function RolesAndPermissionsPage() {
         </div>
 
         {/* Compact Role Indicator Cards with Circular Bars */}
-        <div className="flex items-center gap-3 flex-wrap w-full xl:w-auto xl:justify-end">
+        <div className="flex items-center gap-3 flex-wrap w-full xl:flex-1 xl:justify-end transition-all duration-300">
           {(["Customer", "Vendor", "Employee", "Admin"] as RoleName[]).map((r) => {
             const styles = getRoleCardClass(r);
             const Icon = getRoleIcon(r);
@@ -307,14 +307,14 @@ export default function RolesAndPermissionsPage() {
             const checkedCount = allowedPermList.length;
             const progressPct = Math.round((checkedCount / maxAllowedCount) * 100);
 
-            // Radius for circle is 12, circumference is 2 * PI * 12 = 75.398
-            const strokeDashoffset = 75.398 - (progressPct / 100) * 75.398;
+            // Radius for circle is 13, circumference is 2 * PI * 13 = 81.68
+            const strokeDashoffset = 81.68 - (progressPct / 100) * 81.68;
 
             return (
-              <div key={r} className={`shadow-sm border rounded-xl p-3 flex items-center justify-between gap-3 bg-white dark:bg-zinc-900 ${styles?.bg} h-[68px] min-w-[150px] shrink-0`}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${styles?.iconBg}`}>
-                    <Icon className="w-4 h-4" />
+              <div key={r} className={`shadow-sm border rounded-xl p-3.5 flex items-center justify-between gap-3 bg-white dark:bg-zinc-900 ${styles?.bg} h-[76px] flex-1 min-w-[130px] max-w-[220px] transition-all duration-300`}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`w-8.5 h-8.5 rounded-lg flex items-center justify-center shrink-0 ${styles?.iconBg}`}>
+                    <Icon className="w-4.5 h-4.5" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">{r}</h4>
@@ -324,20 +324,20 @@ export default function RolesAndPermissionsPage() {
                   </div>
                 </div>
                 {/* Circular Progress Bar */}
-                <div className="relative flex items-center justify-center shrink-0 w-8 h-8">
-                  <svg className="w-8 h-8 transform -rotate-90">
+                <div className="relative flex items-center justify-center shrink-0 w-9 h-9">
+                  <svg className="w-9 h-9 transform -rotate-90">
                     <circle
-                      cx="16"
-                      cy="16"
-                      r="12"
+                      cx="18"
+                      cy="18"
+                      r="13"
                       className="stroke-gray-100 dark:stroke-zinc-800"
                       strokeWidth="2.5"
                       fill="transparent"
                     />
                     <circle
-                      cx="16"
-                      cy="16"
-                      r="12"
+                      cx="18"
+                      cy="18"
+                      r="13"
                       className={`${
                         r === 'Customer' ? 'stroke-pink-500' :
                         r === 'Vendor' ? 'stroke-amber-500' :
@@ -345,13 +345,13 @@ export default function RolesAndPermissionsPage() {
                         'stroke-blue-500'
                       } transition-all duration-300`}
                       strokeWidth="2.5"
-                      strokeDasharray={75.398}
+                      strokeDasharray={81.68}
                       strokeDashoffset={strokeDashoffset}
                       strokeLinecap="round"
                       fill="transparent"
                     />
                   </svg>
-                  <span className="absolute text-[8px] font-bold text-gray-700 dark:text-zinc-300">
+                  <span className="absolute text-[8.5px] font-bold text-gray-700 dark:text-zinc-300">
                     {progressPct}%
                   </span>
                 </div>
