@@ -117,7 +117,7 @@ const LoginPage = () => {
         <img 
           src="/login_banner.jpg" 
           alt="PSS Worldwide Express - Courier & Cargo Management SaaS" 
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover object-top"
         />
 
         {/* Footer of Left Panel (Copyright only) */}
