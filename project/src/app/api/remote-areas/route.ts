@@ -6,11 +6,67 @@ import { Country } from "country-state-city";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import * as i18nCountries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+try {
+  i18nCountries.registerLocale(enLocale);
+} catch (e) {
+  console.error("Error registering locale:", e);
+}
 
 /** Build a set of uppercase country names for matching DHL-style PDF lines */
-const COUNTRY_NAMES_UPPER = new Set(
-  Country.getAllCountries().map((c) => c.name.toUpperCase())
-);
+const COUNTRY_NAMES_UPPER = new Set<string>();
+
+// Add from country-state-city
+Country.getAllCountries().forEach((c) => {
+  const name = c.name.toUpperCase();
+  COUNTRY_NAMES_UPPER.add(name);
+  COUNTRY_NAMES_UPPER.add(name.replace(/[,.]/g, ""));
+});
+
+// Add from i18n-iso-countries
+try {
+  const enNames = i18nCountries.getNames("en");
+  Object.values(enNames).forEach((name: any) => {
+    COUNTRY_NAMES_UPPER.add(name.toUpperCase());
+    COUNTRY_NAMES_UPPER.add(name.toUpperCase().replace(/[,.]/g, ""));
+  });
+} catch (e) {
+  console.error("Error adding i18n countries:", e);
+}
+
+// Add common synonyms
+const CUSTOM_COUNTRY_SYNONYMS = [
+  "BAHAMAS", "GAMBIA", "USA", "US", "UNITED STATES", "UK", "UNITED KINGDOM", 
+  "UAE", "VIETNAM", "RUSSIA", "SYRIA", "SOUTH KOREA", "KOREA", "MOLDOVA", 
+  "TANZANIA", "VENEZUELA", "BOLIVIA", "BRUNEI", "IRAN", "LAOS", "MICRONESIA", 
+  "CZECH REPUBLIC", "SWAZILAND", "DR CONGO", "CONGO", "IVORY COAST"
+];
+CUSTOM_COUNTRY_SYNONYMS.forEach(syn => COUNTRY_NAMES_UPPER.add(syn));
+
+// Dynamic normalization helper to catch even more variations
+const originalNames = Array.from(COUNTRY_NAMES_UPPER);
+originalNames.forEach((name) => {
+  // Remove "THE " from start
+  if (name.startsWith("THE ")) {
+    COUNTRY_NAMES_UPPER.add(name.slice(4));
+  }
+  // Remove "REPUBLIC OF "
+  if (name.includes("REPUBLIC OF ")) {
+    COUNTRY_NAMES_UPPER.add(name.replace("REPUBLIC OF ", ""));
+  }
+  // Split by ","
+  if (name.includes(",")) {
+    const parts = name.split(",");
+    COUNTRY_NAMES_UPPER.add(parts[0].trim());
+  }
+  // Split by "("
+  if (name.includes("(")) {
+    const parts = name.split("(");
+    COUNTRY_NAMES_UPPER.add(parts[0].trim());
+  }
+});
 
 /** Words that must never be treated as a country (header/definition text) */
 const NOT_COUNTRY_WORDS = new Set([
@@ -391,8 +447,6 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const filename = file.name;
-    const company = extractCompanyName(filename);
 
     if (!file) {
       return NextResponse.json(
@@ -400,6 +454,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const filename = file.name;
+    const company = extractCompanyName(filename);
 
     const isPdf =
       file.type === "application/pdf" ||
@@ -409,13 +466,16 @@ export async function POST(req: NextRequest) {
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       ].includes(file.type) || /\.(xlsx|xls)$/i.test(filename);
+    const isCsv =
+      file.type === "text/csv" ||
+      /\.csv$/i.test(filename);
 
-    if (!isPdf && !isExcel) {
+    if (!isPdf && !isExcel && !isCsv) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Invalid file type. Please upload an Excel (.xlsx, .xls) or PDF file.",
+            "Invalid file type. Please upload an Excel (.xlsx, .xls), CSV (.csv) or PDF file.",
         },
         { status: 400 }
       );
@@ -478,47 +538,50 @@ export async function POST(req: NextRequest) {
       const lowIndex = getColumnIndex("low", ["low"]);
       const highIndex = getColumnIndex("high", ["high"]);
       const cityIndex = getColumnIndex("city", ["city"]);
+      const companyIndex = getColumnIndex("company", ["company name"]);
 
       // ── Detect format: standard (Country+IATA) vs DHL-style (Country + zip columns) ──
       const isStandardFormat = countryIndex !== -1 && iataIndex !== -1;
 
       if (isStandardFormat) {
-      // ────── STANDARD FORMAT (Country, IATA Code, Low, High, City) ──────
-      const hasLowHigh = lowIndex !== -1 && highIndex !== -1;
-      const hasCity = cityIndex !== -1;
+        // ────── STANDARD FORMAT (Country, IATA Code, Low, High, City) ──────
+        const hasLowHigh = lowIndex !== -1 && highIndex !== -1;
+        const hasCity = cityIndex !== -1;
+        const hasCompany = companyIndex !== -1;
 
-      for (let i = headerRowIndex + 1; i < raw.length; i++) {
-        const row = raw[i];
-        if (!Array.isArray(row) || row.length === 0) continue;
+        for (let i = headerRowIndex + 1; i < raw.length; i++) {
+          const row = raw[i];
+          if (!Array.isArray(row) || row.length === 0) continue;
 
-        const country = String(row[countryIndex] || "").trim();
-        const iataCode = String(row[iataIndex] || "").trim();
-        const low = hasLowHigh ? String(row[lowIndex] || "").trim() : "";
-        const high = hasLowHigh ? String(row[highIndex] || "").trim() : "";
-        const city = hasCity ? String(row[cityIndex] || "").trim() : null;
+          const country = String(row[countryIndex] || "").trim();
+          const iataCode = String(row[iataIndex] || country || "").trim();
+          const low = hasLowHigh ? String(row[lowIndex] || "").trim() : "";
+          const high = hasLowHigh ? String(row[highIndex] || "").trim() : "";
+          const city = hasCity ? String(row[cityIndex] || "").trim() : null;
+          const rowCompany = (hasCompany ? String(row[companyIndex] || "").trim() : "") || company;
 
-        if (!country && !iataCode && !low && !high && !city) continue;
-        if (!country || !iataCode) continue;
+          if (!country && !iataCode && !low && !high && !city) continue;
+          if (!country) continue;
 
-        const hasLowHighData = hasLowHigh && low !== "" && high !== "";
-        const hasCityData = city && city !== "" && city.toLowerCase() !== "null";
-        if (!hasLowHighData && !hasCityData) continue;
+          const hasLowHighData = hasLowHigh && low !== "" && high !== "";
+          const hasCityData = city && city !== "" && city.toLowerCase() !== "null";
+          if (!hasLowHighData && !hasCityData) continue;
 
-        parsedAreas.push({
-          company,
-          country,
-          iataCode,
-          low: hasLowHighData ? low : "0",
-          high: hasLowHighData ? high : "0",
-          city: hasCityData ? city : null,
-          filename,
-        });
+          parsedAreas.push({
+            company: rowCompany,
+            country,
+            iataCode,
+            low: hasLowHighData ? low : "0",
+            high: hasLowHighData ? high : "0",
+            city: hasCityData ? city : null,
+            filename,
+          });
+        }
+      } else {
+        // ────── DHL-STYLE FORMAT (multi-sheet Excel: Column A = country or city, B–J = zips/ranges) ──────
+        const sheetAreas = parseDhlStyleExcelSheets(workbook, company, filename);
+        parsedAreas.push(...sheetAreas);
       }
-    } else {
-      // ────── DHL-STYLE FORMAT (multi-sheet Excel: Column A = country or city, B–J = zips/ranges) ──────
-      const sheetAreas = parseDhlStyleExcelSheets(workbook, company, filename);
-      parsedAreas.push(...sheetAreas);
-    }
     }
 
     if (parsedAreas.length === 0) {
@@ -532,21 +595,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Get all unique company names in the parsed data
+    const uniqueCompanies = Array.from(new Set(parsedAreas.map((a) => a.company).filter(Boolean)));
+    if (uniqueCompanies.length === 0) {
+      uniqueCompanies.push(company);
+    }
+
+    // Delete existing remote areas for these companies
     await prisma.remoteArea.deleteMany({
-      where: orgWhere(session, { company }),
+      where: orgWhere(session, {
+        company: { in: uniqueCompanies },
+      }),
     });
 
-    await prisma.remoteArea.createMany({
-      data: parsedAreas.map((area) => ({
-        ...area,
-        organizationId: session.organizationId,
-      })),
-      skipDuplicates: true,
-    });
+    // Chunk size of 1000 to prevent max_allowed_packet limits
+    const chunkSize = 1000;
+    for (let i = 0; i < parsedAreas.length; i += chunkSize) {
+      const chunk = parsedAreas.slice(i, i + chunkSize);
+      await prisma.remoteArea.createMany({
+        data: chunk.map((area) => ({
+          ...area,
+          organizationId: session.organizationId,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Successfully uploaded ${parsedAreas.length} remote area entries.`,
+      message: `Successfully uploaded ${parsedAreas.length} remote area entries for ${uniqueCompanies.join(", ")}.`,
       count: parsedAreas.length,
       filename,
     });

@@ -412,15 +412,17 @@ const RemoteAreaLookupPage = () => {
                 </button>
                 <label
                   htmlFor="file"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md cursor-pointer hover:bg-blue-700 transition ${
+                    isLoading ? "pointer-events-none opacity-50 cursor-not-allowed" : ""
+                  }`}
                 >
                   <Paperclip className="w-4 h-4" />
-                  {isLoading ? "Uploading..." : "Upload Excel or PDF file"}
+                  {isLoading ? "Uploading..." : "Upload Excel, CSV or PDF file"}
                 </label>
                 <input
                   id="file"
                   type="file"
-                  accept=".xlsx,.xls,.pdf"
+                  accept=".xlsx,.xls,.csv,.pdf"
                   onChange={handleUpload}
                   disabled={isLoading}
                   className="hidden"
