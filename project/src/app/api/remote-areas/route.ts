@@ -498,87 +498,100 @@ export async function POST(req: NextRequest) {
       parsedAreas = await parseDhlStylePdfText(buffer, company, filename);
     } else {
       const workbook = XLSX.read(buffer, { type: "buffer" });
+      let standardParsedCount = 0;
 
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const raw = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+        if (!Array.isArray(raw) || raw.length === 0) continue;
 
-      // Find header row (usually first row, but skip empty rows)
-      let headerRowIndex = 0;
-      for (let i = 0; i < Math.min(10, raw.length); i++) {
-        const row = raw[i];
-        if (Array.isArray(row) && row.length > 0) {
-          const firstCell = String(row[0] || "").toLowerCase().trim();
-          if (
-            firstCell.includes("country") ||
-            firstCell.includes("iata") ||
-            firstCell === "country"
-          ) {
-            headerRowIndex = i;
-            break;
+        // Find header row (usually first row, but check first 10 rows and search any column for country/iata)
+        let headerRowIndex = 0;
+        let headerFound = false;
+        for (let i = 0; i < Math.min(10, raw.length); i++) {
+          const row = raw[i];
+          if (Array.isArray(row) && row.length > 0) {
+            const hasCountryOrIata = row.some((cell) => {
+              const val = String(cell || "").toLowerCase().trim();
+              return (
+                val === "country" ||
+                val.includes("country") ||
+                val === "iata" ||
+                val.includes("iata")
+              );
+            });
+            if (hasCountryOrIata) {
+              headerRowIndex = i;
+              headerFound = true;
+              break;
+            }
+          }
+        }
+
+        const headerRow = raw[headerRowIndex] || [];
+
+        // Find column indices
+        const getColumnIndex = (header: string, alternatives: string[] = []) => {
+          const searchTerms = [header, ...alternatives].map((h) => h.toLowerCase());
+          for (let i = 0; i < headerRow.length; i++) {
+            const cell = String(headerRow[i] || "").toLowerCase().trim();
+            if (searchTerms.some((term) => cell.includes(term) || cell === term)) {
+              return i;
+            }
+          }
+          return -1;
+        };
+
+        const countryIndex = getColumnIndex("country", ["country"]);
+        const iataIndex = getColumnIndex("iata", ["iata code", "iata", "code"]);
+        const lowIndex = getColumnIndex("low", ["low"]);
+        const highIndex = getColumnIndex("high", ["high"]);
+        const cityIndex = getColumnIndex("city", ["city"]);
+        const companyIndex = getColumnIndex("company", ["company name"]);
+
+        // ── Detect format: standard (Country+IATA) vs DHL-style (Country + zip columns) ──
+        const isStandardFormat = countryIndex !== -1 && iataIndex !== -1;
+
+        if (isStandardFormat) {
+          // ────── STANDARD FORMAT (Country, IATA Code, Low, High, City) ──────
+          const hasLowHigh = lowIndex !== -1 && highIndex !== -1;
+          const hasCity = cityIndex !== -1;
+          const hasCompany = companyIndex !== -1;
+
+          for (let i = headerRowIndex + 1; i < raw.length; i++) {
+            const row = raw[i];
+            if (!Array.isArray(row) || row.length === 0) continue;
+
+            const country = String(row[countryIndex] || "").trim();
+            const iataCode = String(row[iataIndex] || country || "").trim();
+            const low = hasLowHigh ? String(row[lowIndex] || "").trim() : "";
+            const high = hasLowHigh ? String(row[highIndex] || "").trim() : "";
+            const city = hasCity ? String(row[cityIndex] || "").trim() : null;
+            const rowCompany = (hasCompany ? String(row[companyIndex] || "").trim() : "") || company;
+
+            if (!country && !iataCode && !low && !high && !city) continue;
+            if (!country) continue;
+
+            const hasLowHighData = hasLowHigh && low !== "" && high !== "";
+            const hasCityData = city && city !== "" && city.toLowerCase() !== "null";
+            if (!hasLowHighData && !hasCityData) continue;
+
+            parsedAreas.push({
+              company: rowCompany,
+              country,
+              iataCode,
+              low: hasLowHighData ? low : "0",
+              high: hasLowHighData ? high : "0",
+              city: hasCityData ? city : null,
+              filename,
+            });
+            standardParsedCount++;
           }
         }
       }
 
-      const headerRow = raw[headerRowIndex] || [];
-
-      // Find column indices
-      const getColumnIndex = (header: string, alternatives: string[] = []) => {
-        const searchTerms = [header, ...alternatives].map((h) => h.toLowerCase());
-        for (let i = 0; i < headerRow.length; i++) {
-          const cell = String(headerRow[i] || "").toLowerCase().trim();
-          if (searchTerms.some((term) => cell.includes(term) || cell === term)) {
-            return i;
-          }
-        }
-        return -1;
-      };
-
-      const countryIndex = getColumnIndex("country", ["country"]);
-      const iataIndex = getColumnIndex("iata", ["iata code", "iata", "code"]);
-      const lowIndex = getColumnIndex("low", ["low"]);
-      const highIndex = getColumnIndex("high", ["high"]);
-      const cityIndex = getColumnIndex("city", ["city"]);
-      const companyIndex = getColumnIndex("company", ["company name"]);
-
-      // ── Detect format: standard (Country+IATA) vs DHL-style (Country + zip columns) ──
-      const isStandardFormat = countryIndex !== -1 && iataIndex !== -1;
-
-      if (isStandardFormat) {
-        // ────── STANDARD FORMAT (Country, IATA Code, Low, High, City) ──────
-        const hasLowHigh = lowIndex !== -1 && highIndex !== -1;
-        const hasCity = cityIndex !== -1;
-        const hasCompany = companyIndex !== -1;
-
-        for (let i = headerRowIndex + 1; i < raw.length; i++) {
-          const row = raw[i];
-          if (!Array.isArray(row) || row.length === 0) continue;
-
-          const country = String(row[countryIndex] || "").trim();
-          const iataCode = String(row[iataIndex] || country || "").trim();
-          const low = hasLowHigh ? String(row[lowIndex] || "").trim() : "";
-          const high = hasLowHigh ? String(row[highIndex] || "").trim() : "";
-          const city = hasCity ? String(row[cityIndex] || "").trim() : null;
-          const rowCompany = (hasCompany ? String(row[companyIndex] || "").trim() : "") || company;
-
-          if (!country && !iataCode && !low && !high && !city) continue;
-          if (!country) continue;
-
-          const hasLowHighData = hasLowHigh && low !== "" && high !== "";
-          const hasCityData = city && city !== "" && city.toLowerCase() !== "null";
-          if (!hasLowHighData && !hasCityData) continue;
-
-          parsedAreas.push({
-            company: rowCompany,
-            country,
-            iataCode,
-            low: hasLowHighData ? low : "0",
-            high: hasLowHighData ? high : "0",
-            city: hasCityData ? city : null,
-            filename,
-          });
-        }
-      } else {
-        // ────── DHL-STYLE FORMAT (multi-sheet Excel: Column A = country or city, B–J = zips/ranges) ──────
+      // If no sheets matched the standard format, try to parse it as a DHL-style format workbook
+      if (standardParsedCount === 0) {
         const sheetAreas = parseDhlStyleExcelSheets(workbook, company, filename);
         parsedAreas.push(...sheetAreas);
       }
