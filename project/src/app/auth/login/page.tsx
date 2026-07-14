@@ -112,43 +112,44 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
       {/* Left panel - Punchline & Logo (Hidden on mobile, visible on lg/xl) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-zinc-900 text-white flex-col justify-between p-12 select-none">
-          {/* Background Image with Dark Overlay */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-60"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000')` }}
-        />
-        {/* Top Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-slate-900/20 z-0" />
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 flex-col justify-between p-12 select-none border-r border-slate-100 dark:border-zinc-800/50">
+        {/* Soft grid background matching the right side theme */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] opacity-70 pointer-events-none" />
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col h-full justify-between">
-          {/* Logo container */}
-          <div className="max-w-[280px] select-none">
+        {/* Header decoration */}
+        <div className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest relative z-10">
+          PSS Worldwide Express
+        </div>
+
+        {/* Centered Content */}
+        <div className="relative z-10 my-auto flex flex-col items-center text-center space-y-8 max-w-md mx-auto">
+          {/* Logo container in the middle */}
+          <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-[0_12px_40px_-10px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.4)] border border-slate-100/80 dark:border-zinc-800 w-full max-w-[320px] flex items-center justify-center transition-all duration-300 hover:scale-[1.02]">
             <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
           </div>
 
           {/* Punchline */}
-          <div className="space-y-4 max-w-xl pr-6">
-            <div className="flex items-center gap-2">
-              <span className="h-0.5 w-6 bg-amber-500 rounded-full" />
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-500">
+          <div className="space-y-4">
+            <div className="flex items-center justify-center gap-2">
+              <span className="h-0.5 w-6 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
                 Reliable Operations For Your Business
               </span>
+              <span className="h-0.5 w-6 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
             </div>
 
-            <h2 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
               Courier, Cargo & Logistics Management Software
             </h2>
-            <p className="text-sm text-slate-300 leading-relaxed max-w-md">
+            <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed max-w-sm">
               Effortlessly manage your delivery operations with iCargos, an all-in-one White Label Courier Tracking System designed to streamline your supply chain.
             </p>
           </div>
+        </div>
 
-          {/* Footer of Left Panel */}
-          <div className="text-xs text-slate-400">
-            © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
-          </div>
+        {/* Footer of Left Panel */}
+        <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10">
+          © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
         </div>
       </div>
 
