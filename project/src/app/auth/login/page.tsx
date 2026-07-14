@@ -112,43 +112,48 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
       {/* Left panel - Punchline & Logo (Hidden on mobile, visible on lg/xl) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 flex-col justify-between p-12 select-none border-r border-slate-100 dark:border-zinc-800/50">
-        {/* Soft grid background matching the right side theme */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] opacity-70 pointer-events-none" />
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-[#2B59FF] to-[#142B90] text-white flex-col justify-between p-12 select-none border-r border-[#2B59FF]/20">
+        {/* Concentric abstract geometric line overlays matching SaleSkip layout */}
+        <div className="absolute inset-0 opacity-15 pointer-events-none z-0">
+          <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] border-2 border-white rounded-full" />
+          <div className="absolute top-[-30%] left-[-30%] w-[160%] h-[160%] border-2 border-white rounded-full" />
+          <div className="absolute top-[-40%] left-[-40%] w-[180%] h-[180%] border border-white rounded-full" />
+          <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] border border-white rounded-full" />
+        </div>
 
         {/* Header decoration */}
-        <div className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest relative z-10">
+        <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest relative z-10">
           PSS Worldwide Express
         </div>
 
         {/* Centered Content */}
         <div className="relative z-10 my-auto flex flex-col items-center text-center space-y-8 max-w-md mx-auto">
-          {/* Logo container in the middle */}
-          <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-[0_12px_40px_-10px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.4)] border border-slate-100/80 dark:border-zinc-800 w-full max-w-[320px] flex items-center justify-center transition-all duration-300 hover:scale-[1.02]">
+          {/* Logo container in the middle - white background card to make the logo perfectly visible */}
+          <div className="bg-white p-8 rounded-3xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.35)] border border-white/10 w-full max-w-[290px] flex items-center justify-center transition-all duration-300 hover:scale-[1.03]">
             <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
           </div>
 
           {/* Punchline */}
           <div className="space-y-4">
             <div className="flex items-center justify-center gap-2">
-              <span className="h-0.5 w-6 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              <span className="h-0.5 w-6 bg-amber-400 rounded-full" />
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-300">
                 Reliable Operations For Your Business
               </span>
-              <span className="h-0.5 w-6 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+              <span className="h-0.5 w-6 bg-amber-400 rounded-full" />
             </div>
 
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
               Courier, Cargo & Logistics Management Software
             </h2>
-            <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed max-w-sm">
+            <p className="text-sm text-blue-100/90 leading-relaxed max-w-sm">
               Effortlessly manage your delivery operations with iCargos, an all-in-one White Label Courier Tracking System designed to streamline your supply chain.
             </p>
           </div>
         </div>
 
         {/* Footer of Left Panel */}
-        <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10">
+        <div className="text-xs text-blue-200 relative z-10">
           © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
         </div>
       </div>
