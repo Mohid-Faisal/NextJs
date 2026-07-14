@@ -1119,7 +1119,7 @@ export default function RedesignedSettingsPage() {
 
               {/* Tab 4: Billing */}
               {activeTab === "billing" && (
-                <div className="space-y-6">
+                <form onSubmit={(e) => { e.preventDefault(); handleSaveBilling(); }} className="space-y-6">
                   
                   {/* Currency & Invoicing Card */}
                   <Card className="shadow-sm border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-xl">
@@ -1277,7 +1277,7 @@ export default function RedesignedSettingsPage() {
                       {/* Submit */}
                       <div className="mt-8 flex justify-end">
                         <Button 
-                          onClick={handleSaveBilling}
+                          type="submit"
                           className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-2.5 font-semibold rounded-lg text-sm"
                         >
                           Save Changes
@@ -1287,12 +1287,12 @@ export default function RedesignedSettingsPage() {
                     </CardContent>
                   </Card>
 
-                </div>
+                </form>
               )}
 
               {/* Tab 5: Booking Numbers */}
               {activeTab === "bookingNumbering" && (
-                <div className="space-y-6 animate-fadeIn relative min-h-[300px] w-full">
+                <form onSubmit={(e) => { e.preventDefault(); handleSaveBookingNumbering(); }} className="space-y-6 animate-fadeIn relative min-h-[300px] w-full">
                   
                   {/* Coming Soon Overlay */}
                   <div className="absolute inset-0 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xs flex flex-col items-center justify-center z-50 text-center p-6 rounded-xl">
@@ -1394,7 +1394,7 @@ export default function RedesignedSettingsPage() {
                       {/* Submit */}
                       <div className="mt-8 flex justify-end">
                         <Button 
-                          onClick={handleSaveBookingNumbering}
+                          type="submit"
                           className="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-6 py-2.5 font-semibold rounded-lg text-sm"
                         >
                           Update booking sequence
@@ -1403,7 +1403,7 @@ export default function RedesignedSettingsPage() {
 
                     </CardContent>
                   </Card>
-                </div>
+                </form>
               )}
 
             </motion.div>
@@ -1419,147 +1419,151 @@ export default function RedesignedSettingsPage() {
       {/* Modal 1: Status Add/Edit */}
       <Dialog open={openModal === "status"} onOpenChange={(open) => !open && setOpenModal(null)}>
         <DialogContent className="max-w-md w-full">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Status" : "Add Status"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4 text-sm">
-            <div className="space-y-2">
-              <Label className="text-xs">Status Name</Label>
-              <Input 
-                value={statusForm.name} 
-                onChange={(e) => setStatusForm(prev => ({ ...prev, name: e.target.value, code: e.target.value.toLowerCase().replace(/ /g, "_") }))}
-                placeholder="e.g. Pending"
-                className="text-sm rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Code</Label>
-              <Input 
-                value={statusForm.code} 
-                onChange={(e) => setStatusForm(prev => ({ ...prev, code: e.target.value }))}
-                placeholder="e.g. pending"
-                className="text-sm font-mono rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Color Hex</Label>
-              <div className="flex gap-3">
-                <input 
-                  type="color" 
-                  value={statusForm.color} 
-                  onChange={(e) => setStatusForm(prev => ({ ...prev, color: e.target.value }))}
-                  className="w-10 h-10 border rounded-lg cursor-pointer shrink-0" 
-                />
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveStatus(); }}>
+            <DialogHeader>
+              <DialogTitle>{editingId ? "Edit Status" : "Add Status"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4 text-sm">
+              <div className="space-y-2">
+                <Label className="text-xs">Status Name</Label>
                 <Input 
-                  value={statusForm.color} 
-                  onChange={(e) => setStatusForm(prev => ({ ...prev, color: e.target.value }))}
-                  placeholder="#4F46E5"
+                  value={statusForm.name} 
+                  onChange={(e) => setStatusForm(prev => ({ ...prev, name: e.target.value, code: e.target.value.toLowerCase().replace(/ /g, "_") }))}
+                  placeholder="e.g. Pending"
+                  className="text-sm rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Code</Label>
+                <Input 
+                  value={statusForm.code} 
+                  onChange={(e) => setStatusForm(prev => ({ ...prev, code: e.target.value }))}
+                  placeholder="e.g. pending"
                   className="text-sm font-mono rounded-lg"
                 />
               </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Color Hex</Label>
+                <div className="flex gap-3">
+                  <input 
+                    type="color" 
+                    value={statusForm.color} 
+                    onChange={(e) => setStatusForm(prev => ({ ...prev, color: e.target.value }))}
+                    className="w-10 h-10 border rounded-lg cursor-pointer shrink-0" 
+                  />
+                  <Input 
+                    value={statusForm.color} 
+                    onChange={(e) => setStatusForm(prev => ({ ...prev, color: e.target.value }))}
+                    placeholder="#4F46E5"
+                    className="text-sm font-mono rounded-lg"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Sort Order</Label>
+                <Input 
+                  type="number"
+                  value={statusForm.order} 
+                  onChange={(e) => setStatusForm(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
+                  className="text-sm rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Status</Label>
+                <Select 
+                  value={statusForm.status} 
+                  onValueChange={(val) => setStatusForm(prev => ({ ...prev, status: val }))}
+                >
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Sort Order</Label>
-              <Input 
-                type="number"
-                value={statusForm.order} 
-                onChange={(e) => setStatusForm(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
-                className="text-sm rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Status</Label>
-              <Select 
-                value={statusForm.status} 
-                onValueChange={(val) => setStatusForm(prev => ({ ...prev, status: val }))}
-              >
-                <SelectTrigger className="w-full text-sm">
-                  <SelectValue placeholder="Select Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
-            <Button onClick={handleSaveStatus} className="bg-[#4F46E5] text-white">Save</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
+              <Button type="submit" className="bg-[#4F46E5] text-white">Save</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* Modal 2: Service Add/Edit */}
       <Dialog open={openModal === "service"} onOpenChange={(open) => !open && setOpenModal(null)}>
         <DialogContent className="max-w-md w-full">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Service" : "Add Service"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4 text-sm">
-            <div className="space-y-2">
-              <Label className="text-xs">Service Name</Label>
-              <Input 
-                value={serviceForm.name} 
-                onChange={(e) => setServiceForm(prev => ({ ...prev, name: e.target.value, code: e.target.value.toLowerCase().replace(/ /g, "_") }))}
-                placeholder="e.g. Express Air"
-                className="text-sm rounded-lg"
-              />
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveService(); }}>
+            <DialogHeader>
+              <DialogTitle>{editingId ? "Edit Service" : "Add Service"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4 text-sm">
+              <div className="space-y-2">
+                <Label className="text-xs">Service Name</Label>
+                <Input 
+                  value={serviceForm.name} 
+                  onChange={(e) => setServiceForm(prev => ({ ...prev, name: e.target.value, code: e.target.value.toLowerCase().replace(/ /g, "_") }))}
+                  placeholder="e.g. Express Air"
+                  className="text-sm rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Code</Label>
+                <Input 
+                  value={serviceForm.code} 
+                  onChange={(e) => setServiceForm(prev => ({ ...prev, code: e.target.value }))}
+                  placeholder="e.g. express_air"
+                  className="text-sm font-mono rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Mode</Label>
+                <Select 
+                  value={serviceForm.mode} 
+                  onValueChange={(val) => setServiceForm(prev => ({ ...prev, mode: val }))}
+                >
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Select Mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Air">Air</SelectItem>
+                    <SelectItem value="Land">Land</SelectItem>
+                    <SelectItem value="Sea">Sea</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Currency</Label>
+                <Input 
+                  value={serviceForm.currency} 
+                  onChange={(e) => setServiceForm(prev => ({ ...prev, currency: e.target.value }))}
+                  placeholder="USD"
+                  className="text-sm rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Status</Label>
+                <Select 
+                  value={serviceForm.status} 
+                  onValueChange={(val) => setServiceForm(prev => ({ ...prev, status: val }))}
+                >
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Code</Label>
-              <Input 
-                value={serviceForm.code} 
-                onChange={(e) => setServiceForm(prev => ({ ...prev, code: e.target.value }))}
-                placeholder="e.g. express_air"
-                className="text-sm font-mono rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Mode</Label>
-              <Select 
-                value={serviceForm.mode} 
-                onValueChange={(val) => setServiceForm(prev => ({ ...prev, mode: val }))}
-              >
-                <SelectTrigger className="w-full text-sm">
-                  <SelectValue placeholder="Select Mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Air">Air</SelectItem>
-                  <SelectItem value="Land">Land</SelectItem>
-                  <SelectItem value="Sea">Sea</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Currency</Label>
-              <Input 
-                value={serviceForm.currency} 
-                onChange={(e) => setServiceForm(prev => ({ ...prev, currency: e.target.value }))}
-                placeholder="USD"
-                className="text-sm rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Status</Label>
-              <Select 
-                value={serviceForm.status} 
-                onValueChange={(val) => setServiceForm(prev => ({ ...prev, status: val }))}
-              >
-                <SelectTrigger className="w-full text-sm">
-                  <SelectValue placeholder="Select Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
-            <Button onClick={handleSaveService} className="bg-[#4F46E5] text-white">Save</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
+              <Button type="submit" className="bg-[#4F46E5] text-white">Save</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -1572,89 +1576,93 @@ export default function RedesignedSettingsPage() {
         openModal === "office"
       } onOpenChange={(open) => !open && setOpenModal(null)}>
         <DialogContent className="max-w-md w-full">
-          <DialogHeader>
-            <DialogTitle>
-              {editingId ? "Edit" : "Add"} {
-                openModal === "shippingMode" ? "Shipping Mode" :
-                openModal === "deliveryTime" ? "Delivery Time" :
-                openModal === "packagingType" ? "Packaging Type" :
-                openModal === "agency" ? "Branch" : "Office"
-              }
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4 text-sm">
-            {(openModal === "agency" || openModal === "office") && (
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveGeneric(openModal!); }}>
+            <DialogHeader>
+              <DialogTitle>
+                {editingId ? "Edit" : "Add"} {
+                  openModal === "shippingMode" ? "Shipping Mode" :
+                  openModal === "deliveryTime" ? "Delivery Time" :
+                  openModal === "packagingType" ? "Packaging Type" :
+                  openModal === "agency" ? "Branch" : "Office"
+                }
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4 text-sm">
+              {(openModal === "agency" || openModal === "office") && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Code / Short Code</Label>
+                  <Input 
+                    value={genericForm.code} 
+                    onChange={(e) => setGenericForm(prev => ({ ...prev, code: e.target.value }))}
+                    placeholder="e.g. KHI"
+                    className="text-sm rounded-lg font-mono"
+                  />
+                </div>
+              )}
               <div className="space-y-2">
-                <Label className="text-xs">Code / Short Code</Label>
+                <Label className="text-xs">Name</Label>
                 <Input 
-                  value={genericForm.code} 
-                  onChange={(e) => setGenericForm(prev => ({ ...prev, code: e.target.value }))}
-                  placeholder="e.g. KHI"
-                  className="text-sm rounded-lg font-mono"
+                  value={genericForm.name} 
+                  onChange={(e) => setGenericForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g. Standard"
+                  className="text-sm rounded-lg"
                 />
               </div>
-            )}
-            <div className="space-y-2">
-              <Label className="text-xs">Name</Label>
-              <Input 
-                value={genericForm.name} 
-                onChange={(e) => setGenericForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g. Standard"
-                className="text-sm rounded-lg"
-              />
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
-            <Button onClick={() => handleSaveGeneric(openModal!)} className="bg-[#4F46E5] text-white">Save</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
+              <Button type="submit" className="bg-[#4F46E5] text-white">Save</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* Modal 5: Vendor Services Add */}
       <Dialog open={openModal === "vendorService"} onOpenChange={(open) => !open && setOpenModal(null)}>
         <DialogContent className="max-w-md w-full">
-          <DialogHeader>
-            <DialogTitle>Add Vendor Service Mapping</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4 text-sm">
-            <div className="space-y-2">
-              <Label className="text-xs">Vendor</Label>
-              <Select 
-                value={vendorSvcForm.vendor} 
-                onValueChange={(val) => setVendorSvcForm(prev => ({ ...prev, vendor: val }))}
-              >
-                <SelectTrigger className="w-full text-sm">
-                  <SelectValue placeholder="Select Vendor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vendors.map((v) => (
-                    <SelectItem key={v.id} value={v.CompanyName}>{v.CompanyName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveVendorService(); }}>
+            <DialogHeader>
+              <DialogTitle>Add Vendor Service Mapping</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4 text-sm">
+              <div className="space-y-2">
+                <Label className="text-xs">Vendor</Label>
+                <Select 
+                  value={vendorSvcForm.vendor} 
+                  onValueChange={(val) => setVendorSvcForm(prev => ({ ...prev, vendor: val }))}
+                >
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Select Vendor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vendors.map((v) => (
+                      <SelectItem key={v.id} value={v.CompanyName}>{v.CompanyName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Service</Label>
+                <Select 
+                  value={vendorSvcForm.service} 
+                  onValueChange={(val) => setVendorSvcForm(prev => ({ ...prev, service: val }))}
+                >
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="Select Service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Service</Label>
-              <Select 
-                value={vendorSvcForm.service} 
-                onValueChange={(val) => setVendorSvcForm(prev => ({ ...prev, service: val }))}
-              >
-                <SelectTrigger className="w-full text-sm">
-                  <SelectValue placeholder="Select Service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map((s) => (
-                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
-            <Button onClick={handleSaveVendorService} className="bg-[#4F46E5] text-white">Save</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOpenModal(null)}>Cancel</Button>
+              <Button type="submit" className="bg-[#4F46E5] text-white">Save</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

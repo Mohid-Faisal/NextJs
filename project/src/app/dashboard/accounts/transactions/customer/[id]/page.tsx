@@ -262,7 +262,7 @@ export default function CustomerTransactionsPage() {
     }
   }, [customerId]);
 
-  // Fetch when pagination or filters change (but not on initial mount)
+  // Fetch when pagination, filters or search term change (but not on initial mount)
   useEffect(() => {
     if (isInitialMount.current) {
       return;
@@ -284,8 +284,15 @@ export default function CustomerTransactionsPage() {
         return;
       }
     }
-    fetchCustomerData();
-  }, [page, pageSize, dateRange, sortField, sortOrder, periodType]);
+
+    const handler = setTimeout(() => {
+      fetchCustomerData();
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [page, pageSize, dateRange, sortField, sortOrder, periodType, searchTerm]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -1198,14 +1205,9 @@ export default function CustomerTransactionsPage() {
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
+                setPage(1);
               }}
               className="pr-12"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  setPage(1);
-                  fetchCustomerData();
-                }
-              }}
             />
             <div className="absolute right-0 top-0 h-full flex items-center pointer-events-none">
               <div className="bg-blue-500 rounded-r-md px-3 h-full flex items-center">
