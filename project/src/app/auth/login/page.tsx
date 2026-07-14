@@ -112,17 +112,16 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
       {/* Left panel - Login Banner (Hidden on mobile, visible on lg/xl) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white flex-col justify-end p-12 select-none border-r border-slate-200">
-        {/* Background Image showing login_banner.jpg */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
-          style={{ 
-            backgroundImage: `url('/login_banner.jpg')`
-          }}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white flex-col items-center justify-center select-none border-r border-slate-200">
+        {/* Full image fitted inside the panel */}
+        <img 
+          src="/login_banner.jpg" 
+          alt="PSS Worldwide Express - Courier & Cargo Management SaaS" 
+          className="w-full h-full object-contain"
         />
 
         {/* Footer of Left Panel (Copyright only) */}
-        <div className="text-xs text-slate-500 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xs px-3 py-1.5 rounded-md self-start relative z-10 shadow-xs border border-slate-200/50 dark:border-zinc-800">
+        <div className="absolute bottom-4 left-4 text-xs text-slate-500 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-md z-10">
           © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
         </div>
       </div>
