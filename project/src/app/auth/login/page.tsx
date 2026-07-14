@@ -111,60 +111,18 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
-      {/* Left panel - Punchline & Logo (Hidden on mobile, visible on lg/xl) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-black text-white flex-col justify-between p-12 select-none border-r border-zinc-800">
-        {/* Background Image aligned to right-center to show logistics vertical grid */}
+      {/* Left panel - Login Banner (Hidden on mobile, visible on lg/xl) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white flex-col justify-end p-12 select-none border-r border-slate-200">
+        {/* Background Image showing login_banner.jpg */}
         <div 
-          className="absolute inset-0 bg-cover opacity-80 z-0"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
           style={{ 
-            backgroundImage: `url('/banner_new.jpg')`,
-            backgroundPosition: 'right center'
+            backgroundImage: `url('/login_banner.jpg')`
           }}
         />
-        {/* Subtle black overlay to ensure text readability */}
-        <div className="absolute inset-0 bg-black/50 z-0" />
 
-        {/* Concentric abstract geometric line overlays matching SaleSkip layout */}
-        <div className="absolute inset-0 opacity-5 pointer-events-none z-0">
-          <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] border-2 border-white rounded-full" />
-          <div className="absolute top-[-30%] left-[-30%] w-[160%] h-[160%] border-2 border-white rounded-full" />
-          <div className="absolute top-[-40%] left-[-40%] w-[180%] h-[180%] border border-white rounded-full" />
-          <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] border border-white rounded-full" />
-        </div>
-
-        {/* Header decoration */}
-        <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest relative z-10">
-          PSS Worldwide Express
-        </div>
-
-        {/* Centered Content */}
-        <div className="relative z-10 my-auto flex flex-col items-center text-center space-y-8 max-w-md mx-auto">
-          {/* Logo container in the middle - white background card to make the logo perfectly visible */}
-          <div className="bg-white p-8 rounded-3xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.35)] border border-white/10 w-full max-w-[290px] flex items-center justify-center transition-all duration-300 hover:scale-[1.03]">
-            <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="w-full h-auto object-contain" />
-          </div>
-
-          {/* Punchline */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <span className="h-0.5 w-6 bg-amber-400 rounded-full" />
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-300">
-                Reliable Operations For Your Business
-              </span>
-              <span className="h-0.5 w-6 bg-amber-400 rounded-full" />
-            </div>
-
-            <h2 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
-              Courier, Cargo & Logistics Management Software
-            </h2>
-            <p className="text-sm text-blue-100/90 leading-relaxed max-w-sm">
-              Effortlessly manage your delivery operations with iCargos, an all-in-one White Label Courier Tracking System designed to streamline your supply chain.
-            </p>
-          </div>
-        </div>
-
-        {/* Footer of Left Panel */}
-        <div className="text-xs text-blue-200 relative z-10">
+        {/* Footer of Left Panel (Copyright only) */}
+        <div className="text-xs text-slate-500 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xs px-3 py-1.5 rounded-md self-start relative z-10 shadow-xs border border-slate-200/50 dark:border-zinc-800">
           © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
         </div>
       </div>
