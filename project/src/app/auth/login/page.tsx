@@ -112,20 +112,20 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
       {/* Left panel - Punchline & Logo (Hidden on mobile, visible on lg/xl) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#142B90] text-white flex-col justify-between p-12 select-none border-r border-[#2B59FF]/20">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-black text-white flex-col justify-between p-12 select-none border-r border-zinc-800">
         {/* Background Image aligned to right-center to show logistics vertical grid */}
         <div 
-          className="absolute inset-0 bg-cover opacity-30 z-0"
+          className="absolute inset-0 bg-cover opacity-80 z-0"
           style={{ 
             backgroundImage: `url('/banner_new.jpg')`,
             backgroundPosition: 'right center'
           }}
         />
-        {/* Rich electric blue gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#2B59FF]/95 via-[#142B90]/92 to-[#0B154A]/95 z-0" />
+        {/* Subtle black overlay to ensure text readability */}
+        <div className="absolute inset-0 bg-black/50 z-0" />
 
         {/* Concentric abstract geometric line overlays matching SaleSkip layout */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none z-0">
+        <div className="absolute inset-0 opacity-5 pointer-events-none z-0">
           <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] border-2 border-white rounded-full" />
           <div className="absolute top-[-30%] left-[-30%] w-[160%] h-[160%] border-2 border-white rounded-full" />
           <div className="absolute top-[-40%] left-[-40%] w-[180%] h-[180%] border border-white rounded-full" />
@@ -133,7 +133,7 @@ const LoginPage = () => {
         </div>
 
         {/* Header decoration */}
-        <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest relative z-10">
+        <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest relative z-10">
           PSS Worldwide Express
         </div>
 
