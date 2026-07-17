@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,6 +94,34 @@ export default function PaymentsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+
+  // Selection states
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<number[]>([]);
+  const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false);
+
+  const selectedTotal = useMemo(() => {
+    return payments
+      .filter((p) => selectedTransactionIds.includes(p.id))
+      .reduce((sum, p) => sum + p.amount, 0);
+  }, [payments, selectedTransactionIds]);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedTransactionIds(payments.map((p) => p.id));
+    } else {
+      setSelectedTransactionIds([]);
+    }
+  };
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedTransactionIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    setOpenBulkDeleteDialog(true);
+  };
 
   // Bulk-import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -743,6 +772,14 @@ export default function PaymentsPage() {
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
                 <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
+                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      checked={payments.length > 0 && selectedTransactionIds.length === payments.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button onClick={() => handleSort("id")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
                       <span className="hidden sm:inline">ID</span>
@@ -826,6 +863,14 @@ export default function PaymentsPage() {
               <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
                 {payments.map((p) => (
                   <tr key={p.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300">
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                        checked={selectedTransactionIds.includes(p.id)}
+                        onChange={() => handleToggleSelect(p.id)}
+                      />
+                    </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{p.id}</td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <span className="hidden sm:inline">{p.transactionType}</span>
@@ -923,6 +968,69 @@ export default function PaymentsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog open={openBulkDeleteDialog} onOpenChange={setOpenBulkDeleteDialog}>
+        <DialogContent className="max-w-md w-full">
+          <DeleteDialog
+            entityType="payment"
+            entityId={selectedTransactionIds[0] || 0}
+            entityIds={selectedTransactionIds}
+            onDelete={async () => {
+              setSelectedTransactionIds([]);
+              setOpenBulkDeleteDialog(false);
+              setRefreshKey((prev) => prev + 1);
+            }}
+            onClose={() => {
+              setOpenBulkDeleteDialog(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Selected Capsule */}
+      <AnimatePresence>
+        {selectedTransactionIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-zinc-950 text-white rounded-full px-6 py-3.5 shadow-2xl flex items-center gap-6 z-50 border border-slate-800"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-slate-300">
+                {selectedTransactionIds.length} selected
+              </span>
+              <span className="h-4 w-px bg-slate-700" />
+              <span className="text-sm font-extrabold text-emerald-400">
+                PKR {selectedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            
+            <div className="h-4 w-px bg-slate-700" />
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 text-sm font-bold text-rose-400 hover:text-rose-300 transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                Delete selected
+              </button>
+              
+              <span className="h-4 w-px bg-slate-700" />
+              
+              <button
+                onClick={() => setSelectedTransactionIds([])}
+                className="flex items-center gap-1.5 text-sm font-bold text-slate-300 hover:text-white transition-colors cursor-pointer bg-transparent border-0"
+              >
+                <span className="text-lg leading-none font-light">×</span>
+                <span>Deselect all</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Import Transactions Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={(open) => {
