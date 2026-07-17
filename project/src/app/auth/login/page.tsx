@@ -111,17 +111,37 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
-      {/* Left panel - Login Banner (Hidden on mobile, visible on lg/xl) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white flex-col items-center justify-center select-none border-r border-slate-200">
-        {/* Full image fitted inside the panel */}
-        <img 
-          src="/login_banner.jpg" 
-          alt="PSS Worldwide Express - Courier & Cargo Management SaaS" 
-          className="w-full h-full object-cover object-top"
-        />
+      {/* Left panel - Login Intro (Hidden on mobile, visible on lg/xl) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-12 select-none border-r border-gray-200 dark:border-zinc-800">
+        {/* Top-left SaaS logo */}
+        <div className="absolute top-8 left-8 z-20 select-none">
+          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions" className="h-12 w-auto object-contain" />
+        </div>
+
+        {/* Centered text layout */}
+        <div className="relative z-10 my-auto flex flex-col items-start justify-center px-6 md:px-12 max-w-xl space-y-6">
+          <div className="flex items-center gap-2">
+            <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+            <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              Smart Logistics, Stronger Business
+            </span>
+          </div>
+
+          <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+            All-In-One <span className="text-indigo-600 dark:text-indigo-400">Courier & Cargo</span> Management SaaS
+          </h2>
+
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-xs font-semibold uppercase tracking-wider">
+            Automate • Track • Manage • Grow
+          </div>
+
+          <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+            A complete cloud-based solution to simplify your courier, cargo, and logistics operations, empowering you to deliver an exceptional experience to your customers.
+          </p>
+        </div>
 
         {/* Footer of Left Panel (Copyright only) */}
-        <div className="absolute bottom-4 left-4 text-xs text-slate-500 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-md z-10">
+        <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10">
           © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
         </div>
       </div>
@@ -141,6 +161,11 @@ const LoginPage = () => {
         >
           <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
             <CardContent className="p-8 sm:p-10 space-y-6">
+              {/* Top-left SaaS logo on mobile when absolute header is hidden */}
+              <div className="sm:hidden flex justify-center mb-2">
+                <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-14 w-auto object-contain" />
+              </div>
+
               <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
                 Log in
               </h1>
