@@ -30,32 +30,40 @@ async function netCustomerInvoicedReceivableForPeriod(
     select: {
       invoiceNumber: true,
       totalAmount: true,
+      status: true,
     },
   });
 
-  const gross = monthInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
-  const invoiceNumbers = monthInvoices.map((i) => i.invoiceNumber);
-  if (invoiceNumbers.length === 0) return 0;
+  if (monthInvoices.length === 0) return 0;
 
-  const paymentsReceived = await prismaClient.payment.aggregate({
-    where: {
-      organizationId,
-      transactionType: "INCOME",
-      fromCustomerId: { not: null },
-      date: {
-        gte: rangeStart,
-        lt: rangeEndExclusive,
-      },
-      invoice: { in: invoiceNumbers },
-    },
-    _sum: {
-      amount: true,
-    },
-  });
+  let totalNetReceivable = 0;
 
-  const paid = paymentsReceived._sum.amount || 0;
-  const net = gross - paid;
-  return Math.round(Math.max(0, net) * 100) / 100;
+  for (const inv of monthInvoices) {
+    let remaining = 0;
+    if (inv.status === "Unpaid") {
+      remaining = inv.totalAmount;
+    } else if (inv.status === "Partial") {
+      const totalPayments = await prismaClient.payment.aggregate({
+        where: {
+          organizationId,
+          transactionType: "INCOME",
+          fromCustomerId: { not: null },
+          invoice: inv.invoiceNumber,
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+      const totalPaid = totalPayments._sum.amount || 0;
+      remaining = Math.max(0, inv.totalAmount - totalPaid);
+    } else {
+      // Paid or others
+      remaining = 0;
+    }
+    totalNetReceivable += remaining;
+  }
+
+  return Math.round(totalNetReceivable * 100) / 100;
 }
 
 export async function GET(req: Request) {
