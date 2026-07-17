@@ -58,21 +58,44 @@ export async function GET(req: Request) {
       return NextResponse.redirect(new URL("/auth/login?error=No email address associated with your Google account", req.url));
     }
 
+    // Read the google_signup_data cookie if it exists (meaning the user started from the signup page)
+    const cookieHeader = req.headers.get("cookie") || "";
+    const signupCookie = cookieHeader
+      .split("; ")
+      .find((row) => row.startsWith("google_signup_data="))
+      ?.split("=")[1];
+    
+    let signupData: { companyName: string; phone: string; address: string; name?: string } | null = null;
+    if (signupCookie) {
+      try {
+        signupData = JSON.parse(decodeURIComponent(signupCookie));
+      } catch (e) {
+        console.error("Failed to parse signup cookie:", e);
+      }
+    }
+
     // 3. Match user in database or create new user
     let user = await prisma.user.findUnique({ where: { email } });
     let isNewUser = false;
 
     if (!user) {
+      // If they clicked Google on Login page but have no account, ask them to sign up
+      if (!signupData) {
+        return NextResponse.redirect(
+          new URL("/auth/signup?error=Please fill in your company details first to register with Google.", req.url)
+        );
+      }
+
       // Auto-create new user for sign up
       user = await prisma.user.create({
         data: {
-          name: profile.name || "Google User",
+          name: signupData.name || profile.name || "Google User",
           email: email,
           password: "", // Google users do not have a local password
           status: "ACTIVE", // Verified automatically via Google
           isApproved: true, // Auto-approve Google signups
-          phone: null,
-          address: null,
+          phone: signupData.phone || null,
+          address: signupData.address || null,
         },
       });
       isNewUser = true;
@@ -88,8 +111,7 @@ export async function GET(req: Request) {
     let membership = await resolveMembership(user.id);
     
     if (!membership) {
-      // Auto-create a default workspace for new Google users
-      const companyName = `${profile.name || "Google User"}'s Workspace`;
+      const companyName = signupData?.companyName || `${profile.name || "Google User"}'s Workspace`;
       try {
         const organization = await createOrganizationForSignup(companyName, user.id, "trial");
         membership = {
@@ -122,8 +144,20 @@ export async function GET(req: Request) {
       platformRole: user.platformRole,
     });
 
-    // 6. Set token cookie and redirect to dashboard
-    const response = NextResponse.redirect(new URL("/dashboard", req.url));
+    // 6. Set token cookie and redirect
+    let response: NextResponse;
+    
+    // If it is a new Google signup, redirect to plan selection page in signup flow
+    if (isNewUser && signupData) {
+      response = NextResponse.redirect(
+        new URL(`/auth/signup?step=plan&userId=${user.id}&orgId=${membership.organizationId}`, req.url)
+      );
+      response.cookies.delete("google_signup_data");
+    } else {
+      // Otherwise, redirect to dashboard directly
+      response = NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
     response.cookies.set("token", token, {
       path: "/",
       maxAge: 60 * 60 * 24 * 7, // 1 week

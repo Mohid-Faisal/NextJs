@@ -36,6 +36,7 @@ import {
 import { ZodError } from "zod";
 import { signupSchema } from "@/zodschemas/signupSchema";
 import Particles from "@/components/Particles";
+import Cookies from "js-cookie";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 type Plan = {
@@ -99,6 +100,24 @@ const SignupPage = () => {
   useEffect(() => {
     const emailParam = searchParams.get("email");
     if (emailParam) setForm((prev) => ({ ...prev, email: emailParam }));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      toast.error(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const stepParam = searchParams.get("step");
+    const userIdParam = searchParams.get("userId");
+    const orgIdParam = searchParams.get("orgId");
+    if (stepParam === "plan" && userIdParam && orgIdParam) {
+      setUserId(parseInt(userIdParam));
+      setOrgId(parseInt(orgIdParam));
+      setStep("plan");
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -384,6 +403,33 @@ const SignupPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleSignup = () => {
+    if (tab === "org") {
+      if (!form.companyName.trim()) {
+        toast.error("Company Name is required to set up your workspace.");
+        return;
+      }
+      if (!form.phone.trim()) {
+        toast.error("Phone Number is required.");
+        return;
+      }
+      if (!form.address.trim()) {
+        toast.error("Company Address is required.");
+        return;
+      }
+    }
+
+    // Save the metadata temporarily in cookie
+    Cookies.set("google_signup_data", JSON.stringify({
+      companyName: form.companyName.trim(),
+      phone: form.phone.trim(),
+      address: form.address.trim(),
+      name: form.name.trim() || undefined,
+    }), { expires: 1/24 }); // expires in 1 hour
+
+    window.location.href = "/api/auth/google";
   };
 
   const handleVerification = async () => {
@@ -997,7 +1043,7 @@ const SignupPage = () => {
             <Button
               variant="outline"
               type="button"
-              onClick={() => window.location.href = "/api/auth/google"}
+              onClick={handleGoogleSignup}
               className="w-full h-11 border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
             >
               <FcGoogle size={20} />
