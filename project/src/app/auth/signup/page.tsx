@@ -196,16 +196,12 @@ const SignupPage = () => {
 
   const handleContinueToPlan = () => {
     if (!form.companyName.trim()) { toast.error("Company name is required."); return; }
-    if (!form.phone.trim()) { toast.error("Phone number is required."); return; }
-    if (!form.address.trim()) { toast.error("Address is required."); return; }
-    if (!form.name.trim()) { toast.error("Your name is required."); return; }
     if (!form.email.trim()) { toast.error("Email is required."); return; }
     if (!form.password) { toast.error("Password is required."); return; }
-    if (form.password !== form.confirmPassword) { toast.error("Passwords do not match."); return; }
     const strength = getPasswordStrength(form.password);
     if (strength === "weak") { toast.error("Password is too weak."); return; }
     try {
-      signupSchema.parse({ name: form.name.trim(), email: form.email.trim(), password: form.password });
+      signupSchema.parse({ email: form.email.trim(), password: form.password });
     } catch (err) {
       if (err instanceof ZodError) { toast.error(err.issues[0].message); return; }
     }
@@ -411,22 +407,11 @@ const SignupPage = () => {
         toast.error("Company Name is required to set up your workspace.");
         return;
       }
-      if (!form.phone.trim()) {
-        toast.error("Phone Number is required.");
-        return;
-      }
-      if (!form.address.trim()) {
-        toast.error("Company Address is required.");
-        return;
-      }
     }
 
     // Save the metadata temporarily in cookie
     Cookies.set("google_signup_data", JSON.stringify({
       companyName: form.companyName.trim(),
-      phone: form.phone.trim(),
-      address: form.address.trim(),
-      name: form.name.trim() || undefined,
     }), { expires: 1/24 }); // expires in 1 hour
 
     window.location.href = "/api/auth/google";
@@ -1060,7 +1045,7 @@ const SignupPage = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-4">
+              {tab === "org" && (
                 <div className="space-y-2">
                   <Label htmlFor="companyName" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Company Name</Label>
                   <div className="relative group">
@@ -1068,73 +1053,35 @@ const SignupPage = () => {
                     <Input id="companyName" name="companyName" value={form.companyName} onChange={handleChange} placeholder="Acme Logistics Ltd" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Phone Number</Label>
-                    <div className="relative group">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                      <Input id="phone" name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Company Address</Label>
-                    <div className="relative group">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                      <Input id="address" name="address" value={form.address} onChange={handleChange} placeholder="123 Logistics Way" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                    </div>
-                  </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Work Email Address</Label>
+                <div className="relative group">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                  <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
                 </div>
               </div>
 
-              {/* Name & Email in one line */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Full Name</Label>
-                  <div className="relative group">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <Input id="name" name="name" type="text" value={form.name} onChange={handleChange} placeholder="Jane Doe" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                  <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+                    {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                  </button>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Work Email Address</Label>
-                  <div className="relative group">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="jane@company.com" className="pl-9 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Passwords grid (Password & Confirm Password) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
-                  <div className="relative group">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <Input id="password" name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
-                      {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
-                    </button>
-                  </div>
-                  {form.password && (
-                    <div className="space-y-1.5 pt-1.5">
-                      <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <motion.div className={`h-full ${strengthColor}`} initial={{ width: 0 }} animate={{ width: strength === "strong" ? "100%" : strength === "medium" ? "66%" : "33%" }} transition={{ duration: 0.4 }} />
-                      </div>
-                      <p className={`text-[10px] font-bold uppercase tracking-wider ${strength === "strong" ? "text-green-600 dark:text-green-400" : strength === "medium" ? "text-amber-500" : "text-rose-500"}`}>
-                        Strength: {strength}
-                      </p>
+                {form.password && (
+                  <div className="space-y-1.5 pt-1.5">
+                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <motion.div className={`h-full ${strengthColor}`} initial={{ width: 0 }} animate={{ width: strength === "strong" ? "100%" : strength === "medium" ? "66%" : "33%" }} transition={{ duration: 0.4 }} />
                     </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Confirm Password</Label>
-                  <div className="relative group">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <Input id="confirmPassword" name="confirmPassword" type={showPassword ? "text" : "password"} value={form.confirmPassword} onChange={handleChange} placeholder="••••••••" className="pl-9 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all text-sm" />
+                    <p className={`text-[10px] font-bold uppercase tracking-wider ${strength === "strong" ? "text-green-600 dark:text-green-400" : strength === "medium" ? "text-amber-500" : "text-rose-500"}`}>
+                      Strength: {strength}
+                    </p>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* WhatsApp/SMS updates agreement checkbox */}

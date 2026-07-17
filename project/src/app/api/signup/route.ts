@@ -9,20 +9,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, password, companyName, planCode, phone, address, paymentMethod, referenceId, receiptUrl } = body;
 
-    if (!name?.trim() || !email?.trim() || !password) {
+    if (!email?.trim() || !password) {
       return NextResponse.json(
-        { success: false, message: "Name, email, and password are required." },
+        { success: false, message: "Email and password are required." },
         { status: 400 }
       );
-    }
-
-    if (companyName?.trim()) {
-      if (!phone?.trim() || !address?.trim()) {
-        return NextResponse.json(
-          { success: false, message: "Phone number and address are required when creating a workspace." },
-          { status: 400 }
-        );
-      }
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -40,13 +31,15 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
     const verificationStatus = `PENDING_VERIFICATION_${verificationCode}_${Date.now() + 10 * 60 * 1000}`;
 
+    const resolvedName = name?.trim() || email.trim().split("@")[0];
+
     let user;
     if (existingUser && existingUser.status.startsWith("INVITED")) {
       // Update the pre-created invited user record
       user = await prisma.user.update({
         where: { id: existingUser.id },
         data: {
-          name: name.trim(),
+          name: resolvedName,
           password: hashedPassword,
           status: verificationStatus,
           phone: phone?.trim() || undefined,
@@ -57,7 +50,7 @@ export async function POST(request: NextRequest) {
       // Standard new user sign up
       user = await prisma.user.create({
         data: {
-          name: name.trim(),
+          name: resolvedName,
           email: email.trim().toLowerCase(),
           password: hashedPassword,
           status: verificationStatus,
