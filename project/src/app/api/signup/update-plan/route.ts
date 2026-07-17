@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
         select: { id: true, name: true, email: true, status: true },
       });
 
-      if (user && (user.status === "PENDING_PLAN_SELECTION" || user.status === "PENDING_VERIFICATION")) {
+      if (user && (user.status === "PENDING_PLAN_SELECTION" || user.status === "PENDING_VERIFICATION" || user.status === "PENDING_APPROVAL")) {
         // Update user status to PENDING_APPROVAL
         await prisma.user.update({
           where: { id: user.id },

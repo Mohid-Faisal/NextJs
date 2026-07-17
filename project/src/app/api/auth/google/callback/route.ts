@@ -86,19 +86,26 @@ export async function GET(req: Request) {
         );
       }
 
-      // Auto-create new user for sign up
+      // Auto-create new user for sign up (requires admin approval)
       user = await prisma.user.create({
         data: {
           name: signupData.name || profile.name || "Google User",
           email: email,
           password: "", // Google users do not have a local password
-          status: "ACTIVE", // Verified automatically via Google
-          isApproved: true, // Auto-approve Google signups
+          status: "PENDING_APPROVAL", // Requires admin approval
+          isApproved: false, // Must be approved by admin
           phone: signupData.phone || null,
           address: signupData.address || null,
         },
       });
       isNewUser = true;
+    }
+
+    // Check if user is pending approval (both new and returning users)
+    if (!user.isApproved && !isNewUser) {
+      return NextResponse.redirect(
+        new URL("/auth/login?error=Your account is pending approval. Please wait for an administrator to approve your account.", req.url)
+      );
     }
 
     // Update lastLoginAt
@@ -133,37 +140,38 @@ export async function GET(req: Request) {
       return NextResponse.redirect(new URL("/auth/login?error=Your organization has been suspended. Contact support.", req.url));
     }
 
-    // 5. Generate custom JWT session token
-    const token = signSessionToken({
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      organizationId: membership.organizationId,
-      orgRole: membership.orgRole,
-      orgStatus: membership.orgStatus,
-      platformRole: user.platformRole,
-    });
+
 
     // 6. Set token cookie and redirect
     let response: NextResponse;
     
     // If it is a new Google signup, redirect to plan selection page in signup flow
+    // Do NOT issue a JWT token — the user isn't approved yet.
     if (isNewUser && signupData) {
       response = NextResponse.redirect(
         new URL(`/auth/signup?step=plan&userId=${user.id}&orgId=${membership.organizationId}`, req.url)
       );
       response.cookies.delete("google_signup_data");
     } else {
-      // Otherwise, redirect to dashboard directly
-      response = NextResponse.redirect(new URL("/dashboard", req.url));
-    }
+      // Returning approved user — issue JWT and redirect to dashboard
+      const token = signSessionToken({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        organizationId: membership.organizationId,
+        orgRole: membership.orgRole,
+        orgStatus: membership.orgStatus,
+        platformRole: user.platformRole,
+      });
 
-    response.cookies.set("token", token, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-    });
+      response = NextResponse.redirect(new URL("/dashboard", req.url));
+      response.cookies.set("token", token, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+        httpOnly: false, // Must be false so client-side logout can clear it
+        secure: process.env.NODE_ENV === "production",
+      });
+    }
 
     return response;
   } catch (error) {
