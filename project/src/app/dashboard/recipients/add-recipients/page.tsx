@@ -177,6 +177,25 @@ const RecipientsPage = () => {
     }
   }, [cities, form.city, selectedCity, isEditMode]);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!form.companyname.trim()) {
+        toast.error("Company Name is required.");
+        return;
+      }
+      if (!form.personname.trim()) {
+        toast.error("Person Name is required.");
+        return;
+      }
+      if (!form.country) {
+        toast.error("Country is required.");
+        return;
+      }
+      handleSubmit(e);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -252,6 +271,7 @@ const RecipientsPage = () => {
                   name="companyname"
                   value={form.companyname}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                   required
                   autoFocus
                 />
@@ -263,7 +283,7 @@ const RecipientsPage = () => {
                   name="personname"
                   value={form.personname}
                   onChange={handleChange}
-                  
+                  onKeyDown={handleKeyDown}
                 />
               </div>
               <div className="space-y-1.5">
@@ -274,7 +294,7 @@ const RecipientsPage = () => {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
-                  
+                  onKeyDown={handleKeyDown}
                 />
               </div>
               <div className="space-y-1.5">
@@ -284,6 +304,7 @@ const RecipientsPage = () => {
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                   placeholder="0301 2345678"
                   
                 />
@@ -373,6 +394,7 @@ const RecipientsPage = () => {
                   name="zip"
                   value={form.zip}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                 />
               </div>
 
@@ -384,6 +406,7 @@ const RecipientsPage = () => {
                   name="address"
                   value={form.address}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                 />
               </div>
             </div>

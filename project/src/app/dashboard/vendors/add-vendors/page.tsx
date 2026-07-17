@@ -104,6 +104,25 @@ const VendorsPage = () => {
     }
   }, [selectedState, selectedCountry]);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!form.companyname.trim()) {
+        toast.error("Company Name is required.");
+        return;
+      }
+      if (!form.personname.trim()) {
+        toast.error("Person Name is required.");
+        return;
+      }
+      if (!form.country) {
+        toast.error("Country is required.");
+        return;
+      }
+      handleSubmit(e);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -174,6 +193,7 @@ const VendorsPage = () => {
                   name="companyname"
                   value={form.companyname}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                   required
                   autoFocus
                 />
@@ -185,6 +205,7 @@ const VendorsPage = () => {
                   name="personname"
                   value={form.personname}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                 />
               </div>
               <div className="space-y-1.5">
@@ -195,6 +216,7 @@ const VendorsPage = () => {
                   type="email"
                   value={form.email}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                 />
               </div>
               <div className="space-y-1.5">
@@ -204,6 +226,7 @@ const VendorsPage = () => {
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                   placeholder="0301 2345678"
                 />
               </div>
@@ -289,6 +312,7 @@ const VendorsPage = () => {
                   name="zip"
                   value={form.zip}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                 />
               </div>
 
@@ -300,6 +324,7 @@ const VendorsPage = () => {
                   name="address"
                   value={form.address}
                   onChange={handleChange}
+                  onKeyDown={handleKeyDown}
                 />
               </div>
             </div>

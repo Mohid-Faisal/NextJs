@@ -49,6 +49,13 @@ const RemoteAreaLookupPage = () => {
   // Get all countries
   const countries = Country.getAllCountries();
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
   // Handle search
   const handleSearch = async () => {
     if (!country) {
@@ -426,6 +433,7 @@ const RemoteAreaLookupPage = () => {
                         setZipCode(e.target.value);
                         setResult(null);
                       }}
+                      onKeyDown={handleKeyDown}
                       className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
                     />
                   ) : (
@@ -438,6 +446,7 @@ const RemoteAreaLookupPage = () => {
                         setCity(e.target.value);
                         setResult(null);
                       }}
+                      onKeyDown={handleKeyDown}
                       className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
                     />
                   )}

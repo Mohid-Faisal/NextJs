@@ -18,6 +18,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Country } from "country-state-city";
 import { Plane, Info, Printer, Clock, Home, Truck, PackageSearch, Shield, AlertTriangle, ArrowRight, Mail, Package, FileText } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -183,6 +184,13 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
     setForm({ ...form, [field]: value });
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleCalculate();
+    }
+  };
+
   const handleCalculate = async () => {
     const { weight, length, width, height, origin, destination, originZip, destinationZip, docType, profitPercentage } = form;
     const w = parseFloat(weight);
@@ -192,19 +200,25 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
     const profit = publicView ? 5 : parseFloat(profitPercentage || "0");
 
     if ([w, l, wd, h].some((v) => isNaN(v) || v < 0)) {
-      setError("Please enter valid non-negative numbers for all dimensions and weight.");
+      const errMsg = "Please enter valid non-negative numbers for all dimensions and weight.";
+      setError(errMsg);
+      toast.error(errMsg);
       setResults(null);
       return;
     }
 
     if (!origin || !destination || !docType) {
-      setError("Please fill in all required fields: Origin, Destination, and Document Type.");
+      const errMsg = "Please fill in all required fields: Origin, Destination, and Document Type.";
+      setError(errMsg);
+      toast.error(errMsg);
       setResults(null);
       return;
     }
 
     if (!publicView && (isNaN(profit) || profit < 0)) {
-      setError("Please enter a valid profit percentage (0 or greater).");
+      const errMsg = "Please enter a valid profit percentage (0 or greater).";
+      setError(errMsg);
+      toast.error(errMsg);
       setResults(null);
       return;
     }
@@ -285,6 +299,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     name="originZip"
                     value={form.originZip}
                     onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                     placeholder="Zip/Area Code"
                     className="h-[42px] w-full bg-white border-slate-200 rounded-xl text-sm"
                   />
@@ -317,6 +332,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     name="destinationZip"
                     value={form.destinationZip}
                     onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                     placeholder="Zip/Area Code"
                     className="h-[42px] w-full bg-white border-slate-200 rounded-xl text-sm"
                   />
@@ -361,7 +377,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="weight" name="weight" type="number" min="0" step="0.1"
-                    value={form.weight} onChange={handleChange} placeholder="5"
+                    value={form.weight} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="5"
                     className="h-11 bg-white border-slate-200 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">kg</span>
@@ -369,7 +385,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="length" name="length" type="number" min="0"
-                    value={form.length} onChange={handleChange} placeholder="0"
+                    value={form.length} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="0"
                     className="h-11 bg-white border-slate-200 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">cm</span>
@@ -377,7 +393,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="width" name="width" type="number" min="0"
-                    value={form.width} onChange={handleChange} placeholder="0"
+                    value={form.width} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="0"
                     className="h-11 bg-white border-slate-200 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">cm</span>
@@ -385,7 +401,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="height" name="height" type="number" min="0"
-                    value={form.height} onChange={handleChange} placeholder="0"
+                    value={form.height} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="0"
                     className="h-11 bg-white border-slate-200 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">cm</span>
@@ -629,6 +645,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     name="originZip"
                     value={form.originZip}
                     onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                     placeholder="Zip/Area Code"
                     className="h-[42px] w-full bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm"
                   />
@@ -660,6 +677,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                     name="destinationZip"
                     value={form.destinationZip}
                     onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                     placeholder="Zip/Area Code"
                     className="h-[42px] w-full bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm"
                   />
@@ -703,7 +721,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="weight" name="weight" type="number" min="0" step="0.1"
-                    value={form.weight} onChange={handleChange} placeholder="Weight"
+                    value={form.weight} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Weight"
                     className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">kg</span>
@@ -711,7 +729,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="length" name="length" type="number" min="0"
-                    value={form.length} onChange={handleChange} placeholder="Length"
+                    value={form.length} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Length"
                     className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">cm</span>
@@ -719,7 +737,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="width" name="width" type="number" min="0"
-                    value={form.width} onChange={handleChange} placeholder="Width"
+                    value={form.width} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Width"
                     className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">cm</span>
@@ -727,7 +745,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="height" name="height" type="number" min="0"
-                    value={form.height} onChange={handleChange} placeholder="Height"
+                    value={form.height} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Height"
                     className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">cm</span>
@@ -735,7 +753,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
                 <div className="relative">
                   <Input
                     id="profitPercentage" name="profitPercentage" type="number" min="0" step="0.1"
-                    value={form.profitPercentage} onChange={handleChange} placeholder="Profit"
+                    value={form.profitPercentage} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Profit"
                     className="h-11 bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-600 rounded-xl text-sm pr-9"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">%</span>

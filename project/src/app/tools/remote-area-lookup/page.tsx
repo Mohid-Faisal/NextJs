@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, XCircle, Search } from "lucide-react";
 import { Country } from "country-state-city";
+import { toast } from "sonner";
 
 function FlagIcon({ country, className }: { country: { isoCode?: string; name?: string }; className?: string }) {
   if (!country?.isoCode) return null;
@@ -69,10 +70,26 @@ export default function RemoteAreaLookupPage() {
     loadFlag();
   }, []);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
   const handleSearch = async () => {
-    if (!country) return;
-    if (searchType === "zip" && !zipCode.trim()) return;
-    if (searchType === "city" && !city.trim()) return;
+    if (!country) {
+      toast.error("Please select a country");
+      return;
+    }
+    if (searchType === "zip" && !zipCode.trim()) {
+      toast.error("Please enter a zip code");
+      return;
+    }
+    if (searchType === "city" && !city.trim()) {
+      toast.error("Please enter a city name");
+      return;
+    }
 
     setIsSearching(true);
     setResult(null);
@@ -297,6 +314,7 @@ export default function RemoteAreaLookupPage() {
                     placeholder="Enter zip code"
                     value={zipCode}
                     onChange={(e) => { setZipCode(e.target.value); setResult(null); }}
+                    onKeyDown={handleKeyDown}
                     className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
                   />
                 ) : (
@@ -305,6 +323,7 @@ export default function RemoteAreaLookupPage() {
                     placeholder="Enter city name"
                     value={city}
                     onChange={(e) => { setCity(e.target.value); setResult(null); }}
+                    onKeyDown={handleKeyDown}
                     className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
                   />
                 )}
