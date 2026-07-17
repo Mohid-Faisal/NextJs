@@ -115,7 +115,7 @@ const LoginPage = () => {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-12 select-none border-r border-gray-200 dark:border-zinc-800">
         {/* Top-left SaaS logo */}
         <div className="absolute top-8 left-8 z-20 select-none">
-          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions" className="h-12 w-auto object-contain" />
+          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-20 w-auto object-contain" />
         </div>
 
         {/* Centered text layout */}
@@ -163,7 +163,7 @@ const LoginPage = () => {
             <CardContent className="p-8 sm:p-10 space-y-6">
               {/* Top-left SaaS logo on mobile when absolute header is hidden */}
               <div className="sm:hidden flex justify-center mb-2">
-                <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-14 w-auto object-contain" />
+                <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-20 w-auto object-contain" />
               </div>
 
               <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">

@@ -975,7 +975,7 @@ const SignupPage = () => {
     <div className="min-h-screen w-full flex items-center justify-center px-4 py-16 relative bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
       {/* Top-left SaaS logo */}
       <div className="absolute top-8 left-8 z-20 select-none hidden sm:block">
-        <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="h-14 w-auto object-contain" />
+        <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-20 w-auto object-contain" />
       </div>
 
       {/* Theme Toggle */}
@@ -986,7 +986,7 @@ const SignupPage = () => {
           <CardContent className="p-8 sm:p-10 space-y-6">
             {/* Top-left SaaS logo on mobile when absolute header is hidden */}
             <div className="sm:hidden flex justify-center mb-2">
-              <img src="/SaaS-Logo.png" alt="PSS Worldwide Express Logo" className="h-14 w-auto object-contain" />
+              <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-20 w-auto object-contain" />
             </div>
 
             <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
