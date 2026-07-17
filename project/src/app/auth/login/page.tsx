@@ -61,8 +61,13 @@ const LoginPage = () => {
   const isDark = mounted && resolvedTheme === "dark";
 
   useEffect(() => {
-    if (searchParams.get("error") === "org-suspended") {
-      toast.error("Your organization has been suspended. Contact support.");
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      if (errorParam === "org-suspended") {
+        toast.error("Your organization has been suspended. Contact support.");
+      } else {
+        toast.error(decodeURIComponent(errorParam));
+      }
     }
   }, [searchParams]);
 
@@ -174,6 +179,7 @@ const LoginPage = () => {
               <Button
                 variant="outline"
                 type="button"
+                onClick={() => window.location.href = "/api/auth/google"}
                 className="w-full h-11 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
               >
                 <FcGoogle size={20} />

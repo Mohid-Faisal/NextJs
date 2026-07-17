@@ -1,0 +1,139 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { resolveMembership, createOrganizationForSignup } from "@/lib/auth/membership";
+import { signSessionToken } from "@/lib/auth/session";
+
+export async function GET(req: Request) {
+  try {
+    const url = new URL(req.url);
+    const code = url.searchParams.get("code");
+    if (!code) {
+      return NextResponse.redirect(new URL("/auth/login?error=Google authentication failed: no code provided", req.url));
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    if (!clientId || !clientSecret) {
+      console.error("Google OAuth environment variables are missing.");
+      return NextResponse.redirect(new URL("/auth/login?error=Google authentication is not configured on the server", req.url));
+    }
+
+    // 1. Exchange OAuth code for tokens
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: `${appUrl}/api/auth/google/callback`,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const errorText = await tokenRes.text();
+      console.error("Failed to exchange code for tokens:", errorText);
+      return NextResponse.redirect(new URL("/auth/login?error=Failed to authenticate with Google", req.url));
+    }
+
+    const tokens = await tokenRes.json();
+
+    // 2. Fetch Google profile info
+    const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+
+    if (!profileRes.ok) {
+      console.error("Failed to fetch user profile from Google");
+      return NextResponse.redirect(new URL("/auth/login?error=Failed to retrieve profile from Google", req.url));
+    }
+
+    const profile = await profileRes.json();
+    const email = profile.email?.toLowerCase().trim();
+
+    if (!email) {
+      return NextResponse.redirect(new URL("/auth/login?error=No email address associated with your Google account", req.url));
+    }
+
+    // 3. Match user in database or create new user
+    let user = await prisma.user.findUnique({ where: { email } });
+    let isNewUser = false;
+
+    if (!user) {
+      // Auto-create new user for sign up
+      user = await prisma.user.create({
+        data: {
+          name: profile.name || "Google User",
+          email: email,
+          password: "", // Google users do not have a local password
+          status: "ACTIVE", // Verified automatically via Google
+          isApproved: true, // Auto-approve Google signups
+          phone: null,
+          address: null,
+        },
+      });
+      isNewUser = true;
+    }
+
+    // Update lastLoginAt
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    // 4. Resolve or create organization membership
+    let membership = await resolveMembership(user.id);
+    
+    if (!membership) {
+      // Auto-create a default workspace for new Google users
+      const companyName = `${profile.name || "Google User"}'s Workspace`;
+      try {
+        const organization = await createOrganizationForSignup(companyName, user.id, "trial");
+        membership = {
+          organizationId: organization.id,
+          orgRole: "OWNER",
+          orgStatus: "trial",
+        };
+      } catch (orgError) {
+        console.error("Failed to auto-create organization for Google user:", orgError);
+        // Clean up user if org creation failed
+        if (isNewUser) {
+          await prisma.user.delete({ where: { id: user.id } });
+        }
+        return NextResponse.redirect(new URL("/auth/login?error=Could not initialize your workspace. Please try standard sign up.", req.url));
+      }
+    }
+
+    if (membership.orgStatus === "suspended") {
+      return NextResponse.redirect(new URL("/auth/login?error=Your organization has been suspended. Contact support.", req.url));
+    }
+
+    // 5. Generate custom JWT session token
+    const token = signSessionToken({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      organizationId: membership.organizationId,
+      orgRole: membership.orgRole,
+      orgStatus: membership.orgStatus,
+      platformRole: user.platformRole,
+    });
+
+    // 6. Set token cookie and redirect to dashboard
+    const response = NextResponse.redirect(new URL("/dashboard", req.url));
+    response.cookies.set("token", token, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return response;
+  } catch (error) {
+    console.error("Error in Google Auth callback:", error);
+    return NextResponse.redirect(new URL("/auth/login?error=An unexpected error occurred during authentication", req.url));
+  }
+}
