@@ -310,64 +310,26 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
             </span>
           </Link>
 
-          {/* SaaS Admin Collapsible */}
+          {/* SaaS Admin Link */}
           {isSuperAdmin && (
-            <div>
-              <button
-                onClick={() => setSaasOpen(!saasOpen)}
-                className={`flex items-center justify-between w-full text-left transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
-                  pathname.startsWith("/dashboard/saas") &&
-                  !pathname.startsWith("/dashboard/saas/pending-approvals")
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            <Link
+              href="/dashboard/saas/organizations"
+              className={`flex items-center gap-4 transition-all duration-200 text-sm font-medium rounded-lg px-3 py-2 ${
+                pathname.startsWith("/dashboard/saas") &&
+                !pathname.startsWith("/dashboard/saas/pending-approvals")
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+            >
+              <Crown className="w-5 h-5 shrink-0" />
+              <span
+                className={`whitespace-nowrap transition-all duration-200 ${
+                  shouldExpand ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <Crown className="w-5 h-5 shrink-0" />
-                  <span
-                    className={`whitespace-nowrap transition-all duration-200 ${
-                      shouldExpand
-                        ? "opacity-100"
-                        : "opacity-0 w-0 overflow-hidden"
-                    }`}
-                  >
-                    SaaS Admin
-                  </span>
-                </div>
-                {shouldExpand &&
-                  (saasOpen ? (
-                    <ChevronUp className="w-4 h-4 ml-auto" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 ml-auto" />
-                  ))}
-              </button>
-
-              <AnimatePresence>
-                {saasOpen && shouldExpand && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="pl-10 mt-2 space-y-1"
-                  >
-                    {subLinksSaaS.map(({ href, label, icon: Icon }) => (
-                      <Link
-                        key={href}
-                        href={href}
-                        className={`flex items-center gap-3 text-sm rounded-md px-3 py-2 transition-all ${
-                          isLinkActive(href)
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
-                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 shrink-0" />
-                        {label}
-                      </Link>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                SaaS Admin
+              </span>
+            </Link>
           )}
 
           {/* Pending Approvals (super admin only) */}

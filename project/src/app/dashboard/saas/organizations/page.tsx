@@ -216,7 +216,7 @@ export default function SaasOrganizationsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Billing Dashboard</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">SaaS Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
             SaaS platform revenue, subscriptions and wallet overview.
           </p>
