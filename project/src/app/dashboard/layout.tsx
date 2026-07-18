@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import LayoutContent from "@/components/LayoutContent";
 import { PermissionProvider } from "@/components/PermissionContext";
+import SupportChat from "@/components/SupportChat";
 
 export const metadata: Metadata = {
   title: "Courier Dashboard",
@@ -15,6 +16,7 @@ export default function DashboardLayout({
   return (
     <PermissionProvider>
       <LayoutContent>{children}</LayoutContent>
+      <SupportChat />
     </PermissionProvider>
   );
 }
