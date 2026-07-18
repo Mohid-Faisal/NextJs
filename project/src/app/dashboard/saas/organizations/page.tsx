@@ -70,6 +70,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 }
 
 type DashboardStats = {
+  currency?: string;
   revenueThisMonth: number;
   revenueThisYear: number;
   activeSubsCount: number;
@@ -277,7 +278,7 @@ export default function SaasOrganizationsPage() {
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-lg font-extrabold tracking-tight leading-none">
-                ${(stats ? stats.revenueThisMonth : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {stats?.currency || "PKR"} {(stats ? stats.revenueThisMonth : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-xs text-muted-foreground font-medium truncate mt-0.5">This Month</span>
             </div>
@@ -292,7 +293,7 @@ export default function SaasOrganizationsPage() {
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-lg font-extrabold tracking-tight leading-none">
-                ${(stats ? stats.revenueThisYear : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {stats?.currency || "PKR"} {(stats ? stats.revenueThisYear : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-xs text-muted-foreground font-medium truncate mt-0.5">This Year</span>
             </div>
@@ -371,10 +372,10 @@ export default function SaasOrganizationsPage() {
             </div>
             <div className="text-right">
               <span className="text-3xl font-extrabold tracking-tight">
-                ${(stats ? stats.revenueThisYear : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {stats?.currency || "PKR"} {(stats ? stats.revenueThisYear : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <p className="text-xs text-muted-foreground">
-                Revenue This Month: ${(stats ? stats.revenueThisMonth : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                Revenue This Month: {stats?.currency || "PKR"} {(stats ? stats.revenueThisMonth : 0.00).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>
@@ -405,11 +406,11 @@ export default function SaasOrganizationsPage() {
                   <YAxis 
                     tickLine={false} 
                     axisLine={false} 
-                    tickFormatter={(val) => `$${val}`}
+                    tickFormatter={(val) => `${stats?.currency || "PKR"} ${val}`}
                     tick={{ fill: "#94a3b8", fontSize: 11 }}
                   />
                   <Tooltip 
-                    formatter={(value) => [`$${value}`, "Revenue"]}
+                    formatter={(value) => [`${stats?.currency || "PKR"} ${value}`, "Revenue"]}
                     contentStyle={{ 
                       background: "rgba(15, 23, 42, 0.9)", 
                       border: "none", 
@@ -490,7 +491,7 @@ export default function SaasOrganizationsPage() {
                     <p className="text-xs text-muted-foreground">Plan: {tx.planName}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-bold text-emerald-600">+${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-sm font-bold text-emerald-600">+{stats?.currency || "PKR"} {tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     <p className="text-[10px] text-muted-foreground">{new Date(tx.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>

@@ -159,7 +159,14 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
+    const platformOrg = await prisma.organization.findUnique({
+      where: { id: 1 },
+      select: { currency: true }
+    });
+    const platformCurrency = platformOrg?.currency || "PKR";
+
     const stats = {
+      currency: platformCurrency,
       revenueThisMonth,
       revenueThisYear,
       activeSubsCount,
