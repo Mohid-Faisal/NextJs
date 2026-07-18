@@ -370,6 +370,33 @@ export default function CustomersPage() {
   const [activeTab, setActiveTab] = useState<"all" | "withBalance" | "active" | "inactive">("all");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "CompanyName", "PersonName", "Email", "Phone", "DocumentType", 
+      "DocumentNumber", "DocumentExpiry", "Country", "State", "City", 
+      "Zip", "Address", "ActiveStatus", "currentBalance", "creditLimit"
+    ];
+    const rows = [
+      ["Acme Corp", "John Doe", "john@acme.com", "+123456789", "Tax ID", "TX123456", "", "United States", "New York", "New York", "10001", "123 Broadway", "Active", "0", "5000"]
+    ];
+    
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "customers_template.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Customers template downloaded successfully!");
+  };
   const [grandTotal, setGrandTotal] = useState(0);
   const [withBalanceTotal, setWithBalanceTotal] = useState(0);
   const [activeTotal, setActiveTotal] = useState(0);
@@ -1200,15 +1227,7 @@ export default function CustomersPage() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-gray-150 dark:border-zinc-800 mt-6">
-            <button className="px-4 py-2 text-sm font-semibold border-b-2 border-[#4F46E5] text-[#4F46E5]">
-              Template (CSV / Excel)
-            </button>
-            <button className="px-4 py-2 text-sm font-semibold text-gray-400 hover:text-gray-650 cursor-not-allowed">
-              Deprixa Pro (SQL)
-            </button>
-          </div>
+          <div className="h-4" />
 
           <div className="mt-4 space-y-4">
             <div className="flex justify-between items-center bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-sm">
@@ -1216,7 +1235,7 @@ export default function CustomersPage() {
                 <FileText className="w-4 h-4 text-blue-600" />
                 <span className="text-gray-700 dark:text-gray-300 font-medium">Download the template to see the required format.</span>
               </div>
-              <button onClick={() => toast.success("Template download started!")} className="text-blue-600 hover:text-blue-800 font-bold underline">
+              <button onClick={handleDownloadTemplate} className="text-blue-600 hover:text-blue-800 font-bold underline">
                 Download template
               </button>
             </div>

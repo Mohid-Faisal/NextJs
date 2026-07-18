@@ -131,6 +131,31 @@ export default function PaymentsPage() {
     summary: { processed: number; imported: number; failed: number };
     results: { row: number; success: boolean; message?: string; amount?: number; category?: string; type?: string; journalEntry?: string }[];
   } | null>(null);
+
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "Transaction Type", "Category", "Date", "Amount", "Payment Method", "Reference", "Description"
+    ];
+    const rows = [
+      ["Income", "Sales", "2026-07-18", "1500", "Bank Transfer", "REF789", "Payment for services"]
+    ];
+    
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "payments_template.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Payments template downloaded successfully!");
+  };
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Check for query parameter when coming from dashboard
@@ -1044,6 +1069,16 @@ export default function PaymentsPage() {
               <span className="font-medium"> Transaction Type, Category, Date, Amount, Payment Method, Reference, Description</span>.
               Only Income and Expense rows are supported. The chart-of-accounts is matched by category name.
             </p>
+
+            <div className="flex justify-between items-center bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-sm mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span className="text-gray-700 dark:text-gray-300 font-medium">Download the template to see the required format.</span>
+              </div>
+              <button onClick={handleDownloadTemplate} className="text-blue-600 hover:text-blue-800 font-bold underline">
+                Download template
+              </button>
+            </div>
 
             <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center bg-gray-50 dark:bg-gray-800/40 mb-4">
               <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />

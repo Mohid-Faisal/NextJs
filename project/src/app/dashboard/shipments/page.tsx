@@ -110,6 +110,35 @@ export default function ShipmentsPage() {
   const [totalValue, setTotalValue] = useState(0);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "invoiceNumber", "referenceNumber", "agency", "office", "senderName", 
+      "senderAddress", "recipientName", "recipientAddress", "destination", 
+      "deliveryTime", "invoiceStatus", "deliveryStatus", "trackingStatus", 
+      "shippingMode", "packaging", "vendor", "serviceMode", "weight", 
+      "length", "width", "height", "price"
+    ];
+    const rows = [
+      ["618720", "REF12345", "Agency A", "Office B", "Najam Alavi", "123 Sender St", "Najam Alavi", "123 Receiver St", "United States", "Next Day", "Paid", "Delivered", "Delivered", "Air", "Box", "DHL", "Express", "10", "12", "12", "12", "66370"]
+    ];
+    
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "shipments_template.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Shipments template downloaded successfully!");
+  };
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
@@ -1996,15 +2025,7 @@ export default function ShipmentsPage() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-gray-150 dark:border-zinc-800 mt-6">
-            <button className="px-4 py-2 text-sm font-semibold border-b-2 border-[#4F46E5] text-[#4F46E5]">
-              Template (CSV / Excel)
-            </button>
-            <button className="px-4 py-2 text-sm font-semibold text-gray-400 hover:text-gray-650 cursor-not-allowed">
-              Deprixa Pro (SQL)
-            </button>
-          </div>
+          <div className="h-4" />
 
           <div className="mt-4 space-y-4">
             <div className="flex justify-between items-center bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-sm">
@@ -2012,7 +2033,7 @@ export default function ShipmentsPage() {
                 <FileText className="w-4 h-4 text-blue-600" />
                 <span className="text-gray-700 dark:text-gray-300 font-medium">Download the template to see the required format.</span>
               </div>
-              <button onClick={() => toast.success("Template download started!")} className="text-blue-600 hover:text-blue-800 font-bold underline">
+              <button onClick={handleDownloadTemplate} className="text-blue-600 hover:text-blue-800 font-bold underline">
                 Download template
               </button>
             </div>
