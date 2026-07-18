@@ -772,7 +772,7 @@ export default function VendorsPage() {
           <div className="flex justify-between items-start">
             <div className="flex gap-3 items-center">
               <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 text-[#4F46E5] rounded-lg flex items-center justify-center">
-                <Upload className="w-5 h-5" />
+                <Download className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Import Vendors</h3>

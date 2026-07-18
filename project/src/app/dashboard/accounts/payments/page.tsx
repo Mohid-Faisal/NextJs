@@ -1061,9 +1061,20 @@ export default function PaymentsPage() {
       <Dialog open={importDialogOpen} onOpenChange={(open) => {
         if (!importing) setImportDialogOpen(open);
       }}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex gap-3 items-center">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 text-[#4F46E5] rounded-lg flex items-center justify-center">
+                <Download className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Import Transactions</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Bulk upload from CSV or Excel file</p>
+              </div>
+            </div>
+          </div>
+
           <div className="p-2">
-            <h2 className="text-xl font-semibold mb-1">Import Transactions from Excel</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               Upload a .xlsx / .xls file with columns:
               <span className="font-medium"> Transaction Type, Category, Date, Amount, Payment Method, Reference, Description</span>.
