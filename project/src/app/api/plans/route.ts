@@ -19,9 +19,16 @@ export async function GET(req: NextRequest) {
     });
 
     const countryHeader = req.headers.get("x-vercel-ip-country") || "PK";
-    const targetCurrency = getCurrencyForCountry(countryHeader);
+    const isPakistan = countryHeader.toUpperCase().trim() === "PK";
+    const targetCurrency = isPakistan ? "PKR" : getCurrencyForCountry(countryHeader);
+    
     const rates = await fetchExchangeRates();
     const rate = rates[targetCurrency] || 1;
+    const pkrRate = rates["PKR"] || 278.0;
+    
+    // Base prices in database are in PKR.
+    // If user is outside Pakistan, convert to local currency and add 10% markup.
+    const pkrToLocalRate = isPakistan ? 1.0 : (rate / pkrRate) * 1.10;
 
     const convertedPlans = plans.map(plan => {
       let featuresObj = plan.features as any;
@@ -37,11 +44,11 @@ export async function GET(req: NextRequest) {
         ? parseFloat(featuresObj.yearlyDiscountPercent) 
         : 20;
 
-      const localPriceMonthly = plan.priceMonthlyUsd * rate;
+      const localPriceMonthly = plan.priceMonthlyUsd * pkrToLocalRate;
       const localPriceAnnual = localPriceMonthly * 12 * (1 - (discountPercent / 100));
 
       if (featuresObj.annualPrice !== undefined) {
-        featuresObj.annualPrice = parseFloat(featuresObj.annualPrice) * rate;
+        featuresObj.annualPrice = parseFloat(featuresObj.annualPrice) * pkrToLocalRate;
       }
 
       // Override features object to include currency, so front-end picks it up
