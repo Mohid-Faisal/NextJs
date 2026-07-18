@@ -1092,7 +1092,7 @@ export default function PaymentsPage() {
             </div>
 
             <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center bg-gray-50 dark:bg-gray-800/40 mb-4">
-              <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+              <Download className="w-8 h-8 mx-auto text-gray-400 mb-2" />
               <input
                 type="file"
                 accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"

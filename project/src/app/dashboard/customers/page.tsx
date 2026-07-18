@@ -1254,7 +1254,7 @@ export default function CustomersPage() {
                 }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-              <Upload className="w-10 h-10 mx-auto text-gray-400 mb-3" />
+              <Download className="w-10 h-10 mx-auto text-gray-400 mb-3" />
               <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Click or drag your file here</p>
               <p className="text-xs text-gray-400 mt-1">CSV, XLSX, XLS • Max. 5 MB</p>
               {uploadedFile && (
@@ -1283,7 +1283,7 @@ export default function CustomersPage() {
               }}
               className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold rounded-lg flex items-center gap-1.5 px-4 py-2"
             >
-              <Upload className="w-4 h-4" />
+              <Download className="w-4 h-4" />
               Import
             </Button>
           </div>
