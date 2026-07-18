@@ -789,13 +789,13 @@ const DashboardPage = () => {
                               </span>
                             </div>
                           </td>
-                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                            <span 
-                              className="cursor-pointer hover:underline"
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap">
+                            <button
                               onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                              className="inline-block font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer text-left"
                             >
-                              {shipment.trackingId}
-                            </span>
+                              {shipment.invoiceNumber}
+                            </button>
                           </td>
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 max-w-[200px]">
                             <div className="flex items-center gap-3">
