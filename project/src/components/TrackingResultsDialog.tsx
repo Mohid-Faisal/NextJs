@@ -427,33 +427,6 @@ export default function TrackingResultsDialog(props: {
             >
               {shipment ? (
                 <div className="space-y-4">
-                  {organization && (
-                    <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm">
-                      <div className="flex items-center gap-3">
-                        {organization.logoUrl ? (
-                          <img
-                            src={organization.logoUrl}
-                            alt={organization.name}
-                            className="h-10 w-auto max-w-[150px] object-contain"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center font-bold text-lg">
-                            {organization.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-800 dark:text-white">{organization.name}</h4>
-                          <p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase tracking-widest font-extrabold mt-0.5">Handling Carrier</p>
-                        </div>
-                      </div>
-                      <div className="text-right hidden sm:block">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
-                          Active Shipment
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
                   <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
                     <CardContent className="p-6 pt-1 pb-0">
                       <div className="mb-6">
