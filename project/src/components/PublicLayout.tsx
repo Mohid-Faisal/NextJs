@@ -14,8 +14,8 @@ export default function PublicLayout({
 }) {
   const pathname = usePathname();
   
-  // Show public navbar on all pages except dashboard and auth pages
-  const showPublicNavbar = !pathname.startsWith("/dashboard") && !pathname.startsWith("/auth");
+  // Show public navbar on all pages except dashboard, auth pages, and tracking page
+  const showPublicNavbar = !pathname.startsWith("/dashboard") && !pathname.startsWith("/auth") && pathname !== "/tracking";
 
   return (
     <div className="flex min-h-screen flex-col">

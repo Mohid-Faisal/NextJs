@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       success: true,
       shipment: finalShipment,
       recipient,
-      organization: org ? { name: org.name, logoUrl: org.logoUrl } : null
+      organization: org ? { id: shipment.organizationId, name: org.name, logoUrl: org.logoUrl } : null
     });
   } catch (error) {
     console.error("Public track API error:", error);

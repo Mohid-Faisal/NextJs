@@ -263,12 +263,13 @@ export default function TrackingResultsDialog(props: {
   autoSearch?: boolean;
   /** When true, renders as page content instead of a dialog */
   asPage?: boolean;
+  onOrganizationLoaded?: (org: { id: number; name: string } | null) => void;
 }) {
   const { open = true, onOpenChange, initialBookingId = "", autoSearch = true, asPage = false } = props;
   const [bookingId, setBookingId] = useState(initialBookingId);
   const [shipment, setShipment] = useState<Shipment | null>(null);
   const [recipient, setRecipient] = useState<{ City?: string; Country?: string } | null>(null);
-  const [organization, setOrganization] = useState<{ name: string; logoUrl: string | null } | null>(null);
+  const [organization, setOrganization] = useState<{ id: number; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(true);
@@ -299,11 +300,17 @@ export default function TrackingResultsDialog(props: {
         setShipment(data.shipment);
         setRecipient(data.recipient);
         setOrganization(data.organization);
+        if (props.onOrganizationLoaded) {
+          props.onOrganizationLoaded(data.organization);
+        }
         toast.success("Shipment found!");
       } else {
         setShipment(null);
         setRecipient(null);
         setOrganization(null);
+        if (props.onOrganizationLoaded) {
+          props.onOrganizationLoaded(null);
+        }
         toast.error(data.error || "No shipment found with this booking ID");
       }
     } catch {
@@ -311,6 +318,9 @@ export default function TrackingResultsDialog(props: {
       setShipment(null);
       setRecipient(null);
       setOrganization(null);
+      if (props.onOrganizationLoaded) {
+        props.onOrganizationLoaded(null);
+      }
     } finally {
       setLoading(false);
     }
