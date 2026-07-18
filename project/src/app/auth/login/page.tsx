@@ -115,9 +115,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500">
+    <div className="h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
       {/* Left panel - Login Intro (Hidden on mobile, visible on lg/xl) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-12 select-none border-r border-gray-200 dark:border-zinc-800">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#F4F5F9] dark:bg-zinc-950 flex-col justify-between p-12 select-none border-r-2 border-white dark:border-zinc-800">
         {/* Top-left SaaS logo */}
         <div className="absolute top-8 left-8 z-20 select-none">
           <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-20 w-auto object-contain" />
