@@ -347,8 +347,8 @@ function BillingPageInner() {
 
         {/* Top-right Current Plan & Limits card */}
         {usage && (
-          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-5 flex flex-row items-center gap-8 transition-all duration-300 ease-in-out md:ml-auto shrink-0 w-full md:w-auto">
-            <div className="flex items-center gap-4">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm rounded-2xl p-5 flex-1 min-w-0 flex flex-row items-center justify-between gap-6 transition-all duration-300 ease-in-out">
+            <div className="flex items-center justify-around flex-1 gap-4">
               <CircularProgress
                 label="Shipments"
                 used={usage.shipmentsThisMonth}
@@ -365,8 +365,8 @@ function BillingPageInner() {
                 max={subStatus === "trialing" ? -1 : (usage.maxBranches || 0)}
               />
             </div>
-            <div className="h-14 w-px bg-slate-200 dark:bg-slate-800" />
-            <div className="flex flex-col justify-center pl-1">
+            <div className="h-14 w-px bg-slate-200 dark:bg-slate-800 shrink-0 mx-2" />
+            <div className="flex flex-col justify-center pl-1 shrink-0">
               <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Current Plan</p>
               <p className="text-base font-black text-slate-800 dark:text-white capitalize mt-0.5">
                 {subStatus === "trialing" ? "Free Trial" : plan?.name ?? "—"}
