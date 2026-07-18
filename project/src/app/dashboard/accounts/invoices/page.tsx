@@ -33,6 +33,7 @@ import {
   Calendar,
 } from "lucide-react";
 import DeleteDialog from "@/components/DeleteDialog";
+import { usePermissions } from "@/components/PermissionContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TablePagination } from "@/components/TablePagination";
 import {
@@ -84,6 +85,7 @@ type SortField = keyof Invoice;
 type SortOrder = "asc" | "desc";
 
 export default function InvoicesPage() {
+  const { currency } = usePermissions();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [total, setTotal] = useState(0);
 
@@ -334,7 +336,7 @@ export default function InvoicesPage() {
       i.trackingNumber || "",
       getCountryNameFromCode(i.destination),
       i.status,
-      `PKR ${i.totalAmount.toLocaleString()}`,
+      `${i.currency || currency || "PKR"} ${i.totalAmount.toLocaleString()}`,
       i.profile,
       (i.customer?.PersonName || i.customer?.CompanyName) || (i.vendor?.PersonName || i.vendor?.CompanyName) || "",
     ]);
@@ -362,7 +364,7 @@ export default function InvoicesPage() {
           <td>${i.trackingNumber || ""}</td>
           <td>${getCountryNameFromCode(i.destination)}</td>
           <td>${i.status}</td>
-          <td>PKR {i.totalAmount.toLocaleString()}</td>
+          <td>${i.currency || currency || "PKR"} ${i.totalAmount.toLocaleString()}</td>
           <td>${i.profile}</td>
           <td>${(i.customer?.PersonName || i.customer?.CompanyName) || (i.vendor?.PersonName || i.vendor?.CompanyName) || ""}</td>
         </tr>`
@@ -382,7 +384,7 @@ export default function InvoicesPage() {
         </head>
         <body>
           <h1>Invoices</h1>
-          <p>Total Amount: PKR {totalAmount.toLocaleString()}</p>
+          <p>Total Amount: ${currency || "PKR"} ${totalAmount.toLocaleString()}</p>
           <table>
             <thead>
               <tr>

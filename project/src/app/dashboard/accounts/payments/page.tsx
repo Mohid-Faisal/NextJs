@@ -23,6 +23,7 @@ import Link from "next/link";
 import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download, Coins } from "lucide-react";
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
+import { usePermissions } from "@/components/PermissionContext";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TablePagination } from "@/components/TablePagination";
 import {
@@ -51,6 +52,7 @@ type SortOrder = "asc" | "desc";
 export default function PaymentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { currency } = usePermissions();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [total, setTotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -494,7 +496,7 @@ export default function PaymentsPage() {
       payment.transactionType,
       payment.category,
       format(parseISO(payment.date), "dd-MM-yyyy"),
-      `PKR ${payment.amount.toLocaleString()}`,
+      `${payment.currency || currency || "PKR"} ${payment.amount.toLocaleString()}`,
       payment.fromAccount,
       payment.toAccount,
       payment.mode,
@@ -906,7 +908,7 @@ export default function PaymentsPage() {
                       <span className="sm:hidden">{p.category?.substring(0, 8)}...</span>
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{new Date(p.date).toLocaleDateString()}</td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">PKR {p.amount.toLocaleString()}</td>
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{p.currency || currency || "PKR"} {p.amount.toLocaleString()}</td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <span className="hidden sm:inline">{p.fromAccount}</span>
                       <span className="sm:hidden">{p.fromAccount?.substring(0, 8)}...</span>
@@ -1028,7 +1030,7 @@ export default function PaymentsPage() {
               </span>
               <span className="h-4 w-px bg-slate-700" />
               <span className="text-sm font-extrabold text-emerald-400">
-                PKR {selectedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {currency} {selectedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             

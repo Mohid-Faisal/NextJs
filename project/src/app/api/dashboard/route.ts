@@ -73,6 +73,12 @@ export async function GET(req: Request) {
     const session = auth.session;
     const org = (extra: Record<string, unknown> = {}) => orgWhere(session, extra);
 
+    const currentOrg = await prisma.organization.findUnique({
+      where: { id: session.organizationId },
+      select: { currency: true }
+    });
+    const currency = currentOrg?.currency || "PKR";
+
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
     
@@ -959,6 +965,7 @@ export async function GET(req: Request) {
     
     // Ensure all arrays have data, if not provide fallback data
     const finalData = {
+      currency: currency || "PKR",
       totalShipments: totalShipments || 0,
       totalUsers: currentActiveUsers || 0, // Show active users instead of total users
       totalCustomers: totalCustomers || 0,

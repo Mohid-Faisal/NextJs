@@ -15,6 +15,7 @@ interface PermissionContextType {
   hasFeature: (key: string) => boolean;
   loading: boolean;
   isTrialExpired: boolean;
+  currency: string;
 }
 
 const PermissionContext = createContext<PermissionContextType>({
@@ -27,6 +28,7 @@ const PermissionContext = createContext<PermissionContextType>({
   hasFeature: () => false,
   loading: true,
   isTrialExpired: false,
+  currency: "PKR",
 });
 
 export const usePermissions = () => useContext(PermissionContext);
@@ -78,6 +80,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
   const [planFeatures, setPlanFeatures] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTrialExpired, setIsTrialExpired] = useState(false);
+  const [currency, setCurrency] = useState("PKR");
 
   useEffect(() => {
     const fetchPermissionsAndPlan = async () => {
@@ -131,6 +134,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
             if (orgData && orgData.organization) {
               const orgId = orgData.organization.id;
               const sub = orgData.organization.subscription;
+              setCurrency(orgData.organization.currency || "PKR");
               const isTrialActive = sub?.status === "trialing" && sub?.trialEndsAt && new Date(sub.trialEndsAt) > new Date();
               setIsTrialExpired(false);
 
@@ -202,6 +206,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
         hasFeature,
         loading,
         isTrialExpired,
+        currency,
       }}
     >
       {children}

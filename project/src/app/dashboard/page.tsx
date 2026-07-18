@@ -146,6 +146,7 @@ const DashboardPage = () => {
   const [selectedCountryIso, setSelectedCountryIso] = useState<string | null>(null);
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [data, setData] = useState({
+    currency: "PKR",
     totalShipments: 0,
     totalUsers: 0,
     totalCustomers: 0,
@@ -332,12 +333,12 @@ const DashboardPage = () => {
           <div className="relative overflow-hidden rounded-xl">
             <MetricCard
               title="Total Revenue"
-              value={data.totalRevenue.toLocaleString()}
+              value={`${data.currency} ${data.totalRevenue.toLocaleString()}`}
               change={data.percentageChanges?.revenuePercentageChange || 0}
               icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
               bgColor="bg-gradient-to-r from-green-500 to-emerald-600"
               iconColor="text-white"
-              currentMonth={(data.currentMonthData?.revenue || 0).toLocaleString()}
+              currentMonth={`${data.currency} ${(data.currentMonthData?.revenue || 0).toLocaleString()}`}
             />
             {!hasPermission("view_revenue") ? (
               <DashboardAccessPlaceholder type="permission" message="You do not have the 'view_revenue' permission to view total earnings." />
@@ -347,13 +348,13 @@ const DashboardPage = () => {
           <div className="relative overflow-hidden rounded-xl">
             <MetricCard
               title="Receivables"
-              value={data.accountsData.accountsReceivable.toLocaleString()}
+              value={`${data.currency} ${data.accountsData.accountsReceivable.toLocaleString()}`}
               change={data.percentageChanges?.receivablePercentageChange ?? 0}
               icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />}
               bgColor="bg-gradient-to-r from-orange-500 to-red-600"
               iconColor="text-white"
               onClick={hasPermission("view_revenue") ? () => setShowReceivableModal(true) : undefined}
-              currentMonth={(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}
+              currentMonth={`${data.currency} ${(data.currentMonthData?.accountsReceivable || 0).toLocaleString()}`}
             />
             {!hasPermission("view_revenue") ? (
               <DashboardAccessPlaceholder type="permission" message="You do not have the 'view_revenue' permission to view accounts receivables." />
@@ -442,7 +443,7 @@ const DashboardPage = () => {
                   formatter={(value, name) => {
                     const n = typeof value === "number" ? value : Number(value);
                     return [
-                      n.toLocaleString(),
+                      `${data.currency} ${n.toLocaleString()}`,
                       name === "receivable" ? "Receivable" : "Payable",
                     ];
                   }}
@@ -859,7 +860,7 @@ const DashboardPage = () => {
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium text-slate-900 dark:text-white">
                              <div className="flex flex-col items-start gap-1">
                                <span>
-                                 {(shipment.totalCost || shipment.amount || 0).toLocaleString()}
+                                 {data.currency} {(shipment.totalCost || shipment.amount || 0).toLocaleString()}
                                </span>
                                {shipment.invoiceStatus && (
                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getInvoiceColor(shipment.invoiceStatus)}`}>
@@ -928,7 +929,7 @@ const DashboardPage = () => {
                           </td>
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-bold">
                             <span className={payment.type === 'INCOME' ? 'text-green-600 font-bold' : 'text-red-550 font-bold'}>
-                              {payment.amount.toLocaleString()}
+                              {data.currency} {payment.amount.toLocaleString()}
                             </span>
                           </td>
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-gray-650 dark:text-gray-400 whitespace-nowrap font-medium">
