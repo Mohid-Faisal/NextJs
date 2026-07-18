@@ -146,9 +146,9 @@ const LoginPage = () => {
 
           <Button
             onClick={() => router.push("/tracking")}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-5 rounded-xl shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all text-sm flex items-center gap-2 cursor-pointer border-0 mt-2"
+            className="bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-650 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-bold px-6 py-5 rounded-xl shadow-md active:scale-[0.98] transition-all text-sm flex items-center gap-2 cursor-pointer mt-2"
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-4 h-4 text-indigo-650 dark:text-indigo-400" />
             Track Shipment
           </Button>
         </div>
@@ -289,16 +289,6 @@ const LoginPage = () => {
                     className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline"
                   >
                     Sign Up
-                  </Link>
-                </p>
-
-                <p className="text-slate-500 dark:text-slate-400 font-medium">
-                  Want to track a package?{" "}
-                  <Link
-                    href="/tracking"
-                    className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline"
-                  >
-                    Track Shipment
                   </Link>
                 </p>
               </div>

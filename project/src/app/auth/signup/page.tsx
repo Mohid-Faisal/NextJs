@@ -1111,15 +1111,10 @@ const SignupPage = () => {
                 By continuing you agree with our <span className="text-indigo-650 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Terms of Service</span> and confirm that you have read our <span className="text-indigo-650 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Privacy Policy</span>. We may send you product updates and special offers via email. You can opt out anytime (see Privacy Policy).
               </div>
 
-              {/* Bottom links */}
               <div className="text-sm text-center pt-4">
                 <p className="text-slate-500 dark:text-slate-400 font-medium">
                   Already have an account?{" "}
                   <Link href="/auth/login" className="text-indigo-655 dark:text-indigo-400 font-bold hover:underline">Log in</Link>
-                </p>
-                <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">
-                  Want to track a package?{" "}
-                  <Link href="/tracking" className="text-indigo-655 dark:text-indigo-400 font-bold hover:underline">Track Shipment</Link>
                 </p>
               </div>
             </div>
