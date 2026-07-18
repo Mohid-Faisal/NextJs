@@ -1117,6 +1117,10 @@ const SignupPage = () => {
                   Already have an account?{" "}
                   <Link href="/auth/login" className="text-indigo-655 dark:text-indigo-400 font-bold hover:underline">Log in</Link>
                 </p>
+                <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">
+                  Want to track a package?{" "}
+                  <Link href="/tracking" className="text-indigo-655 dark:text-indigo-400 font-bold hover:underline">Track Shipment</Link>
+                </p>
               </div>
             </div>
           </CardContent>

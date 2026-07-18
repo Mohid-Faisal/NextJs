@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FcGoogle } from "react-icons/fc";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { ArrowLeft, Mail, Lock, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Sparkles, Loader2, Search } from "lucide-react";
 
 import { motion } from "framer-motion";
 import Particles from "@/components/Particles";
@@ -143,6 +143,14 @@ const LoginPage = () => {
           <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed">
             A complete cloud-based solution to simplify your courier, cargo, and logistics operations, empowering you to deliver an exceptional experience to your customers.
           </p>
+
+          <Button
+            onClick={() => router.push("/tracking")}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-5 rounded-xl shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all text-sm flex items-center gap-2 cursor-pointer border-0 mt-2"
+          >
+            <Search className="w-4 h-4" />
+            Track Shipment
+          </Button>
         </div>
 
         {/* Footer of Left Panel (Copyright only) */}
@@ -281,6 +289,16 @@ const LoginPage = () => {
                     className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline"
                   >
                     Sign Up
+                  </Link>
+                </p>
+
+                <p className="text-slate-500 dark:text-slate-400 font-medium">
+                  Want to track a package?{" "}
+                  <Link
+                    href="/tracking"
+                    className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline"
+                  >
+                    Track Shipment
                   </Link>
                 </p>
               </div>

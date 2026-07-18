@@ -268,6 +268,7 @@ export default function TrackingResultsDialog(props: {
   const [bookingId, setBookingId] = useState(initialBookingId);
   const [shipment, setShipment] = useState<Shipment | null>(null);
   const [recipient, setRecipient] = useState<{ City?: string; Country?: string } | null>(null);
+  const [organization, setOrganization] = useState<{ name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(true);
@@ -292,55 +293,24 @@ export default function TrackingResultsDialog(props: {
     setLoading(true);
     setSearched(true);
     try {
-      const response = await fetch(`/api/shipments?search=${encodeURIComponent(q)}&limit=10`);
+      const response = await fetch(`/api/track?bookingId=${encodeURIComponent(q)}`);
       const data = await response.json();
-      if (response.ok && data.shipments?.length > 0) {
-        const found = data.shipments.find((s: Shipment) => s.invoiceNumber?.toLowerCase() === q.toLowerCase());
-        if (found) {
-          // If shipment has no tracking history (added before auto-tracking), add Booked + Picked Up
-          const history = parseHistory(found.trackingStatusHistory);
-          let finalShipment = found;
-          if (history.length === 0) {
-            try {
-              const ensureRes = await fetch(`/api/shipments/${found.id}/ensure-initial-tracking`, {
-                method: "POST",
-              });
-              const ensureData = await ensureRes.json();
-              if (ensureRes.ok && ensureData.shipment) {
-                finalShipment = ensureData.shipment;
-              }
-            } catch {
-              // keep found
-            }
-          }
-          setShipment(finalShipment);
-          // Fetch recipient for destination city
-          try {
-            const detailRes = await fetch(`/api/shipments/${found.id}`);
-            const detailData = await detailRes.json();
-            if (detailRes.ok && detailData.recipient) {
-              setRecipient(detailData.recipient);
-            } else {
-              setRecipient(null);
-            }
-          } catch {
-            setRecipient(null);
-          }
-          toast.success("Shipment found!");
-        } else {
-          setShipment(null);
-          setRecipient(null);
-          toast.error("No shipment found with this booking ID");
-        }
+      if (response.ok && data.shipment) {
+        setShipment(data.shipment);
+        setRecipient(data.recipient);
+        setOrganization(data.organization);
+        toast.success("Shipment found!");
       } else {
         setShipment(null);
         setRecipient(null);
-        toast.error("No shipment found with this booking ID");
+        setOrganization(null);
+        toast.error(data.error || "No shipment found with this booking ID");
       }
     } catch {
       toast.error("An error occurred while searching. Please try again.");
       setShipment(null);
       setRecipient(null);
+      setOrganization(null);
     } finally {
       setLoading(false);
     }
@@ -447,6 +417,33 @@ export default function TrackingResultsDialog(props: {
             >
               {shipment ? (
                 <div className="space-y-4">
+                  {organization && (
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm">
+                      <div className="flex items-center gap-3">
+                        {organization.logoUrl ? (
+                          <img
+                            src={organization.logoUrl}
+                            alt={organization.name}
+                            className="h-10 w-auto max-w-[150px] object-contain"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center font-bold text-lg">
+                            {organization.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-white">{organization.name}</h4>
+                          <p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase tracking-widest font-extrabold mt-0.5">Handling Carrier</p>
+                        </div>
+                      </div>
+                      <div className="text-right hidden sm:block">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
+                          Active Shipment
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
                     <CardContent className="p-6 pt-1 pb-0">
                       <div className="mb-6">
