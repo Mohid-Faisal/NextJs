@@ -1031,7 +1031,7 @@ const SignupPage = () => {
               onClick={handleGoogleSignup}
               className="w-full h-11 border-slate-205 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
             >
-              <FcGoogle size={20} />
+              <FcGoogle size={25} />
             </Button>
 
             {/* OR Divider */}

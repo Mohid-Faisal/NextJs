@@ -147,7 +147,7 @@ const LoginPage = () => {
 
         {/* Footer of Left Panel (Copyright only) */}
         <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10">
-          © {new Date().getFullYear()} PSS Worldwide Express. All rights reserved.
+          © {new Date().getFullYear()} PSSWWE. All rights reserved.
         </div>
       </div>
 
@@ -182,7 +182,7 @@ const LoginPage = () => {
                 onClick={() => window.location.href = "/api/auth/google"}
                 className="w-full h-11 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
               >
-                <FcGoogle size={20} />
+                <FcGoogle size={25} />
               </Button>
 
               {/* OR Divider */}
