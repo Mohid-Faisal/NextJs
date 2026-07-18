@@ -17,11 +17,24 @@ export async function middleware(req: NextRequest) {
   const isApiRoute = pathname.startsWith("/api");
   const isStaticFile = pathname.includes(".");
 
+  // Public pages that don't require login
+  const isPublicPage =
+    pathname === "/" ||
+    pathname.startsWith("/tracking") ||
+    pathname.startsWith("/tools") ||
+    pathname.startsWith("/rate-calculator") ||
+    pathname.startsWith("/about") ||
+    pathname.startsWith("/contact") ||
+    pathname.startsWith("/services");
+
   if (isAuthPage || isApiRoute || isStaticFile) {
     return NextResponse.next();
   }
 
   if (!token) {
+    if (isPublicPage) {
+      return NextResponse.next();
+    }
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
@@ -53,6 +66,11 @@ export async function middleware(req: NextRequest) {
     }
     return res;
   } catch {
+    if (isPublicPage) {
+      const res = NextResponse.next();
+      res.cookies.delete("token");
+      return res;
+    }
     const loginUrl = new URL("/auth/login", req.url);
     const res = NextResponse.redirect(loginUrl);
     res.cookies.delete("token");
