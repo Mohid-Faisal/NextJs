@@ -51,16 +51,22 @@ export default function SaasWalletsPage() {
       const res = await fetch("/api/saas/organizations");
       const data = await res.json();
       if (res.ok && data.organizations) {
-        // Map organizations to mock wallet records with randomized but stable balances
-        const mappedWallets = data.organizations.map((org: any) => ({
-          id: org.id,
-          orgName: org.name,
-          slug: org.slug,
-          balance: org.slug === "pss-default" ? 14850.50 : (org.id * 1530) - 250,
-          currency: org.currency || "USD",
-          status: org.status === "active" ? "active" : org.status === "trial" ? "trial" : "inactive",
-          lastUpdated: new Date(org.createdAt).toLocaleDateString(),
-        }));
+        const mappedWallets = data.organizations.map((org: any) => {
+          const approvedProofs = org.paymentProofs || [];
+          const balance = approvedProofs
+            .filter((p: any) => p.status === "approved")
+            .reduce((sum: number, p: any) => sum + p.amount, 0);
+
+          return {
+            id: org.id,
+            orgName: org.name,
+            slug: org.slug,
+            balance: balance,
+            currency: org.currency || "USD",
+            status: org.status === "active" ? "active" : org.status === "trial" ? "trial" : "inactive",
+            lastUpdated: new Date(org.createdAt).toLocaleDateString(),
+          };
+        });
         setWallets(mappedWallets);
       } else {
         toast.error("Failed to load wallets");

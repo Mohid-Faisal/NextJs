@@ -51,25 +51,38 @@ export default function SaasInvoicesPage() {
       const res = await fetch("/api/saas/organizations");
       const data = await res.json();
       if (res.ok && data.organizations) {
-        // Generate mock platform invoices
-        const mappedInvoices = data.organizations.flatMap((org: any, index: number) => {
-          if (!org.plan) return [];
-          const amount = org.plan.code === "pro" ? 99 : org.plan.code === "business" ? 49 : 19;
-          
-          return [
-            {
-              id: `INV-${new Date(org.createdAt).getFullYear()}-${1000 + org.id}`,
+        // 1. Get real invoices from database PaymentProofs
+        const realInvoices = (data.paymentProofs || []).map((proof: any) => ({
+          id: `INV-${new Date(proof.createdAt).getFullYear()}-${1000 + proof.id}`,
+          orgName: proof.organization.name,
+          amount: proof.amount,
+          currency: "USD",
+          status: proof.status === "approved" ? "paid" : proof.status === "pending" ? "open" : "void",
+          dueDate: new Date(new Date(proof.createdAt).setDate(new Date(proof.createdAt).getDate() + 15)).toLocaleDateString(),
+          createdDate: new Date(proof.createdAt).toLocaleDateString(),
+          planName: proof.plan.name,
+        }));
+
+        // 2. Generate trial/free invoices for orgs with no payment proofs
+        const trialInvoices: SaaSInvoice[] = [];
+        data.organizations.forEach((org: any) => {
+          const hasProofs = (org.paymentProofs || []).length > 0;
+          if (!hasProofs && org.status === "trial") {
+            trialInvoices.push({
+              id: `INV-TRIAL-${1000 + org.id}`,
               orgName: org.name,
-              amount,
+              amount: 0,
               currency: "USD",
-              status: org.subscriptionStatus === "active" ? "paid" : "open",
-              dueDate: new Date(new Date(org.createdAt).setMonth(new Date(org.createdAt).getMonth() + 1)).toLocaleDateString(),
+              status: "paid",
+              dueDate: new Date(new Date(org.createdAt).setDate(new Date(org.createdAt).getDate() + 14)).toLocaleDateString(),
               createdDate: new Date(org.createdAt).toLocaleDateString(),
-              planName: org.plan.name,
-            }
-          ];
+              planName: "Free Trial (14 Days)",
+            });
+          }
         });
-        setInvoices(mappedInvoices);
+
+        // Combine both
+        setInvoices([...realInvoices, ...trialInvoices]);
       } else {
         toast.error("Failed to load invoices");
       }

@@ -51,15 +51,21 @@ export default function SaasSubscriptionsPage() {
       const data = await res.json();
       if (res.ok && data.organizations) {
         const mappedSubs = data.organizations.map((org: any) => {
-          const planPrice = org.plan ? (org.plan.code === "pro" ? 99 : org.plan.code === "business" ? 49 : 19) : 0;
+          const planPrice = org.plan?.priceMonthlyUsd ?? 0;
+          const nextRenewal = org.currentPeriodEnd 
+            ? new Date(org.currentPeriodEnd).toLocaleDateString()
+            : org.status === "trial" 
+              ? new Date(new Date(org.createdAt).setDate(new Date(org.createdAt).getDate() + 14)).toLocaleDateString()
+              : "N/A";
+
           return {
             id: org.id,
             orgName: org.name,
             planName: org.plan?.name || "Free Trial",
             planPrice,
-            status: org.subscriptionStatus || (org.status === "suspended" ? "suspended" : "trialing"),
+            status: org.subscriptionStatus || (org.status === "suspended" ? "suspended" : org.status === "trial" ? "trialing" : "inactive"),
             startDate: new Date(org.createdAt).toLocaleDateString(),
-            nextRenewal: new Date(new Date(org.createdAt).setMonth(new Date(org.createdAt).getMonth() + 1)).toLocaleDateString(),
+            nextRenewal,
           };
         });
         setSubscriptions(mappedSubs);

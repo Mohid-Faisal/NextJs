@@ -31,7 +31,14 @@ export async function GET(req: NextRequest) {
           select: {
             status: true,
             currentPeriodEnd: true,
-            plan: { select: { code: true, name: true } },
+            plan: { select: { code: true, name: true, priceMonthlyUsd: true } },
+          },
+        },
+        paymentProofs: {
+          select: {
+            amount: true,
+            status: true,
+            createdAt: true,
           },
         },
       },
@@ -56,10 +63,11 @@ export async function GET(req: NextRequest) {
       memberCount: org._count.members,
       shipmentCount: shipmentCountByOrg.get(org.id) ?? 0,
       plan: org.subscription?.plan
-        ? { code: org.subscription.plan.code, name: org.subscription.plan.name }
+        ? { code: org.subscription.plan.code, name: org.subscription.plan.name, priceMonthlyUsd: org.subscription.plan.priceMonthlyUsd }
         : null,
       subscriptionStatus: org.subscription?.status ?? null,
       currentPeriodEnd: org.subscription?.currentPeriodEnd ?? null,
+      paymentProofs: org.paymentProofs || [],
     }));
 
     // Calculate real stats from database
@@ -143,6 +151,14 @@ export async function GET(req: NextRequest) {
     const noSubCount = data.filter((org) => !org.plan).length;
     const readOnlyCount = data.filter((org) => org.status === "suspended").length;
 
+    const allPaymentProofs = await prisma.paymentProof.findMany({
+      include: {
+        organization: { select: { name: true } },
+        plan: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
     const stats = {
       revenueThisMonth,
       revenueThisYear,
@@ -154,7 +170,7 @@ export async function GET(req: NextRequest) {
       transactions,
     };
 
-    return NextResponse.json({ success: true, organizations: data, stats });
+    return NextResponse.json({ success: true, organizations: data, stats, paymentProofs: allPaymentProofs });
   } catch (error) {
     console.error("Error listing organizations:", error);
     return NextResponse.json(
