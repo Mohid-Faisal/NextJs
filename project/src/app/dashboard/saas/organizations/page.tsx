@@ -380,47 +380,54 @@ export default function SaasOrganizationsPage() {
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats ? stats.chartData : chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="purpleG" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.15} />
-                <XAxis 
-                  dataKey="name" 
-                  tickLine={false} 
-                  axisLine={false}
-                  dy={10}
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
-                />
-                <YAxis 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickFormatter={(val) => `$${val}`}
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
-                />
-                <Tooltip 
-                  formatter={(value) => [`$${value}`, "Revenue"]}
-                  contentStyle={{ 
-                    background: "rgba(15, 23, 42, 0.9)", 
-                    border: "none", 
-                    borderRadius: "6px",
-                    color: "#fff"
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#6366f1" 
-                  strokeWidth={2}
-                  fillOpacity={1} 
-                  fill="url(#purpleG)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {!stats || loading ? (
+              <div className="h-full w-full flex flex-col items-center justify-center gap-3 bg-slate-50/50 dark:bg-slate-900/10 rounded-xl border border-dashed border-slate-200/50 dark:border-zinc-800/50 animate-pulse">
+                <div className="h-7 w-7 rounded-full border-[3px] border-indigo-500 border-t-transparent animate-spin" />
+                <span className="text-xs font-semibold text-slate-400 dark:text-zinc-500">Loading chart analytics...</span>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="purpleG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.15} />
+                  <XAxis 
+                    dataKey="name" 
+                    tickLine={false} 
+                    axisLine={false}
+                    dy={10}
+                    tick={{ fill: "#94a3b8", fontSize: 11 }}
+                  />
+                  <YAxis 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(val) => `$${val}`}
+                    tick={{ fill: "#94a3b8", fontSize: 11 }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`$${value}`, "Revenue"]}
+                    contentStyle={{ 
+                      background: "rgba(15, 23, 42, 0.9)", 
+                      border: "none", 
+                      borderRadius: "6px",
+                      color: "#fff"
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#6366f1" 
+                    strokeWidth={2}
+                    fillOpacity={1} 
+                    fill="url(#purpleG)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>
