@@ -195,7 +195,9 @@ export default function CustomerTransactionsPage() {
     const gen = ++fetchGenerationRef.current;
 
     try {
-      setLoading(true);
+      if (!options?.recalc) {
+        setLoading(true);
+      }
 
       const params = new URLSearchParams({
         page: String(page),
