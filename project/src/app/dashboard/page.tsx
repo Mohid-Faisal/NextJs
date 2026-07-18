@@ -792,7 +792,7 @@ const DashboardPage = () => {
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 whitespace-nowrap">
                             <button
                               onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                              className="inline-block font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer text-left"
+                              className="inline-block font-bold text-blue-600 dark:text-blue-400 hover:text-white hover:bg-blue-600 dark:hover:bg-blue-500 px-2 py-1 rounded transition-colors duration-200 cursor-pointer text-left"
                             >
                               {shipment.invoiceNumber}
                             </button>
