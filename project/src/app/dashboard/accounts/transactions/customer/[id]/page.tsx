@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Table } from "lucide-react";
+import { ArrowLeft, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Table, RefreshCw } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import {
   format,
@@ -1259,8 +1259,10 @@ export default function CustomerTransactionsPage() {
                 fetchCustomerData({ recalc: true });
               }}
               disabled={loading || isRecalculating}
+              className="flex items-center gap-2"
             >
-              {isRecalculating ? 'Recalculating...' : 'Recalculate balances'}
+              <RefreshCw className={`h-4 w-4 ${isRecalculating ? "animate-spin" : ""}`} />
+              {isRecalculating ? 'Recalculating...' : 'Recalculate'}
             </Button>
           </div>
 
