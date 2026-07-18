@@ -1227,7 +1227,7 @@ export default function ShipmentsPage() {
           {/* Import Button */}
           <Button
             onClick={() => setImportDialogOpen(true)}
-            className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
+            className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
           >
             <Download className="w-4 h-4" />
             Import
@@ -1237,12 +1237,12 @@ export default function ShipmentsPage() {
           <div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">
+                <Button className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold">
+                  <Upload className="w-4 h-4" />
                   Export
-                  <Upload className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[120px]">
+              <DropdownMenuContent align="end" className="w-[110px]">
                 <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
                   <Table className="w-4 h-4" />
                   Excel

@@ -656,12 +656,12 @@ export default function PaymentsPage() {
             {/* Export Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold h-9 shrink-0">
+                <Button className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold h-9 shrink-0 flex items-center gap-1.5 rounded-lg">
+                  <Upload className="w-4 h-4" />
                   Export
-                  <Upload className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[120px]">
+              <DropdownMenuContent align="end" className="w-[110px]">
                 <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2 text-xs">
                   <Table className="w-3.5 h-3.5" />
                   Excel
@@ -688,7 +688,7 @@ export default function PaymentsPage() {
                 setImportResults(null);
                 setImportDialogOpen(true);
               }}
-              className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold shadow-sm h-9 shrink-0"
+              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2 rounded-lg text-xs font-semibold shadow-sm h-9 shrink-0"
             >
               <Download className="w-4 h-4" />
               Import
