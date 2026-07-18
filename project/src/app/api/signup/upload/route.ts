@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import { supabase } from "@/lib/supabase";
 
 // Public upload endpoint for signup receipt screenshots (no auth required)
 export async function POST(request: NextRequest) {
@@ -23,35 +21,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File too large. Maximum 5MB." }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const storageUrl = process.env.NEXT_PUBLIC_CPANEL_STORAGE_URL;
+    const secretKey = process.env.CPANEL_UPLOAD_SECRET_KEY;
 
-    const ext = path.extname(file.name) || ".png";
-    const uniqueName = `signup_receipt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-    const filePathInBucket = `signup-receipts/${uniqueName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("uploads")
-      .upload(filePathInBucket, buffer, {
-        contentType: file.type,
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error("❌ Signup Supabase upload error:", uploadError);
+    if (!storageUrl || !secretKey) {
+      console.error("❌ cPanel storage environment variables are missing.");
       return NextResponse.json(
-        { error: `Upload failed: ${uploadError.message}` },
+        { error: "Storage configuration is missing on the server" },
         { status: 500 }
       );
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("uploads")
-      .getPublicUrl(filePathInBucket);
+    const cpanelFormData = new FormData();
+    cpanelFormData.append("file", file);
+    cpanelFormData.append("category", "signup-receipts");
+    cpanelFormData.append("secret_key", secretKey);
+    cpanelFormData.append("action", "upload");
+
+    const response = await fetch(storageUrl, {
+      method: "POST",
+      body: cpanelFormData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ cPanel storage upload error response:", errorText);
+      return NextResponse.json(
+        { error: `Failed to upload file to storage: ${response.statusText}` },
+        { status: 500 }
+      );
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      return NextResponse.json(
+        { error: data.error || "Failed to upload file to storage" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
+      url: data.url,
     });
   } catch (error) {
     console.error("Signup upload error:", error);

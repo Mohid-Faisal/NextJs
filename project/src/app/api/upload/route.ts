@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
-import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/upload
- * Requires API session. Uploads a file (receipt screenshot) to Supabase Storage uploads bucket under receipts/.
+ * Requires API session. Uploads a file (receipt screenshot) to cPanel storage under receipts/.
  */
 export async function POST(req: NextRequest) {
   const auth = await requireApiSession(req);
@@ -21,34 +19,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const storageUrl = process.env.NEXT_PUBLIC_CPANEL_STORAGE_URL;
+    const secretKey = process.env.CPANEL_UPLOAD_SECRET_KEY;
 
-    // Generate unique name
-    const ext = path.extname(file.name) || ".png";
-    const filename = `receipt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
-    const filePathInBucket = `receipts/${filename}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("uploads")
-      .upload(filePathInBucket, buffer, {
-        contentType: file.type,
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error("❌ Supabase upload error:", uploadError);
+    if (!storageUrl || !secretKey) {
+      console.error("❌ cPanel storage environment variables are missing.");
       return NextResponse.json(
-        { success: false, error: `Failed to upload file to Supabase: ${uploadError.message}` },
+        { success: false, error: "Storage configuration is missing on the server" },
         { status: 500 }
       );
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("uploads")
-      .getPublicUrl(filePathInBucket);
+    const cpanelFormData = new FormData();
+    cpanelFormData.append("file", file);
+    cpanelFormData.append("category", "receipts");
+    cpanelFormData.append("secret_key", secretKey);
+    cpanelFormData.append("action", "upload");
 
-    return NextResponse.json({ success: true, url: publicUrl });
+    const response = await fetch(storageUrl, {
+      method: "POST",
+      body: cpanelFormData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ cPanel storage upload error response:", errorText);
+      return NextResponse.json(
+        { success: false, error: `Failed to upload file to storage: ${response.statusText}` },
+        { status: 500 }
+      );
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      return NextResponse.json(
+        { success: false, error: data.error || "Failed to upload file to storage" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, url: data.url });
   } catch (error: any) {
     console.error("Upload error:", error);
     return NextResponse.json(
@@ -60,7 +70,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/upload
- * Requires API session. Deletes a file from Supabase Storage by its public URL.
+ * Requires API session. Deletes a file from cPanel storage by its public URL.
  */
 export async function DELETE(req: NextRequest) {
   const auth = await requireApiSession(req);
@@ -72,22 +82,39 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: "No URL provided" }, { status: 400 });
     }
 
-    const marker = "/public/uploads/";
-    const markerIndex = url.indexOf(marker);
-    if (markerIndex === -1) {
-      return NextResponse.json({ success: false, error: "Invalid URL for storage deletion" }, { status: 400 });
+    const storageUrl = process.env.NEXT_PUBLIC_CPANEL_STORAGE_URL;
+    const secretKey = process.env.CPANEL_UPLOAD_SECRET_KEY;
+
+    if (!storageUrl || !secretKey) {
+      return NextResponse.json(
+        { success: false, error: "Storage configuration is missing on the server" },
+        { status: 500 }
+      );
     }
 
-    const filePathInBucket = url.substring(markerIndex + marker.length);
+    const cpanelFormData = new FormData();
+    cpanelFormData.append("action", "delete");
+    cpanelFormData.append("url", url);
+    cpanelFormData.append("secret_key", secretKey);
 
-    const { error: deleteError } = await supabase.storage
-      .from("uploads")
-      .remove([filePathInBucket]);
+    const response = await fetch(storageUrl, {
+      method: "POST",
+      body: cpanelFormData,
+    });
 
-    if (deleteError) {
-      console.error("❌ Supabase delete error:", deleteError);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ cPanel storage delete error response:", errorText);
       return NextResponse.json(
-        { success: false, error: `Failed to delete from Supabase: ${deleteError.message}` },
+        { success: false, error: `Failed to delete file from storage: ${response.statusText}` },
+        { status: 500 }
+      );
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      return NextResponse.json(
+        { success: false, error: data.error || "Failed to delete file from storage" },
         { status: 500 }
       );
     }

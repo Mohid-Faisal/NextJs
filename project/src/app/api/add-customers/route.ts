@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import path from "path";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
-import { supabase } from "@/lib/supabase";
 
 // Function to generate next customer ID starting from 1000 with increment of 5
 async function getNextCustomerId(): Promise<number> {
@@ -46,32 +44,46 @@ export async function POST(req: NextRequest) {
 
     let fileUrl = "";
     if (file && file.size > 0) {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const ext = path.extname(file.name) || ".png";
-      const filename = `customer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
-      const filePathInBucket = `customer-documents/${filename}`;
+      const storageUrl = process.env.NEXT_PUBLIC_CPANEL_STORAGE_URL;
+      const secretKey = process.env.CPANEL_UPLOAD_SECRET_KEY;
 
-      const { error: uploadError } = await supabase.storage
-        .from("uploads")
-        .upload(filePathInBucket, buffer, {
-          contentType: file.type,
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error("❌ Supabase upload error:", uploadError);
+      if (!storageUrl || !secretKey) {
+        console.error("❌ cPanel storage environment variables are missing.");
         return NextResponse.json(
-          { success: false, message: `Failed to upload customer document: ${uploadError.message}` },
+          { success: false, message: "Storage configuration is missing on the server" },
           { status: 500 }
         );
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("uploads")
-        .getPublicUrl(filePathInBucket);
+      const cpanelFormData = new FormData();
+      cpanelFormData.append("file", file);
+      cpanelFormData.append("category", "customer-documents");
+      cpanelFormData.append("secret_key", secretKey);
+      cpanelFormData.append("action", "upload");
 
-      fileUrl = publicUrl;
+      const response = await fetch(storageUrl, {
+        method: "POST",
+        body: cpanelFormData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ cPanel storage upload error response:", errorText);
+        return NextResponse.json(
+          { success: false, message: `Failed to upload customer document: ${response.statusText}` },
+          { status: 500 }
+        );
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        return NextResponse.json(
+          { success: false, message: data.error || "Failed to upload customer document to storage" },
+          { status: 500 }
+        );
+      }
+
+      fileUrl = data.url;
     }
 
     // Generate custom customer ID
