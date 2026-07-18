@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { sendVerificationEmail } from "@/lib/email";
 import { createOrganizationForSignup } from "@/lib/auth/membership";
+import { getCurrencyForCountry } from "@/lib/currency";
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,10 +65,14 @@ export async function POST(request: NextRequest) {
     let organization: { id: number; slug: string } | null = null;
     if (companyName?.trim()) {
       try {
+        const countryHeader = request.headers.get("x-vercel-ip-country") || "PK";
+        const currency = getCurrencyForCountry(countryHeader);
+
         organization = await createOrganizationForSignup(
           companyName.trim(),
           user.id,
-          typeof planCode === "string" && planCode.trim() ? planCode.trim() : "trial"
+          typeof planCode === "string" && planCode.trim() ? planCode.trim() : "trial",
+          currency
         );
       } catch (orgError) {
         await prisma.user.delete({ where: { id: user.id } });

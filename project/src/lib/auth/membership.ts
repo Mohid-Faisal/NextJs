@@ -84,7 +84,8 @@ export async function resolveMembership(userId: number): Promise<ResolvedMembers
 export async function createOrganizationForSignup(
   companyName: string,
   userId: number,
-  planCode = "trial"
+  planCode = "trial",
+  currency = "PKR"
 ): Promise<{ id: number; slug: string }> {
   const slug = await uniqueSlug(companyName);
 
@@ -107,6 +108,7 @@ export async function createOrganizationForSignup(
       name: companyName.trim(),
       slug,
       status: isTrialPlan ? "trial" : "pending",
+      currency,
       subscription: {
         create: {
           planId: plan.id,

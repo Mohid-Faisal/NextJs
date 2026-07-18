@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth/requireSuperAdmin";
+import { getCurrencyForCountry, fetchExchangeRates } from "@/lib/currency";
 
 /**
  * GET /api/plans
  * Public — used by the org signup page to render plan choices.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const plans = await prisma.plan.findMany({
       orderBy: { priceMonthlyUsd: "asc" },
@@ -16,7 +17,51 @@ export async function GET() {
         }
       }
     });
-    return NextResponse.json({ success: true, plans });
+
+    const countryHeader = req.headers.get("x-vercel-ip-country") || "PK";
+    const targetCurrency = getCurrencyForCountry(countryHeader);
+    const rates = await fetchExchangeRates();
+    const rate = rates[targetCurrency] || 1;
+
+    const convertedPlans = plans.map(plan => {
+      let featuresObj = plan.features as any;
+      if (typeof featuresObj === "string") {
+        try {
+          featuresObj = JSON.parse(featuresObj);
+        } catch {
+          featuresObj = {};
+        }
+      }
+
+      const discountPercent = featuresObj.yearlyDiscountPercent !== undefined 
+        ? parseFloat(featuresObj.yearlyDiscountPercent) 
+        : 20;
+
+      const localPriceMonthly = plan.priceMonthlyUsd * rate;
+      const localPriceAnnual = localPriceMonthly * 12 * (1 - (discountPercent / 100));
+
+      if (featuresObj.annualPrice !== undefined) {
+        featuresObj.annualPrice = parseFloat(featuresObj.annualPrice) * rate;
+      }
+
+      // Override features object to include currency, so front-end picks it up
+      const updatedFeatures = {
+        ...featuresObj,
+        currency: targetCurrency,
+      };
+
+      return {
+        ...plan,
+        priceMonthlyUsd: localPriceMonthly, // Override so frontend uses this as price
+        features: updatedFeatures,
+        localCurrency: targetCurrency,
+        localPriceMonthly,
+        localPriceAnnual,
+        yearlyDiscountPercent: discountPercent
+      };
+    });
+
+    return NextResponse.json({ success: true, plans: convertedPlans });
   } catch (error) {
     console.error("Error listing plans:", error);
     return NextResponse.json(
