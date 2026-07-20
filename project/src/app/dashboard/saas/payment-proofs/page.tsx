@@ -39,6 +39,7 @@ type PaymentProof = {
   organizationId: number;
   planId: number;
   amount: number;
+  currency: string;
   method: string;
   referenceId: string;
   receiptUrl: string | null;
@@ -207,7 +208,7 @@ export default function SaaSManualPaymentsPage() {
               <TableRow>
                 <TableHead>Organization</TableHead>
                 <TableHead>Requested Plan</TableHead>
-                <TableHead>Amount Paid (PKR)</TableHead>
+                <TableHead>Amount Paid</TableHead>
                 <TableHead>Method</TableHead>
                 <TableHead>Reference ID</TableHead>
                 <TableHead>Submitted Date</TableHead>
@@ -233,7 +234,7 @@ export default function SaaSManualPaymentsPage() {
                         <div className="text-xs text-muted-foreground font-mono">@{proof.organization.slug}</div>
                       </TableCell>
                       <TableCell className="capitalize font-medium">{proof.plan.name}</TableCell>
-                      <TableCell className="font-mono">PKR {proof.amount.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono">{proof.currency || "PKR"} {proof.amount.toLocaleString()}</TableCell>
                       <TableCell>{formatMethod(proof.method)}</TableCell>
                       <TableCell className="font-mono text-xs font-semibold">{proof.referenceId}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">

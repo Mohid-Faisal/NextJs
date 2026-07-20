@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { sendVerificationEmail } from "@/lib/email";
 import { createOrganizationForSignup } from "@/lib/auth/membership";
-import { getCurrencyForCountry } from "@/lib/currency";
+import { getCurrencyForCountry, fetchExchangeRates } from "@/lib/currency";
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,11 +88,36 @@ export async function POST(request: NextRequest) {
         try {
           const plan = await prisma.plan.findUnique({ where: { code: planCode?.trim() || "trial" } });
           if (plan) {
+            // Retrieve organization currency resolved during signup
+            const orgDetails = await prisma.organization.findUnique({
+              where: { id: organization.id },
+              select: { currency: true }
+            });
+            const currency = orgDetails?.currency || "PKR";
+            const isPakistan = currency === "PKR";
+
+            const rates = await fetchExchangeRates();
+            const rate = rates[currency] || 1;
+            const pkrRate = rates["PKR"] || 278.0;
+            const pkrToLocalRate = isPakistan ? 1.0 : (rate / pkrRate) * 1.10;
+
+            const convertedPriceMonthly = plan.priceMonthlyUsd * pkrToLocalRate;
+
+            // billingCycle defaults to monthly on initial sign up form unless specified
+            const isAnnual = body.billingCycle === "annually";
+            const features = plan.features ? (plan.features as any) : {};
+            const discountPercent = features.yearlyDiscountPercent !== undefined 
+              ? parseFloat(features.yearlyDiscountPercent) 
+              : 20;
+            const localPriceAnnual = convertedPriceMonthly * 12 * (1 - (discountPercent / 100));
+            const amount = isAnnual ? localPriceAnnual : convertedPriceMonthly;
+
             await prisma.paymentProof.create({
               data: {
                 organizationId: organization.id,
                 planId: plan.id,
-                amount: plan.priceMonthlyUsd,
+                amount: amount,
+                currency: currency,
                 method: String(paymentMethod).toUpperCase(),
                 referenceId: String(referenceId).trim(),
                 receiptUrl: receiptUrl || null,

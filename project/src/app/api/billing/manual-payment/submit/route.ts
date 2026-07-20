@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { fetchExchangeRates } from "@/lib/currency";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
 
@@ -49,11 +50,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const org = await prisma.organization.findUnique({
+      where: { id: session.organizationId },
+      select: { currency: true }
+    });
+    const currency = org?.currency || "PKR";
+
     const proof = await prisma.paymentProof.create({
       data: {
         organizationId: session.organizationId,
         planId: plan.id,
         amount: numericAmount,
+        currency: currency,
         method: String(method).toUpperCase(),
         referenceId: String(referenceId).trim(),
         receiptUrl: receiptUrl ? String(receiptUrl).trim() : null,
