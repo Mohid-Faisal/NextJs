@@ -17,15 +17,8 @@ export async function middleware(req: NextRequest) {
   const isApiRoute = pathname.startsWith("/api");
   const isStaticFile = pathname.includes(".");
 
-  // Public pages that don't require login
-  const isPublicPage =
-    pathname === "/" ||
-    pathname.startsWith("/tracking") ||
-    pathname.startsWith("/tools") ||
-    pathname.startsWith("/rate-calculator") ||
-    pathname.startsWith("/about") ||
-    pathname.startsWith("/contact") ||
-    pathname.startsWith("/services");
+  // Allowed public pages that don't require login (only tracking)
+  const isPublicPage = pathname.startsWith("/tracking");
 
   if (isAuthPage || isApiRoute || isStaticFile) {
     return NextResponse.next();
@@ -53,7 +46,15 @@ export async function middleware(req: NextRequest) {
       return res;
     }
 
-    if (pathname === "/") {
+    const isUnusedPublicPage =
+      pathname === "/" ||
+      pathname.startsWith("/about") ||
+      pathname.startsWith("/contact") ||
+      pathname.startsWith("/services") ||
+      pathname.startsWith("/tools") ||
+      pathname.startsWith("/rate-calculator");
+
+    if (isUnusedPublicPage) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
