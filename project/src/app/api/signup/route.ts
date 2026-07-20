@@ -112,12 +112,18 @@ export async function POST(request: NextRequest) {
             const localPriceAnnual = convertedPriceMonthly * 12 * (1 - (discountPercent / 100));
             const amount = isAnnual ? localPriceAnnual : convertedPriceMonthly;
 
+            // Calculate exact PKR equivalent (base is in PKR)
+            const priceMonthlyPkr = plan.priceMonthlyUsd;
+            const priceAnnualPkr = priceMonthlyPkr * 12 * (1 - (discountPercent / 100));
+            const amountPkr = isAnnual ? priceAnnualPkr : priceMonthlyPkr;
+
             await prisma.paymentProof.create({
               data: {
                 organizationId: organization.id,
                 planId: plan.id,
                 amount: amount,
                 currency: currency,
+                amountPkr: amountPkr,
                 method: String(paymentMethod).toUpperCase(),
                 referenceId: String(referenceId).trim(),
                 receiptUrl: receiptUrl || null,

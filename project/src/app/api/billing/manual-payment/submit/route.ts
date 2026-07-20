@@ -55,6 +55,13 @@ export async function POST(req: NextRequest) {
       select: { currency: true }
     });
     const currency = org?.currency || "PKR";
+    const isPakistan = currency === "PKR";
+
+    const rates = await fetchExchangeRates();
+    const rate = rates[currency] || 1;
+    const pkrRate = rates["PKR"] || 278.0;
+    const pkrToLocalRate = isPakistan ? 1.0 : (rate / pkrRate) * 1.10;
+    const amountPkr = numericAmount / pkrToLocalRate;
 
     const proof = await prisma.paymentProof.create({
       data: {
@@ -62,6 +69,7 @@ export async function POST(req: NextRequest) {
         planId: plan.id,
         amount: numericAmount,
         currency: currency,
+        amountPkr: amountPkr,
         method: String(method).toUpperCase(),
         referenceId: String(referenceId).trim(),
         receiptUrl: receiptUrl ? String(receiptUrl).trim() : null,

@@ -40,6 +40,7 @@ type PaymentProof = {
   planId: number;
   amount: number;
   currency: string;
+  amountPkr: number;
   method: string;
   referenceId: string;
   receiptUrl: string | null;
@@ -209,6 +210,7 @@ export default function SaaSManualPaymentsPage() {
                 <TableHead>Organization</TableHead>
                 <TableHead>Requested Plan</TableHead>
                 <TableHead>Amount Paid</TableHead>
+                <TableHead>Amount (PKR)</TableHead>
                 <TableHead>Method</TableHead>
                 <TableHead>Reference ID</TableHead>
                 <TableHead>Submitted Date</TableHead>
@@ -220,13 +222,14 @@ export default function SaaSManualPaymentsPage() {
             <TableBody>
               {proofs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                     {loading ? "Loading proofs..." : "No payment proofs submitted yet."}
                   </TableCell>
                 </TableRow>
               ) : (
                 proofs.map((proof) => {
                   const isPending = proof.status === "pending";
+                  const displayPkr = proof.amountPkr || (proof.currency === "PKR" ? proof.amount : 0);
                   return (
                     <TableRow key={proof.id}>
                       <TableCell>
@@ -234,7 +237,12 @@ export default function SaaSManualPaymentsPage() {
                         <div className="text-xs text-muted-foreground font-mono">@{proof.organization.slug}</div>
                       </TableCell>
                       <TableCell className="capitalize font-medium">{proof.plan.name}</TableCell>
-                      <TableCell className="font-mono">{proof.currency || "PKR"} {proof.amount.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono">
+                        {proof.currency || "PKR"} {proof.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        PKR {displayPkr > 0 ? displayPkr.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                      </TableCell>
                       <TableCell>{formatMethod(proof.method)}</TableCell>
                       <TableCell className="font-mono text-xs font-semibold">{proof.referenceId}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
