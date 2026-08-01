@@ -273,8 +273,65 @@ const LoginPage = () => {
                 </Button>
               </div>
 
+              {/* Demo Account Box */}
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-indigo-50/80 to-purple-50/80 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-100 dark:border-indigo-800/40 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Want to test without signing up?
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                  Explore our live unified demo environment. Add shipments, invoices, and test all features instantly.
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setForm({ email: "demo@psswe.com", password: "DemoUser@123" });
+                      toast.info("Demo credentials filled into form!");
+                    }}
+                    className="h-9 text-xs font-semibold border-indigo-200 dark:border-indigo-800/60 bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg cursor-pointer transition-all"
+                  >
+                    Fill Demo Credentials
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      const demoCreds = { email: "demo@psswe.com", password: "DemoUser@123" };
+                      setForm(demoCreds);
+                      setLoading(true);
+                      try {
+                        const response = await fetch("/api/login", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(demoCreds),
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                          toast.success("Welcome to Unified Demo Workspace!");
+                          Cookies.set("token", data.token, { expires: 1 });
+                          router.push("/dashboard");
+                        } else {
+                          toast.error(data.message || "Demo login failed.");
+                        }
+                      } catch (err) {
+                        toast.error("Demo login error.");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="h-9 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1"
+                  >
+                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "1-Click Demo Login"}
+                  </Button>
+                </div>
+              </div>
+
               {/* Bottom Links */}
-              <div className="text-sm text-center space-y-3 pt-4">
+              <div className="text-sm text-center space-y-3 pt-2">
                 <Link
                   href="/auth/reset-password"
                   className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline block"

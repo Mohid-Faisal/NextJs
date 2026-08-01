@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Lock, Sparkles, ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
 
+import DemoBanner from "@/components/DemoBanner";
+
 export const routeFeatures: Record<string, string> = {
   "/dashboard/chart-of-accounts": "accounts",
   "/dashboard/accounts/account-books": "accounts",
@@ -93,6 +95,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
             sidebarOpen ? "ml-64" : "ml-20"
           }`}
         >
+          <DemoBanner />
           {loading ? (
             <div className="flex items-center justify-center min-h-[400px] w-full text-sm text-gray-500">
               Checking permissions...

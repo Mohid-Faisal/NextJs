@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 import { resolveMembership } from "@/lib/auth/membership";
 import { signSessionToken } from "@/lib/auth/session";
+import { ensureDemoAccountExists, DEMO_EMAIL } from "@/lib/auth/demoAccount";
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Auto-provision demo account if logging in with DEMO_EMAIL
+    if (normalizedEmail === DEMO_EMAIL.toLowerCase()) {
+      await ensureDemoAccountExists();
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     if (!user) {
       return NextResponse.json(
