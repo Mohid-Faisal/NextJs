@@ -667,33 +667,21 @@ export async function POST(req: NextRequest) {
             shipmentDate ? new Date(shipmentDate) : new Date(),
             session.organizationId
           );
-          if (appliedBalance > 0) {
-          // Create journal entry for customer debit transaction
+        }
+
+        // Always create journal entry for customer debit transaction (Revenue)
+        const customerRevenueAmount = customerTotalCost > 0 ? customerTotalCost : remainingAmount;
+        if (customerRevenueAmount > 0) {
           await createJournalEntryForTransaction(
             prisma,
             'CUSTOMER_DEBIT',
-            customerTotalCost,
+            customerRevenueAmount,
             `Customer invoice for shipment ${trackingId}`,
             invoiceNumber,
             invoiceNumber,
             shipmentDate ? new Date(shipmentDate) : new Date(),
             session.organizationId
           );
-          }
-          else {
-            // Create journal entry for customer debit transaction
-          await createJournalEntryForTransaction(
-            prisma,
-            'CUSTOMER_DEBIT',
-            remainingAmount,
-            `Customer invoice for shipment ${trackingId}`,
-            invoiceNumber,
-            invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-          }
-          
         }
 
         // If customer has balance and it was applied, create a payment transaction
@@ -742,16 +730,6 @@ export async function POST(req: NextRequest) {
             shipmentDate ? new Date(shipmentDate) : new Date(),
             session.organizationId
           );
-
-          // // Create journal entry for company debit transaction
-          // await createJournalEntryForTransaction(
-          //   prisma,
-          //   'COMPANY_DEBIT',
-          //   appliedBalance,
-          //   `Customer credit applied for invoice ${invoiceNumber}`,
-          //   `CREDIT-${invoiceNumber}`,
-          //   invoiceNumber
-          // );
         }
 
         // ============================================================================
@@ -770,31 +748,21 @@ export async function POST(req: NextRequest) {
             shipmentDate ? new Date(shipmentDate) : new Date(),
             session.organizationId
           );
-          if (vendorAppliedBalance > 0) {
-          // Create journal entry for vendor debit transaction
+        }
+
+        // Always create journal entry for vendor debit transaction (Expense)
+        const vendorExpenseAmount = vendorTotalCost > 0 ? vendorTotalCost : vendorRemainingAmount;
+        if (vendorExpenseAmount > 0) {
           await createJournalEntryForTransaction(
             prisma,
             'VENDOR_DEBIT',
-            vendorTotalCost,
+            vendorExpenseAmount,
             `Vendor invoice for shipment ${trackingId}`,
             vendorInvoiceNumber,
             vendorInvoiceNumber,
             shipmentDate ? new Date(shipmentDate) : new Date(),
             session.organizationId
           );
-          }
-          else {
-            // Create journal entry for vendor debit transaction
-          await createJournalEntryForTransaction(
-            prisma,
-            'VENDOR_DEBIT',
-            vendorRemainingAmount,
-            `Vendor invoice for shipment ${trackingId}`,
-            vendorInvoiceNumber,
-            vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );}
         }
 
         // If vendor has balance and it was applied, create a payment transaction
