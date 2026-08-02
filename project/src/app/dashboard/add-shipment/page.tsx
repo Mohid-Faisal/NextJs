@@ -954,8 +954,12 @@ const AddShipmentPage = () => {
           if (senderResult && s.senderName) {
             const senderData = senderResult.data;
             if (Array.isArray(senderData) && senderData.length > 0) {
-              // Find the exact match (case-insensitive)
+              // Find the exact match (case-insensitive and matching address/country if possible)
               const exactSender = senderData.find(
+                (sender: Party) =>
+                  sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim() &&
+                  (sender.Address?.toLowerCase().trim() === s.senderAddress?.toLowerCase().trim() || !s.senderAddress)
+              ) || senderData.find(
                 (sender: Party) => sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim()
               ) || senderData[0]; // Fallback to first result if no exact match
               
@@ -998,8 +1002,13 @@ const AddShipmentPage = () => {
           if (recipientResult && s.recipientName) {
             const recipientData = recipientResult.data;
             if (Array.isArray(recipientData) && recipientData.length > 0) {
-              // Find the exact match (case-insensitive)
+              // Find the exact match (prioritize matching destination country/address)
               const exactRecipient = recipientData.find(
+                (recipient: Party) =>
+                  recipient.Company.toLowerCase().trim() === s.recipientName.toLowerCase().trim() &&
+                  (recipient.Country?.toLowerCase().trim() === s.destination?.toLowerCase().trim() ||
+                   recipient.Address?.toLowerCase().trim() === s.recipientAddress?.toLowerCase().trim())
+              ) || recipientData.find(
                 (recipient: Party) => recipient.Company.toLowerCase().trim() === s.recipientName.toLowerCase().trim()
               ) || recipientData[0]; // Fallback to first result if no exact match
               
@@ -1319,10 +1328,10 @@ const AddShipmentPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
               <Select
-                        value={selectedSender?.Company || ""}
+                        value={selectedSender?.id ? String(selectedSender.id) : ""}
                         onValueChange={(value) => {
                           const sender = senderResults.find(
-                            (s) => s.Company === value
+                            (s) => String(s.id) === value
                           );
                           if (sender) {
                             setSelectedSender(sender);
@@ -1360,11 +1369,15 @@ const AddShipmentPage = () => {
                             {Array.isArray(senderResults) &&
                               senderResults.length > 0 && (
                                 <div className="max-h-60 overflow-y-auto">
-                                  {senderResults.map((s) => (
-                                    <SelectItem key={s.id} value={s.Company}>
-                                      {s.Company}
-                                    </SelectItem>
-                                  ))}
+                                  {senderResults.map((s) => {
+                                    const countryObj = s.Country && s.Country.length === 2 ? Country.getCountryByCode(s.Country) : null;
+                                    const loc = [s.City, countryObj?.name || s.Country].filter(Boolean).join(", ");
+                                    return (
+                                      <SelectItem key={s.id} value={String(s.id)}>
+                                        {s.Company} {loc ? `(${loc})` : ""}
+                                      </SelectItem>
+                                    );
+                                  })}
                                 </div>
                               )}
                             {senderQuery.length > 0 &&
@@ -1507,10 +1520,10 @@ const AddShipmentPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
               <Select
-                        value={selectedRecipient?.Company || ""}
+                        value={selectedRecipient?.id ? String(selectedRecipient.id) : ""}
                         onValueChange={(value) => {
                           const recipient = recipientResults.find(
-                            (r) => r.Company === value
+                            (r) => String(r.id) === value
                           );
                           if (recipient) {
                             setSelectedRecipient(recipient);
@@ -1550,11 +1563,15 @@ const AddShipmentPage = () => {
                             {Array.isArray(recipientResults) &&
                               recipientResults.length > 0 && (
                                 <div className="max-h-60 overflow-y-auto">
-                                  {recipientResults.map((r) => (
-                                    <SelectItem key={r.id} value={r.Company}>
-                                      {r.Company}
-                                    </SelectItem>
-                                  ))}
+                                  {recipientResults.map((r) => {
+                                    const countryObj = r.Country && r.Country.length === 2 ? Country.getCountryByCode(r.Country) : null;
+                                    const loc = [r.City, countryObj?.name || r.Country].filter(Boolean).join(", ");
+                                    return (
+                                      <SelectItem key={r.id} value={String(r.id)}>
+                                        {r.Company} {loc ? `(${loc})` : ""}
+                                      </SelectItem>
+                                    );
+                                  })}
                                 </div>
                               )}
                             {recipientQuery.length > 0 &&
