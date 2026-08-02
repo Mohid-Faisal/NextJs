@@ -647,8 +647,12 @@ export default function AddPaymentPage() {
     }
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (submitting) return;
 
     // Validation
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
@@ -656,21 +660,22 @@ export default function AddPaymentPage() {
       return;
     }
 
+    if (!debitAccountId || !creditAccountId) {
+      toast.error("Please select both debit and credit accounts");
+      return;
+    }
+
+    if (debitAccountId === creditAccountId) {
+      toast.error("Debit and credit accounts must be different");
+      return;
+    }
+
+    setSubmitting(true);
+
     if (isEditMode) {
       // In edit mode, update all fields and journal entry
       console.log(`Updating payment ${paymentId} with full data:`, formData);
       console.log(`Chart of accounts: debit=${debitAccountId}, credit=${creditAccountId}`);
-      
-      // Validation for edit mode
-      if (!debitAccountId || !creditAccountId) {
-        toast.error("Please select both debit and credit accounts");
-        return;
-      }
-
-      if (debitAccountId === creditAccountId) {
-        toast.error("Debit and credit accounts must be different");
-        return;
-      }
       
       try {
         const response = await fetch(`/api/accounts/payments/${paymentId}`, {
@@ -698,25 +703,17 @@ export default function AddPaymentPage() {
           router.push("/dashboard/accounts/payments");
         } else {
           toast.error(data.message || "Failed to update payment");
+          setSubmitting(false);
         }
       } catch (error) {
         console.error("Error updating payment:", error);
         toast.error("An unexpected error occurred");
+        setSubmitting(false);
       }
       return;
     }
 
     // Original logic for creating new payments
-    if (!debitAccountId || !creditAccountId) {
-      toast.error("Please select both debit and credit accounts");
-      return;
-    }
-
-    if (debitAccountId === creditAccountId) {
-      toast.error("Debit and credit accounts must be different");
-      return;
-    }
-
     try {
       const payload = {
         transactionType: formData.transactionType,
@@ -749,10 +746,12 @@ export default function AddPaymentPage() {
         router.push("/dashboard/accounts/payments");
       } else {
         toast.error(data.message || "Failed to add transaction");
+        setSubmitting(false);
       }
     } catch (error) {
       console.error("Error saving payment:", error);
       toast.error("An unexpected error occurred");
+      setSubmitting(false);
     }
   };
 
@@ -1131,9 +1130,9 @@ export default function AddPaymentPage() {
           <Button
             type="submit"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 lg:px-10 py-2 sm:py-3 text-base sm:text-lg font-medium w-full sm:w-auto"
-            disabled={accountsLoading || accounts.length === 0}
+            disabled={submitting || accountsLoading || accounts.length === 0}
           >
-            {isEditMode ? "Update Transaction" : "Save Transaction"}
+            {submitting ? "Saving..." : isEditMode ? "Update Transaction" : "Save Transaction"}
           </Button>
         </div>
       </form>

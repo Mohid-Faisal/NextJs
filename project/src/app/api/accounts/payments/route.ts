@@ -270,7 +270,23 @@ export async function POST(req: NextRequest) {
       toVendor: "Us",
     };
 
-    // All internal transactions - no external party relationships
+    // Deduplication check: if identical payment created in last 10 seconds, return existing payment
+    const tenSecondsAgo = new Date(Date.now() - 10000);
+    const existingDuplicate = await prisma.payment.findFirst({
+      where: orgWhere(session, {
+        transactionType: data.transactionType,
+        category: data.category,
+        amount: data.amount,
+        reference: data.reference,
+        description: data.description,
+        createdAt: { gte: tenSecondsAgo }
+      })
+    });
+
+    if (existingDuplicate) {
+      console.log(`[POST /api/accounts/payments] Deduplication triggered: returning existing payment ID ${existingDuplicate.id}`);
+      return NextResponse.json({ success: true, message: "Payment added successfully.", payment: existingDuplicate });
+    }
 
     try {
       const payment = await prisma.payment.create({ data: orgData(session, data) });

@@ -50,6 +50,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
+    // Deduplication check: if identical payment created in last 10 seconds, return existing payment
+    const tenSecondsAgo = new Date(Date.now() - 10000);
+    const existingDuplicate = await prisma.payment.findFirst({
+      where: orgWhere(session, {
+        amount: parseFloat(paymentAmount),
+        reference: reference || null,
+        invoice: invoiceNumber,
+        createdAt: { gte: tenSecondsAgo }
+      })
+    });
+    if (existingDuplicate) {
+      console.log(`[POST /api/accounts/payments/process] Deduplication triggered: returning existing payment ID ${existingDuplicate.id}`);
+      return NextResponse.json({
+        success: true,
+        message: "Payment processed successfully",
+        payment: existingDuplicate,
+      });
+    }
+
     if (enableAllocation) {
       const result = await processPaymentWithAllocation(
         prisma,
