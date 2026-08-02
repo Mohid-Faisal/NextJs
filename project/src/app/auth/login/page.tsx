@@ -141,68 +141,56 @@ const LoginPage = () => {
 
   return (
     <div className="h-screen w-full flex flex-col lg:flex-row bg-white dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
-      {/* Left panel - Login Intro (60% width on desktop) */}
-      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-10 xl:p-14 select-none border-r border-slate-200 dark:border-zinc-800">
+      {/* Left panel - Login Intro (60% width on desktop with thicker partition) */}
+      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-10 xl:p-14 select-none border-r-2 border-gray-300 dark:border-zinc-800">
         {/* Top-left SaaS logo */}
         <div className="relative z-20 select-none">
           <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
         </div>
 
-        {/* Center content: Text on left, Boxes graphic on right */}
-        <div className="relative z-10 my-auto grid grid-cols-12 items-center gap-6 w-full max-w-5xl mx-auto px-4">
-          {/* Big typography & actions (left 6 cols) */}
-          <div className="col-span-6 flex flex-col items-start justify-center space-y-6">
-            <div className="flex items-center gap-2">
-              <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
-              <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
-                Smart Logistics, Stronger Business
-              </span>
-            </div>
-
-            <h2 className="text-4xl xl:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.15]">
-              All-In-One <br />
-              <span className="text-indigo-600 dark:text-indigo-400">Courier & Cargo</span> <br />
-              Management.
-            </h2>
-
-            <p className="text-sm xl:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-              A complete cloud-based solution to simplify your courier, cargo, and logistics operations.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Button
-                onClick={() => router.push("/tracking")}
-                className="bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold px-5 py-4 rounded-xl shadow-sm active:scale-[0.98] transition-all text-xs xl:text-sm flex items-center gap-2 cursor-pointer"
-              >
-                <Search className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                Track Shipment
-              </Button>
-
-              <Button
-                type="button"
-                onClick={handleDemoLogin}
-                disabled={loading}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-4 rounded-xl shadow-md active:scale-[0.98] transition-all text-xs xl:text-sm flex items-center gap-2 cursor-pointer"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-                    Live Demo
-                  </>
-                )}
-              </Button>
-            </div>
+        {/* Center content: Text layout */}
+        <div className="relative z-10 my-auto flex flex-col items-start justify-center max-w-xl mx-auto px-4 space-y-6">
+          <div className="flex items-center gap-2">
+            <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+            <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              Smart Logistics, Stronger Business
+            </span>
           </div>
 
-          {/* Boxes Illustration (right 6 cols) */}
-          <div className="col-span-6 flex items-center justify-center relative">
-            <img
-              src="/boxes.png"
-              alt="Carrier Boxes Illustration"
-              className="w-full max-w-md h-auto object-contain drop-shadow-md hover:scale-105 transition-transform duration-500"
-            />
+          <h2 className="text-4xl xl:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.15]">
+            All-In-One <br />
+            <span className="text-indigo-600 dark:text-indigo-400">Courier & Cargo</span> <br />
+            Management SaaS.
+          </h2>
+
+          <p className="text-sm xl:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+            A complete cloud-based solution to simplify your courier, cargo, and logistics operations, empowering you to deliver an exceptional experience to your customers.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button
+              onClick={() => router.push("/tracking")}
+              className="bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold px-5 py-4 rounded-xl shadow-sm active:scale-[0.98] transition-all text-xs xl:text-sm flex items-center gap-2 cursor-pointer"
+            >
+              <Search className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              Track Shipment
+            </Button>
+
+            <Button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={loading}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-4 rounded-xl shadow-md active:scale-[0.98] transition-all text-xs xl:text-sm flex items-center gap-2 cursor-pointer"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                  Live Demo
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -212,7 +200,7 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Right panel - Form container (40% width on desktop) */}
+      {/* Right panel - Form container (40% width on desktop, blending seamlessly into background) */}
       <div className="w-full lg:w-[40%] flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto bg-white dark:bg-zinc-950">
         {/* Theme Toggle */}
         <div className="absolute top-6 right-6 z-20">
@@ -223,10 +211,10 @@ const LoginPage = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-[460px] relative z-10 my-auto"
+          className="w-full max-w-[440px] relative z-10 my-auto"
         >
-          <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
-            <CardContent className="p-8 sm:p-10 space-y-6">
+          <Card className="bg-transparent border-0 shadow-none rounded-none w-full">
+            <CardContent className="p-0 sm:p-4 space-y-6">
               {/* Top-left SaaS logo on mobile when absolute header is hidden */}
               <div className="sm:hidden flex justify-center mb-2">
                 <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-20 w-auto object-contain" />
@@ -252,7 +240,7 @@ const LoginPage = () => {
                   <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-zinc-900 px-4 text-slate-400">or</span>
+                  <span className="bg-white dark:bg-zinc-950 px-4 text-slate-400">or</span>
                 </div>
               </div>
 
