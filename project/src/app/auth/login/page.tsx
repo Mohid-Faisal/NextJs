@@ -229,9 +229,9 @@ const LoginPage = () => {
                 variant="outline"
                 type="button"
                 onClick={() => window.location.href = "/api/auth/google"}
-                className="w-full h-12 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
+                className="w-full h-13 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer py-2.5"
               >
-                <FcGoogle size={28} />
+                <FcGoogle size={36} />
               </Button>
 
               {/* OR Divider */}
