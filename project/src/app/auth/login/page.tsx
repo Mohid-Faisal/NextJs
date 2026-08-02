@@ -211,7 +211,7 @@ const LoginPage = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-[440px] relative z-10 my-auto"
+          className="w-full max-w-[520px] relative z-10 my-auto"
         >
           <Card className="bg-transparent border-0 shadow-none rounded-none w-full">
             <CardContent className="p-0 sm:p-4 space-y-6">
@@ -220,7 +220,7 @@ const LoginPage = () => {
                 <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-20 w-auto object-contain" />
               </div>
 
-              <h1 className="text-3xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-[#1d1b26] dark:text-white text-center mb-6">
                 Log in
               </h1>
 
@@ -229,9 +229,9 @@ const LoginPage = () => {
                 variant="outline"
                 type="button"
                 onClick={() => window.location.href = "/api/auth/google"}
-                className="w-full h-11 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
+                className="w-full h-12 border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 flex items-center justify-center transition-all cursor-pointer"
               >
-                <FcGoogle size={25} />
+                <FcGoogle size={28} />
               </Button>
 
               {/* OR Divider */}
@@ -239,17 +239,17 @@ const LoginPage = () => {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
+                <div className="relative flex justify-center text-sm uppercase">
                   <span className="bg-white dark:bg-zinc-950 px-4 text-slate-400">or</span>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {/* Email */}
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Email address</Label>
+                  <Label htmlFor="email" className="text-sm font-semibold text-slate-600 dark:text-slate-300">Email address</Label>
                   <div className="relative group">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
                     <Input
                       id="email"
                       name="email"
@@ -257,16 +257,16 @@ const LoginPage = () => {
                       value={form.email}
                       onChange={handleChange}
                       placeholder="name@company.com"
-                      className="pl-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
+                      className="pl-11 h-12 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-base"
                     />
                   </div>
                 </div>
 
                 {/* Password */}
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-semibold text-slate-600 dark:text-slate-300">Password</Label>
                   <div className="relative group">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
                     <Input
                       id="password"
                       name="password"
@@ -274,37 +274,37 @@ const LoginPage = () => {
                       value={form.password}
                       onChange={handleChange}
                       placeholder="••••••••"
-                      className="pl-10 pr-10 h-11 bg-white/50 dark:bg-slate-950/40 border-slate-205 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-sm"
+                      className="pl-11 pr-11 h-12 bg-white/50 dark:bg-slate-950/40 border-slate-200 dark:border-zinc-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25 rounded-xl transition-all duration-200 text-base"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors focus:outline-none"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors focus:outline-none"
                     >
                       {showPassword ? (
-                        <FaEyeSlash size={16} />
+                        <FaEyeSlash size={18} />
                       ) : (
-                        <FaEye size={16} />
+                        <FaEye size={18} />
                       )}
                     </button>
                   </div>
                 </div>
 
-                {/* Forgot Password Link - Underneath the password field aligned to start */}
+                {/* Forgot Password Link */}
                 <div className="text-left pt-1">
                   <Link
                     href="/auth/reset-password"
-                    className="text-xs font-bold text-indigo-600 dark:text-indigo-450 hover:underline"
+                    className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                   >
                     Forgot password?
                   </Link>
                 </div>
 
-                {/* Login Button - Styled like Track Shipment button */}
+                {/* Login Button */}
                 <Button 
                   onClick={handleLogin} 
                   disabled={loading}
-                  className="w-full h-11 bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold rounded-xl shadow-md active:scale-[0.98] transition-all text-sm mt-4 flex items-center justify-center cursor-pointer"
+                  className="w-full h-12 bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold rounded-xl shadow-md active:scale-[0.98] transition-all text-base mt-4 flex items-center justify-center cursor-pointer"
                 >
                   {loading ? (
                     <Loader2 className="w-5 h-5 animate-spin text-indigo-600 dark:text-indigo-400" />
@@ -318,9 +318,9 @@ const LoginPage = () => {
               <div className="lg:hidden grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
                 <Button
                   onClick={() => router.push("/tracking")}
-                  className="bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold h-10 rounded-xl shadow-sm active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold h-11 rounded-xl shadow-sm active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Search className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <Search className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   Track Shipment
                 </Button>
 
@@ -328,13 +328,13 @@ const LoginPage = () => {
                   type="button"
                   onClick={handleDemoLogin}
                   disabled={loading}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold h-10 rounded-xl shadow-sm active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold h-11 rounded-xl shadow-sm active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {loading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
                   ) : (
                     <>
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                      <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
                       Live Demo
                     </>
                   )}
@@ -342,19 +342,19 @@ const LoginPage = () => {
               </div>
 
               {/* Bottom Links */}
-              <div className="text-sm text-center space-y-3 pt-2">
+              <div className="text-base text-center space-y-3 pt-2">
                 <Link
                   href="/auth/reset-password"
-                  className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline block"
+                  className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline block"
                 >
                   Can't Access Your Account?
                 </Link>
                 
-                <p className="text-slate-500 dark:text-slate-400 font-medium">
+                <p className="text-slate-500 dark:text-slate-400 font-medium text-sm sm:text-base">
                   Don't have an account?{" "}
                   <Link
                     href="/auth/signup"
-                    className="text-indigo-600 dark:text-indigo-455 font-bold hover:underline"
+                    className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
                   >
                     Sign Up
                   </Link>
