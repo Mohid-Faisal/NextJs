@@ -329,8 +329,8 @@ const DashboardPage = () => {
         </motion.div>
 
         {/* Key Metrics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
-          <div className="relative overflow-hidden rounded-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8 items-stretch">
+          <div className="relative overflow-hidden rounded-xl h-full">
             <MetricCard
               title="Total Revenue"
               value={`${data.currency} ${data.totalRevenue.toLocaleString()}`}
@@ -345,7 +345,7 @@ const DashboardPage = () => {
             ) : null}
           </div>
 
-          <div className="relative overflow-hidden rounded-xl">
+          <div className="relative overflow-hidden rounded-xl h-full">
             <MetricCard
               title="Receivables"
               value={`${data.currency} ${data.accountsData.accountsReceivable.toLocaleString()}`}
@@ -361,7 +361,7 @@ const DashboardPage = () => {
             ) : null}
           </div>
 
-          <div className="relative overflow-hidden rounded-xl">
+          <div className="relative overflow-hidden rounded-xl h-full">
             <MetricCard
               title="Total Shipments"
               value={data.totalShipments.toLocaleString()}
@@ -376,7 +376,7 @@ const DashboardPage = () => {
             )}
           </div>
 
-          <div className="relative overflow-hidden rounded-xl">
+          <div className="relative overflow-hidden rounded-xl h-full">
             <MetricCard
               title="Total Customers"
               value={data.totalCustomers.toLocaleString()}
@@ -1288,20 +1288,29 @@ const MetricCard = ({ title, value, change, icon, bgColor, iconColor, onClick, c
     return 'text-gray-700 dark:text-gray-300';
   };
 
+  const valStr = String(value);
+  const fontSizeClass = valStr.length > 13
+    ? "text-sm sm:text-base lg:text-lg font-bold"
+    : valStr.length > 10
+    ? "text-base sm:text-lg lg:text-xl font-bold"
+    : "text-lg sm:text-xl lg:text-2xl font-bold";
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className={`relative bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 ${onClick ? 'cursor-pointer hover:scale-105' : ''}`}
+      className={`relative bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between ${onClick ? 'cursor-pointer hover:scale-105' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center mb-3 sm:mb-4 relative">
-        <div className="flex items-center gap-3 sm:gap-4 flex-1">
-          <div className={`${bgColor} ${iconColor} p-2 sm:p-3 rounded-lg sm:rounded-xl`}>{icon}</div>
+        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+          <div className={`${bgColor} ${iconColor} p-2 sm:p-3 rounded-lg sm:rounded-xl shrink-0`}>{icon}</div>
           <div className="flex-1 min-w-0">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 pr-16 sm:pr-20 truncate">{title}</p>
-            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">{value}</h3>
+            <h3 className={`${fontSizeClass} text-gray-900 dark:text-white whitespace-nowrap truncate`} title={valStr}>
+              {value}
+            </h3>
           </div>
         </div>
         <div className="absolute top-0 right-0">
