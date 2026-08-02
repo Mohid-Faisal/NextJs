@@ -19,41 +19,56 @@ export function decodeToken(token: string) {
 
 // Function to generate unique invoice numbers
 export async function generateInvoiceNumber(prisma: any): Promise<string> {
-  // Get the highest invoice number from the database
-  const lastShipment = await prisma.shipment.findFirst({
+  // Fetch recent shipments to find the highest numeric invoice number
+  const recentShipments = await prisma.shipment.findMany({
     where: {
       invoiceNumber: {
-        not: null
-      }
+        not: null,
+      },
     },
     orderBy: {
-      invoiceNumber: 'desc'
+      id: "desc",
     },
+    take: 500,
     select: {
-      invoiceNumber: true
-    }
+      invoiceNumber: true,
+    },
   });
+
+  // Extract purely numeric invoice numbers (ignore strings like DEMO-1001 or 000NaN)
+  const numericValues = recentShipments
+    .map((s: { invoiceNumber: string | null }) => s.invoiceNumber)
+    .filter((inv: string | null): inv is string => !!inv && /^\d+$/.test(inv.trim()))
+    .map((inv: string) => parseInt(inv.trim(), 10))
+    .filter((num: number) => !isNaN(num));
 
   let nextNumber: number;
 
-  if (lastShipment && lastShipment.invoiceNumber) {
-    // Extract the numeric part and increment by 5
-    const currentNumber = parseInt(lastShipment.invoiceNumber, 10);
-    nextNumber = currentNumber + 5;
+  if (numericValues.length > 0) {
+    const highestNumber = Math.max(...numericValues);
+    nextNumber = highestNumber + 5;
   } else {
-    // Start from 600000 if no shipments exist
+    // Start from 600000 if no numeric shipments exist
+    nextNumber = 600000;
+  }
+
+  // Safety fallback if somehow nextNumber is NaN or invalid
+  if (isNaN(nextNumber) || nextNumber < 600000) {
     nextNumber = 600000;
   }
 
   // Format as 6-digit string with leading zeros
-  return nextNumber.toString().padStart(6, '0');
+  return nextNumber.toString().padStart(6, "0");
 }
 
 // Function to generate vendor invoice number (customer invoice + 2)
 export function generateVendorInvoiceNumber(customerInvoiceNumber: string): string {
   const customerNumber = parseInt(customerInvoiceNumber, 10);
+  if (isNaN(customerNumber)) {
+    return "600002";
+  }
   const vendorNumber = customerNumber + 2;
-  return vendorNumber.toString().padStart(6, '0');
+  return vendorNumber.toString().padStart(6, "0");
 }
 
 // Function to get full country name from country code

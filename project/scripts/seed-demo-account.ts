@@ -50,7 +50,7 @@ async function main() {
       {
         organizationId: org.id,
         trackingId: "DEMO-1001",
-        invoiceNumber: "INV-DEMO-1001",
+        invoiceNumber: "DEMO-1001",
         referenceNumber: "REF-88901",
         senderName: "Apex Global Logistics Demo",
         senderAddress: "Suite 404, Business Plaza, Karachi",
@@ -71,7 +71,7 @@ async function main() {
       {
         organizationId: org.id,
         trackingId: "DEMO-1002",
-        invoiceNumber: "INV-DEMO-1002",
+        invoiceNumber: "DEMO-1002",
         referenceNumber: "REF-88902",
         senderName: "Apex Global Logistics Demo",
         senderAddress: "Suite 404, Business Plaza, Karachi",
