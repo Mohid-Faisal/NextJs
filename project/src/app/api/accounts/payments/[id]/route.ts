@@ -448,12 +448,16 @@ export async function DELETE(
 
     // Find and delete the corresponding journal entry
     try {
+      const refsToMatch = [
+        `PAY-${payment.id}`,
+        `Payment-${payment.id}`,
+        payment.reference,
+        payment.invoice
+      ].filter((r): r is string => Boolean(r && r.trim().length > 0));
+
       const journalEntry = await prisma.journalEntry.findFirst({
         where: orgWhere(session, {
-          OR: [
-            { reference: payment.reference },
-            { reference: `Payment-${payment.id}` }
-          ]
+          reference: { in: refsToMatch }
         }),
       });
 

@@ -1246,11 +1246,10 @@ export async function POST(
         
         // Find and delete existing journal entries for this starting balance
         // Use the existing transaction's reference to find matching journal entries
+        const targetRef = existingStartingBalance.reference || `STARTING-BALANCE-VEND-${vendorId}`;
         const existingJournalEntries = await prisma.journalEntry.findMany({
           where: orgWhere(session, {
-            reference: existingStartingBalance.reference 
-              ? existingStartingBalance.reference 
-              : { startsWith: "STARTING-BALANCE" }
+            reference: targetRef
           })
         });
         
