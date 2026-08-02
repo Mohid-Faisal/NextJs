@@ -140,16 +140,16 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
-      {/* Left panel - Login Intro (Hidden on mobile, visible on lg/xl) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#F4F5F9] dark:bg-zinc-950 flex-col justify-between p-12 select-none border-r-2 border-white dark:border-zinc-800">
+    <div className="h-screen w-full flex flex-col lg:flex-row bg-white dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
+      {/* Left panel - Login Intro (2/3 width on desktop) */}
+      <div className="hidden lg:flex lg:w-2/3 relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-12 select-none border-r border-gray-200 dark:border-zinc-800">
         {/* Top-left SaaS logo */}
         <div className="absolute top-8 left-8 z-20 select-none">
           <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-20 w-auto object-contain" />
         </div>
 
         {/* Centered text layout */}
-        <div className="relative z-10 my-auto flex flex-col items-start justify-center px-6 md:px-12 max-w-xl space-y-6">
+        <div className="relative z-10 my-auto flex flex-col items-start justify-center px-6 md:px-12 max-w-2xl space-y-6">
           <div className="flex items-center gap-2">
             <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
             <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
@@ -202,8 +202,8 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Right panel - Form container */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto">
+      {/* Right panel - Form container (1/3 width on desktop) */}
+      <div className="w-full lg:w-1/3 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto bg-white dark:bg-zinc-950">
         {/* Theme Toggle */}
         <div className="absolute top-6 right-6 z-20">
           <ThemeToggle />
