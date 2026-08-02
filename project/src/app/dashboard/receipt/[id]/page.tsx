@@ -92,6 +92,20 @@ export default function ReceiptPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [org, setOrg] = useState<any>(null);
+  const [supportAddress, setSupportAddress] = useState("LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore");
+  const [supportPhone, setSupportPhone] = useState("+92 (21) 111-222-333");
+  const [supportEmail, setSupportEmail] = useState("info@psswwe.com");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const address = localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore";
+      const phone = localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333";
+      const email = localStorage.getItem("brand_support_email") || "info@psswwe.com";
+      setSupportAddress(address);
+      setSupportPhone(phone);
+      setSupportEmail(email);
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/org/current")
@@ -1527,6 +1541,24 @@ export default function ReceiptPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Branding Support Info Footer */}
+          <div
+            className="support-info-footer"
+            style={{
+              marginTop: '6px',
+              paddingTop: '3px',
+              borderTop: '1px solid #000',
+              textAlign: 'center',
+              fontSize: '7.5px',
+              fontWeight: 'bold',
+              color: '#000',
+              fontFamily: 'Arial, Helvetica, sans-serif',
+              letterSpacing: '0.2px',
+            }}
+          >
+            {supportAddress} | {supportPhone} | {supportEmail}
           </div>
         </div>
       </div>
