@@ -50,6 +50,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (session.email === "demo@psswe.com") {
+      const demoCount = await prisma.shipment.count({
+        where: { organizationId: session.organizationId },
+      });
+      if (demoCount >= 15) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "limit_exceeded",
+            message: "Demo shipment creation limit reached (max 15). Please start a 14-Day Free Trial for unlimited shipments!",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // ============================================================================
     // SECTION 1: REQUEST DATA EXTRACTION
     // ============================================================================

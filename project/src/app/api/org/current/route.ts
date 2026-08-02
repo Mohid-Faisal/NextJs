@@ -58,6 +58,13 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
+  if (session.email === "demo@psswe.com") {
+    return NextResponse.json(
+      { success: false, error: "Company branding settings are locked in Demo Mode. Start a Free Trial to customize your company details." },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await req.json();
     const data: { name?: string; logoUrl?: string | null; currency?: string; website?: string | null } = {};

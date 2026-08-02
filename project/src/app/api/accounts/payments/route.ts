@@ -222,6 +222,18 @@ export async function POST(req: NextRequest) {
     if (auth.error) return auth.error;
     const session = auth.session;
 
+    if (session.email === "demo@psswe.com") {
+      const demoCount = await prisma.payment.count({
+        where: { organizationId: session.organizationId },
+      });
+      if (demoCount >= 15) {
+        return NextResponse.json(
+          { success: false, message: "Demo transaction limit reached (max 15). Please start a 14-Day Free Trial for unlimited transactions!" },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await req.json();
 
     // Basic validation

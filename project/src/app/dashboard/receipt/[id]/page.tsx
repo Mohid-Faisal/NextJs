@@ -7,6 +7,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getCountryNameFromCode, getStateNameFromCode } from '@/lib/utils';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface Package {
   id?: string;
@@ -145,6 +146,10 @@ export default function ReceiptPage() {
     if (!invoice) {
       alert('Invoice data not available');
       return;
+    }
+
+    if (org?.slug === "pss-demo") {
+      toast.warning("Receipts carry a Demo Watermark in Demo Mode. Start a 14-Day Free Trial for unwatermarked commercial receipts!");
     }
 
     // Get the waybill container HTML
@@ -1207,7 +1212,33 @@ export default function ReceiptPage() {
       `}</style>
 
       <div className="waybill-wrapper">
-        <div className="waybill-container">
+        <div className="waybill-container" style={{ position: 'relative' }}>
+          {org?.slug === "pss-demo" && (
+            <div
+              className="demo-watermark-overlay"
+              style={{
+                position: 'absolute',
+                top: '32%',
+                left: '5%',
+                width: '90%',
+                transform: 'rotate(-25deg)',
+                fontSize: '26px',
+                fontWeight: '900',
+                color: 'rgba(220, 38, 38, 0.35)',
+                border: '4px dashed rgba(220, 38, 38, 0.45)',
+                padding: '10px 16px',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                pointerEvents: 'none',
+                zIndex: 100,
+                fontFamily: 'Arial, Helvetica, sans-serif',
+                backgroundColor: 'rgba(254, 242, 242, 0.25)',
+              }}
+            >
+              DEMO MODE — NOT VALID FOR COMMERCIAL USE
+            </div>
+          )}
           {/* Header */}
           <div className="header-area" style={{position: 'relative'}}>
             <div className="logo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '48px', width: '120px', overflow: 'hidden' }}>

@@ -95,27 +95,27 @@ export default function DemoBanner() {
                 1. Test Adding Shipments
               </div>
               <p className="text-[11px] text-indigo-200 leading-relaxed">
-                Go to <strong className="text-white">Add Shipment</strong> in the menu to create real test cargo bookings. Rates, volume weight, and status updates calculate automatically.
+                Add test shipments or transactions. Default sample entries are <strong className="text-white">permanently preserved</strong>, while user test entries reset automatically every 24 hours.
               </p>
             </div>
 
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
               <div className="flex items-center gap-2 font-bold text-white text-xs">
                 <Users className="w-4 h-4 text-blue-400" />
-                2. Unified Persistent Entries
+                2. Demo Safeguards & Watermark
               </div>
               <p className="text-[11px] text-indigo-200 leading-relaxed">
-                When you add shipments or customers and leave/logout, your entries <strong className="text-white">remain saved</strong> in this demo workspace for the next customer to explore.
+                Branding settings are locked and waybill receipts carry a <strong className="text-white font-semibold">"DEMO MODE" watermark</strong> to prevent commercial misuse.
               </p>
             </div>
 
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
               <div className="flex items-center gap-2 font-bold text-white text-xs">
                 <ShieldCheck className="w-4 h-4 text-purple-300" />
-                3. Isolated From Trial Accounts
+                3. Ready for Real Business?
               </div>
               <p className="text-[11px] text-indigo-200 leading-relaxed">
-                This demo account is completely separate from customer accounts. Ready for your own private, clean environment? Click <strong className="text-amber-300">Start Private Trial</strong> anytime.
+                Want your own clean company workspace with your logo & clean receipts? Click <strong className="text-amber-300">Start Private Trial</strong> anytime.
               </p>
             </div>
           </div>

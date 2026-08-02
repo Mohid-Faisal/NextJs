@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { 
   Building2, Save, Palette, Upload, Sun, Moon, 
-  Monitor, FileText, Check, AlertCircle, Info, RefreshCw
+  Monitor, FileText, Check, AlertCircle, Info, RefreshCw, Lock
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -103,7 +103,8 @@ export default function BrandingSettingsPage() {
     setSavedSupportAddress(address);
   }, []);
 
-  const canManage = MANAGE_ROLES.includes(role);
+  const isDemo = org?.slug === "pss-demo";
+  const canManage = MANAGE_ROLES.includes(role) && !isDemo;
 
   const loadOrg = useCallback(async () => {
     setLoading(true);
@@ -316,6 +317,15 @@ export default function BrandingSettingsPage() {
           </Button>
         )}
       </div>
+
+      {isDemo && (
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 p-4 rounded-xl mb-6 text-sm font-medium flex items-center gap-3">
+          <Lock className="w-5 h-5 shrink-0" />
+          <div>
+            <strong>Demo Mode Notice:</strong> Company branding & contact details are locked in the public Demo account to prevent commercial abuse. Start a Private Free Trial to configure your custom company branding.
+          </div>
+        </div>
+      )}
 
       {/* Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
