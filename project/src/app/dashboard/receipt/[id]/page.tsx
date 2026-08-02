@@ -182,25 +182,30 @@ export default function ReceiptPage() {
               print-color-adjust: exact;
             }
 
+            @page {
+              size: A4 portrait;
+              margin: 6mm;
+            }
+
             html, body {
               font-family: Arial, Helvetica, sans-serif;
-              background-color: #f3f4f6;
-              padding: 20px;
+              background-color: #fff;
+              padding: 0;
               margin: 0;
-              font-size: 10px;
+              font-size: 9.5px;
               height: auto;
               min-height: 0;
-              line-height: 1.5;
+              line-height: 1.3;
             }
 
             .waybill-container {
-              max-width: 855px;
+              width: 100%;
+              max-width: 100%;
               margin: 0 auto;
               background: white;
-              padding: 20px;
-              border: 1px solid #ccc;
-              transform: scale(0.9);
-              transform-origin: top center;
+              padding: 0;
+              border: none;
+              transform: none;
             }
 
             .header-area {
@@ -771,6 +776,8 @@ export default function ReceiptPage() {
     ? format(new Date(invoice.invoiceDate), 'dd MMM yy HH:mm:ss')
     : format(new Date(), 'dd MMM yy HH:mm:ss');
 
+  const orgName = org?.name || "PSS Worldwide Express";
+
   return (
     <div className="w-full p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-full">
       <style jsx>{`
@@ -789,21 +796,19 @@ export default function ReceiptPage() {
 
         .waybill-wrapper .waybill-container {
           max-width: 855px;
-              margin: 0 auto;
-              background: white;
-              padding: 20px;
+          margin: 0 auto;
+          background: white;
+          padding: 20px;
           border: 1px solid #ccc;
           font-family: Arial, Helvetica, sans-serif;
           font-size: 10px;
-          transform: scale(0.9);
-          transform-origin: top center;
         }
 
         .waybill-wrapper .header-area {
           display: flex;
           justify-content: space-between;
           align-items: center;
-              margin-bottom: 10px;
+          margin-bottom: 10px;
           padding-bottom: 5px;
         }
 
@@ -827,7 +832,6 @@ export default function ReceiptPage() {
           width: auto;
         }
 
-
         .waybill-wrapper .main-grid {
           display: grid;
           grid-template-columns: 34% 33% 33%;
@@ -849,9 +853,9 @@ export default function ReceiptPage() {
           color: black;
           width: 16px;
           height: 16px;
-              text-align: center;
+          text-align: center;
           line-height: 16px;
-              font-weight: bold;
+          font-weight: bold;
           font-size: 11px;
           margin-right: 4px;
         }
@@ -945,7 +949,7 @@ export default function ReceiptPage() {
         .waybill-wrapper .lhe-box {
           width: 40%;
           font-size: 18px;
-              font-weight: bold;
+          font-weight: bold;
           text-align: center;
           padding: 5px;
           border-right: 1px solid black;
@@ -960,23 +964,23 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .dap-section {
-              display: flex;
+          display: flex;
           border-bottom: 1px solid black;
           min-height: 45px;
           height: auto;
-            }
+        }
 
         .waybill-wrapper .dap-box {
           width: 50%;
           font-size: 20px;
-              font-weight: bold;
+          font-weight: bold;
           display: flex;
           align-items: center;
           justify-content: center;
           border-right: 1px solid black;
         }
 
-            .waybill-wrapper .currency-box {
+        .waybill-wrapper .currency-box {
           width: 50%;
           padding: 3px 5px;
           font-size: 9px;
@@ -1171,13 +1175,10 @@ export default function ReceiptPage() {
           background: #4f46e5;
         }
 
-
         @media print {
           @page {
-            size: A4;
-            margin: 0.5cm;
-            margin-top: 1.5cm;
-            margin-bottom: 1.5cm;
+            size: A4 portrait;
+            margin: 6mm;
           }
           .waybill-wrapper .waybill-container {
             border: none;
@@ -1264,7 +1265,7 @@ export default function ReceiptPage() {
                   The shipper declares that this shipment contains no money, explosives, weapons, jewelry, narcotics, or other prohibited items. Any customs duties, taxes, penalties, or charges arising from detention or seizure shall be borne by the shipper/consignee.
                   <br />
                   <br />
-                  {org?.name || "PSS Worldwide"}'s liability is limited to USD 0.00–100.00 as per company appraisal and criteria. {org?.name || "PSS Worldwide"} is not responsible for loss, breakage, or damage to the shipment. The shipper authorizes visual inspection of the shipment by {org?.name || "PSS Worldwide"} or its agents.
+                  {orgName}'s liability is limited to USD 0.00–100.00 as per company appraisal and criteria. {orgName} is not responsible for loss, breakage, or damage to the shipment. The shipper authorizes visual inspection of the shipment by {orgName} or its agents.
                 </div>
                 <div className="signature-line">
                   <span>SENDER'S SIGNATURE</span>
@@ -1351,7 +1352,7 @@ export default function ReceiptPage() {
               <div className="section-header text-center" style={{ borderLeft: '2px solid white', boxSizing: 'border-box' }}>
                 CUSTOMER REFERENCE
               </div>
-              <div className="ref-box">{referenceNumber || org?.name || 'PSS'}</div>
+              <div className="ref-box">{referenceNumber || orgName}</div>
 
               {/* Service Type */}
               <div className="service-section">
@@ -1421,6 +1422,95 @@ export default function ReceiptPage() {
 
           <div className="footer-strip">
             SENDER COPY
+          </div>
+
+          {/* Terms and Conditions Section */}
+          <div
+            className="terms-conditions-wrapper"
+            style={{
+              marginTop: '16px',
+              paddingTop: '10px',
+              borderTop: '2px solid black',
+              fontFamily: 'Arial, Helvetica, sans-serif',
+            }}
+          >
+            <div
+              style={{
+                textAlign: 'center',
+                fontWeight: 'bold',
+                fontSize: '11px',
+                textTransform: 'uppercase',
+                marginBottom: '6px',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Terms and Conditions of Transportation
+            </div>
+
+            <div style={{ fontSize: '7.5px', lineHeight: '1.3', color: '#111' }}>
+              <div style={{ marginBottom: '8px', textAlign: 'justify' }}>
+                <strong>IMPORTANT NOTICE:</strong> When ordering {orgName}’s services you, as “Shipper”, are agreeing, on your behalf and on behalf of the consignee of the Shipment (“Consignee”) and anyone else with an interest in the Shipment that these Terms and Conditions shall apply. “Shipment” means all documents or parcels that travel under one waybill and which may be carried by any means {orgName} chooses, including air, road or any other carrier. A “waybill” shall include any Shipment identifier or document produced by {orgName} or Shipper automated systems such as a label, barcode, waybill or consignment note as well as any electronic version thereof. Every Shipment is transported on a limited liability basis as provided herein. If Shipper requires greater protection, then insurance may be arranged at an additional cost. “{orgName}” means any member of the {orgName} Network.
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 14px', textAlign: 'justify' }}>
+                <div>
+                  <strong>1. Customs Clearance and Regulatory Compliance:</strong> {orgName} may perform any of the following activities on Shipper’s or Consignee’s behalf in order to provide services: (1) complete any documents, amend product or service codes and advance any duties, taxes or other regulatory charges required under applicable laws and regulations (“Customs Duties”), (2) act as Shipper’s or Consignee´s true and lawful agent or designate a customs broker to perform export control and customs clearance and (3) redirect the Shipment to Consignee’s customs broker or other address upon request by any person who {orgName} believes in its reasonable opinion to be authorized. Shipper or Consignee will provide any extra authorization required by applicable law for {orgName} to clear a Shipment.
+                </div>
+
+                <div>
+                  <strong>2. Unacceptable Shipments:</strong> A Shipment is deemed unacceptable if:
+                  <ul style={{ margin: '2px 0 2px 10px', paddingLeft: '10px', listStyleType: 'disc' }}>
+                    <li>it contains complete firearms, ammunition, explosives, explosive devices or test pieces, air guns, replica or imitation firearms; counterfeit goods; cash; bullion (of any precious metal); live animals, prohibited animal parts or remains, such as ivory; human remains or ashes; loose precious or semi-precious stones; cannabis or its derivatives; or illegal goods, such as narcotics or other illegal drugs,</li>
+                    <li>it is classified as hazardous material, dangerous goods, prohibited or restricted articles under ADR (European Road Transport Regulation on dangerous goods) or by IATA (International Air Transport Association), ICAO (International Civil Aviation Organization), or other relevant organization (“Dangerous Goods”),</li>
+                    <li>it contains any other item which {orgName} cannot carry safely or legally,</li>
+                    <li>the address is incorrect or not properly marked or its packaging is defective or inadequate to ensure safe transportation with ordinary care in handling,</li>
+                    <li>Shipper, Consignee or any other party with a direct or indirect interest in the Shipment is listed on any applicable sanctions lists as a denied or restricted party.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <strong>3. Deliveries and Undeliverables:</strong> Shipments cannot be delivered to PO boxes or postal codes. Shipments are delivered to the Consignee’s address given by Shipper but not necessarily to the named Consignee personally. Shipments to addresses with a central receiving area will be delivered to that area. {orgName} may notify Consignee of an upcoming delivery or a missed delivery. Consignee may be offered alternative delivery options such as delivery on another day, no signature required, redirection or collection at a {orgName} Service Point. If the Shipment is deemed to be unacceptable as described in Section 2, it has been undervalued for customs purposes, Consignee cannot be reasonably identified or located, or Consignee refuses delivery or to pay Customs Duties or other Shipment charges, {orgName} shall use reasonable efforts to return the Shipment to Shipper. This shall be at Shipper’s cost. If it is not possible to return the Shipment, it may be released, abandoned, disposed of or sold without incurring any liability whatsoever to Shipper or anyone else. {orgName} shall have the right to destroy any Shipment if {orgName} is prevented by any law or law enforcement agency from returning it in whole or in part to Shipper, as well as any Shipment of Dangerous Goods.
+                </div>
+
+                <div>
+                  <strong>4. Inspection:</strong> {orgName} has the right to open and inspect a Shipment without notice for safety, security, customs or other regulatory reasons.
+                  <br /><br />
+                  <strong>5. Shipment Charges, Duties and Fees:</strong> {orgName}’s Shipment charges are calculated according to the higher of actual or volumetric weight per piece and any piece may be re-weighed and re-measured by {orgName} to confirm this calculation. Payment of Customs Duties and other charges due as indicated on {orgName}’s website in the receiving country may be requested from Consignee prior to delivery. This includes a fee if {orgName} uses its credit with the Customs Authorities or pays any Customs Duties on Consignee’s behalf. Shipper shall pay or reimburse {orgName} for all Customs Duties and other charges due for services provided by {orgName} or incurred by {orgName} on Shipper’s or Consignee’s behalf if Consignee has failed to pay.
+                </div>
+
+                <div>
+                  <strong>6. {orgName}’s Liability:</strong> {orgName}’s liability in respect of any one Shipment transported by air (including ancillary road transport or stops en route) is limited by the Montreal Convention or the Warsaw Convention as applicable, or in the absence of such Convention, to the lower of (i) the current market or declared value, or (ii) 22 Special Drawing Rights per kilogram (approximately $US 30.00 per kilogram). Such limits shall also apply to all other forms of transportation, except where Shipments are carried only by road, when the limits below apply. For cross border Shipments transported by road, {orgName}’s liability is or shall be deemed to be limited by the Convention for the International Carriage of Goods by Road (CMR) to the lower of (i) current market value or declared value, or (ii) 8.33 Special Drawing Rights per kilogram (approximately $US 11.00 per kilogram). Such limits will also apply to national road transportation in the absence of any mandatory or lower liability limits in the applicable national transport law. If Shipper regards these limits as insufficient it must make a special declaration of value and request insurance as described in Section 8 or make its own insurance arrangements. {orgName}’s liability is strictly limited to direct loss and damage to a Shipment only and to the per kilogram limits in this Section 6. All other types of loss or damage are excluded (including but not limited to lost profits, income, interest, future business), whether such loss or damage is special or indirect, and even if the risk of such loss or damage was brought to {orgName}’s attention. {orgName} will make every reasonable effort to deliver the Shipment according to {orgName}’s regular delivery schedules, but these schedules are not binding and do not form part of the contract. {orgName} is not liable for any damages or loss caused by delay, but for certain Shipments, Shipper may be able to claim limited delay compensation under the Money Back Guarantee terms and conditions, which are available on the {orgName} website or from {orgName} Customer Service.
+                </div>
+
+                <div>
+                  <strong>7. Claims:</strong> All claims must be submitted in writing to {orgName} within thirty (30) days from the date that {orgName} accepted the Shipment, failing which {orgName} shall have no liability whatsoever. Claims are limited to one claim per Shipment, settlement of which will be full and final settlement for all loss or damage in connection therewith.
+                  <br /><br />
+                  <strong>8. Shipment Insurance:</strong> {orgName} may be able to arrange insurance for loss of or damage to the Shipment, covering the full value of the goods, provided that Shipper so instructs {orgName} in writing, including by completing the insurance section of the waybill or using {orgName}’s automated systems and pays the applicable premium. Shipment insurance does not cover indirect loss or damage, or loss or damage caused by delays.
+                  <br /><br />
+                  <strong>9. Circumstances Beyond {orgName}’s Control:</strong> {orgName} is not liable for any loss or damage arising out of circumstances beyond {orgName}’s control. These include but are not limited to electrical or magnetic damage to, or erasure of, electronic or photographic images, data or recordings; any defect or characteristic related to the nature of the Shipment, even if known to {orgName}; any act or omission by a person not employed or contracted by {orgName} - e.g. Shipper, Consignee, third party, customs or other government official; third party cyber-attacks or other information security related threats; “Force Majeure” - e.g. earthquake, cyclone, storm, flood, fog, war, plane crash, embargo, riot, epidemic, pandemic, civil commotion, or industrial action.
+                </div>
+
+                <div>
+                  <strong>10. Shipper’s Representations, Warranties and Indemnities:</strong> Shipper shall indemnify and hold {orgName} and its directors, officers, employees and agents harmless from and against all and any liabilities losses and damages arising out of Shipper’s failure to comply with the following warranties and representations:
+                  <ul style={{ margin: '2px 0 2px 10px', paddingLeft: '10px', listStyleType: 'disc' }}>
+                    <li>the Shipment is acceptable for transport under Section 2 above,</li>
+                    <li>the Shipment was prepared in secure premises by reliable persons and was protected against unauthorized interference during preparation, storage and any transportation to {orgName},</li>
+                    <li>Shipper has complied with applicable export control, sanctions, customs laws and regulations or other applicable regulatory requirements and restrictions related to the import, export, transit or transfer of goods,</li>
+                    <li>Shipper has declared to {orgName} any controlled dual-use or military goods subject to government authorizations contained in the Shipment,</li>
+                    <li>Shipper has provided all information, permits, licenses or other government authorizations and documents, as required by applicable law or upon request from {orgName}, and all information, permits, licenses or other government authorizations and documents provided by Shipper or its representatives are true, complete and accurate, including the value and description of the goods and Shipper and Consignee information,</li>
+                    <li>when providing personal data to {orgName}, Shipper has complied with its legal obligations to process and share this data, including informing the affected individuals that personal data, including Consignee’s email address and mobile phone number, is required for transport, customs clearance and delivery.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <strong>11. Routing:</strong> Shipper agrees to all routing and diversion, including the possibility that the Shipment may be carried via intermediate stopping places.
+                  <br /><br />
+                  <strong>12. Governing Law:</strong> Any dispute arising under or in any way connected with these Terms and Conditions shall be subject to the non-exclusive jurisdiction of the courts of, and governed by the law of the country of origin of the Shipment and Shipper irrevocably submits to such jurisdiction, unless contrary to applicable law.
+                  <br /><br />
+                  <strong>13. Severability:</strong> The invalidity or unenforceability of any provision shall not affect any other part of these Terms and Conditions.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
