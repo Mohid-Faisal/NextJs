@@ -114,6 +114,31 @@ const LoginPage = () => {
     }
   };
 
+  const handleDemoLogin = async () => {
+    const demoCreds = { email: "demo@psswe.com", password: "DemoUser@123" };
+    setForm(demoCreds);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(demoCreds),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success("Welcome to Unified Demo Workspace!");
+        Cookies.set("token", data.token, { expires: 1 });
+        router.push("/dashboard");
+      } else {
+        toast.error(data.message || "Demo login failed.");
+      }
+    } catch (err) {
+      toast.error("Demo login error.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="h-screen w-full flex flex-col lg:flex-row bg-[#F4F5F9] dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
       {/* Left panel - Login Intro (Hidden on mobile, visible on lg/xl) */}
@@ -144,13 +169,31 @@ const LoginPage = () => {
             A complete cloud-based solution to simplify your courier, cargo, and logistics operations, empowering you to deliver an exceptional experience to your customers.
           </p>
 
-          <Button
-            onClick={() => router.push("/tracking")}
-            className="bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-normal px-6 py-5 rounded-xl shadow-md active:scale-[0.98] transition-all text-sm flex items-center gap-2 cursor-pointer mt-2"
-          >
-            <Search className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            Track Shipment
-          </Button>
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            <Button
+              onClick={() => router.push("/tracking")}
+              className="bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold px-6 py-5 rounded-xl shadow-md active:scale-[0.98] transition-all text-sm flex items-center gap-2 cursor-pointer"
+            >
+              <Search className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              Track Shipment
+            </Button>
+
+            <Button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={loading}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-5 rounded-xl shadow-md active:scale-[0.98] transition-all text-sm flex items-center gap-2 cursor-pointer"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                  Live Demo
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Footer of Left Panel (Copyright only) */}
@@ -160,7 +203,7 @@ const LoginPage = () => {
       </div>
 
       {/* Right panel - Form container */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto">
         {/* Theme Toggle */}
         <div className="absolute top-6 right-6 z-20">
           <ThemeToggle />
@@ -170,7 +213,7 @@ const LoginPage = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-[460px] relative z-10"
+          className="w-full max-w-[460px] relative z-10 my-auto"
         >
           <Card className="bg-white dark:bg-zinc-900 border border-gray-200/50 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden w-full">
             <CardContent className="p-8 sm:p-10 space-y-6">
@@ -259,75 +302,45 @@ const LoginPage = () => {
                   </Link>
                 </div>
 
-                {/* Login Button */}
+                {/* Login Button - Styled like Track Shipment button */}
                 <Button 
                   onClick={handleLogin} 
                   disabled={loading}
-                  className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] transition-all text-sm mt-4 flex items-center justify-center cursor-pointer"
+                  className="w-full h-11 bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold rounded-xl shadow-md active:scale-[0.98] transition-all text-sm mt-4 flex items-center justify-center cursor-pointer"
                 >
                   {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin text-indigo-600 dark:text-indigo-400" />
                   ) : (
                     "Log in"
                   )}
                 </Button>
               </div>
 
-              {/* Demo Account Box */}
-              <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-indigo-50/80 to-purple-50/80 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-100 dark:border-indigo-800/40 space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Want to test without signing up?
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                  Explore our live unified demo environment. Add shipments, invoices, and test all features instantly.
-                </p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setForm({ email: "demo@psswe.com", password: "DemoUser@123" });
-                      toast.info("Demo credentials filled into form!");
-                    }}
-                    className="h-9 text-xs font-semibold border-indigo-200 dark:border-indigo-800/60 bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg cursor-pointer transition-all"
-                  >
-                    Fill Demo Credentials
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={async () => {
-                      const demoCreds = { email: "demo@psswe.com", password: "DemoUser@123" };
-                      setForm(demoCreds);
-                      setLoading(true);
-                      try {
-                        const response = await fetch("/api/login", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify(demoCreds),
-                        });
-                        const data = await response.json();
-                        if (response.ok) {
-                          toast.success("Welcome to Unified Demo Workspace!");
-                          Cookies.set("token", data.token, { expires: 1 });
-                          router.push("/dashboard");
-                        } else {
-                          toast.error(data.message || "Demo login failed.");
-                        }
-                      } catch (err) {
-                        toast.error("Demo login error.");
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    disabled={loading}
-                    className="h-9 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1"
-                  >
-                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "1-Click Demo Login"}
-                  </Button>
-                </div>
+              {/* Mobile Track Shipment & Live Demo buttons */}
+              <div className="lg:hidden grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <Button
+                  onClick={() => router.push("/tracking")}
+                  className="bg-white hover:bg-indigo-50/50 dark:bg-zinc-950 dark:hover:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border border-indigo-600 dark:border-indigo-400 font-semibold h-10 rounded-xl shadow-sm active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  Track Shipment
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={handleDemoLogin}
+                  disabled={loading}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold h-10 rounded-xl shadow-sm active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {loading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                      Live Demo
+                    </>
+                  )}
+                </Button>
               </div>
 
               {/* Bottom Links */}
