@@ -21,7 +21,7 @@ export type LedgerCreditForPaymentMatch = {
  * Uses Payment.date from the row entered in Payments — matched by invoice + amount, strong reference,
  * or disambiguation vs ledger createdAt — not reference alone when the reference is a placeholder.
  */
-export function isWeakPaymentReference(
+function isWeakPaymentReference(
   ref: string | null | undefined
 ): boolean {
   if (ref == null) return true;

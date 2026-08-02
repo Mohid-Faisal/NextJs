@@ -12,4 +12,3 @@ export const signupSchema = z.object({
     .regex(/[@$!%*?&]/, "Password must contain at least one special character"),
 });
 
-export type SignupFormData = z.infer<typeof signupSchema>;

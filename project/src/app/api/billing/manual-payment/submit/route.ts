@@ -69,7 +69,6 @@ export async function POST(req: NextRequest) {
         planId: plan.id,
         amount: numericAmount,
         currency: currency,
-        amountPkr: amountPkr,
         method: String(method).toUpperCase(),
         referenceId: String(referenceId).trim(),
         receiptUrl: receiptUrl ? String(receiptUrl).trim() : null,

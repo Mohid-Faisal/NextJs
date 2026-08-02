@@ -239,12 +239,6 @@ model Office {
   @@index([organizationId])
 }
 
-model InvoiceStatus {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
-}
-
 model DeliveryStatus {
   id             Int      @id @default(autoincrement())
   organizationId Int      @default(1)

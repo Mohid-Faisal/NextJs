@@ -35,7 +35,7 @@ export default function TopLoaderFetch() {
           const h = headers as Record<string, string>;
           const purposeKey = Object.keys(h).find(k => k.toLowerCase() === "purpose");
           const preflightKey = Object.keys(h).find(k => k.toLowerCase() === "x-middleware-preflight");
-          isPrefetch = (purposeKey && h[purposeKey] === "prefetch") || (preflightKey && h[preflightKey] === "1");
+          isPrefetch = Boolean((purposeKey && h[purposeKey] === "prefetch") || (preflightKey && h[preflightKey] === "1"));
         }
       }
 

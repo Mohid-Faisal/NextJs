@@ -16,6 +16,3 @@ export const ResetPasswordSchema = z
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
-
-// For type inference
-export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;

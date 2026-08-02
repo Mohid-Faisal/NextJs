@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 
 import DemoBanner from "@/components/DemoBanner";
 
-export const routeFeatures: Record<string, string> = {
+const routeFeatures: Record<string, string> = {
   "/dashboard/chart-of-accounts": "accounts",
   "/dashboard/accounts/account-books": "accounts",
   "/dashboard/journal-entries": "accounts",

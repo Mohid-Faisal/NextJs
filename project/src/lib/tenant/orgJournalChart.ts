@@ -14,11 +14,3 @@ export async function nextJournalEntryNumber(
   const lastNumber = parseInt(String(lastEntry.entryNumber).split("-")[1], 10);
   return `JE-${String((Number.isFinite(lastNumber) ? lastNumber : 0) + 1).padStart(4, "0")}`;
 }
-
-export function chartWhere(session: SessionPayload, extra: Record<string, unknown> = {}) {
-  return orgWhere(session, extra);
-}
-
-export function journalWhere(session: SessionPayload, extra: Record<string, unknown> = {}) {
-  return orgWhere(session, extra);
-}

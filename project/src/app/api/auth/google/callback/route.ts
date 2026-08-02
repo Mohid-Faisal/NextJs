@@ -125,6 +125,8 @@ export async function GET(req: Request) {
           organizationId: organization.id,
           orgRole: "OWNER",
           orgStatus: "trial",
+          orgName: companyName,
+          orgSlug: organization.slug,
         };
       } catch (orgError) {
         console.error("Failed to auto-create organization for Google user:", orgError);
@@ -134,6 +136,10 @@ export async function GET(req: Request) {
         }
         return NextResponse.redirect(new URL("/auth/login?error=Could not initialize your workspace. Please try standard sign up.", req.url));
       }
+    }
+
+    if (!membership) {
+      return NextResponse.redirect(new URL("/auth/login?error=Could not initialize your workspace.", req.url));
     }
 
     if (membership.orgStatus === "suspended") {

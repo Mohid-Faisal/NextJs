@@ -12,10 +12,6 @@ export function getStripe(): Stripe | null {
   return cached;
 }
 
-export function isStripeConfigured(): boolean {
-  return Boolean(process.env.STRIPE_SECRET_KEY);
-}
-
 /**
  * Resolve the Stripe Price id for a plan. Prefers the price stored in the
  * plan's `features.stripePriceId`, then falls back to an env var per code

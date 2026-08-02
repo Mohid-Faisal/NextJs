@@ -1,4 +1,4 @@
-export const trackingLinks: Record<string, (id: string) => string> = {
+const trackingLinks: Record<string, (id: string) => string> = {
   // DPEX
   DPEX: (id) =>
     `https://dpexonline.com/trace-and-track/index?id=${id}`,

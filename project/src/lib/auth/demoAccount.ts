@@ -2,8 +2,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export const DEMO_EMAIL = "demo@psswe.com";
-export const DEMO_PASSWORD = "DemoUser@123";
-export const DEMO_ORG_SLUG = "pss-demo";
+const DEMO_PASSWORD = "DemoUser@123";
+const DEMO_ORG_SLUG = "pss-demo";
 
 /**
  * Guarantees that the unified Demo Account and Demo Organization exist in the database,

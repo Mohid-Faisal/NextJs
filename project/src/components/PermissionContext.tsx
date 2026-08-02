@@ -33,7 +33,7 @@ const PermissionContext = createContext<PermissionContextType>({
 
 export const usePermissions = () => useContext(PermissionContext);
 
-export const routePermissions: Record<string, string> = {
+const routePermissions: Record<string, string> = {
   "/dashboard/add-shipment": "create_shipment",
   "/dashboard/shipments": "view_shipments",
   "/dashboard/rate-calculator": "view_shipments",

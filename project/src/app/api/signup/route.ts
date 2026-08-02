@@ -123,7 +123,6 @@ export async function POST(request: NextRequest) {
                 planId: plan.id,
                 amount: amount,
                 currency: currency,
-                amountPkr: amountPkr,
                 method: String(paymentMethod).toUpperCase(),
                 referenceId: String(referenceId).trim(),
                 receiptUrl: receiptUrl || null,

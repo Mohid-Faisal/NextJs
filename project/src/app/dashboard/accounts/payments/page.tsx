@@ -496,7 +496,7 @@ export default function PaymentsPage() {
       payment.transactionType,
       payment.category,
       format(parseISO(payment.date), "dd-MM-yyyy"),
-      `${payment.currency || currency || "PKR"} ${payment.amount.toLocaleString()}`,
+      `${(payment as any).currency || currency || "PKR"} ${payment.amount.toLocaleString()}`,
       payment.fromAccount,
       payment.toAccount,
       payment.mode,
@@ -908,7 +908,7 @@ export default function PaymentsPage() {
                       <span className="sm:hidden">{p.category?.substring(0, 8)}...</span>
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{new Date(p.date).toLocaleDateString()}</td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{p.currency || currency || "PKR"} {p.amount.toLocaleString()}</td>
+                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{(p as any).currency || currency || "PKR"} {p.amount.toLocaleString()}</td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <span className="hidden sm:inline">{p.fromAccount}</span>
                       <span className="sm:hidden">{p.fromAccount?.substring(0, 8)}...</span>

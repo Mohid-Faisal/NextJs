@@ -51,7 +51,7 @@ export default function TrackingPage() {
             asPage
             initialBookingId={bookingId}
             autoSearch
-            onOrganizationLoaded={(org) => setOrganization(org)}
+            onOrganizationLoaded={(org) => setOrganization(org ? { id: org.id, name: org.name, logoUrl: (org as any).logoUrl ?? null } : null)}
           />
         </div>
       </div>

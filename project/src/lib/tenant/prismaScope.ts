@@ -7,13 +7,6 @@ export function orgWhere(session: SessionPayload, extra: WhereExtra = {}) {
   return { organizationId: session.organizationId, ...extra };
 }
 
-export function requireOrg(session: SessionPayload | null): SessionPayload {
-  if (!session?.organizationId) {
-    throw new Error("Organization context required");
-  }
-  return session;
-}
-
 /** For creates — never trust organizationId from client body. */
 export function orgData<T extends Record<string, unknown>>(
   session: SessionPayload,

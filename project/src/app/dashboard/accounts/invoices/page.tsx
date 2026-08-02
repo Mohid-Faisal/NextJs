@@ -636,14 +636,6 @@ export default function InvoicesPage() {
               <Plus className="w-4 h-4" /> Add Invoice
             </Link>
           </Button>
-          <Button asChild variant="outline">
-            <Link
-              href="/dashboard/accounts/payments/process"
-              className="flex items-center gap-2"
-            >
-              💰 Process Payment
-            </Link>
-          </Button>
           <Button
             variant="outline"
             onClick={exportToCSV}
@@ -793,14 +785,6 @@ export default function InvoicesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              window.location.href = `/dashboard/accounts/payments/process?invoice=${i.invoiceNumber}`;
-                            }}
-                            className="text-blue-600 font-medium"
-                          >
-                            💰 Charge Payment
-                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
                               window.location.href = `/dashboard/accounts/invoices/add?id=${i.id}`;
