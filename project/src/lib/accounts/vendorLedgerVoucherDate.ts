@@ -31,9 +31,10 @@ export function computeVendorLedgerVoucherDate(
     if (debitNoteDate) voucherDate = debitNoteDate;
   }
 
+  const fromDebitNote =
+    !!transaction.reference && ctx.debitNotesMap.has(transaction.reference);
+
   if (transaction.type === "CREDIT") {
-    const fromDebitNote =
-      transaction.reference && ctx.debitNotesMap.has(transaction.reference);
     if (!fromDebitNote) {
       // Always use a real Payment.date for vendor payments — never leave CREDIT on createdAt
       // when any payment rows were loaded (resolver + fallbacks return Payment.date only).
@@ -51,7 +52,8 @@ export function computeVendorLedgerVoucherDate(
       }
       // Only if no Payment rows exist for this vendor in context (data gap): keep prior voucherDate
     }
-  } else if (transaction.invoice) {
+  } else if (transaction.invoice && !fromDebitNote) {
+    // Invoice DEBIT bills use shipment/invoice date; debit/credit notes keep note date
     const invoiceData = ctx.invoicesMap.get(transaction.invoice);
     if (transaction.type === "DEBIT") {
       const vd = debitVoucherDateFromInvoice(invoiceData);

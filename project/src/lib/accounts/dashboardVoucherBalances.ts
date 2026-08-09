@@ -66,8 +66,8 @@ function customerVoucherDate(
     const creditNoteDate = creditNotesMap.get(t.reference);
     if (creditNoteDate) voucherDate = creditNoteDate;
   }
+  const fromNote = !!t.reference && creditNotesMap.has(t.reference);
   if (t.type === "CREDIT") {
-    const fromNote = t.reference && creditNotesMap.has(t.reference);
     if (!fromNote) {
       const paymentDate = resolveCreditPaymentVoucherDate(
         {
@@ -80,7 +80,8 @@ function customerVoucherDate(
       );
       if (paymentDate) voucherDate = paymentDate;
     }
-  } else if (t.invoice) {
+  } else if (t.invoice && !fromNote) {
+    // Invoice DEBIT bills use shipment/invoice date; credit/debit notes keep note date
     const invoiceData = invoicesMap.get(t.invoice);
     if (t.type === "DEBIT") {
       const vd = debitVoucherDateFromInvoice(invoiceData);

@@ -292,10 +292,11 @@ export async function GET(
             }
           }
 
+          const fromCreditNote =
+            !!transaction.reference &&
+            creditNotesMapList.has(transaction.reference);
+
           if (transaction.type === "CREDIT") {
-            const fromCreditNote =
-              transaction.reference &&
-              creditNotesMapList.has(transaction.reference);
             if (!fromCreditNote) {
               const paymentDate = resolveCreditPaymentVoucherDate(
                 {
@@ -308,7 +309,8 @@ export async function GET(
               );
               if (paymentDate) voucherDate = paymentDate;
             }
-          } else if (transaction.invoice) {
+          } else if (transaction.invoice && !fromCreditNote) {
+            // Invoice DEBIT bills use shipment/invoice date; credit/debit notes keep note date
             const invoiceData = invoicesMapList.get(transaction.invoice);
             if (transaction.type === "DEBIT") {
               const vd = debitVoucherDateFromInvoice(invoiceData);
@@ -883,9 +885,10 @@ export async function GET(
         }
       }
 
+      const fromCreditNote =
+        !!transaction.reference && creditNotesMap.has(transaction.reference);
+
       if (transaction.type === "CREDIT") {
-        const fromCreditNote =
-          transaction.reference && creditNotesMap.has(transaction.reference);
         if (!fromCreditNote) {
           const paymentDate = resolveCreditPaymentVoucherDate(
             {
@@ -898,7 +901,8 @@ export async function GET(
           );
           if (paymentDate) voucherDate = paymentDate;
         }
-      } else if (transaction.invoice) {
+      } else if (transaction.invoice && !fromCreditNote) {
+        // Invoice DEBIT bills use shipment/invoice date; credit/debit notes keep note date
         const invoiceData = invoicesMap.get(transaction.invoice);
         if (transaction.type === "DEBIT") {
           const vd = debitVoucherDateFromInvoice(invoiceData);
