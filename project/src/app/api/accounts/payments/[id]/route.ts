@@ -6,6 +6,10 @@ import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgPayment } from "@/lib/tenant/findOrgPayment";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
+import {
+  cleanupOrphanPaymentJournalEntriesAfterDelete,
+  findJournalEntriesForPayment,
+} from "@/lib/accounts/cleanupOrphanPaymentJournalEntries";
 
 export async function GET(
   request: NextRequest,
@@ -203,26 +207,32 @@ export async function PUT(
       try {
         console.log(`Updating journal entry for payment ${paymentId}`);
         
-        // Find the journal entry for this payment
-        const journalEntry = await prisma.journalEntry.findFirst({
-          where: orgWhere(session, {
-            OR: [
-              { reference: existingPayment.reference },
-              { reference: `Payment-${existingPayment.id}` }
-            ]
-          }),
+        const paymentKey = `Payment-${paymentId}`;
+        const journalEntries = await findJournalEntriesForPayment(session, {
+          id: existingPayment.id,
+          reference: existingPayment.reference,
+          amount: existingPayment.amount,
+          date: existingPayment.date,
+          category: existingPayment.category,
+          invoice: existingPayment.invoice,
         });
+        const journalEntry = journalEntries[0]
+          ? await prisma.journalEntry.findFirst({
+              where: orgWhere(session, { id: journalEntries[0].id }),
+            })
+          : null;
 
         if (journalEntry) {
           console.log(`Found journal entry ${journalEntry.entryNumber} for payment ${paymentId}`);
+          const userRef = body.reference ? ` (Ref: ${body.reference})` : "";
           
-          // Update the journal entry
+          // Update the journal entry — keep Payment-{id} as the stable reference
           await prisma.journalEntry.update({
             where: { id: journalEntry.id },
             data: {
               date: new Date(body.date),
-              description: `Payment: ${body.category} - ${body.description || 'No description'}`,
-              reference: body.reference || `Payment-${paymentId}`,
+              description: `Payment: ${body.category} - ${body.description || 'No description'}${userRef}`,
+              reference: paymentKey,
               totalDebit: Number(body.amount),
               totalCredit: Number(body.amount),
             },
@@ -243,7 +253,7 @@ export async function PUT(
                 debitAmount: Number(body.amount),
                 creditAmount: 0,
                 description: `Debit: ${body.category}`,
-                reference: body.reference || `Payment-${paymentId}`
+                reference: paymentKey
               }
             }),
             // Credit line
@@ -254,7 +264,7 @@ export async function PUT(
                 debitAmount: 0,
                 creditAmount: Number(body.amount),
                 description: `Credit: ${body.category}`,
-                reference: body.reference || `Payment-${paymentId}`
+                reference: paymentKey
               }
             })
           ]);
@@ -446,47 +456,51 @@ export async function DELETE(
       }
     }
 
-    // Find and delete the corresponding journal entry
+    // Delete linked journal entries + payment together, then sweep any leftover orphans
     try {
-      const refsToMatch = [
-        `PAY-${payment.id}`,
-        `Payment-${payment.id}`,
-        payment.reference,
-        payment.invoice
-      ].filter((r): r is string => Boolean(r && r.trim().length > 0));
-
-      const journalEntry = await prisma.journalEntry.findFirst({
-        where: orgWhere(session, {
-          reference: { in: refsToMatch }
-        }),
+      const journalEntries = await findJournalEntriesForPayment(session, {
+        id: payment.id,
+        reference: payment.reference,
+        amount: payment.amount,
+        date: payment.date,
+        category: payment.category,
+        invoice: payment.invoice,
       });
 
-      if (journalEntry) {
-        console.log(`Found journal entry ${journalEntry.entryNumber} for payment ${payment.id}, deleting...`);
-        
-        // Delete the journal entry lines first (due to foreign key constraints)
-        await prisma.journalEntryLine.deleteMany({
-          where: { journalEntryId: journalEntry.id },
+      await prisma.$transaction(async (tx) => {
+        if (journalEntries.length > 0) {
+          const ids = journalEntries.map((e) => e.id);
+          await tx.journalEntryLine.deleteMany({
+            where: { journalEntryId: { in: ids } },
+          });
+          await tx.journalEntry.deleteMany({
+            where: { id: { in: ids } },
+          });
+        }
+
+        await tx.payment.delete({
+          where: { id: paymentId },
         });
-        
-        // Delete the journal entry
-        await prisma.journalEntry.delete({
-          where: { id: journalEntry.id },
-        });
-        
-        console.log(`Deleted journal entry ${journalEntry.entryNumber} and its lines`);
-      } else {
-        console.log(`No journal entry found for payment ${payment.id}`);
+      });
+
+      // Broader sweep after delete (includes legacy shared bank-ref orphans)
+      const orphansRemoved =
+        await cleanupOrphanPaymentJournalEntriesAfterDelete(session);
+      if (orphansRemoved > 0) {
+        console.log(
+          `Removed ${orphansRemoved} orphaned payment journal entr${orphansRemoved === 1 ? "y" : "ies"}`
+        );
       }
     } catch (journalError) {
-      console.error("Error deleting journal entry:", journalError);
-      // Continue with payment deletion even if journal entry deletion fails
+      console.error("Error deleting payment journal entry:", journalError);
+      return NextResponse.json(
+        {
+          error:
+            "Failed to delete payment journal entry. Payment was not deleted.",
+        },
+        { status: 500 }
+      );
     }
-
-    // Delete the payment
-    await prisma.payment.delete({
-      where: { id: paymentId },
-    });
 
     return NextResponse.json({ 
       success: true, 

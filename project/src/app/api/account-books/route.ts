@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import { cleanupOrphanPaymentJournalEntries } from "@/lib/accounts/cleanupOrphanPaymentJournalEntries";
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,13 @@ export async function GET(request: NextRequest) {
     const auth = await requireApiSession(request);
     if (auth.error) return auth.error;
     const session = auth.session;
+
+    // Heal Income Statement / account books when payment deletes left orphan JEs
+    try {
+      await cleanupOrphanPaymentJournalEntries(session);
+    } catch (cleanupError) {
+      console.error("Orphan payment JE cleanup failed:", cleanupError);
+    }
 
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get('accountId');

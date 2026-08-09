@@ -27,13 +27,15 @@ export async function createJournalEntryForPaymentProcess(
         ? new Date(payment.date)
         : new Date();
 
+    const paymentKey = `Payment-${payment.id}`;
+    const userRef = body.reference ? ` (Ref: ${body.reference})` : "";
     const entry = await tx.journalEntry.create({
       data: {
         organizationId,
         entryNumber,
         date: journalEntryDate,
-        description: `Invoice Payment: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment for ${invoice.invoiceNumber} - ${body.description || "No description"}`,
-        reference: body.reference || `Payment-${payment.id}`,
+        description: `Invoice Payment: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment for ${invoice.invoiceNumber} - ${body.description || "No description"}${userRef}`,
+        reference: paymentKey,
         totalDebit: Number(body.paymentAmount),
         totalCredit: Number(body.paymentAmount),
         isPosted: true,
@@ -49,7 +51,7 @@ export async function createJournalEntryForPaymentProcess(
           debitAmount: Number(body.paymentAmount),
           creditAmount: 0,
           description: `Debit: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment`,
-          reference: body.reference || `Payment-${payment.id}`,
+          reference: paymentKey,
         },
       }),
       tx.journalEntryLine.create({
@@ -59,7 +61,7 @@ export async function createJournalEntryForPaymentProcess(
           debitAmount: 0,
           creditAmount: Number(body.paymentAmount),
           description: `Credit: ${body.paymentType === "CUSTOMER_PAYMENT" ? "Customer" : "Vendor"} payment`,
-          reference: body.reference || `Payment-${payment.id}`,
+          reference: paymentKey,
         },
       }),
     ]);

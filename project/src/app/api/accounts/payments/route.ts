@@ -359,13 +359,16 @@ async function createJournalEntryForPayment(payment: any, body: any, organizatio
         ? new Date(body.date) 
         : (payment.date ? new Date(payment.date) : new Date());
       
+      // Always use Payment-{id} so delete can find this JE even when bank ref is shared (e.g. "Office")
+      const paymentKey = `Payment-${payment.id}`;
+      const userRef = body.reference ? ` (Ref: ${body.reference})` : "";
       const entry = await tx.journalEntry.create({
         data: {
           organizationId,
           entryNumber,
           date: journalEntryDate,
-          description: `Payment: ${body.category} - ${body.description || 'No description'}`,
-          reference: body.reference || `Payment-${payment.id}`,
+          description: `Payment: ${body.category} - ${body.description || 'No description'}${userRef}`,
+          reference: paymentKey,
           totalDebit: Number(body.amount),
           totalCredit: Number(body.amount),
           isPosted: true, // Auto-post payment journal entries
@@ -383,7 +386,7 @@ async function createJournalEntryForPayment(payment: any, body: any, organizatio
             debitAmount: Number(body.amount),
             creditAmount: 0,
             description: `Debit: ${body.category}`,
-            reference: body.reference || `Payment-${payment.id}`
+            reference: paymentKey
           }
         }),
         // Credit line
@@ -394,7 +397,7 @@ async function createJournalEntryForPayment(payment: any, body: any, organizatio
             debitAmount: 0,
             creditAmount: Number(body.amount),
             description: `Credit: ${body.category}`,
-            reference: body.reference || `Payment-${payment.id}`
+            reference: paymentKey
           }
         })
       ]);
