@@ -53,6 +53,29 @@ export async function GET(
       );
     }
 
+    // Prefer customer linked via invoice; otherwise resolve by shipment.senderName
+    let customer = shipment.invoices?.[0]?.customer ?? null;
+    if (!customer && shipment.senderName) {
+      const name = String(shipment.senderName).trim();
+      if (name) {
+        customer =
+          (await prisma.customers.findFirst({
+            where: orgWhere(session, { CompanyName: { equals: name } }),
+          })) ||
+          (await prisma.customers.findFirst({
+            where: orgWhere(session, { PersonName: { equals: name } }),
+          })) ||
+          (await prisma.customers.findFirst({
+            where: orgWhere(session, {
+              OR: [
+                { CompanyName: { contains: name } },
+                { PersonName: { contains: name } },
+              ],
+            }),
+          }));
+      }
+    }
+
     // Look up recipient using multiple strategies because shipment.recipientName
     // can be either a company name OR a person name depending on how the
     // shipment was created.
@@ -62,16 +85,16 @@ export async function GET(
       if (name) {
         recipient =
           (await prisma.recipients.findFirst({
-            where: orgWhere(session, { CompanyName: { equals: name} }),
+            where: orgWhere(session, { CompanyName: { equals: name } }),
           })) ||
           (await prisma.recipients.findFirst({
-            where: orgWhere(session, { PersonName: { equals: name} }),
+            where: orgWhere(session, { PersonName: { equals: name } }),
           })) ||
           (await prisma.recipients.findFirst({
             where: orgWhere(session, {
               OR: [
-                { CompanyName: { contains: name} },
-                { PersonName: { contains: name} },
+                { CompanyName: { contains: name } },
+                { PersonName: { contains: name } },
               ],
             }),
           }));
@@ -80,7 +103,7 @@ export async function GET(
 
     return NextResponse.json({
       shipment,
-      customer: shipment.invoices?.[0]?.customer ?? null,
+      customer,
       recipient,
     });
   } catch (error) {

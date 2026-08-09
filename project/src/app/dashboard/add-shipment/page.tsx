@@ -887,32 +887,68 @@ const AddShipmentPage = () => {
 
         setForm(completeFormData);
 
-        // Show sender/recipient immediately (don't wait on search APIs)
-        if (s.senderName) {
-          const mockSender: Party = {
-            id: 0,
-            Company: s.senderName,
-            Address: s.senderAddress || "",
-            Country: "",
+        // Prefer customer/recipient already resolved by GET /api/shipments/[id]
+        const toParty = (
+          row: {
+            id: number;
+            CompanyName?: string | null;
+            PersonName?: string | null;
+            Address?: string | null;
+            Country?: string | null;
+            State?: string | null;
+            City?: string | null;
+            Zip?: string | null;
+          } | null | undefined,
+          fallbackName: string,
+          fallbackAddress: string,
+          fallbackCountry = ""
+        ): Party | null => {
+          if (row?.id) {
+            return {
+              id: row.id,
+              Company: row.CompanyName || row.PersonName || fallbackName,
+              Address: row.Address || fallbackAddress || "",
+              Country: row.Country || fallbackCountry || "",
+              State: row.State || "",
+              City: row.City || "",
+              Zip: row.Zip || "",
+            };
+          }
+          if (!fallbackName) return null;
+          // Use a stable non-zero synthetic id so Radix Select value is not ""
+          // (id 0 is falsy and previously left the trigger showing the placeholder)
+          return {
+            id: -1,
+            Company: fallbackName,
+            Address: fallbackAddress || "",
+            Country: fallbackCountry || "",
             State: "",
             City: "",
             Zip: "",
           };
-          setSelectedSender(mockSender);
-          setSenderQuery(s.senderName);
+        };
+
+        const senderParty = toParty(
+          data.customer,
+          s.senderName || "",
+          s.senderAddress || ""
+        );
+        const recipientParty = toParty(
+          data.recipient,
+          s.recipientName || "",
+          s.recipientAddress || "",
+          s.destination || ""
+        );
+
+        if (senderParty) {
+          setSelectedSender(senderParty);
+          setSenderQuery(senderParty.Company);
+          setSenderResults([senderParty]);
         }
-        if (s.recipientName) {
-          const mockRecipient: Party = {
-            id: 0,
-            Company: s.recipientName,
-            Address: s.recipientAddress || "",
-            Country: s.destination || "",
-            State: "",
-            City: "",
-            Zip: "",
-          };
-          setSelectedRecipient(mockRecipient);
-          setRecipientQuery(s.recipientName);
+        if (recipientParty) {
+          setSelectedRecipient(recipientParty);
+          setRecipientQuery(recipientParty.Company);
+          setRecipientResults([recipientParty]);
         }
 
         try {
@@ -1312,7 +1348,11 @@ const AddShipmentPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
               <Select
-                        value={selectedSender?.id ? String(selectedSender.id) : ""}
+                        value={
+                          selectedSender != null
+                            ? String(selectedSender.id)
+                            : undefined
+                        }
                         onValueChange={(value) => {
                           const sender = senderResults.find(
                             (s) => String(s.id) === value
@@ -1339,7 +1379,9 @@ const AddShipmentPage = () => {
                         onOpenChange={setSenderDropdownOpen}
               >
                 <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Search sender name..." />
+                          <SelectValue placeholder="Search sender name...">
+                            {selectedSender?.Company || undefined}
+                          </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                           <div className="p-2">
@@ -1416,7 +1458,7 @@ const AddShipmentPage = () => {
                       placeholder="Sender address"
                       className="flex-1 bg-muted"
                     />
-                    {selectedSender ? (
+                    {selectedSender && selectedSender.id > 0 ? (
                       <UpdateCustomerAddressDialog
                         triggerLabel="+"
                         customerId={selectedSender.id}
@@ -1504,7 +1546,11 @@ const AddShipmentPage = () => {
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
               <Select
-                        value={selectedRecipient?.id ? String(selectedRecipient.id) : ""}
+                        value={
+                          selectedRecipient != null
+                            ? String(selectedRecipient.id)
+                            : undefined
+                        }
                         onValueChange={(value) => {
                           const recipient = recipientResults.find(
                             (r) => String(r.id) === value
@@ -1531,7 +1577,9 @@ const AddShipmentPage = () => {
                         onOpenChange={setRecipientDropdownOpen}
               >
                 <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Search recipient name..." />
+                          <SelectValue placeholder="Search recipient name...">
+                            {selectedRecipient?.Company || undefined}
+                          </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                           <div className="p-2">
@@ -1613,7 +1661,7 @@ const AddShipmentPage = () => {
                       placeholder="Recipient address"
                       className="flex-1 bg-muted"
                     />
-                    {selectedRecipient ? (
+                    {selectedRecipient && selectedRecipient.id > 0 ? (
                       <UpdateRecipientAddressDialog
                         triggerLabel="+"
                         recipientId={selectedRecipient.id}
