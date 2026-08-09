@@ -178,9 +178,9 @@ const VendorsPage = () => {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-5xl mx-auto px-4 mt-10"
     >
-      <Card className="w-full bg-white border border-gray-100 shadow-sm rounded-2xl">
+      <Card className="w-full border-border shadow-sm rounded-2xl">
         <CardContent className="p-8">
-          <h1 className="text-2xl font-semibold text-primary mb-6 text-center">
+          <h1 className="text-2xl font-semibold text-foreground mb-6 text-center">
             {isEditMode ? "Edit Vendor" : "Add Vendor"}
           </h1>
 

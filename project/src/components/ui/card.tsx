@@ -1,14 +1,22 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { needsThemeSurfaceGuard } from "@/lib/theme-surface"
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
+  // Re-assert theme tokens after className so bare `bg-white` cannot leave
+  // light (dark-mode) text on a forced white surface.
+  const guardWhiteBg = needsThemeSurfaceGuard(
+    typeof className === "string" ? className : undefined
+  )
+
   return (
     <div
       data-slot="card"
       className={cn(
         "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
-        className
+        className,
+        guardWhiteBg && "bg-card text-card-foreground"
       )}
       {...props}
     />

@@ -46,9 +46,9 @@ export default function CountryCombobox({
       <div className="relative w-64">
         {/* Dropdown trigger */}
         <Combobox.Button className="w-full">
-          <div className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition cursor-pointer">
+          <div className="flex items-center justify-between w-full rounded-md border border-input bg-background px-4 py-2 text-sm text-foreground shadow-sm hover:border-border focus:outline-none focus:ring-2 focus:ring-ring/40 transition cursor-pointer">
             {selectedName}
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </div>
         </Combobox.Button>
 
@@ -56,7 +56,7 @@ export default function CountryCombobox({
         <Combobox.Options
           static
           ref={parentRef}
-          className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg focus:outline-none"
+          className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-popover text-popover-foreground shadow-lg focus:outline-none"
         >
           <div
             style={{
@@ -77,8 +77,8 @@ export default function CountryCombobox({
                         active
                           ? "bg-blue-500 text-white"
                           : selected
-                          ? "bg-blue-100 text-blue-900"
-                          : "text-gray-700 hover:bg-gray-100"
+                          ? "bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100"
+                          : "text-foreground hover:bg-accent"
                       }`
                     }
                     style={{

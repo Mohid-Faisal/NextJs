@@ -353,7 +353,7 @@ const RemoteAreaLookupPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Country with flags */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="country" className="text-xs font-bold tracking-wide text-slate-600">
+                  <Label htmlFor="country" className="text-xs font-bold tracking-wide text-muted-foreground">
                     Country <span className="text-red-500">*</span>
                   </Label>
                   <Select
@@ -363,7 +363,7 @@ const RemoteAreaLookupPage = () => {
                       setResult(null);
                     }}
                   >
-                    <SelectTrigger id="country" className="w-full h-[46px] bg-white border-slate-200 rounded-xl text-sm">
+                    <SelectTrigger id="country" className="w-full h-[46px] bg-background dark:bg-input/30 border-border rounded-xl text-sm">
                       <SelectValue placeholder="Select a country" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
@@ -381,8 +381,8 @@ const RemoteAreaLookupPage = () => {
 
                 {/* Search by - tab style */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold tracking-wide text-slate-600">Search by</Label>
-                  <div className="flex rounded-xl bg-white border border-slate-200 p-1 h-[46px] box-border">
+                  <Label className="text-xs font-bold tracking-wide text-muted-foreground">Search by</Label>
+                  <div className="flex rounded-xl bg-background dark:bg-input/30 border border-border p-1 h-[46px] box-border">
                     <button
                       type="button"
                       onClick={() => {
@@ -393,7 +393,7 @@ const RemoteAreaLookupPage = () => {
                       className={`flex-1 rounded-lg text-sm font-medium transition-colors ${
                         searchType === "zip"
                           ? "bg-blue-600 text-white shadow-sm"
-                          : "text-slate-600 hover:bg-slate-100"
+                          : "text-muted-foreground hover:bg-accent"
                       }`}
                     >
                       Zip code
@@ -408,7 +408,7 @@ const RemoteAreaLookupPage = () => {
                       className={`flex-1 rounded-lg text-sm font-medium transition-colors ${
                         searchType === "city"
                           ? "bg-blue-600 text-white shadow-sm"
-                          : "text-slate-600 hover:bg-slate-100"
+                          : "text-muted-foreground hover:bg-accent"
                       }`}
                     >
                       City
@@ -420,7 +420,7 @@ const RemoteAreaLookupPage = () => {
               {/* Row 2: Input (half) | Search buttons (half) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold tracking-wide text-slate-600">
+                  <Label className="text-xs font-bold tracking-wide text-muted-foreground">
                     {searchType === "zip" ? "Zip code" : "City"} <span className="text-red-500">*</span>
                   </Label>
                   {searchType === "zip" ? (
@@ -434,7 +434,7 @@ const RemoteAreaLookupPage = () => {
                         setResult(null);
                       }}
                       onKeyDown={handleKeyDown}
-                      className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
+                      className="h-[46px] bg-background dark:bg-input/30 border-border rounded-xl text-sm"
                     />
                   ) : (
                     <Input
@@ -447,7 +447,7 @@ const RemoteAreaLookupPage = () => {
                         setResult(null);
                       }}
                       onKeyDown={handleKeyDown}
-                      className="h-[46px] bg-white border-slate-200 rounded-xl text-sm"
+                      className="h-[46px] bg-background dark:bg-input/30 border-border rounded-xl text-sm"
                     />
                   )}
                 </div>

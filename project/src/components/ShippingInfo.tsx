@@ -30,11 +30,11 @@ export default function ShippingInfoSection({
   serviceModes,
 }: ShippingInfoSectionProps) {
   return (
-    <Card className="bg-white border border-gray-100 shadow-sm mb-4">
+    <Card className="border-border shadow-sm mb-4">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-4">
           <FaTruck className="text-primary" />
-          <span className="font-medium">Shipping information:</span>
+          <span className="font-medium text-foreground">Shipping information:</span>
         </div>
 
         {/* First Row */}

@@ -26,17 +26,17 @@ export default function RecipientInfoSection({
   setSelectedRecipient: (val: any) => void;
 }) {
   return (
-    <Card className="bg-white border border-gray-100 shadow-sm">
+    <Card className="border-border shadow-sm">
       <CardContent className="p-6">
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">
           <FaInfoCircle className="text-primary" />
-          <span className="font-medium">Recipient Information</span>
+          <span className="font-medium text-foreground">Recipient Information</span>
         </div>
 
         <div className="space-y-6">
           {/* Recipient Name */}
-          <div className="flex flex-col text-black">
+          <div className="flex flex-col text-foreground">
             <Label className="mb-1">Recipient/Client</Label>
             <div className="flex items-center gap-2">
               <div className="flex-1">
@@ -82,14 +82,14 @@ export default function RecipientInfoSection({
           </div>
 
           {/* Recipient Address */}
-          <div className="flex flex-col text-black">
+          <div className="flex flex-col text-foreground">
             <Label className="mb-1">Recipient/Client Address</Label>
             <div className="flex gap-2">
               <Input
                 value={selectedRecipient?.Address ?? ""}
                 readOnly
                 placeholder="Recipient address"
-                className="flex-1 bg-gray-100"
+                className="flex-1 bg-muted dark:bg-input/30"
               />
               <AddRecipientDialog triggerLabel="+" />
             </div>
