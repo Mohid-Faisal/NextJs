@@ -365,6 +365,8 @@ const AddShipmentPage = () => {
     }
   };
 
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       const endpoints = [
@@ -434,6 +436,7 @@ const AddShipmentPage = () => {
       }
 
       // Prefill booking number is disabled (Coming Soon)
+      setSettingsLoaded(true);
     };
 
     fetchData();
@@ -814,289 +817,251 @@ const AddShipmentPage = () => {
     }
   };
 
-  // Prevent edit prefill from re-running when vendor filter changes serviceModes
-  // (that was wiping unsaved Reference # / packaging / COS edits)
+  // Prefill once per shipment after settings (vendors + services) are fully loaded.
+  // Do not re-run when filterServicesByVendor changes serviceModes (that wiped edits).
   const editHydratedForIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     editHydratedForIdRef.current = null;
   }, [editId]);
 
-  // Prefill in edit mode — once per shipment id after settings options are ready
   useEffect(() => {
+    if (!editId || !settingsLoaded) return;
+    if (editHydratedForIdRef.current === editId) return;
+
+    let cancelled = false;
+
     const loadForEdit = async () => {
-      if (!editId) return;
-      if (editHydratedForIdRef.current === editId) return;
-
-      const optionsReady =
-        deliveryStatuses.length > 0 ||
-        shippingModes.length > 0 ||
-        packagingTypes.length > 0 ||
-        vendors.length > 0;
-      if (!optionsReady) return;
-
-      editHydratedForIdRef.current = editId;
       setIsLoadingEdit(true);
       try {
         const res = await fetch(`/api/shipments/${editId}`);
         const data = await res.json();
-        if (res.ok && data.shipment) {
-          const s = data.shipment;
+        if (cancelled) return;
 
-          // Create a complete form state object with all the data
-          const completeFormData = {
-            shipmentDate: s.shipmentDate
-              ? new Date(new Date(s.shipmentDate).getTime() - new Date(s.shipmentDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-              : new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
-            trackingId: s.trackingId || "",
-            invoiceNumber: s.invoiceNumber || "",
-            referenceNumber: s.referenceNumber || "",
-            agency: s.agency || "",
-            office: s.office || "",
-            senderName: s.senderName || "",
-            senderAddress: s.senderAddress || "",
-            recipientName: s.recipientName || "",
-            recipientAddress: s.recipientAddress || "",
-            deliveryStatus: s.deliveryStatus || "",
-            shippingMode: s.shippingMode || "",
-            packaging: s.packaging || "",
-            vendor: s.vendor || "",
-            serviceMode: s.serviceMode || "",
-            amount: s.amount || 1,
-            packageDescription: s.packageDescription || "",
-            weight: s.weight || 0,
-            length: s.length || 0,
-            width: s.width || 0,
-            height: s.height || 0,
-            weightVol: s.weightVol || 0,
-            fixedCharge: s.fixedCharge || 0,
-            decValue: s.decValue || 0,
-            price: (s.price && s.price > 0) ? s.price : (s.totalCost || 0),
-            discount: s.discount || 0,
-            fuelSurcharge: s.fuelSurcharge || 0,
-            insurance: s.insurance || 0,
-            customs: s.customs || 0,
-            tax: s.tax || 0,
-            declaredValue: s.declaredValue || 0,
-            reissue: s.reissue || 0,
-            profitPercentage: s.profitPercentage || "0",
-            cos: s.cos || "0",
-            manualRate: s.manualRate || false,
+        if (!res.ok || !data.shipment) {
+          console.error("Failed to load shipment for edit", data);
+          return;
+        }
+
+        const s = data.shipment;
+
+        const completeFormData = {
+          shipmentDate: s.shipmentDate
+            ? new Date(new Date(s.shipmentDate).getTime() - new Date(s.shipmentDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+            : new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+          trackingId: s.trackingId || "",
+          invoiceNumber: s.invoiceNumber || "",
+          referenceNumber: s.referenceNumber || "",
+          agency: s.agency || "",
+          office: s.office || "",
+          senderName: s.senderName || "",
+          senderAddress: s.senderAddress || "",
+          recipientName: s.recipientName || "",
+          recipientAddress: s.recipientAddress || "",
+          deliveryStatus: s.deliveryStatus || "",
+          shippingMode: s.shippingMode || "",
+          packaging: s.packaging || "",
+          vendor: s.vendor || "",
+          serviceMode: s.serviceMode || "",
+          amount: s.amount || 1,
+          packageDescription: s.packageDescription || "",
+          weight: s.weight || 0,
+          length: s.length || 0,
+          width: s.width || 0,
+          height: s.height || 0,
+          weightVol: s.weightVol || 0,
+          fixedCharge: s.fixedCharge || 0,
+          decValue: s.decValue || 0,
+          price: (s.price && s.price > 0) ? s.price : (s.totalCost || 0),
+          discount: s.discount || 0,
+          fuelSurcharge: s.fuelSurcharge || 0,
+          insurance: s.insurance || 0,
+          customs: s.customs || 0,
+          tax: s.tax || 0,
+          declaredValue: s.declaredValue || 0,
+          reissue: s.reissue || 0,
+          profitPercentage: s.profitPercentage || "0",
+          cos: s.cos != null ? String(s.cos) : "0",
+          manualRate: s.manualRate || false,
+        };
+
+        setForm(completeFormData);
+
+        // Show sender/recipient immediately (don't wait on search APIs)
+        if (s.senderName) {
+          const mockSender: Party = {
+            id: 0,
+            Company: s.senderName,
+            Address: s.senderAddress || "",
+            Country: "",
+            State: "",
+            City: "",
+            Zip: "",
           };
+          setSelectedSender(mockSender);
+          setSenderQuery(s.senderName);
+        }
+        if (s.recipientName) {
+          const mockRecipient: Party = {
+            id: 0,
+            Company: s.recipientName,
+            Address: s.recipientAddress || "",
+            Country: s.destination || "",
+            State: "",
+            City: "",
+            Zip: "",
+          };
+          setSelectedRecipient(mockRecipient);
+          setRecipientQuery(s.recipientName);
+        }
 
-          // Set the complete form state at once
-          setForm(completeFormData);
-
-          // Prefill selected sender/recipient if you have embedded data (keeping simple here)
-          // Packages and calculated values stored as JSON strings in DB; parse if available
-          try {
-            if (s.packages) {
-              const parsed =
-                typeof s.packages === "string"
-                  ? JSON.parse(s.packages)
-                  : s.packages;
-              if (Array.isArray(parsed)) {
-                // Ensure all packages have the new fields with default values
-                const packagesWithDefaults = parsed.map((pkg: any) => ({
-                  ...pkg,
-                  vendorWeight: pkg.vendorWeight ?? 0,
-                  remarks: pkg.remarks ?? "",
-                }));
-                setPackages(packagesWithDefaults);
-              }
+        try {
+          if (s.packages) {
+            const parsed =
+              typeof s.packages === "string"
+                ? JSON.parse(s.packages)
+                : s.packages;
+            if (Array.isArray(parsed)) {
+              const packagesWithDefaults = parsed.map((pkg: any) => ({
+                ...pkg,
+                vendorWeight: pkg.vendorWeight ?? 0,
+                remarks: pkg.remarks ?? "",
+              }));
+              setPackages(packagesWithDefaults);
             }
-            if (s.calculatedValues) {
-              const parsedCalc =
-                typeof s.calculatedValues === "string"
-                  ? JSON.parse(s.calculatedValues)
-                  : s.calculatedValues;
-              if (parsedCalc && typeof parsedCalc === "object") {
-                setCalculatedValues(parsedCalc);
-              }
-            } else {
-                          // If no calculated values, set them based on the price from the database
+          }
+          if (s.calculatedValues) {
+            const parsedCalc =
+              typeof s.calculatedValues === "string"
+                ? JSON.parse(s.calculatedValues)
+                : s.calculatedValues;
+            if (parsedCalc && typeof parsedCalc === "object") {
+              setCalculatedValues(parsedCalc);
+            }
+          } else {
             const price = parseFloat(s.price) || 0;
             setCalculatedValues({
               subtotal: price,
               total: price,
               vendorPrice: 0,
             });
-            }
-          } catch (e) {
-            console.error("Failed to parse stored JSON fields", e);
-            // Fallback: set calculated values based on price
-            const price = parseFloat(s.price) || 0;
-            setCalculatedValues({
-              subtotal: price,
-              total: price,
-              vendorPrice: 0,
-            });
           }
+        } catch (e) {
+          console.error("Failed to parse stored JSON fields", e);
+          const price = parseFloat(s.price) || 0;
+          setCalculatedValues({
+            subtotal: price,
+            total: price,
+            vendorPrice: 0,
+          });
+        }
 
-          // Fetch complete sender and recipient data from database in parallel
-          const fetchPromises: Promise<any>[] = [];
-          
-          if (s.senderName) {
-            fetchPromises.push(
-              fetch(`/api/search/customers?query=${encodeURIComponent(s.senderName)}`)
-                .then((res) => res.json())
-                .then((senderData) => ({ type: 'sender', data: senderData }))
-                .catch((error) => {
-                  console.error("Error fetching sender data:", error);
-                  return { type: 'sender', data: null, error };
-                })
-            );
-          } else {
-            fetchPromises.push(Promise.resolve({ type: 'sender', data: null }));
-          }
+        // Filter services now that allVendorServices is loaded, then restore serviceMode
+        if (s.vendor) {
+          filterServicesByVendor(s.vendor);
+        }
+        setForm((prev) => ({
+          ...prev,
+          vendor: s.vendor || prev.vendor,
+          serviceMode: s.serviceMode || prev.serviceMode,
+          packaging: s.packaging || prev.packaging,
+          shippingMode: s.shippingMode || prev.shippingMode,
+          deliveryStatus: s.deliveryStatus || prev.deliveryStatus,
+        }));
 
-          if (s.recipientName) {
-            fetchPromises.push(
-              fetch(`/api/search/recipients?query=${encodeURIComponent(s.recipientName)}`)
-                .then((res) => res.json())
-                .then((recipientData) => ({ type: 'recipient', data: recipientData }))
-                .catch((error) => {
-                  console.error("Error fetching recipient data:", error);
-                  return { type: 'recipient', data: null, error };
-                })
-            );
-          } else {
-            fetchPromises.push(Promise.resolve({ type: 'recipient', data: null }));
-          }
+        // Enrich sender/recipient from search (optional; mocks already shown)
+        const fetchPromises: Promise<any>[] = [];
+        if (s.senderName) {
+          fetchPromises.push(
+            fetch(`/api/search/customers?query=${encodeURIComponent(s.senderName)}`)
+              .then((r) => r.json())
+              .then((senderData) => ({ type: "sender", data: senderData }))
+              .catch((error) => ({ type: "sender", data: null, error }))
+          );
+        }
+        if (s.recipientName) {
+          fetchPromises.push(
+            fetch(`/api/search/recipients?query=${encodeURIComponent(s.recipientName)}`)
+              .then((r) => r.json())
+              .then((recipientData) => ({ type: "recipient", data: recipientData }))
+              .catch((error) => ({ type: "recipient", data: null, error }))
+          );
+        }
 
-          // Wait for all API calls to complete in parallel
+        if (fetchPromises.length > 0) {
           const results = await Promise.all(fetchPromises);
-          
-          // Process sender results
-          const senderResult = results.find(r => r.type === 'sender');
-          if (senderResult && s.senderName) {
+          if (cancelled) return;
+
+          const senderResult = results.find((r) => r.type === "sender");
+          if (senderResult && s.senderName && Array.isArray(senderResult.data) && senderResult.data.length > 0) {
             const senderData = senderResult.data;
-            if (Array.isArray(senderData) && senderData.length > 0) {
-              // Find the exact match (case-insensitive and matching address/country if possible)
-              const exactSender = senderData.find(
+            const exactSender =
+              senderData.find(
                 (sender: Party) =>
                   sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim() &&
-                  (sender.Address?.toLowerCase().trim() === s.senderAddress?.toLowerCase().trim() || !s.senderAddress)
-              ) || senderData.find(
-                (sender: Party) => sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim()
-              ) || senderData[0]; // Fallback to first result if no exact match
-              
-              if (exactSender) {
-                setSelectedSender(exactSender);
-                setSenderQuery(exactSender.Company);
-                setSenderResults(senderData); // Set results directly to avoid triggering search
-              } else {
-                // Fallback: create a mock sender object
-                const mockSender: Party = {
-                  id: 0,
-                  Company: s.senderName,
-                  Address: s.senderAddress || "",
-                  Country: "",
-                  State: "",
-                  City: "",
-                  Zip: "",
-                };
-                setSelectedSender(mockSender);
-                setSenderQuery(s.senderName);
-              }
-            } else {
-              // Fallback: create a mock sender object if no data found
-              const mockSender: Party = {
-                id: 0,
-                Company: s.senderName,
-                Address: s.senderAddress || "",
-                Country: "",
-                State: "",
-                City: "",
-                Zip: "",
-              };
-              setSelectedSender(mockSender);
-              setSenderQuery(s.senderName);
+                  (sender.Address?.toLowerCase().trim() === s.senderAddress?.toLowerCase().trim() ||
+                    !s.senderAddress)
+              ) ||
+              senderData.find(
+                (sender: Party) =>
+                  sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim()
+              ) ||
+              senderData[0];
+            if (exactSender) {
+              setSelectedSender(exactSender);
+              setSenderQuery(exactSender.Company);
+              setSenderResults(senderData);
             }
           }
 
-          // Process recipient results
-          const recipientResult = results.find(r => r.type === 'recipient');
-          if (recipientResult && s.recipientName) {
+          const recipientResult = results.find((r) => r.type === "recipient");
+          if (
+            recipientResult &&
+            s.recipientName &&
+            Array.isArray(recipientResult.data) &&
+            recipientResult.data.length > 0
+          ) {
             const recipientData = recipientResult.data;
-            if (Array.isArray(recipientData) && recipientData.length > 0) {
-              // Find the exact match (prioritize matching destination country/address)
-              const exactRecipient = recipientData.find(
+            const exactRecipient =
+              recipientData.find(
                 (recipient: Party) =>
-                  recipient.Company.toLowerCase().trim() === s.recipientName.toLowerCase().trim() &&
-                  (recipient.Country?.toLowerCase().trim() === s.destination?.toLowerCase().trim() ||
-                   recipient.Address?.toLowerCase().trim() === s.recipientAddress?.toLowerCase().trim())
-              ) || recipientData.find(
-                (recipient: Party) => recipient.Company.toLowerCase().trim() === s.recipientName.toLowerCase().trim()
-              ) || recipientData[0]; // Fallback to first result if no exact match
-              
-              if (exactRecipient) {
-                setSelectedRecipient(exactRecipient);
-                setRecipientQuery(exactRecipient.Company);
-                setRecipientResults(recipientData); // Set results directly to avoid triggering search
-              } else {
-                // Fallback: create a mock recipient object
-                const mockRecipient: Party = {
-                  id: 0,
-                  Company: s.recipientName,
-                  Address: s.recipientAddress || "",
-                  Country: s.destination || "",
-                  State: "",
-                  City: "",
-                  Zip: "",
-                };
-                setSelectedRecipient(mockRecipient);
-                setRecipientQuery(s.recipientName);
-              }
-            } else {
-              // Fallback: create a mock recipient object if no data found
-              const mockRecipient: Party = {
-                id: 0,
-                Company: s.recipientName,
-                Address: s.recipientAddress || "",
-                Country: s.destination || "",
-                State: "",
-                City: "",
-                Zip: "",
-              };
-              setSelectedRecipient(mockRecipient);
-              setRecipientQuery(s.recipientName);
+                  recipient.Company.toLowerCase().trim() ===
+                    s.recipientName.toLowerCase().trim() &&
+                  (recipient.Country?.toLowerCase().trim() ===
+                    s.destination?.toLowerCase().trim() ||
+                    recipient.Address?.toLowerCase().trim() ===
+                      s.recipientAddress?.toLowerCase().trim())
+              ) ||
+              recipientData.find(
+                (recipient: Party) =>
+                  recipient.Company.toLowerCase().trim() ===
+                  s.recipientName.toLowerCase().trim()
+              ) ||
+              recipientData[0];
+            if (exactRecipient) {
+              setSelectedRecipient(exactRecipient);
+              setRecipientQuery(exactRecipient.Company);
+              setRecipientResults(recipientData);
             }
           }
+        }
 
-          // Filter services based on vendor if vendor is set
-          if (s.vendor) {
-            filterServicesByVendor(s.vendor);
-          }
-
-          // Set select values directly in the form state to ensure proper pre-filling
-          setForm((prev) => ({
-              ...prev,
-              agency: s.agency || prev.agency,
-              office: s.office || prev.office,
-              deliveryStatus: s.deliveryStatus || prev.deliveryStatus,
-              shippingMode: s.shippingMode || prev.shippingMode,
-              packaging: s.packaging || prev.packaging,
-              vendor: s.vendor || prev.vendor,
-              serviceMode: s.serviceMode || prev.serviceMode,
-            }));
+        if (!cancelled) {
+          editHydratedForIdRef.current = editId;
         }
       } catch (e) {
         console.error("Failed to load shipment for edit", e);
+        // Leave hydrated unset so a later settingsLoaded/editId cycle can retry
       } finally {
-        setIsLoadingEdit(false);
+        if (!cancelled) setIsLoadingEdit(false);
       }
     };
+
     loadForEdit();
-    // Intentionally omit serviceModes.length — filterServicesByVendor changes it and
-    // must not re-fetch/overwrite the form mid-edit.
-  }, [
-    editId,
-    deliveryStatuses.length,
-    shippingModes.length,
-    packagingTypes.length,
-    vendors.length,
-  ]);
+    return () => {
+      cancelled = true;
+    };
+  }, [editId, settingsLoaded]);
 
   // Helper function to format full address
   const formatFullAddress = (party: Party | null) => {
