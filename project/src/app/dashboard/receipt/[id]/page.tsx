@@ -228,7 +228,6 @@ export default function ReceiptPage() {
               background: white;
               padding: 0;
               border: none;
-              transform: none;
             }
 
             .header-area {
@@ -263,11 +262,8 @@ export default function ReceiptPage() {
               display: grid;
               grid-template-columns: 34% 33% 33%;
               border: 2px solid black;
-              transform: scale(1.1);
-              transform-origin: top left;
-              width: 90.909%; /* 100% / 1.1 so scaled width fits the page */
-              /* Fixed px — % margin is based on width and left a huge gap under the grid */
-              margin-bottom: 22px;
+              width: 100%;
+              margin: 0 0 3px 0;
             }
 
             .border-right { border-right: 1px solid black; }
@@ -318,22 +314,25 @@ export default function ReceiptPage() {
             .shipper-container {
               display: flex;
               flex-direction: column;
-              min-height: 165px;
+              min-height: 150px;
               height: auto;
+              overflow: hidden;
             }
             .address-details {
-              padding: 6px;
+              padding: 5px 6px;
               flex: 1;
-              font-size: 10.5px;
-              line-height: 1.25;
-              overflow: visible;
+              font-size: 10px;
+              line-height: 1.22;
+              overflow: hidden;
             }
 
             .auth-section {
-              height: 100px;
+              min-height: 110px;
+              height: auto;
               padding: 0;
               position: relative;
-              font-size: 8.5px;
+              font-size: 8px;
+              overflow: hidden;
             }
             .auth-section .section-header {
               margin: 0;
@@ -363,8 +362,10 @@ export default function ReceiptPage() {
             }
 
             .pod-section {
-              height: 100px;
-              padding: 5px;
+              height: 0;
+              min-height: 0;
+              padding: 0;
+              overflow: hidden;
             }
 
             .col-2 {
@@ -486,43 +487,46 @@ export default function ReceiptPage() {
             }
 
             .footer-strip {
-              margin-top: 2px;
-              margin-bottom: 0;
+              clear: both;
+              margin: 2px 0 1px 0;
+              padding: 0;
               font-size: 11px;
               font-weight: bold;
+              line-height: 1.2;
             }
 
             .terms-conditions-wrapper {
               margin-top: 2px !important;
               padding-top: 2px !important;
+              page-break-inside: avoid;
             }
 
             .terms-title {
-              font-size: 8px !important;
+              font-size: 7.5px !important;
               margin-bottom: 1px !important;
             }
 
             .terms-body {
-              font-size: 5.6px !important;
+              font-size: 5.8px !important;
               line-height: 1.12 !important;
             }
 
             .terms-body .terms-notice {
-              margin-bottom: 2px !important;
-            }
-
-            .terms-body .terms-columns {
-              column-gap: 10px !important;
-            }
-
-            .terms-body .terms-section {
               margin-bottom: 1.5px !important;
             }
 
+            .terms-body .terms-columns {
+              column-gap: 8px !important;
+            }
+
+            .terms-body .terms-section {
+              margin-bottom: 1px !important;
+            }
+
             .support-info-footer {
-              margin-top: 3px !important;
-              padding-top: 2px !important;
-              font-size: 6.5px !important;
+              margin-top: 2px !important;
+              padding-top: 1px !important;
+              font-size: 6px !important;
             }
 
             /* Utility classes shared with on-screen layout (margins/paddings) */
@@ -596,10 +600,11 @@ export default function ReceiptPage() {
               html, body { padding: 0; margin: 0; background: white; height: auto; min-height: 0; }
               .waybill-container { border: none; padding: 0; margin: 0; width: 100%; max-width: 100%; }
               .pod-section { height: 0; min-height: 0; padding: 0; overflow: hidden; }
-              .main-grid { margin-bottom: 18px; }
-              .terms-body { font-size: 5.4px !important; line-height: 1.1 !important; }
+              .main-grid { margin-bottom: 2px; }
+              .footer-strip { margin: 2px 0 1px 0; }
+              .terms-body { font-size: 5.8px !important; line-height: 1.12 !important; }
               @page {
-                size: A4;
+                size: A4 portrait;
                 margin: 6mm;
               }
             }
@@ -900,10 +905,8 @@ export default function ReceiptPage() {
           display: grid;
           grid-template-columns: 34% 33% 33%;
           border: 2px solid black;
-          transform: scale(1.1);
-          transform-origin: top left;
-          width: 90.909%; /* 100% / 1.1 so scaled width fits */
-          margin-bottom: 22px;
+          width: 100%;
+          margin: 0 0 3px 0;
         }
 
         .waybill-wrapper .border-right { border-right: 1px solid black; }
@@ -950,23 +953,26 @@ export default function ReceiptPage() {
         .waybill-wrapper .shipper-container {
           display: flex;
           flex-direction: column;
-          min-height: 165px;
+          min-height: 150px;
           height: auto;
+          overflow: hidden;
         }
 
         .waybill-wrapper .address-details {
-          padding: 6px;
+          padding: 5px 6px;
           flex: 1;
-          font-size: 10.5px;
-          line-height: 1.25;
-          overflow: visible;
+          font-size: 10px;
+          line-height: 1.22;
+          overflow: hidden;
         }
 
         .waybill-wrapper .auth-section {
-          height: 100px;
+          min-height: 110px;
+          height: auto;
           padding: 0;
           position: relative;
-          font-size: 8.5px;
+          font-size: 8px;
+          overflow: hidden;
         }
         .waybill-wrapper .auth-section .section-header {
           margin: 0;
@@ -987,8 +993,8 @@ export default function ReceiptPage() {
         .waybill-wrapper .signature-line {
           border-top: 1px solid black;
           width: 100%;
-          margin-top: 15px;
-          padding-top: 5px;
+          margin-top: 4px;
+          padding-top: 3px;
         }
 
         .waybill-wrapper .timestamp {
@@ -998,8 +1004,10 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .pod-section {
-          height: 100px;
-          padding: 5px;
+          height: 0;
+          min-height: 0;
+          padding: 0;
+          overflow: hidden;
         }
 
         .waybill-wrapper .col-2 {
@@ -1135,10 +1143,11 @@ export default function ReceiptPage() {
         }
 
         .waybill-wrapper .footer-strip {
-          margin-top: 2px;
-          margin-bottom: 0;
+          clear: both;
+          margin: 2px 0 1px 0;
           font-size: 11px;
           font-weight: bold;
+          line-height: 1.2;
         }
 
         /* Utility classes shared with print template (margins/paddings) */
@@ -1525,7 +1534,7 @@ export default function ReceiptPage() {
           <div
             className="terms-conditions-wrapper"
             style={{
-              marginTop: '2px',
+              marginTop: '1px',
               paddingTop: '2px',
               borderTop: '1.5px solid black',
               fontFamily: 'Arial, Helvetica, sans-serif',
@@ -1545,7 +1554,7 @@ export default function ReceiptPage() {
               Terms and Conditions of Transportation
             </div>
 
-            <div className="terms-body" style={{ fontSize: '5.5px', lineHeight: '1.1', color: '#000' }}>
+            <div className="terms-body" style={{ fontSize: '5.8px', lineHeight: '1.12', color: '#000' }}>
               <div className="terms-notice" style={{ marginBottom: '2px', textAlign: 'justify' }}>
                 <strong>IMPORTANT NOTICE:</strong> When ordering {orgName}’s services you, as “Shipper”, are agreeing, on your behalf and on behalf of the consignee of the Shipment (“Consignee”) and anyone else with an interest in the Shipment that these Terms and Conditions shall apply. “Shipment” means all documents or parcels that travel under one waybill and which may be carried by any means {orgName} chooses, including air, road or any other carrier. A “waybill” shall include any Shipment identifier or document produced by {orgName} or Shipper automated systems such as a label, barcode, waybill or consignment note as well as any electronic version thereof. Every Shipment is transported on a limited liability basis as provided herein. If Shipper requires greater protection, then insurance may be arranged at an additional cost. “{orgName}” means any member of the {orgName} Network.
               </div>
