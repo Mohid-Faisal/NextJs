@@ -167,6 +167,10 @@ export default function ReceiptPage() {
       // Hide the sender phone number for the vendor copy.
       const phoneEl = clone.querySelector('[data-sender-phone]');
       if (phoneEl) phoneEl.remove();
+      const footerStrip =
+        clone.querySelector('[data-copy-label]') ||
+        clone.querySelector('.footer-strip');
+      if (footerStrip) footerStrip.textContent = 'VENDOR COPY';
     }
 
     // Create a new window for printing
@@ -259,6 +263,10 @@ export default function ReceiptPage() {
               display: grid;
               grid-template-columns: 34% 33% 33%;
               border: 2px solid black;
+              transform: scale(1.1);
+              transform-origin: top left;
+              width: 90.909%; /* 100% / 1.1 so scaled width fits the page */
+              margin-bottom: 12%;
             }
 
             .border-right { border-right: 1px solid black; }
@@ -309,13 +317,15 @@ export default function ReceiptPage() {
             .shipper-container {
               display: flex;
               flex-direction: column;
-              height: 150px;
+              min-height: 165px;
+              height: auto;
             }
             .address-details {
               padding: 6px;
               flex: 1;
               font-size: 10.5px;
               line-height: 1.25;
+              overflow: visible;
             }
 
             .auth-section {
@@ -855,6 +865,10 @@ export default function ReceiptPage() {
           display: grid;
           grid-template-columns: 34% 33% 33%;
           border: 2px solid black;
+          transform: scale(1.1);
+          transform-origin: top left;
+          width: 90.909%; /* 100% / 1.1 so scaled width fits */
+          margin-bottom: 12%;
         }
 
         .waybill-wrapper .border-right { border-right: 1px solid black; }
@@ -901,7 +915,8 @@ export default function ReceiptPage() {
         .waybill-wrapper .shipper-container {
           display: flex;
           flex-direction: column;
-          height: 150px;
+          min-height: 165px;
+          height: auto;
         }
 
         .waybill-wrapper .address-details {
@@ -909,6 +924,7 @@ export default function ReceiptPage() {
           flex: 1;
           font-size: 10.5px;
           line-height: 1.25;
+          overflow: visible;
         }
 
         .waybill-wrapper .auth-section {
@@ -1465,7 +1481,7 @@ export default function ReceiptPage() {
           </div>
           {/* End Grid */}
 
-          <div className="footer-strip">
+          <div className="footer-strip" data-copy-label>
             SENDER COPY
           </div>
 
