@@ -685,8 +685,13 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // Always create journal entry for customer debit transaction (Revenue)
-        const customerRevenueAmount = customerTotalCost > 0 ? customerTotalCost : remainingAmount;
+        // Post revenue from the saved invoice amount (not just price-derived totals).
+        // price can be 0 while invoice.totalAmount is set; prefer the invoice.
+        const customerRevenueAmount =
+          (customerInvoice?.totalAmount > 0
+            ? customerInvoice.totalAmount
+            : null) ??
+          (customerTotalCost > 0 ? customerTotalCost : remainingAmount);
         if (customerRevenueAmount > 0) {
           await createJournalEntryForTransaction(
             prisma,
@@ -766,8 +771,10 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // Always create journal entry for vendor debit transaction (Expense)
-        const vendorExpenseAmount = vendorTotalCost > 0 ? vendorTotalCost : vendorRemainingAmount;
+        // Prefer saved vendor invoice amount (same reason as customer revenue).
+        const vendorExpenseAmount =
+          (vendorInvoice?.totalAmount > 0 ? vendorInvoice.totalAmount : null) ??
+          (vendorTotalCost > 0 ? vendorTotalCost : vendorRemainingAmount);
         if (vendorExpenseAmount > 0) {
           await createJournalEntryForTransaction(
             prisma,

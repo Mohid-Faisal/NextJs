@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, X, Info, Search } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Info, Search } from "lucide-react";
+import { toDatetimeLocalValue } from "@/lib/noteFormats";
 
 type Bill = {
   id: number;
@@ -59,7 +59,7 @@ export default function CreateDebitNoteDialog({
   const [selectedBill, setSelectedBill] = useState<string>("");
   const [selectedVendor, setSelectedVendor] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
-  const [date, setDate] = useState<string>("");
+  const [date, setDate] = useState<string>(() => toDatetimeLocalValue(new Date()));
   const [description, setDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [entryType, setEntryType] = useState<"DEBIT" | "CREDIT">("DEBIT");
@@ -167,7 +167,7 @@ export default function CreateDebitNoteDialog({
         }
         setSelectedVendor(String(data.vendorId));
         setAmount(String(data.amount));
-        setDate(new Date(data.date).toISOString().slice(0, 10));
+        setDate(toDatetimeLocalValue(data.date));
         setDescription((data.descriptionDetail as string) || "");
         setEntryType(data.type === "CREDIT" ? "CREDIT" : "DEBIT");
         if (data.debitAccountId != null) {
@@ -320,11 +320,6 @@ export default function CreateDebitNoteDialog({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
-
   if (isEditMode && editLoading) {
     return (
       <div className="p-6 text-center text-sm text-muted-foreground">
@@ -460,25 +455,21 @@ export default function CreateDebitNoteDialog({
           />
         </div>
 
-        {/* Date + Type (one line) */}
+        {/* Date & Time + Type (one line) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-          {/* Date */}
+          {/* Date & Time */}
           <div className="space-y-2">
             <Label htmlFor="date" className="text-sm font-medium">
-              Date <span className="text-red-500">*</span>
+              Date & Time <span className="text-red-500">*</span>
             </Label>
-            <div className="relative">
-              <Input
-                id="date"
-                type="date"
-                placeholder="dd/mm/yyyy"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-10"
-                required
-              />
-              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
+            <Input
+              id="date"
+              type="datetime-local"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="h-10"
+              required
+            />
           </div>
 
           {/* Type (DEBIT/CREDIT) */}

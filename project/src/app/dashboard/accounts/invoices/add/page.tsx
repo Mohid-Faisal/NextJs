@@ -15,6 +15,10 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import {
+  parseDateInputAsLocalDate,
+  toDatetimeLocalValue,
+} from "@/lib/noteFormats";
 
 type Customer = {
   id: number;
@@ -46,7 +50,7 @@ export default function AddInvoicePage() {
   // Form state
   const [formData, setFormData] = useState({
     invoiceNumber: "",
-    invoiceDate: new Date().toISOString().split("T")[0],
+    invoiceDate: toDatetimeLocalValue(new Date()),
     receiptNumber: "",
     trackingNumber: "",
     destination: "",
@@ -104,8 +108,8 @@ export default function AddInvoicePage() {
             setFormData({
               invoiceNumber: invoice.invoiceNumber || "",
               invoiceDate: invoice.invoiceDate
-                ? new Date(invoice.invoiceDate).toISOString().split("T")[0]
-                : new Date().toISOString().split("T")[0],
+                ? toDatetimeLocalValue(invoice.invoiceDate)
+                : toDatetimeLocalValue(new Date()),
               receiptNumber: invoice.receiptNumber || "",
               trackingNumber: invoice.trackingNumber || "",
               destination: invoice.destination || "",
@@ -186,6 +190,7 @@ export default function AddInvoicePage() {
         },
         body: JSON.stringify({
           ...formData,
+          invoiceDate: parseDateInputAsLocalDate(formData.invoiceDate).toISOString(),
           weight: parseFloat(formData.weight),
           fscCharges: parseFloat(formData.fscCharges),
           customerId: formData.customerId || null,
@@ -424,11 +429,11 @@ export default function AddInvoicePage() {
               </div>
               <div>
                 <Label htmlFor="invoiceDate" className="font-bold">
-                  Invoice Date
+                  Invoice Date & Time
                 </Label>
                 <Input
                   id="invoiceDate"
-                  type="date"
+                  type="datetime-local"
                   value={formData.invoiceDate}
                   onChange={(e) =>
                     setFormData({ ...formData, invoiceDate: e.target.value })

@@ -144,7 +144,10 @@ export default function DebitNotesPage() {
       dn.type || (dn.amount < 0 ? "CREDIT" : "DEBIT"),
       dn.vendor?.PersonName || dn.vendor?.CompanyName || "-",
       dn.bill?.invoiceNumber || "-",
-      new Date(dn.date).toLocaleDateString(),
+      new Date(dn.date).toLocaleString(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+      }),
       `${dn.currency} ${dn.amount.toLocaleString()}`,
       dn.description || "-",
     ]);
@@ -170,7 +173,7 @@ export default function DebitNotesPage() {
            <td>${dn.type || (dn.amount < 0 ? "CREDIT" : "DEBIT")}</td>
            <td>${dn.vendor?.PersonName || dn.vendor?.CompanyName || "-"}</td>
            <td>${dn.bill?.invoiceNumber || "-"}</td>
-           <td>${new Date(dn.date).toLocaleDateString()}</td>
+           <td>${new Date(dn.date).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}</td>
            <td>${dn.currency} ${dn.amount.toLocaleString()}</td>
            <td>${dn.description || "-"}</td>
          </tr>`
@@ -400,7 +403,10 @@ export default function DebitNotesPage() {
                       )}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      {new Date(dn.date).toLocaleDateString()}
+                      {new Date(dn.date).toLocaleString(undefined, {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">
                       {dn.currency} {dn.amount.toLocaleString()}

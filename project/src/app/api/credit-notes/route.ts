@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addCustomerTransaction } from "@/lib/utils";
 import {
-  formatCreditNoteReference,
+  formatAdjustmentReference,
+  inferAdjustmentType,
   normalizeNoteLineDescription,
   parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
@@ -133,13 +134,29 @@ export async function GET(request: NextRequest) {
       take: pageSize,
     });
 
-    // Attach a computed type field for UI consumption
+    // Infer type from linked customer txn / reference / legacy description
+    const noteRefs = creditNotes
+      .map((cn: any) => cn.creditNoteNumber as string)
+      .filter(Boolean);
+    const linkedTxns =
+      noteRefs.length > 0
+        ? await prisma.customerTransaction.findMany({
+            where: orgWhere(session, { reference: { in: noteRefs } }),
+            select: { reference: true, type: true },
+          })
+        : [];
+    const txnTypeByRef = new Map(
+      linkedTxns.map((t) => [t.reference!, t.type as "CREDIT" | "DEBIT"])
+    );
+
     const withType = creditNotes.map((cn: any) => ({
       ...cn,
-      type:
-        typeof cn.description === "string" && cn.description.toLowerCase().startsWith("debit note")
-          ? "DEBIT"
-          : "CREDIT",
+      type: inferAdjustmentType({
+        reference: cn.creditNoteNumber,
+        description: cn.description,
+        transactionType: txnTypeByRef.get(cn.creditNoteNumber) ?? null,
+        fallback: "CREDIT",
+      }),
     }));
 
     // Get total count for pagination
@@ -240,12 +257,13 @@ export async function POST(request: NextRequest) {
     });
 
     const nextId = (lastCreditNote?.id || 0) + 1;
-    const creditNoteNumber = formatCreditNoteReference(nextId);
+    const entryType: "CREDIT" | "DEBIT" = type === "DEBIT" ? "DEBIT" : "CREDIT";
+    const creditNoteNumber = formatAdjustmentReference(entryType, nextId);
 
     const nextEntryNumber = await nextJournalEntryNumber(prisma, session.organizationId);
 
     // Must match UI: type CREDIT = credit note (customer CREDIT); type DEBIT = debit note (customer DEBIT)
-    if (type === "CREDIT") {
+    if (entryType === "CREDIT") {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {
@@ -364,7 +382,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result.creditNote, { status: 201 });
   }
-  else if (type === "DEBIT") {
+  else if (entryType === "DEBIT") {
     
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {

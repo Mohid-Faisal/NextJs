@@ -579,7 +579,7 @@ export async function POST(req: NextRequest) {
           })
         });
 
-        // Create customer transaction
+        // Ledger txs use remaining (after balance applied); GL posts full invoice totals.
         if (customerRemainingAmount > 0) {
           await addCustomerTransaction(
             prisma,
@@ -592,11 +592,12 @@ export async function POST(req: NextRequest) {
             shipmentData.shipmentDate,
             session.organizationId
           );
-
+        }
+        if (customerTotalCost > 0) {
           await createJournalEntryForTransaction(
             prisma,
             'CUSTOMER_DEBIT',
-            customerRemainingAmount,
+            customerTotalCost,
             `Customer invoice for shipment ${shipmentData.trackingId}`,
             invoiceNumber,
             invoiceNumber,
@@ -605,7 +606,6 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // Create vendor transaction
         if (vendorRemainingAmount > 0) {
           await addVendorTransaction(
             prisma,
@@ -618,11 +618,12 @@ export async function POST(req: NextRequest) {
             shipmentData.shipmentDate,
             session.organizationId
           );
-
+        }
+        if (vendorTotalCost > 0) {
           await createJournalEntryForTransaction(
             prisma,
             'VENDOR_DEBIT',
-            vendorRemainingAmount,
+            vendorTotalCost,
             `Vendor invoice for shipment ${shipmentData.trackingId}`,
             vendorInvoiceNumber,
             vendorInvoiceNumber,

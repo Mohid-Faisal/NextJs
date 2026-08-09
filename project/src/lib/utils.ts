@@ -3,6 +3,7 @@ import { twMerge } from "tailwind-merge"
 import jwt from "jsonwebtoken"
 import { Country, State } from "country-state-city"
 import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
+import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -1047,15 +1048,25 @@ export async function createJournalEntryForTransaction(
       }
     }
 
-    const lastEntry = await prisma.journalEntry.findFirst({
-      where: orgFilter,
-      orderBy: { entryNumber: "desc" }
-    });
+    // Do not post zero/invalid amounts — callers should create when the invoice
+    // amount becomes > 0 (see updateCustomerJournalEntry create-if-missing).
+    if (!Number.isFinite(amount) || amount <= 0) {
+      console.warn(`Skipping ${type} journal entry for ${reference || invoice}: non-positive amount ${amount}`);
+      return null;
+    }
 
     let entryNumber = "JE-0001";
-    if (lastEntry) {
-      const lastNumber = parseInt(lastEntry.entryNumber.split("-")[1]);
-      entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
+    if (organizationId != null) {
+      entryNumber = await nextJournalEntryNumber(prisma, organizationId);
+    } else {
+      const lastEntry = await prisma.journalEntry.findFirst({
+        where: orgFilter,
+        orderBy: { entryNumber: "desc" }
+      });
+      if (lastEntry) {
+        const lastNumber = parseInt(String(lastEntry.entryNumber).split("-")[1], 10);
+        entryNumber = `JE-${String((Number.isFinite(lastNumber) ? lastNumber : 0) + 1).padStart(4, "0")}`;
+      }
     }
 
     const chartWhere = (extra: Record<string, unknown>) =>
@@ -1087,7 +1098,7 @@ export async function createJournalEntryForTransaction(
       })
     });
 
-    const journalEntry = await prisma.$transaction(async (tx: any) => {
+    const writeEntry = async (tx: any) => {
       const entryDate = date ? new Date(date) : new Date();
 
       const entry = await tx.journalEntry.create({
@@ -1276,7 +1287,13 @@ export async function createJournalEntryForTransaction(
       }
 
       return entry;
-    });
+    };
+
+    // Support being called with an interactive transaction client (no nested $transaction).
+    const journalEntry =
+      typeof prisma.$transaction === "function"
+        ? await prisma.$transaction(writeEntry)
+        : await writeEntry(prisma);
 
     console.log(`Created journal entry ${journalEntry.entryNumber} for ${type} transaction`);
     return journalEntry;
@@ -1442,6 +1459,29 @@ export async function updateCustomerJournalEntry(
         }
       }
       console.log(`Updated customer journal entry ${existingEntry.entryNumber} for invoice ${invoiceNumber}`);
+    } else if (newAmount > 0) {
+      // Invoice/ledger was updated but revenue was never posted — create it now.
+      const invoice = await prisma.invoice.findFirst({
+        where: organizationId != null
+          ? { organizationId, invoiceNumber }
+          : { invoiceNumber },
+        include: { shipment: { select: { shipmentDate: true, trackingId: true } } },
+      });
+      const entryDate =
+        invoice?.shipment?.shipmentDate || invoice?.invoiceDate || new Date();
+      const tracking =
+        invoice?.shipment?.trackingId || invoice?.trackingNumber || invoiceNumber;
+      await createJournalEntryForTransaction(
+        prisma,
+        "CUSTOMER_DEBIT",
+        newAmount,
+        description || `Customer invoice for shipment ${tracking}`,
+        invoiceNumber,
+        invoiceNumber,
+        entryDate,
+        organizationId
+      );
+      console.log(`Created missing customer journal entry for invoice ${invoiceNumber}`);
     }
   } catch (error) {
     console.error(`Error updating customer journal entry for invoice ${invoiceNumber}:`, error);
@@ -1501,6 +1541,28 @@ export async function updateVendorJournalEntry(
       }
       console.log(existingEntry);
       console.log(`Updated vendor journal entry ${existingEntry.entryNumber} for invoice ${invoiceNumber}`);
+    } else if (newAmount > 0) {
+      const invoice = await prisma.invoice.findFirst({
+        where: organizationId != null
+          ? { organizationId, invoiceNumber }
+          : { invoiceNumber },
+        include: { shipment: { select: { shipmentDate: true, trackingId: true } } },
+      });
+      const entryDate =
+        invoice?.shipment?.shipmentDate || invoice?.invoiceDate || new Date();
+      const tracking =
+        invoice?.shipment?.trackingId || invoice?.trackingNumber || invoiceNumber;
+      await createJournalEntryForTransaction(
+        prisma,
+        "VENDOR_DEBIT",
+        newAmount,
+        description || `Vendor invoice for shipment ${tracking}`,
+        invoiceNumber,
+        invoiceNumber,
+        entryDate,
+        organizationId
+      );
+      console.log(`Created missing vendor journal entry for invoice ${invoiceNumber}`);
     }
   } catch (error) {
     console.error(`Error updating vendor journal entry for invoice ${invoiceNumber}:`, error);

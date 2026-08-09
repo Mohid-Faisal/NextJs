@@ -423,14 +423,51 @@ export async function GET(
 
       // Batch fetch debit notes for paginated transactions
       const paginatedDebitNotesMap = new Map<string, Date>();
+      const paginatedDebitNoteInvoiceMap = new Map<string, string>();
       if (paginatedDebitNoteRefs.length > 0) {
         const paginatedDebitNotes = await prisma.debitNote.findMany({
           where: { ...debitNoteOrgFilter(session), debitNoteNumber: { in: paginatedDebitNoteRefs } },
-          select: { debitNoteNumber: true, date: true },
+          select: {
+            debitNoteNumber: true,
+            date: true,
+            bill: { select: { invoiceNumber: true } },
+          },
         });
         paginatedDebitNotes.forEach((dn) => {
           if (dn.date) paginatedDebitNotesMap.set(dn.debitNoteNumber, dn.date);
+          const inv = dn.bill?.invoiceNumber;
+          if (inv) paginatedDebitNoteInvoiceMap.set(dn.debitNoteNumber, inv);
         });
+
+        // Ensure bill invoices linked to adjustments are available for shipment lookup
+        const missingBillInvoices = [...paginatedDebitNoteInvoiceMap.values()].filter(
+          (inv) => !paginatedInvoicesMap.has(inv)
+        );
+        if (missingBillInvoices.length > 0) {
+          const extraInvoices = await prisma.invoice.findMany({
+            where: { ...orgWhere(session), invoiceNumber: { in: missingBillInvoices } },
+            include: {
+              shipment: {
+                select: {
+                  trackingId: true,
+                  weight: true,
+                  destination: true,
+                  referenceNumber: true,
+                  deliveryStatus: true,
+                  shipmentDate: true,
+                  recipientName: true,
+                },
+              },
+            },
+          });
+          extraInvoices.forEach((inv) => {
+            paginatedInvoicesMap.set(inv.invoiceNumber, inv);
+            invoicesFieldsByNumber.set(inv.invoiceNumber, {
+              shipmentDate: inv.shipment?.shipmentDate ?? undefined,
+              invoiceDate: inv.invoiceDate,
+            });
+          });
+        }
       }
 
       // Batch fetch payments for CREDIT transactions in paginated results.
@@ -491,6 +528,7 @@ export async function GET(
           let paymentDate: string | undefined = undefined;
           let debitNoteDate: string | undefined = undefined;
           let consigneeName: string | undefined = undefined;
+          let trackingId: string | undefined = undefined;
 
           if (transaction.reference) {
             const dnDate = paginatedDebitNotesMap.get(transaction.reference);
@@ -499,26 +537,35 @@ export async function GET(
             }
           }
 
-          if (transaction.type === "CREDIT") {
-            const fromDebitNote =
-              transaction.reference &&
-              paginatedDebitNotesMap.has(transaction.reference);
-            if (!fromDebitNote) {
-              const paymentDateObj = resolveCreditPaymentVoucherDate(
-                {
-                  amount: transaction.amount,
-                  invoice: transaction.invoice,
-                  reference: transaction.reference,
-                  createdAt: transaction.createdAt,
-                },
-                paginatedPaymentsList
-              );
-              if (paymentDateObj) {
-                paymentDate = paymentDateObj.toISOString();
-              }
+          const fromDebitNote =
+            !!transaction.reference &&
+            paginatedDebitNotesMap.has(transaction.reference);
+
+          if (transaction.type === "CREDIT" && !fromDebitNote) {
+            const paymentDateObj = resolveCreditPaymentVoucherDate(
+              {
+                amount: transaction.amount,
+                invoice: transaction.invoice,
+                reference: transaction.reference,
+                createdAt: transaction.createdAt,
+              },
+              paginatedPaymentsList
+            );
+            if (paymentDateObj) {
+              paymentDate = paymentDateObj.toISOString();
             }
-          } else if (transaction.invoice) {
-            const invoice = paginatedInvoicesMap.get(transaction.invoice);
+          }
+
+          const resolvedInvoice =
+            (transaction.invoice && paginatedInvoicesMap.has(transaction.invoice)
+              ? transaction.invoice
+              : null) ??
+            (transaction.reference
+              ? paginatedDebitNoteInvoiceMap.get(transaction.reference) ?? null
+              : null);
+
+          if (resolvedInvoice) {
+            const invoice = paginatedInvoicesMap.get(resolvedInvoice);
 
             if (invoice?.shipment) {
               shipmentInfo = {
@@ -536,6 +583,10 @@ export async function GET(
 
               if (invoice.shipment.recipientName) {
                 consigneeName = invoice.shipment.recipientName;
+              }
+
+              if (invoice.shipment.trackingId) {
+                trackingId = invoice.shipment.trackingId;
               }
             }
           }
@@ -556,6 +607,7 @@ export async function GET(
             paymentDate,
             debitNoteDate,
             consigneeName,
+            trackingId,
             ledgerVoucherDate: ledgerVoucherDate.toISOString(),
           };
         }
@@ -1021,14 +1073,50 @@ export async function GET(
     
     // Batch fetch debit notes for paginated transactions
     const paginatedDebitNotesMap = new Map<string, Date>();
+    const paginatedDebitNoteInvoiceMapRecalc = new Map<string, string>();
     if (paginatedDebitNoteRefs.length > 0) {
       const paginatedDebitNotes = await prisma.debitNote.findMany({
         where: { ...debitNoteOrgFilter(session), debitNoteNumber: { in: paginatedDebitNoteRefs } },
-        select: { debitNoteNumber: true, date: true }
+        select: {
+          debitNoteNumber: true,
+          date: true,
+          bill: { select: { invoiceNumber: true } },
+        },
       });
-      paginatedDebitNotes.forEach(dn => {
+      paginatedDebitNotes.forEach((dn) => {
         if (dn.date) paginatedDebitNotesMap.set(dn.debitNoteNumber, dn.date);
+        const inv = dn.bill?.invoiceNumber;
+        if (inv) paginatedDebitNoteInvoiceMapRecalc.set(dn.debitNoteNumber, inv);
       });
+
+      const missingBillInvoices = [
+        ...paginatedDebitNoteInvoiceMapRecalc.values(),
+      ].filter((inv) => !paginatedInvoicesMap.has(inv));
+      if (missingBillInvoices.length > 0) {
+        const extraInvoices = await prisma.invoice.findMany({
+          where: { ...orgWhere(session), invoiceNumber: { in: missingBillInvoices } },
+          include: {
+            shipment: {
+              select: {
+                trackingId: true,
+                weight: true,
+                destination: true,
+                referenceNumber: true,
+                deliveryStatus: true,
+                shipmentDate: true,
+                recipientName: true,
+              },
+            },
+          },
+        });
+        extraInvoices.forEach((inv) => {
+          paginatedInvoicesMap.set(inv.invoiceNumber, inv);
+          invoicesFieldsByNumberRecalc.set(inv.invoiceNumber, {
+            shipmentDate: inv.shipment?.shipmentDate ?? undefined,
+            invoiceDate: inv.invoiceDate,
+          });
+        });
+      }
     }
     
     // Batch fetch payments for CREDIT transactions in paginated results.
@@ -1083,6 +1171,7 @@ export async function GET(
       let paymentDate: string | undefined = undefined;
       let debitNoteDate: string | undefined = undefined;
       let consigneeName: string | undefined = undefined;
+      let trackingId: string | undefined = undefined;
 
       if (transaction.reference) {
         const dnDate = paginatedDebitNotesMap.get(transaction.reference);
@@ -1091,26 +1180,35 @@ export async function GET(
         }
       }
 
-      if (transaction.type === "CREDIT") {
-        const fromDebitNote =
-          transaction.reference &&
-          paginatedDebitNotesMap.has(transaction.reference);
-        if (!fromDebitNote) {
-          const paymentDateObj = resolveCreditPaymentVoucherDate(
-            {
-              amount: transaction.amount,
-              invoice: transaction.invoice,
-              reference: transaction.reference,
-              createdAt: transaction.createdAt,
-            },
-            paginatedPaymentsListRecalc
-          );
-          if (paymentDateObj) {
-            paymentDate = paymentDateObj.toISOString();
-          }
+      const fromDebitNote =
+        !!transaction.reference &&
+        paginatedDebitNotesMap.has(transaction.reference);
+
+      if (transaction.type === "CREDIT" && !fromDebitNote) {
+        const paymentDateObj = resolveCreditPaymentVoucherDate(
+          {
+            amount: transaction.amount,
+            invoice: transaction.invoice,
+            reference: transaction.reference,
+            createdAt: transaction.createdAt,
+          },
+          paginatedPaymentsListRecalc
+        );
+        if (paymentDateObj) {
+          paymentDate = paymentDateObj.toISOString();
         }
-      } else if (transaction.invoice) {
-        const invoice = paginatedInvoicesMap.get(transaction.invoice);
+      }
+
+      const resolvedInvoice =
+        (transaction.invoice && paginatedInvoicesMap.has(transaction.invoice)
+          ? transaction.invoice
+          : null) ??
+        (transaction.reference
+          ? paginatedDebitNoteInvoiceMapRecalc.get(transaction.reference) ?? null
+          : null);
+
+      if (resolvedInvoice) {
+        const invoice = paginatedInvoicesMap.get(resolvedInvoice);
 
         if (invoice?.shipment) {
           shipmentInfo = {
@@ -1128,6 +1226,10 @@ export async function GET(
 
           if (invoice.shipment.recipientName) {
             consigneeName = invoice.shipment.recipientName;
+          }
+
+          if (invoice.shipment.trackingId) {
+            trackingId = invoice.shipment.trackingId;
           }
         }
       }
@@ -1148,6 +1250,7 @@ export async function GET(
         paymentDate,
         debitNoteDate,
         consigneeName,
+        trackingId,
         ledgerVoucherDate: ledgerVoucherDateRecalc.toISOString(),
       };
     });

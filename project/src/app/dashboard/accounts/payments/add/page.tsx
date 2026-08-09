@@ -15,6 +15,10 @@ import {
 import { ArrowLeft, Info } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import {
+  parseDateInputAsLocalDate,
+  toDatetimeLocalValue,
+} from "@/lib/noteFormats";
 
 type ChartOfAccount = {
   id: number;
@@ -34,7 +38,7 @@ export default function AddPaymentPage() {
   const [formData, setFormData] = useState({
     transactionType: "EXPENSE",
     category: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: toDatetimeLocalValue(new Date()),
     amount: "",
     description: "",
     reference: "",
@@ -218,7 +222,7 @@ export default function AddPaymentPage() {
         setFormData({
           transactionType: payment.transactionType,
           category: payment.category || "",
-          date: new Date(payment.date).toISOString().slice(0, 10),
+          date: toDatetimeLocalValue(payment.date),
           amount: payment.amount.toString(),
           description: payment.description || "",
           reference: payment.reference || "",
@@ -684,7 +688,7 @@ export default function AddPaymentPage() {
           body: JSON.stringify({
             transactionType: formData.transactionType,
             category: formData.category,
-            date: new Date(formData.date).toISOString(),
+            date: parseDateInputAsLocalDate(formData.date).toISOString(),
             amount: parseFloat(formData.amount),
             description: formData.description,
             reference: formData.reference,
@@ -718,7 +722,7 @@ export default function AddPaymentPage() {
       const payload = {
         transactionType: formData.transactionType,
         category: formData.category,
-        date: new Date(formData.date).toISOString(),
+        date: parseDateInputAsLocalDate(formData.date).toISOString(),
         amount: parseFloat(formData.amount),
         description: formData.description,
         reference: formData.reference,
@@ -854,10 +858,10 @@ export default function AddPaymentPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
-                    Date *
+                    Date & Time *
                   </Label>
                   <Input
-                    type="date"
+                    type="datetime-local"
                     value={formData.date}
                     onChange={(e) => handleInputChange("date", e.target.value)}
                     required

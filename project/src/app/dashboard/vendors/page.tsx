@@ -29,6 +29,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { TablePagination } from "@/components/TablePagination";
+import { toDatetimeLocalValue } from "@/lib/noteFormats";
 
 
 const STATUSES = ["All", "Active", "Inactive"];
@@ -604,7 +605,7 @@ export default function VendorsPage() {
                               onClick={() => {
                                 setVendorForBalance(vendor);
                                 setStartingBalance(vendor.currentBalance?.toString() || "0");
-                                setStartingBalanceDate(new Date().toISOString().split('T')[0]);
+                                setStartingBalanceDate(toDatetimeLocalValue(new Date()));
                                 setOpenStartingBalanceDialog(true);
                               }}
                             >
@@ -688,10 +689,10 @@ export default function VendorsPage() {
                 </p>
               </div>
               <div>
-                <Label htmlFor="startingBalanceDate">Date</Label>
+                <Label htmlFor="startingBalanceDate">Date & Time</Label>
                 <Input
                   id="startingBalanceDate"
-                  type="date"
+                  type="datetime-local"
                   value={startingBalanceDate}
                   onChange={(e) => setStartingBalanceDate(e.target.value)}
                   className="mt-1"

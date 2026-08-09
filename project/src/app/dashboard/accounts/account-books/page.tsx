@@ -337,7 +337,14 @@ export default function AccountBooksPage() {
   const getExportData = () => {
     const headers = ["Date", "Description", "Account", "Account Code", "Type", "Amount", "Reference", "Category", "Journal Entry"];
     const rows = filteredEntries.map(entry => [
-      new Date(entry.date).toLocaleDateString(),
+      new Date(entry.date).toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
       entry.description || "",
       entry.accountName || "",
       entry.accountCode || "",
@@ -621,7 +628,14 @@ export default function AccountBooksPage() {
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span className="font-semibold text-gray-800 dark:text-white text-sm sm:text-base">
-                            {new Date(entry.date).toLocaleDateString()}
+                            {new Date(entry.date).toLocaleString("en-GB", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            })}
                           </span>
                           <span className={`text-xs px-1 sm:px-2 py-1 rounded ${
                             entry.transactionType === 'DEBIT' 

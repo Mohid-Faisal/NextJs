@@ -29,7 +29,10 @@ import {
   computeDateRangeForPeriod,
   type AccountsPeriodType,
 } from "@/lib/accounts/periodDateRange";
-import { isVendorDebitNoteReference } from "@/lib/noteFormats";
+import {
+  formatAdjustmentLedgerDescription,
+  isVendorDebitNoteReference,
+} from "@/lib/noteFormats";
 import { TablePagination } from "@/components/TablePagination";
 
 type Vendor = {
@@ -57,6 +60,7 @@ type Transaction = {
   paymentDate?: string;
   debitNoteDate?: string;
   consigneeName?: string;
+  trackingId?: string;
   /** Canonical voucher instant — matches recalc / dashboard (use for sort + Date column when set) */
   ledgerVoucherDate?: string;
 };
@@ -953,18 +957,26 @@ export default function VendorTransactionsPage() {
       
       let formattedDate: string;
       try {
-        formattedDate = format(parseISO(voucherDateToUse), "dd/MM/yy");
+        formattedDate = format(parseISO(voucherDateToUse), "dd/MM/yy HH:mm");
       } catch (e) {
         const date = new Date(voucherDateToUse);
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = String(date.getFullYear()).slice(-2);
-        formattedDate = `${day}/${month}/${year}`;
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        formattedDate = `${day}/${month}/${year} ${hours}:${minutes}`;
       }
       
-      // Build description with consignee for DEBIT rows
-      let baseDescription =
-        transaction.type === "DEBIT" && transaction.consigneeName
+      // Adjustments: Description | Consignee | Tracking | Shipment Date
+      let baseDescription = isVendorDebitNoteReference(transaction.reference)
+        ? formatAdjustmentLedgerDescription({
+            description: transaction.description,
+            consigneeName: transaction.consigneeName,
+            trackingId: transaction.trackingId,
+            shipmentDate: transaction.shipmentDate,
+          })
+        : transaction.type === "DEBIT" && transaction.consigneeName
           ? `Consignee: ${transaction.consigneeName} | ${transaction.description}`
           : transaction.description;
 
@@ -1524,9 +1536,16 @@ export default function VendorTransactionsPage() {
                       <td className="px-4 py-3">
                         {(() => {
                           try {
-                            return format(parseISO(voucherDateToUse), "dd/MM/yy");
+                            return format(parseISO(voucherDateToUse), "dd/MM/yy HH:mm");
                           } catch (e) {
-                            return new Date(voucherDateToUse).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                            return new Date(voucherDateToUse).toLocaleString('en-GB', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false,
+                            });
                           }
                         })()}
                       </td>
@@ -1534,9 +1553,16 @@ export default function VendorTransactionsPage() {
                         {transaction.invoice || "-"}
                       </td>
                       <td className="px-4 py-3">
-                        {transaction.type === "DEBIT" && transaction.consigneeName
-                          ? `Consignee: ${transaction.consigneeName} | ${transaction.description}`
-                          : transaction.description}
+                        {isVendorDebitNoteReference(transaction.reference)
+                          ? formatAdjustmentLedgerDescription({
+                              description: transaction.description,
+                              consigneeName: transaction.consigneeName,
+                              trackingId: transaction.trackingId,
+                              shipmentDate: transaction.shipmentDate,
+                            })
+                          : transaction.type === "DEBIT" && transaction.consigneeName
+                            ? `Consignee: ${transaction.consigneeName} | ${transaction.description}`
+                            : transaction.description}
                       </td>
                       <td className="px-4 py-3">{transaction.reference || "-"}</td>
                       <td className="px-4 py-3 font-medium">

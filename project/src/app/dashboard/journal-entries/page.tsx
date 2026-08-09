@@ -38,6 +38,10 @@ import {
   Upload
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  parseDateInputAsLocalDate,
+  toDatetimeLocalValue,
+} from "@/lib/noteFormats";
 import { motion } from "framer-motion";
 import { TablePagination } from "@/components/TablePagination";
 import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
@@ -93,7 +97,7 @@ const JournalEntriesPage = () => {
 
   // Form states
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: toDatetimeLocalValue(new Date()),
     description: "",
     reference: "",
     lines: [
@@ -177,7 +181,10 @@ const JournalEntriesPage = () => {
       const response = await fetch("/api/journal-entries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          date: parseDateInputAsLocalDate(formData.date).toISOString(),
+        })
       });
 
       const data = await response.json();
@@ -186,7 +193,7 @@ const JournalEntriesPage = () => {
         toast.success("Journal entry created successfully");
         setIsAddDialogOpen(false);
         setFormData({
-          date: new Date().toISOString().split('T')[0],
+          date: toDatetimeLocalValue(new Date()),
           description: "",
           reference: "",
           lines: [
@@ -254,7 +261,14 @@ const JournalEntriesPage = () => {
   const getExportData = () => {
     const headers = ["Date", "Entry #", "Description", "Reference", "Debit", "Credit", "Status", "Lines"];
     const rows = entries.map((entry) => [
-      new Date(entry.date).toLocaleDateString(),
+      new Date(entry.date).toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
       entry.entryNumber,
       entry.description,
       entry.reference || "",
@@ -441,7 +455,14 @@ const JournalEntriesPage = () => {
                     entries.map((entry) => (
                       <tr key={entry.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="p-2 sm:p-3 font-mono">{entry.entryNumber}</td>
-                        <td className="p-2 sm:p-3">{new Date(entry.date).toLocaleDateString()}</td>
+                        <td className="p-2 sm:p-3">{new Date(entry.date).toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })}</td>
                         <td className="p-2 sm:p-3">
                           <span className="hidden sm:inline">{entry.description}</span>
                           <span className="sm:hidden">{entry.description?.substring(0, 20)}...</span>
@@ -518,10 +539,10 @@ const JournalEntriesPage = () => {
             {/* Header Information */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="date">Date</Label>
+                <Label htmlFor="date">Date & Time</Label>
                 <Input
                   id="date"
-                  type="date"
+                  type="datetime-local"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
@@ -682,7 +703,14 @@ const JournalEntriesPage = () => {
                 </div>
                 <div>
                   <Label>Date</Label>
-                  <p>{new Date(viewingEntry.date).toLocaleDateString()}</p>
+                  <p>{new Date(viewingEntry.date).toLocaleString("en-GB", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}</p>
                 </div>
                 <div>
                   <Label>Status</Label>

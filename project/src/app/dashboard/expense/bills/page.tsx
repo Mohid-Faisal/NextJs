@@ -42,6 +42,10 @@ import { TablePagination } from "@/components/TablePagination";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  parseDateInputAsLocalDate,
+  toDatetimeLocalValue,
+} from "@/lib/noteFormats";
 
 // Edit Invoice Form Component
 const EditInvoiceForm = ({ 
@@ -55,7 +59,7 @@ const EditInvoiceForm = ({
 }) => {
   const [form, setForm] = useState({
     invoiceNumber: invoice?.invoiceNumber || "",
-    invoiceDate: invoice?.invoiceDate ? new Date(invoice.invoiceDate).toISOString().split('T')[0] : "",
+    invoiceDate: invoice?.invoiceDate ? toDatetimeLocalValue(invoice.invoiceDate) : "",
     trackingNumber: invoice?.trackingNumber || "",
     destination: invoice?.destination || "",
     weight: invoice?.weight || 0,
@@ -81,7 +85,12 @@ const EditInvoiceForm = ({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          invoiceDate: form.invoiceDate
+            ? parseDateInputAsLocalDate(form.invoiceDate).toISOString()
+            : form.invoiceDate,
+        }),
       });
 
       const data = await res.json();
@@ -115,11 +124,11 @@ const EditInvoiceForm = ({
           />
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="invoiceDate" className="text-sm font-medium">Invoice Date</label>
+          <label htmlFor="invoiceDate" className="text-sm font-medium">Invoice Date & Time</label>
           <Input
             id="invoiceDate"
             name="invoiceDate"
-            type="date"
+            type="datetime-local"
             value={form.invoiceDate}
             onChange={handleChange}
             required
@@ -578,7 +587,7 @@ export default function ExpenseBillsPage() {
     const rows = invoices.map((i) => [
       i.id,
       i.invoiceNumber,
-      new Date(i.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+      new Date(i.invoiceDate).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }),
       i.receiptNumber || "",
       i.trackingNumber || "",
       getCountryNameFromCode(i.destination),
@@ -605,7 +614,7 @@ export default function ExpenseBillsPage() {
         <tr>
           <td>${i.id}</td>
           <td>${i.invoiceNumber}</td>
-          <td>${new Date(i.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+          <td>${new Date(i.invoiceDate).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}</td>
           <td>${i.receiptNumber || ""}</td>
           <td>${i.trackingNumber || ""}</td>
           <td>${getCountryNameFromCode(i.destination)}</td>
@@ -973,7 +982,7 @@ export default function ExpenseBillsPage() {
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{i.id}</td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{i.invoiceNumber}</td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      {new Date(i.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                      {new Date(i.invoiceDate).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{i.trackingNumber || "-"}</td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">

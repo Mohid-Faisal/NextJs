@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   extractNoteDetailDescription,
+  inferAdjustmentType,
   normalizeNoteLineDescription,
   parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
@@ -58,11 +59,20 @@ export async function GET(
       creditAccountId = creditLine?.accountId ?? null;
     }
 
-    const type: "DEBIT" | "CREDIT" =
-      typeof note.description === "string" &&
-      note.description.toLowerCase().startsWith("debit note")
-        ? "DEBIT"
-        : "CREDIT";
+    const linkedTxn = await prisma.customerTransaction.findFirst({
+      where: orgWhere(session, { reference: note.creditNoteNumber }),
+      select: { type: true },
+    });
+
+    const type = inferAdjustmentType({
+      reference: note.creditNoteNumber,
+      description: note.description,
+      transactionType:
+        linkedTxn?.type === "DEBIT" || linkedTxn?.type === "CREDIT"
+          ? linkedTxn.type
+          : null,
+      fallback: "CREDIT",
+    });
 
     const kind = type === "DEBIT" ? "debit" : "credit";
 
@@ -134,11 +144,19 @@ export async function PUT(
     }
     const customerId = note.customerId;
 
-    const type: "DEBIT" | "CREDIT" =
-      typeof note.description === "string" &&
-      note.description.toLowerCase().startsWith("debit note")
-        ? "DEBIT"
-        : "CREDIT";
+    const linkedTxnForType = await prisma.customerTransaction.findFirst({
+      where: orgWhere(session, { reference: note.creditNoteNumber }),
+      select: { type: true },
+    });
+    const type = inferAdjustmentType({
+      reference: note.creditNoteNumber,
+      description: note.description,
+      transactionType:
+        linkedTxnForType?.type === "DEBIT" || linkedTxnForType?.type === "CREDIT"
+          ? linkedTxnForType.type
+          : null,
+      fallback: "CREDIT",
+    });
     const kind = type === "DEBIT" ? "debit" : "credit";
 
     const oldAmount = Number(note.amount);

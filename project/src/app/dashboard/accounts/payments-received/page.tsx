@@ -450,7 +450,7 @@ export default function PaymentsReceivedPage() {
   const handleExportExcel = () => {
     const headers = ["Date", "From", "Amount", "Mode", "Invoice", "Reference", "Description"];
     const data = filteredPayments.map(p => [
-      format(parseISO(p.date), "dd/MM/yyyy"),
+      format(parseISO(p.date), "dd/MM/yyyy HH:mm"),
       p.fromAccount || "-",
       (p.amount || 0).toLocaleString(),
       p.mode || "-",
@@ -464,7 +464,7 @@ export default function PaymentsReceivedPage() {
   const handleExportPrint = async () => {
     const headers = ["Date", "From", "Amount", "Mode", "Invoice", "Reference", "Description"];
     const data = filteredPayments.map(p => [
-      format(parseISO(p.date), "dd/MM/yyyy"),
+      format(parseISO(p.date), "dd/MM/yyyy HH:mm"),
       p.fromAccount || "-",
       (p.amount || 0).toLocaleString(),
       p.mode || "-",
@@ -478,7 +478,7 @@ export default function PaymentsReceivedPage() {
   const handleExportPDF = () => {
     const headers = ["Date", "From", "Amount", "Mode", "Invoice", "Reference", "Description"];
     const data = filteredPayments.map(p => [
-      format(parseISO(p.date), "dd/MM/yyyy"),
+      format(parseISO(p.date), "dd/MM/yyyy HH:mm"),
       p.fromAccount || "-",
       (p.amount || 0).toLocaleString(),
       p.mode || "-",
@@ -663,7 +663,7 @@ export default function PaymentsReceivedPage() {
                   {filteredPayments.map((payment) => (
                     <tr key={payment.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-3">
-                        {format(parseISO(payment.date), "dd/MM/yyyy")}
+                        {format(parseISO(payment.date), "dd/MM/yyyy HH:mm")}
                       </td>
                       <td className="px-4 py-3 font-medium">{payment.fromAccount || "-"}</td>
                       <td className="px-4 py-3 text-right font-medium text-green-600 dark:text-green-400">

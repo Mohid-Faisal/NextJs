@@ -139,7 +139,10 @@ export default function CreditNotesPage() {
       cn.type || (cn.description?.toLowerCase().startsWith("debit note") ? "DEBIT" : "CREDIT"),
       cn.customer?.PersonName || cn.customer?.CompanyName || "-",
       cn.invoice?.invoiceNumber || "-",
-      new Date(cn.date).toLocaleDateString(),
+      new Date(cn.date).toLocaleString(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+      }),
       `${cn.currency} ${cn.amount.toLocaleString()}`,
       cn.description || "-",
     ]);
@@ -165,7 +168,7 @@ export default function CreditNotesPage() {
             <td>${cn.type || (cn.description?.toLowerCase().startsWith("debit note") ? "DEBIT" : "CREDIT")}</td>
             <td>${cn.customer?.PersonName || cn.customer?.CompanyName || "-"}</td>
             <td>${cn.invoice?.invoiceNumber || "-"}</td>
-            <td>${new Date(cn.date).toLocaleDateString()}</td>
+            <td>${new Date(cn.date).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}</td>
             <td>${cn.currency} ${cn.amount.toLocaleString()}</td>
             <td>${cn.description || "-"}</td>
           </tr>`
@@ -395,7 +398,10 @@ export default function CreditNotesPage() {
                       )}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      {new Date(cn.date).toLocaleDateString()}
+                      {new Date(cn.date).toLocaleString(undefined, {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">
                       {cn.currency} {cn.amount.toLocaleString()}

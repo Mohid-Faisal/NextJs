@@ -10,6 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Save, ArrowLeft, Plus, Trash2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { Country } from 'country-state-city';
+import {
+  parseDateInputAsLocalDate,
+  toDatetimeLocalValue,
+} from '@/lib/noteFormats';
 
 interface InvoiceData {
   id: number;
@@ -286,7 +290,9 @@ export default function EditInvoicePage() {
       // Prepare update data
       const updateData = {
         invoiceNumber: invoiceData.invoiceNumber,
-        invoiceDate: invoiceData.invoiceDate || invoiceData.createdAt,
+        invoiceDate: parseDateInputAsLocalDate(
+          invoiceData.invoiceDate || invoiceData.createdAt
+        ).toISOString(),
         totalAmount: totalAmount,
         fscCharges: fscCharges,
         discount: discount,
@@ -687,14 +693,14 @@ export default function EditInvoicePage() {
               <div className="col-span-3">
                 <div className="form-group">
                   <Label htmlFor="invoiceDate" className="font-bold text-sm">
-                    Invoice Date
+                    Invoice Date & Time
                   </Label>
                   <Input
                     id="invoiceDate"
-                    type="date"
-                    value={invoiceData.invoiceDate 
-                      ? new Date(invoiceData.invoiceDate).toISOString().split('T')[0]
-                      : new Date(invoiceData.createdAt).toISOString().split('T')[0]}
+                    type="datetime-local"
+                    value={toDatetimeLocalValue(
+                      invoiceData.invoiceDate || invoiceData.createdAt
+                    )}
                     onChange={(e) => setInvoiceData({...invoiceData, invoiceDate: e.target.value})}
                     className="mt-1 text-sm w-full text-left [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100"
                     style={{ textAlign: 'left', position: 'relative', paddingRight: '2.5rem' }}
