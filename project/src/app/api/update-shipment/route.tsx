@@ -248,12 +248,15 @@ async function handleShipmentUpdate(req: Request) {
       shippingMode: body.shippingMode,
       vendor: body.vendor,
       serviceMode: body.serviceMode,
+      referenceNumber: body.referenceNumber,
+      cos: body.cos,
     });
     console.log('=== END UPDATE SHIPMENT DATA ===');
     
     const {
       id,
       trackingId,
+      referenceNumber,
       shipmentDate,
       agency,
       office,
@@ -309,6 +312,27 @@ async function handleShipmentUpdate(req: Request) {
 
     if (!existingShipment) {
       return NextResponse.json({ success: false, message: "Shipment not found" }, { status: 404 });
+    }
+
+    // Reference number uniqueness (exclude current shipment)
+    if (
+      referenceNumber !== undefined &&
+      String(referenceNumber).trim() !== "" &&
+      String(referenceNumber).trim() !== (existingShipment.referenceNumber ?? "")
+    ) {
+      const duplicateRef = await prisma.shipment.findFirst({
+        where: orgWhere(session, {
+          referenceNumber: String(referenceNumber).trim(),
+          NOT: { id },
+        }),
+        select: { id: true },
+      });
+      if (duplicateRef) {
+        return NextResponse.json(
+          { success: false, message: "Reference Number already exists" },
+          { status: 400 }
+        );
+      }
     }
 
     // Use existing values if new values aren't provided
@@ -381,14 +405,41 @@ async function handleShipmentUpdate(req: Request) {
       ) > 1e-6;
     const packagingChanged =
       packaging !== undefined && packaging !== (existingShipment.packaging ?? "");
+    const referenceChanged =
+      referenceNumber !== undefined &&
+      String(referenceNumber).trim() !== (existingShipment.referenceNumber ?? "");
+    const serviceModeChanged =
+      serviceMode !== undefined && serviceMode !== (existingShipment.serviceMode ?? "");
+    const shippingModeChanged =
+      shippingMode !== undefined && shippingMode !== (existingShipment.shippingMode ?? "");
+    const vendorChanged =
+      vendor !== undefined && vendor !== (existingShipment.vendor ?? "");
+    const packagesChanged = packages !== undefined;
 
     // Use a transaction to ensure all updates happen together
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Update the shipment
+      // Resolve vendorId when vendor name changes (so bills move with the shipment)
+      // Only set when a matching vendor is found — never clear vendorId on a miss
+      let resolvedVendorId: number | undefined = undefined;
+      if (vendorChanged) {
+        const vendorName = String(vendor ?? "").trim();
+        if (vendorName) {
+          const vendorRecord = await tx.vendors.findFirst({
+            where: orgWhere(session, { CompanyName: vendorName }),
+            select: { id: true },
+          });
+          if (vendorRecord) resolvedVendorId = vendorRecord.id;
+        }
+      }
+
+      // 1. Update the shipment (including reference # and CoS — previously dropped on edit)
       const updatedShipment = await tx.shipment.update({
         where: { id },
         data: {
           trackingId,
+          ...(referenceNumber !== undefined
+            ? { referenceNumber: String(referenceNumber).trim() }
+            : {}),
           shipmentDate: shipmentDate ? new Date(shipmentDate) : undefined,
           agency,
           office,
@@ -420,6 +471,9 @@ async function handleShipmentUpdate(req: Request) {
           declaredValue: declaredValue ? parseFloat(declaredValue) : undefined,
           reissue: reissue ? parseFloat(reissue) : undefined,
           profitPercentage: profitPercentage ? parseFloat(profitPercentage) : undefined,
+          ...(cos !== undefined
+            ? { cos: parseFloat(String(cos)) || 0 }
+            : {}),
           totalCost: calculatedTotalCost,
           manualRate: manualRate !== undefined ? Boolean(manualRate) : undefined,
           totalPackages: totalPackages ? parseInt(totalPackages) : undefined,
@@ -499,7 +553,7 @@ async function handleShipmentUpdate(req: Request) {
       }
 
       // 3. Update related invoices with shipment data
-      // Also refresh when weight or packaging changes (invoice line + transaction descriptions must match)
+      // Also refresh when metadata changes (tracking, packaging, vendor, packages, etc.)
       const shouldUpdateInvoices =
         price !== undefined ||
         fuelSurcharge !== undefined ||
@@ -509,9 +563,82 @@ async function handleShipmentUpdate(req: Request) {
         shipmentDate !== undefined ||
         (effectiveManualRate && cos !== undefined) ||
         totalWeightChanged ||
-        packagingChanged;
+        packagingChanged ||
+        referenceChanged ||
+        serviceModeChanged ||
+        shippingModeChanged ||
+        vendorChanged ||
+        packagesChanged;
       
       if (updatedShipment.invoices && updatedShipment.invoices.length > 0 && shouldUpdateInvoices) {
+        // Rebuild line items from packages when packages or pricing change (same logic as add-shipment)
+        const rebuildLineItems =
+          packagesChanged ||
+          price !== undefined ||
+          fuelSurcharge !== undefined ||
+          discount !== undefined ||
+          (effectiveManualRate && cos !== undefined);
+
+        const buildLineItems = (forVendor: boolean) => {
+          const lineItems: { description: string; value: number }[] = [];
+          let parsedPackages: any[] = [];
+          if (Array.isArray(packages)) {
+            parsedPackages = packages;
+          } else if (typeof packages === "string") {
+            try {
+              parsedPackages = JSON.parse(packages);
+            } catch {
+              parsedPackages = [];
+            }
+          } else if (existingShipment.packages) {
+            try {
+              parsedPackages =
+                typeof existingShipment.packages === "string"
+                  ? JSON.parse(existingShipment.packages)
+                  : (existingShipment.packages as any[]);
+            } catch {
+              parsedPackages = [];
+            }
+          }
+
+          const baseAmount = forVendor
+            ? effectiveManualRate
+              ? vendorTotalCost
+              : Math.round(originalPrice - effectiveFixedCharge)
+            : originalPrice;
+
+          if (Array.isArray(parsedPackages) && parsedPackages.length > 0) {
+            const tw = parsedPackages.reduce(
+              (sum: number, pkg: any) =>
+                sum + Math.max(pkg.weight || 0, pkg.weightVol || 0),
+              0
+            );
+            parsedPackages.forEach((pkg: any) => {
+              const packageWeight = Math.max(pkg.weight || 0, pkg.weightVol || 0);
+              const packageProportion =
+                tw > 0 ? packageWeight / tw : 1 / parsedPackages.length;
+              const packageValue = Math.round(baseAmount * packageProportion);
+              lineItems.push({
+                description: pkg.packageDescription || (forVendor ? "Vendor Service" : "Shipping Service"),
+                value: packageValue,
+              });
+            });
+          } else {
+            lineItems.push({
+              description: forVendor ? "Vendor Service" : "Shipping Service",
+              value: Math.round(baseAmount),
+            });
+          }
+
+          if (!forVendor && profitPercentageValue > 0) {
+            lineItems.push({
+              description: "Profit",
+              value: Math.round(profitAmount),
+            });
+          }
+          return lineItems;
+        };
+
         const invoiceUpdates = updatedShipment.invoices.map(async (invoice) => {
           // Update invoice with shipment data
           // For vendor invoices, use vendor cost; for customer invoices, use customer total
@@ -541,6 +668,10 @@ async function handleShipmentUpdate(req: Request) {
           
           // Store old amount before updating
           const oldInvoiceAmount = invoice.totalAmount;
+
+          const nextLineItems = rebuildLineItems
+            ? buildLineItems(!!isVendorInvoice)
+            : invoice.lineItems || [];
           
           // Update invoice with all relevant fields
           const updatedInvoice = await tx.invoice.update({
@@ -551,17 +682,40 @@ async function handleShipmentUpdate(req: Request) {
               weight: effectiveTotalWeight || invoice.weight || 0,
               // Update invoice date if shipment date was provided
               ...(shipmentDate ? { invoiceDate: new Date(shipmentDate) } : {}),
-              // Update line items if they contain shipment-specific information
-              lineItems: invoice.lineItems || [], // Keep existing line items but could be updated if needed
+              lineItems: nextLineItems,
               totalAmount: finalInvoiceAmount,
               // Update FSC charges and discount if pricing data was provided
               ...(price !== undefined || fuelSurcharge !== undefined || discount !== undefined ? {
                 fscCharges: fuelSurchargeAmount,
                 discount: discountAmount,
               } : {}),
+              // Move vendor bill when shipment vendor changes
+              ...(isVendorInvoice && resolvedVendorId != null
+                ? { vendorId: resolvedVendorId }
+                : {}),
               updatedAt: new Date(),
             },
           });
+
+          // Move vendor DEBIT rows with the bill when vendor changes
+          if (
+            isVendorInvoice &&
+            resolvedVendorId != null &&
+            invoice.vendorId &&
+            resolvedVendorId !== invoice.vendorId
+          ) {
+            await tx.vendorTransaction.updateMany({
+              where: {
+                vendorId: invoice.vendorId,
+                type: "DEBIT",
+                OR: [
+                  { reference: invoice.invoiceNumber },
+                  { invoice: invoice.invoiceNumber },
+                ],
+              },
+              data: { vendorId: resolvedVendorId },
+            });
+          }
 
           // 3. Update customer/vendor balances and journal entries if amount changed
           // Only update if pricing data was provided (or CoS in manual mode) and amount actually changed

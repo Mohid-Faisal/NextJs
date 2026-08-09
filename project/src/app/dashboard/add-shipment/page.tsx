@@ -814,10 +814,28 @@ const AddShipmentPage = () => {
     }
   };
 
-  // Prefill in edit mode
+  // Prevent edit prefill from re-running when vendor filter changes serviceModes
+  // (that was wiping unsaved Reference # / packaging / COS edits)
+  const editHydratedForIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    editHydratedForIdRef.current = null;
+  }, [editId]);
+
+  // Prefill in edit mode — once per shipment id after settings options are ready
   useEffect(() => {
     const loadForEdit = async () => {
       if (!editId) return;
+      if (editHydratedForIdRef.current === editId) return;
+
+      const optionsReady =
+        deliveryStatuses.length > 0 ||
+        shippingModes.length > 0 ||
+        packagingTypes.length > 0 ||
+        vendors.length > 0;
+      if (!optionsReady) return;
+
+      editHydratedForIdRef.current = editId;
       setIsLoadingEdit(true);
       try {
         const res = await fetch(`/api/shipments/${editId}`);
@@ -1070,13 +1088,14 @@ const AddShipmentPage = () => {
       }
     };
     loadForEdit();
+    // Intentionally omit serviceModes.length — filterServicesByVendor changes it and
+    // must not re-fetch/overwrite the form mid-edit.
   }, [
     editId,
     deliveryStatuses.length,
     shippingModes.length,
     packagingTypes.length,
     vendors.length,
-    serviceModes.length,
   ]);
 
   // Helper function to format full address
