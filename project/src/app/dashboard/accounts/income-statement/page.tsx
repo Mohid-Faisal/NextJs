@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Table, Printer, FileText, Upload } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Table, Printer, FileText, Upload, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, eachYearOfInterval, startOfYear, endOfYear, addMonths, subMonths, differenceInYears } from "date-fns";
 import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
@@ -782,8 +782,23 @@ export default function IncomeStatementPage() {
               </div>
             )}
             
-                         {/* Export Dropdown */}
-             <div>
+                         {/* Refresh + Export */}
+             <div className="flex items-center gap-2">
+               <Button
+                 type="button"
+                 onClick={() => {
+                   if (shouldShowMultiColumn()) {
+                     fetchMultiPeriodBalances();
+                   } else {
+                     fetchAccountBalances();
+                   }
+                 }}
+                 disabled={loading}
+                 className="w-[120px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
+               >
+                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                 Refresh
+               </Button>
                <DropdownMenu>
                  <DropdownMenuTrigger asChild>
                    <Button className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">

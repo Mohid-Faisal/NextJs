@@ -185,7 +185,7 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
                     setForm({ ...form, country: value, state: "", city: "" });
                     setSelectedCountry(value);
                   }}
-                  value={form.country}
+                  value={form.country || undefined}
                 >
                   <SelectTrigger id="country" className="w-full">
                     <SelectValue placeholder="Select a country" />
@@ -207,7 +207,7 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
                     setForm({ ...form, state: value, city: "" });
                     setSelectedState(value);
                   }}
-                  value={form.state}
+                  value={form.state || undefined}
                   disabled={!form.country}
                 >
                   <SelectTrigger id="state" className="w-full">
@@ -229,7 +229,7 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
                   onValueChange={(value) =>
                     setForm((prev) => ({ ...prev, city: value }))
                   }
-                  value={form.city}
+                  value={form.city || undefined}
                   disabled={!form.state}
                 >
                   <SelectTrigger id="city" className="w-full">

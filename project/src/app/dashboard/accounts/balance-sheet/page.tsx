@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, TrendingUp, Scale, Table, Printer, FileText, Upload } from "lucide-react";
+import { Calendar, TrendingUp, Scale, Table, Printer, FileText, Upload, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
 
@@ -442,31 +442,42 @@ export default function BalanceSheetPage() {
                 className="w-full sm:w-40"
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  disabled={loading}
-                  className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
-                >
-                  Export
-                  <Upload className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[120px]">
-                <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
-                  <Table className="w-4 h-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
-                  <Printer className="w-4 h-4" />
-                  Print
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                onClick={fetchDataAndCalculate}
+                disabled={loading || accounts.length === 0}
+                className="w-[120px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    disabled={loading}
+                    className="w-[120px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Export
+                    <Upload className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[120px]">
+                  <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2">
+                    <Table className="w-4 h-4" />
+                    Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2">
+                    <Printer className="w-4 h-4" />
+                    Print
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </div>

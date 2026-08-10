@@ -237,12 +237,12 @@ export default function AddPaymentPage() {
         // Use passed accounts or state accounts
         const accountsToUse = accountsList || accounts;
         if (accountsToUse.length > 0) {
-          await loadJournalEntryAccounts(payment.reference || `Payment-${payment.id}`, accountsToUse);
+          await loadJournalEntryAccounts(`Payment-${payment.id}`, accountsToUse);
         } else {
           // If accounts aren't loaded yet, wait a bit and try again
           setTimeout(async () => {
             if (accounts.length > 0) {
-              await loadJournalEntryAccounts(payment.reference || `Payment-${payment.id}`, accounts);
+              await loadJournalEntryAccounts(`Payment-${payment.id}`, accounts);
             }
           }, 500);
         }

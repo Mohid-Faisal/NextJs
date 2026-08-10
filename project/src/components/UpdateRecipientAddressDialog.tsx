@@ -12,9 +12,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Country, State, City } from "country-state-city";
 import { motion } from "framer-motion";
+import { resolveCountryIso, resolveStateIso } from "@/lib/geoNormalize";
 
 interface UpdateRecipientAddressDialogProps {
   triggerLabel?: string;
@@ -35,67 +42,62 @@ const UpdateRecipientAddressDialog = ({
   currentState = "",
   currentCountry = "",
   currentZip = "",
-  onSuccess
+  onSuccess,
 }: UpdateRecipientAddressDialogProps) => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    address: currentAddress,
-    city: currentCity,
-    state: currentState,
-    country: currentCountry,
-    zip: currentZip,
+    address: currentAddress || "",
+    city: currentCity || "",
+    state: "",
+    country: "",
+    zip: currentZip || "",
   });
 
-  const [selectedCountry, setSelectedCountry] = useState<string>(currentCountry);
-  const [selectedState, setSelectedState] = useState<string>(currentState);
-  const [selectedCity, setSelectedCity] = useState<string>(currentCity);
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedState, setSelectedState] = useState("");
   const [states, setStates] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
 
   const countries = Country.getAllCountries();
 
-  // Update form and selected values when dialog opens with current values
   useEffect(() => {
-    if (open) {
-      setForm({
-        address: currentAddress,
-        city: currentCity,
-        state: currentState,
-        country: currentCountry,
-        zip: currentZip,
-      });
-      setSelectedCountry(currentCountry);
-      setSelectedState(currentState);
-      setSelectedCity(currentCity);
-    }
-  }, [open, currentAddress, currentCity, currentState, currentCountry, currentZip]);
+    const countryIso = resolveCountryIso(currentCountry);
+    const stateIso = resolveStateIso(currentState, countryIso);
+    const cityValue = currentCity || "";
 
-  // Load states when country is selected or when dialog opens with existing country
+    setForm({
+      address: currentAddress || "",
+      city: cityValue,
+      state: stateIso,
+      country: countryIso,
+      zip: currentZip || "",
+    });
+    setSelectedCountry(countryIso);
+    setSelectedState(stateIso);
+  }, [
+    recipientId,
+    currentAddress,
+    currentCity,
+    currentState,
+    currentCountry,
+    currentZip,
+    open,
+  ]);
+
   useEffect(() => {
     if (selectedCountry) {
-      const fetchedStates = State.getStatesOfCountry(selectedCountry);
-      setStates(fetchedStates);
+      setStates(State.getStatesOfCountry(selectedCountry));
     } else {
       setStates([]);
-      setSelectedState("");
-      setSelectedCity("");
       setCities([]);
     }
   }, [selectedCountry]);
 
-  // Load cities when state is selected or when dialog opens with existing state
   useEffect(() => {
     if (selectedCountry && selectedState) {
-      const fetchedCities = City.getCitiesOfState(
-        selectedCountry,
-        selectedState
-      );
-      setCities(fetchedCities);
+      setCities(City.getCitiesOfState(selectedCountry, selectedState));
     } else {
       setCities([]);
-      if (!selectedState) {
-        setSelectedCity("");
-      }
     }
   }, [selectedState, selectedCountry]);
 
@@ -125,9 +127,7 @@ const UpdateRecipientAddressDialog = ({
       if (data.success) {
         toast.success("Recipient address updated successfully!");
         setOpen(false);
-        if (onSuccess) {
-          onSuccess();
-        }
+        onSuccess?.();
       } else {
         toast.error(data.message || "Failed to update recipient address");
       }
@@ -138,13 +138,16 @@ const UpdateRecipientAddressDialog = ({
   };
 
   const handleChange = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+        <Button
+          type="button"
+          className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+        >
           {triggerLabel}
         </Button>
       </DialogTrigger>
@@ -155,11 +158,12 @@ const UpdateRecipientAddressDialog = ({
           className="w-full"
         >
           <DialogHeader>
-            <DialogTitle className="text-2xl text-center mb-4">Update Recipient Address</DialogTitle>
+            <DialogTitle className="text-2xl text-center mb-4">
+              Update Recipient Address
+            </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
-            {/* Address */}
             <div className="space-y-1.5">
               <Label htmlFor="address">Address</Label>
               <Input
@@ -170,7 +174,6 @@ const UpdateRecipientAddressDialog = ({
               />
             </div>
 
-            {/* Country, State, City */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="country">Country</Label>
@@ -181,9 +184,8 @@ const UpdateRecipientAddressDialog = ({
                     handleChange("state", "");
                     handleChange("city", "");
                     setSelectedState("");
-                    setSelectedCity("");
                   }}
-                  value={form.country}
+                  value={form.country || undefined}
                 >
                   <SelectTrigger id="country" className="w-full">
                     <SelectValue placeholder="Select a country" />
@@ -205,9 +207,8 @@ const UpdateRecipientAddressDialog = ({
                     handleChange("state", value);
                     setSelectedState(value);
                     handleChange("city", "");
-                    setSelectedCity("");
                   }}
-                  value={form.state}
+                  value={form.state || undefined}
                   disabled={!form.country}
                 >
                   <SelectTrigger id="state" className="w-full">
@@ -226,11 +227,8 @@ const UpdateRecipientAddressDialog = ({
               <div className="space-y-1.5">
                 <Label htmlFor="city">City</Label>
                 <Select
-                  onValueChange={(value) => {
-                    handleChange("city", value);
-                    setSelectedCity(value);
-                  }}
-                  value={form.city}
+                  onValueChange={(value) => handleChange("city", value)}
+                  value={form.city || undefined}
                   disabled={!form.state}
                 >
                   <SelectTrigger id="city" className="w-full">
@@ -247,7 +245,6 @@ const UpdateRecipientAddressDialog = ({
               </div>
             </div>
 
-            {/* Zip Code */}
             <div className="space-y-1.5">
               <Label htmlFor="zip">ZIP/Postal Code</Label>
               <Input
@@ -259,10 +256,19 @@ const UpdateRecipientAddressDialog = ({
             </div>
 
             <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="text-sm px-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpen(false)}
+                className="text-sm px-4"
+              >
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSubmit} className="text-sm px-4">
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                className="text-sm px-4"
+              >
                 Update Address
               </Button>
             </div>

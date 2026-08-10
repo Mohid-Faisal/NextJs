@@ -12,9 +12,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Country, State, City } from "country-state-city";
 import { motion } from "framer-motion";
+import { resolveCountryIso, resolveStateIso } from "@/lib/geoNormalize";
 
 interface UpdateCustomerAddressDialogProps {
   triggerLabel?: string;
@@ -35,49 +42,65 @@ const UpdateCustomerAddressDialog = ({
   currentState = "",
   currentCountry = "",
   currentZip = "",
-  onSuccess
+  onSuccess,
 }: UpdateCustomerAddressDialogProps) => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    address: currentAddress,
-    city: currentCity,
-    state: currentState,
-    country: currentCountry,
-    zip: currentZip,
+    address: currentAddress || "",
+    city: currentCity || "",
+    state: "",
+    country: "",
+    zip: currentZip || "",
   });
 
-  const [selectedCountry, setSelectedCountry] = useState<string>(currentCountry);
-  const [selectedState, setSelectedState] = useState<string>(currentState);
-  const [selectedCity, setSelectedCity] = useState<string>(currentCity);
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedState, setSelectedState] = useState("");
   const [states, setStates] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
 
   const countries = Country.getAllCountries();
 
+  // Sync when parent selection changes or dialog opens (component stays mounted).
+  useEffect(() => {
+    const countryIso = resolveCountryIso(currentCountry);
+    const stateIso = resolveStateIso(currentState, countryIso);
+    const cityValue = currentCity || "";
+
+    setForm({
+      address: currentAddress || "",
+      city: cityValue,
+      state: stateIso,
+      country: countryIso,
+      zip: currentZip || "",
+    });
+    setSelectedCountry(countryIso);
+    setSelectedState(stateIso);
+  }, [
+    customerId,
+    currentAddress,
+    currentCity,
+    currentState,
+    currentCountry,
+    currentZip,
+    open,
+  ]);
+
   useEffect(() => {
     if (selectedCountry) {
-      const fetchedStates = State.getStatesOfCountry(selectedCountry);
-      setStates(fetchedStates);
-      if (!selectedState) {
-        setSelectedState("");
-        setSelectedCity("");
-        setCities([]);
-      }
+      setStates(State.getStatesOfCountry(selectedCountry));
+    } else {
+      setStates([]);
+      setCities([]);
     }
-  }, [selectedCountry, selectedState]);
+  }, [selectedCountry]);
 
   useEffect(() => {
     if (selectedCountry && selectedState) {
-      const fetchedCities = City.getCitiesOfState(
-        selectedCountry,
-        selectedState
-      );
-      setCities(fetchedCities);
-      if (!selectedCity) {
-        setSelectedCity("");
-      }
+      setCities(City.getCitiesOfState(selectedCountry, selectedState));
+    } else {
+      setCities([]);
     }
-  }, [selectedState, selectedCountry, selectedCity]);
+  }, [selectedState, selectedCountry]);
 
   const handleSubmit = async () => {
     if (!customerId) {
@@ -105,9 +128,7 @@ const UpdateCustomerAddressDialog = ({
       if (data.success) {
         toast.success("Customer address updated successfully!");
         setOpen(false);
-        if (onSuccess) {
-          onSuccess();
-        }
+        onSuccess?.();
       } else {
         toast.error(data.message || "Failed to update customer address");
       }
@@ -118,13 +139,16 @@ const UpdateCustomerAddressDialog = ({
   };
 
   const handleChange = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
+        <Button
+          type="button"
+          className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+        >
           {triggerLabel}
         </Button>
       </DialogTrigger>
@@ -135,11 +159,12 @@ const UpdateCustomerAddressDialog = ({
           className="w-full"
         >
           <DialogHeader>
-            <DialogTitle className="text-2xl text-center mb-4">Update Customer Address</DialogTitle>
+            <DialogTitle className="text-2xl text-center mb-4">
+              Update Customer Address
+            </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
-            {/* Address */}
             <div className="space-y-1.5">
               <Label htmlFor="address">Address</Label>
               <Input
@@ -150,7 +175,6 @@ const UpdateCustomerAddressDialog = ({
               />
             </div>
 
-            {/* Country, State, City */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="country">Country</Label>
@@ -161,9 +185,8 @@ const UpdateCustomerAddressDialog = ({
                     handleChange("state", "");
                     handleChange("city", "");
                     setSelectedState("");
-                    setSelectedCity("");
                   }}
-                  value={form.country}
+                  value={form.country || undefined}
                 >
                   <SelectTrigger id="country" className="w-full">
                     <SelectValue placeholder="Select a country" />
@@ -185,9 +208,8 @@ const UpdateCustomerAddressDialog = ({
                     handleChange("state", value);
                     setSelectedState(value);
                     handleChange("city", "");
-                    setSelectedCity("");
                   }}
-                  value={form.state}
+                  value={form.state || undefined}
                   disabled={!form.country}
                 >
                   <SelectTrigger id="state" className="w-full">
@@ -206,11 +228,8 @@ const UpdateCustomerAddressDialog = ({
               <div className="space-y-1.5">
                 <Label htmlFor="city">City</Label>
                 <Select
-                  onValueChange={(value) => {
-                    handleChange("city", value);
-                    setSelectedCity(value);
-                  }}
-                  value={form.city}
+                  onValueChange={(value) => handleChange("city", value)}
+                  value={form.city || undefined}
                   disabled={!form.state}
                 >
                   <SelectTrigger id="city" className="w-full">
@@ -227,7 +246,6 @@ const UpdateCustomerAddressDialog = ({
               </div>
             </div>
 
-            {/* Zip Code */}
             <div className="space-y-1.5">
               <Label htmlFor="zip">ZIP/Postal Code</Label>
               <Input
@@ -239,10 +257,19 @@ const UpdateCustomerAddressDialog = ({
             </div>
 
             <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="text-sm px-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpen(false)}
+                className="text-sm px-4"
+              >
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSubmit} className="text-sm px-4">
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                className="text-sm px-4"
+              >
                 Update Address
               </Button>
             </div>

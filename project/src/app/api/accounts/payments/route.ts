@@ -97,26 +97,27 @@ export async function GET(request: NextRequest) {
       take: limit ?? undefined,
     });
 
-    // Find related journal entries for each payment
-    const paymentsWithJournalEntries = await Promise.all(
-      payments.map(async (payment) => {
-        const journalEntry = await prisma.journalEntry.findFirst({
+    // JEs are keyed as Payment-{id} (bank ref is only in the description).
+    // Prefer that key so payments with a user reference still resolve.
+    const paymentKeys = payments.map((p) => `Payment-${p.id}`);
+    const journalEntries = paymentKeys.length
+      ? await prisma.journalEntry.findMany({
           where: orgWhere(session, {
-            reference: payment.reference || `Payment-${payment.id}`
+            reference: { in: paymentKeys },
           }),
           select: {
-            entryNumber: true
-          }
-        });
-        
-        return {
-          ...payment,
-          journalEntry
-        };
-      })
+            entryNumber: true,
+            reference: true,
+          },
+        })
+      : [];
+    const journalEntryByPaymentKey = new Map(
+      journalEntries.map((je) => [je.reference, je])
     );
-
-    payments = paymentsWithJournalEntries;
+    payments = payments.map((payment) => ({
+      ...payment,
+      journalEntry: journalEntryByPaymentKey.get(`Payment-${payment.id}`) ?? null,
+    }));
   } catch (err) {
     // Fallback if relations not present; select scalar fields
     try {
@@ -141,26 +142,25 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Find related journal entries for fallback case too
-      const paymentsWithJournalEntries = await Promise.all(
-        payments.map(async (payment) => {
-          const journalEntry = await prisma.journalEntry.findFirst({
+      const paymentKeys = payments.map((p) => `Payment-${p.id}`);
+      const journalEntries = paymentKeys.length
+        ? await prisma.journalEntry.findMany({
             where: orgWhere(session, {
-              reference: payment.reference || `Payment-${payment.id}`
+              reference: { in: paymentKeys },
             }),
             select: {
-              entryNumber: true
-            }
-          });
-          
-          return {
-            ...payment,
-            journalEntry
-          };
-        })
+              entryNumber: true,
+              reference: true,
+            },
+          })
+        : [];
+      const journalEntryByPaymentKey = new Map(
+        journalEntries.map((je) => [je.reference, je])
       );
-
-      payments = paymentsWithJournalEntries;
+      payments = payments.map((payment) => ({
+        ...payment,
+        journalEntry: journalEntryByPaymentKey.get(`Payment-${payment.id}`) ?? null,
+      }));
     } catch (e) {
       return NextResponse.json({ payments: [], total: 0 });
     }

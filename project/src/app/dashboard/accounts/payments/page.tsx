@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download, Coins } from "lucide-react";
+import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download, Coins, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
 import { usePermissions } from "@/components/PermissionContext";
@@ -159,6 +159,12 @@ export default function PaymentsPage() {
     toast.success("Payments template downloaded successfully!");
   };
   const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setRefreshKey((k) => k + 1);
+  };
 
   // Check for query parameter when coming from dashboard
   useEffect(() => {
@@ -234,6 +240,7 @@ export default function PaymentsPage() {
   useEffect(() => {
     // Don't fetch if custom period is selected but dates are not provided
     if (periodType === 'custom' && (!customStartDate || !customEndDate)) {
+      setRefreshing(false);
       return;
     }
     const fetchPayments = async () => {
@@ -249,13 +256,17 @@ export default function PaymentsPage() {
         sortOrder: sortOrder,
       });
 
-      const res = await fetch(`/api/accounts/payments?${params.toString()}`);
-      const json = await res.json();
-      setPayments(json.payments);
-      setTotal(json.total);
-      setTotalAmount(json.totalAmount ?? 0);
-      if (json.counts) {
-        setCounts(json.counts);
+      try {
+        const res = await fetch(`/api/accounts/payments?${params.toString()}`);
+        const json = await res.json();
+        setPayments(json.payments);
+        setTotal(json.total);
+        setTotalAmount(json.totalAmount ?? 0);
+        if (json.counts) {
+          setCounts(json.counts);
+        }
+      } finally {
+        setRefreshing(false);
       }
     };
 
@@ -680,6 +691,16 @@ export default function PaymentsPage() {
         {/* Right side - Filters and Actions */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto justify-end flex-wrap">
           <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold h-9 shrink-0 flex items-center gap-1.5 rounded-lg"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+
             {/* Export Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -1127,7 +1127,7 @@ const AddShipmentPage = () => {
     }
 
     const parts = [party.Address, party.City, stateName, countryName].filter(
-      (part) => part && part.trim() !== ""
+      (part) => part != null && String(part).trim() !== ""
     );
 
     return parts.join(", ");
@@ -1357,24 +1357,28 @@ const AddShipmentPage = () => {
                           const sender = senderResults.find(
                             (s) => String(s.id) === value
                           );
-                          if (sender) {
-                            setSelectedSender(sender);
-                            setSenderQuery(sender.Company);
-                            setForm((prev) => ({
-                              ...prev,
-                              senderName: sender.Company,
-                              senderAddress: sender.Address,
-                            }));
-                          } else {
-                            // Clear sender data when no sender is selected
-                            setSelectedSender(null);
-                            setSenderQuery("");
-                            setForm((prev) => ({
-                              ...prev,
-                              senderName: "",
-                              senderAddress: "",
-                            }));
-                          }
+                          // Defer sibling remounts until Radix Select finishes
+                          // tearing down its portal — otherwise React hits
+                          // removeChild NotFoundError and the page crashes.
+                          window.setTimeout(() => {
+                            if (sender) {
+                              setSelectedSender(sender);
+                              setSenderQuery(sender.Company);
+                              setForm((prev) => ({
+                                ...prev,
+                                senderName: sender.Company,
+                                senderAddress: sender.Address,
+                              }));
+                            } else {
+                              setSelectedSender(null);
+                              setSenderQuery("");
+                              setForm((prev) => ({
+                                ...prev,
+                                senderName: "",
+                                senderAddress: "",
+                              }));
+                            }
+                          }, 0);
                         }}
                         onOpenChange={setSenderDropdownOpen}
               >
@@ -1458,17 +1462,18 @@ const AddShipmentPage = () => {
                       placeholder="Sender address"
                       className="flex-1 bg-muted"
                     />
-                    {selectedSender && selectedSender.id > 0 ? (
-                      <UpdateCustomerAddressDialog
+                    {/* Keep both triggers mounted; swapping them during Select
+                        close races portal teardown and crashes the page. */}
+                    <div
+                      className={
+                        selectedSender && selectedSender.id > 0
+                          ? "hidden"
+                          : undefined
+                      }
+                    >
+                      <AddCustomerDialog
                         triggerLabel="+"
-                        customerId={selectedSender.id}
-                        currentAddress={selectedSender.Address}
-                        currentCity={selectedSender.City}
-                        currentState={selectedSender.State}
-                        currentCountry={selectedSender.Country}
-                        currentZip={selectedSender.Zip}
                         onSuccess={() => {
-                          // Refresh sender search results and update selected sender
                           if (senderQuery.length >= 2) {
                             fetch(
                               `/api/search/customers?query=${encodeURIComponent(
@@ -1479,9 +1484,46 @@ const AddShipmentPage = () => {
                               .then((data) => {
                                 if (Array.isArray(data)) {
                                   setSenderResults(data);
-                                  // Update the selected sender with new data
+                                }
+                              })
+                              .catch((error) => {
+                                console.error(
+                                  "Error refreshing senders:",
+                                  error
+                                );
+                              });
+                          }
+                        }}
+                      />
+                    </div>
+                    <div
+                      className={
+                        selectedSender && selectedSender.id > 0
+                          ? undefined
+                          : "hidden"
+                      }
+                    >
+                      <UpdateCustomerAddressDialog
+                        triggerLabel="+"
+                        customerId={selectedSender?.id}
+                        currentAddress={selectedSender?.Address}
+                        currentCity={selectedSender?.City}
+                        currentState={selectedSender?.State}
+                        currentCountry={selectedSender?.Country}
+                        currentZip={selectedSender?.Zip}
+                        onSuccess={() => {
+                          if (senderQuery.length >= 2) {
+                            fetch(
+                              `/api/search/customers?query=${encodeURIComponent(
+                                senderQuery
+                              )}`
+                            )
+                              .then((res) => res.json())
+                              .then((data) => {
+                                if (Array.isArray(data)) {
+                                  setSenderResults(data);
                                   const updatedSender = data.find(
-                                    (s) => s.id === selectedSender.id
+                                    (s) => s.id === selectedSender?.id
                                   );
                                   if (updatedSender) {
                                     setSelectedSender(updatedSender);
@@ -1497,33 +1539,7 @@ const AddShipmentPage = () => {
                           }
                         }}
                       />
-                    ) : (
-                      <AddCustomerDialog
-                        triggerLabel="+"
-                        onSuccess={() => {
-                          // Refresh sender search results
-                          if (senderQuery.length >= 2) {
-                            fetch(
-                              `/api/search/customers?query=${encodeURIComponent(
-                                senderQuery
-                              )}`
-                            )
-                              .then((res) => res.json())
-                              .then((data) => {
-                                if (Array.isArray(data)) {
-                                  setSenderResults(data);
-                                }
-                              })
-                              .catch((error) => {
-                                console.error(
-                                  "Error refreshing senders:",
-                                  error
-                                );
-                              });
-                          }
-                        }}
-                      />
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1555,24 +1571,28 @@ const AddShipmentPage = () => {
                           const recipient = recipientResults.find(
                             (r) => String(r.id) === value
                           );
-                          if (recipient) {
-                            setSelectedRecipient(recipient);
-                            setRecipientQuery(recipient.Company);
-                            setForm((prev) => ({
-                              ...prev,
-                              recipientName: recipient.Company,
-                              recipientAddress: recipient.Address,
-                            }));
-                          } else {
-                            // Clear recipient data when no recipient is selected
-                            setSelectedRecipient(null);
-                            setRecipientQuery("");
-                            setForm((prev) => ({
-                              ...prev,
-                              recipientName: "",
-                              recipientAddress: "",
-                            }));
-                          }
+                          // Defer sibling remounts until Radix Select finishes
+                          // tearing down its portal — otherwise React hits
+                          // removeChild NotFoundError and the page crashes.
+                          window.setTimeout(() => {
+                            if (recipient) {
+                              setSelectedRecipient(recipient);
+                              setRecipientQuery(recipient.Company);
+                              setForm((prev) => ({
+                                ...prev,
+                                recipientName: recipient.Company,
+                                recipientAddress: recipient.Address,
+                              }));
+                            } else {
+                              setSelectedRecipient(null);
+                              setRecipientQuery("");
+                              setForm((prev) => ({
+                                ...prev,
+                                recipientName: "",
+                                recipientAddress: "",
+                              }));
+                            }
+                          }, 0);
                         }}
                         onOpenChange={setRecipientDropdownOpen}
               >
@@ -1661,17 +1681,18 @@ const AddShipmentPage = () => {
                       placeholder="Recipient address"
                       className="flex-1 bg-muted"
                     />
-                    {selectedRecipient && selectedRecipient.id > 0 ? (
-                      <UpdateRecipientAddressDialog
+                    {/* Keep both triggers mounted; swapping them during Select
+                        close races portal teardown and crashes the page. */}
+                    <div
+                      className={
+                        selectedRecipient && selectedRecipient.id > 0
+                          ? "hidden"
+                          : undefined
+                      }
+                    >
+                      <AddRecipientDialog
                         triggerLabel="+"
-                        recipientId={selectedRecipient.id}
-                        currentAddress={selectedRecipient.Address}
-                        currentCity={selectedRecipient.City}
-                        currentState={selectedRecipient.State}
-                        currentCountry={selectedRecipient.Country}
-                        currentZip={selectedRecipient.Zip}
                         onSuccess={() => {
-                          // Refresh recipient search results and update selected recipient
                           if (recipientQuery.length >= 2) {
                             fetch(
                               `/api/search/recipients?query=${encodeURIComponent(
@@ -1682,9 +1703,46 @@ const AddShipmentPage = () => {
                               .then((data) => {
                                 if (Array.isArray(data)) {
                                   setRecipientResults(data);
-                                  // Update the selected recipient with new data
+                                }
+                              })
+                              .catch((error) => {
+                                console.error(
+                                  "Error refreshing recipients:",
+                                  error
+                                );
+                              });
+                          }
+                        }}
+                      />
+                    </div>
+                    <div
+                      className={
+                        selectedRecipient && selectedRecipient.id > 0
+                          ? undefined
+                          : "hidden"
+                      }
+                    >
+                      <UpdateRecipientAddressDialog
+                        triggerLabel="+"
+                        recipientId={selectedRecipient?.id}
+                        currentAddress={selectedRecipient?.Address}
+                        currentCity={selectedRecipient?.City}
+                        currentState={selectedRecipient?.State}
+                        currentCountry={selectedRecipient?.Country}
+                        currentZip={selectedRecipient?.Zip}
+                        onSuccess={() => {
+                          if (recipientQuery.length >= 2) {
+                            fetch(
+                              `/api/search/recipients?query=${encodeURIComponent(
+                                recipientQuery
+                              )}`
+                            )
+                              .then((res) => res.json())
+                              .then((data) => {
+                                if (Array.isArray(data)) {
+                                  setRecipientResults(data);
                                   const updatedRecipient = data.find(
-                                    (r) => r.id === selectedRecipient.id
+                                    (r) => r.id === selectedRecipient?.id
                                   );
                                   if (updatedRecipient) {
                                     setSelectedRecipient(updatedRecipient);
@@ -1700,33 +1758,7 @@ const AddShipmentPage = () => {
                           }
                         }}
                       />
-                    ) : (
-                      <AddRecipientDialog
-                        triggerLabel="+"
-                        onSuccess={() => {
-                          // Refresh recipient search results
-                          if (recipientQuery.length >= 2) {
-                            fetch(
-                              `/api/search/recipients?query=${encodeURIComponent(
-                                recipientQuery
-                              )}`
-                            )
-                              .then((res) => res.json())
-                              .then((data) => {
-                                if (Array.isArray(data)) {
-                                  setRecipientResults(data);
-                                }
-                              })
-                              .catch((error) => {
-                                console.error(
-                                  "Error refreshing recipients:",
-                                  error
-                                );
-                              });
-                          }
-                        }}
-                      />
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
