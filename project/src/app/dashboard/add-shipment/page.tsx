@@ -26,7 +26,7 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import BulkUploadModal from "@/components/BulkUploadModal";
-import { Upload } from "lucide-react";
+import { ChevronDown, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Country, State } from "country-state-city";
 
@@ -39,6 +39,131 @@ interface Party {
   State: string;
   City: string;
   Zip: string;
+}
+
+function partyOptionLabel(party: Party) {
+  const countryObj =
+    party.Country && party.Country.length === 2
+      ? Country.getCountryByCode(party.Country)
+      : null;
+  const loc = [party.City, countryObj?.name || party.Country]
+    .filter(Boolean)
+    .join(", ");
+  return `${party.Company}${loc ? ` (${loc})` : ""}`;
+}
+
+/**
+ * Searchable party picker without Radix Select portals.
+ * Select+Input inside a portal was throwing removeChild and white-screening
+ * the add-shipment page when a result was chosen.
+ */
+function PartyCombobox({
+  selected,
+  results,
+  draft,
+  onDraftChange,
+  onSelect,
+  open,
+  onOpenChange,
+  searchRef,
+  placeholder,
+  searchPlaceholder,
+}: {
+  selected: Party | null;
+  results: Party[];
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onSelect: (party: Party) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  searchRef: React.RefObject<HTMLInputElement | null>;
+  placeholder: string;
+  searchPlaceholder: string;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouseDown = (event: MouseEvent) => {
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(event.target as Node)
+      ) {
+        onOpenChange(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, [open, onOpenChange]);
+
+  useEffect(() => {
+    if (open) {
+      const id = window.setTimeout(() => searchRef.current?.focus(), 0);
+      return () => window.clearTimeout(id);
+    }
+  }, [open, searchRef]);
+
+  return (
+    <div ref={rootRef} className="relative w-full">
+      <button
+        type="button"
+        className="border-input bg-transparent dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+        aria-expanded={open}
+        onClick={() => onOpenChange(!open)}
+      >
+        <span
+          className={
+            selected?.Company
+              ? "truncate text-left text-foreground"
+              : "truncate text-left text-muted-foreground"
+          }
+        >
+          {selected?.Company || placeholder}
+        </span>
+        <ChevronDown className="size-4 shrink-0 opacity-50" />
+      </button>
+      {open && (
+        <div className="bg-popover text-popover-foreground absolute z-50 mt-1 w-full rounded-md border p-2 shadow-md">
+          <Input
+            ref={searchRef}
+            placeholder={searchPlaceholder}
+            value={draft}
+            onChange={(e) => onDraftChange(e.target.value)}
+            className="mb-2"
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+          <div className="max-h-60 overflow-y-auto">
+            {Array.isArray(results) &&
+              results.map((party) => (
+                <button
+                  key={party.id}
+                  type="button"
+                  className="hover:bg-accent hover:text-accent-foreground flex w-full rounded-sm px-2 py-1.5 text-left text-sm"
+                  onClick={() => {
+                    onSelect(party);
+                    onOpenChange(false);
+                  }}
+                >
+                  {partyOptionLabel(party)}
+                </button>
+              ))}
+            {draft.length > 0 && draft.length < 2 && (
+              <div className="text-muted-foreground px-2 py-1 text-sm">
+                Type at least 2 characters
+              </div>
+            )}
+            {draft.length >= 2 &&
+              Array.isArray(results) &&
+              results.length === 0 && (
+                <div className="text-muted-foreground px-2 py-1 text-sm">
+                  No matches found
+                </div>
+              )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Add type for package/box
@@ -70,6 +195,9 @@ const AddShipmentPage = () => {
   const [selectedRecipient, setSelectedRecipient] = useState<Party | null>(
     null
   );
+  // Search draft for the combobox panels (independent of selected display name)
+  const [senderSearchDraft, setSenderSearchDraft] = useState("");
+  const [recipientSearchDraft, setRecipientSearchDraft] = useState("");
 
   // Refs for search inputs
   const senderSearchRef = useRef<HTMLInputElement>(null);
@@ -108,15 +236,6 @@ const AddShipmentPage = () => {
     }
   }, []);
 
-  // Focus search input when sender dropdown opens
-  useEffect(() => {
-    if (senderDropdownOpen && senderSearchRef.current) {
-      setTimeout(() => {
-        senderSearchRef.current?.focus();
-      }, 100);
-    }
-  }, [senderDropdownOpen]);
-
   // Fetch agencies and offices
   useEffect(() => {
     const fetchAgenciesAndOffices = async () => {
@@ -154,15 +273,6 @@ const AddShipmentPage = () => {
 
     fetchAgenciesAndOffices();
   }, []);
-
-  // Focus search input when recipient dropdown opens
-  useEffect(() => {
-    if (recipientDropdownOpen && recipientSearchRef.current) {
-      setTimeout(() => {
-        recipientSearchRef.current?.focus();
-      }, 100);
-    }
-  }, [recipientDropdownOpen]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -448,8 +558,8 @@ const AddShipmentPage = () => {
     if (isLoadingEdit) return;
     
     const delayDebounce = setTimeout(() => {
-      if (senderQuery.length >= 2) {
-        fetch(`/api/search/customers?query=${encodeURIComponent(senderQuery)}`)
+      if (senderSearchDraft.length >= 2) {
+        fetch(`/api/search/customers?query=${encodeURIComponent(senderSearchDraft)}`)
           .then((res) => res.json())
           .then((data) => {
             console.log("Sender search results:", data);
@@ -469,7 +579,7 @@ const AddShipmentPage = () => {
     }, 300); // Debounce
 
     return () => clearTimeout(delayDebounce);
-  }, [senderQuery, isLoadingEdit]);
+  }, [senderSearchDraft, isLoadingEdit]);
 
   // Fetch recipients
   useEffect(() => {
@@ -477,9 +587,9 @@ const AddShipmentPage = () => {
     if (isLoadingEdit) return;
     
     const delayDebounce = setTimeout(() => {
-      if (recipientQuery.length >= 2) {
+      if (recipientSearchDraft.length >= 2) {
         fetch(
-          `/api/search/recipients?query=${encodeURIComponent(recipientQuery)}`
+          `/api/search/recipients?query=${encodeURIComponent(recipientSearchDraft)}`
         )
           .then((res) => res.json())
           .then((data) => {
@@ -500,7 +610,7 @@ const AddShipmentPage = () => {
     }, 300);
 
     return () => clearTimeout(delayDebounce);
-  }, [recipientQuery, isLoadingEdit]);
+  }, [recipientSearchDraft, isLoadingEdit]);
 
   // Types
   type Option = { id: string; name: string; code?: string };
@@ -1347,85 +1457,29 @@ const AddShipmentPage = () => {
                   <Label className="mb-2">Sender/Customer</Label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
-              <Select
-                        value={
-                          selectedSender != null
-                            ? String(selectedSender.id)
-                            : undefined
-                        }
-                        onValueChange={(value) => {
-                          const sender = senderResults.find(
-                            (s) => String(s.id) === value
-                          );
-                          // Defer sibling remounts until Radix Select finishes
-                          // tearing down its portal — otherwise React hits
-                          // removeChild NotFoundError and the page crashes.
-                          window.setTimeout(() => {
-                            if (sender) {
-                              setSelectedSender(sender);
-                              setSenderQuery(sender.Company);
-                              setForm((prev) => ({
-                                ...prev,
-                                senderName: sender.Company,
-                                senderAddress: sender.Address,
-                              }));
-                            } else {
-                              setSelectedSender(null);
-                              setSenderQuery("");
-                              setForm((prev) => ({
-                                ...prev,
-                                senderName: "",
-                                senderAddress: "",
-                              }));
-                            }
-                          }, 0);
+                      <PartyCombobox
+                        selected={selectedSender}
+                        results={senderResults}
+                        draft={senderSearchDraft}
+                        onDraftChange={setSenderSearchDraft}
+                        open={senderDropdownOpen}
+                        onOpenChange={(open) => {
+                          setSenderDropdownOpen(open);
+                          if (open) setSenderSearchDraft("");
                         }}
-                        onOpenChange={setSenderDropdownOpen}
-              >
-                <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Search sender name...">
-                            {selectedSender?.Company || undefined}
-                          </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                          <div className="p-2">
-                            <Input
-                              ref={senderSearchRef}
-                              placeholder="Search sender..."
-                              value={senderQuery}
-                              onChange={(e) => setSenderQuery(e.target.value)}
-                              className="mb-2"
-                            />
-                            {Array.isArray(senderResults) &&
-                              senderResults.length > 0 && (
-                                <div className="max-h-60 overflow-y-auto">
-                                  {senderResults.map((s) => {
-                                    const countryObj = s.Country && s.Country.length === 2 ? Country.getCountryByCode(s.Country) : null;
-                                    const loc = [s.City, countryObj?.name || s.Country].filter(Boolean).join(", ");
-                                    return (
-                                      <SelectItem key={s.id} value={String(s.id)}>
-                                        {s.Company} {loc ? `(${loc})` : ""}
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            {senderQuery.length > 0 &&
-                              senderQuery.length < 2 && (
-                                <div className="px-2 py-1 text-muted-foreground text-sm">
-                                  Type at least 2 characters
-                                </div>
-                              )}
-                            {senderQuery.length >= 2 &&
-                              Array.isArray(senderResults) &&
-                              senderResults.length === 0 && (
-                                <div className="px-2 py-1 text-muted-foreground text-sm">
-                                  No matches found
-                                </div>
-                              )}
-                          </div>
-                </SelectContent>
-              </Select>
+                        searchRef={senderSearchRef}
+                        placeholder="Search sender name..."
+                        searchPlaceholder="Search sender..."
+                        onSelect={(sender) => {
+                          setSelectedSender(sender);
+                          setSenderQuery(sender.Company);
+                          setForm((prev) => ({
+                            ...prev,
+                            senderName: sender.Company,
+                            senderAddress: sender.Address,
+                          }));
+                        }}
+                      />
                     </div>
                     <AddCustomerDialog
                       triggerLabel="+"
@@ -1561,87 +1615,29 @@ const AddShipmentPage = () => {
                   <Label className="mb-2">Recipient/Client</Label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
-              <Select
-                        value={
-                          selectedRecipient != null
-                            ? String(selectedRecipient.id)
-                            : undefined
-                        }
-                        onValueChange={(value) => {
-                          const recipient = recipientResults.find(
-                            (r) => String(r.id) === value
-                          );
-                          // Defer sibling remounts until Radix Select finishes
-                          // tearing down its portal — otherwise React hits
-                          // removeChild NotFoundError and the page crashes.
-                          window.setTimeout(() => {
-                            if (recipient) {
-                              setSelectedRecipient(recipient);
-                              setRecipientQuery(recipient.Company);
-                              setForm((prev) => ({
-                                ...prev,
-                                recipientName: recipient.Company,
-                                recipientAddress: recipient.Address,
-                              }));
-                            } else {
-                              setSelectedRecipient(null);
-                              setRecipientQuery("");
-                              setForm((prev) => ({
-                                ...prev,
-                                recipientName: "",
-                                recipientAddress: "",
-                              }));
-                            }
-                          }, 0);
+                      <PartyCombobox
+                        selected={selectedRecipient}
+                        results={recipientResults}
+                        draft={recipientSearchDraft}
+                        onDraftChange={setRecipientSearchDraft}
+                        open={recipientDropdownOpen}
+                        onOpenChange={(open) => {
+                          setRecipientDropdownOpen(open);
+                          if (open) setRecipientSearchDraft("");
                         }}
-                        onOpenChange={setRecipientDropdownOpen}
-              >
-                <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Search recipient name...">
-                            {selectedRecipient?.Company || undefined}
-                          </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                          <div className="p-2">
-                            <Input
-                              ref={recipientSearchRef}
-                              placeholder="Search recipient..."
-                              value={recipientQuery}
-                              onChange={(e) =>
-                                setRecipientQuery(e.target.value)
-                              }
-                              className="mb-2"
-                            />
-                            {Array.isArray(recipientResults) &&
-                              recipientResults.length > 0 && (
-                                <div className="max-h-60 overflow-y-auto">
-                                  {recipientResults.map((r) => {
-                                    const countryObj = r.Country && r.Country.length === 2 ? Country.getCountryByCode(r.Country) : null;
-                                    const loc = [r.City, countryObj?.name || r.Country].filter(Boolean).join(", ");
-                                    return (
-                                      <SelectItem key={r.id} value={String(r.id)}>
-                                        {r.Company} {loc ? `(${loc})` : ""}
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            {recipientQuery.length > 0 &&
-                              recipientQuery.length < 2 && (
-                                <div className="px-2 py-1 text-muted-foreground text-sm">
-                                  Type at least 2 characters
-                                </div>
-                              )}
-                            {recipientQuery.length >= 2 &&
-                              Array.isArray(recipientResults) &&
-                              recipientResults.length === 0 && (
-                                <div className="px-2 py-1 text-muted-foreground text-sm">
-                                  No matches found
-                                </div>
-                              )}
-                          </div>
-                </SelectContent>
-              </Select>
+                        searchRef={recipientSearchRef}
+                        placeholder="Search recipient name..."
+                        searchPlaceholder="Search recipient..."
+                        onSelect={(recipient) => {
+                          setSelectedRecipient(recipient);
+                          setRecipientQuery(recipient.Company);
+                          setForm((prev) => ({
+                            ...prev,
+                            recipientName: recipient.Company,
+                            recipientAddress: recipient.Address,
+                          }));
+                        }}
+                      />
                     </div>
                     <AddRecipientDialog
                       triggerLabel="+"
