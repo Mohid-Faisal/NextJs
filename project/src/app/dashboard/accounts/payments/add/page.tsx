@@ -236,13 +236,25 @@ export default function AddPaymentPage() {
         // Get chart of accounts data from the journal entry
         // Use passed accounts or state accounts
         const accountsToUse = accountsList || accounts;
+        // Prefer Payment-{id}; fall back to legacy bank-ref JE key
+        const journalRef = `Payment-${payment.id}`;
+        const legacyRef =
+          payment.reference && payment.reference !== journalRef
+            ? payment.reference
+            : undefined;
         if (accountsToUse.length > 0) {
-          await loadJournalEntryAccounts(`Payment-${payment.id}`, accountsToUse);
+          const found = await loadJournalEntryAccounts(journalRef, accountsToUse);
+          if (!found && legacyRef) {
+            await loadJournalEntryAccounts(legacyRef, accountsToUse);
+          }
         } else {
           // If accounts aren't loaded yet, wait a bit and try again
           setTimeout(async () => {
             if (accounts.length > 0) {
-              await loadJournalEntryAccounts(`Payment-${payment.id}`, accounts);
+              const found = await loadJournalEntryAccounts(journalRef, accounts);
+              if (!found && legacyRef) {
+                await loadJournalEntryAccounts(legacyRef, accounts);
+              }
             }
           }, 500);
         }
@@ -253,11 +265,11 @@ export default function AddPaymentPage() {
     }
   };
 
-  const loadJournalEntryAccounts = async (reference: string, accountsList?: ChartOfAccount[]) => {
+  const loadJournalEntryAccounts = async (reference: string, accountsList?: ChartOfAccount[]): Promise<boolean> => {
     try {
       if (!reference) {
         console.log("No reference provided for journal entry lookup");
-        return;
+        return false;
       }
 
       // Use passed accounts or state accounts
@@ -265,7 +277,7 @@ export default function AddPaymentPage() {
       if (accountsToUse.length === 0) {
         console.log("Accounts not loaded yet, waiting...");
         setTimeout(() => loadJournalEntryAccounts(reference, accountsToUse), 500);
-        return;
+        return false;
       }
 
       // Find the journal entry for this payment by reference using search parameter
@@ -298,6 +310,7 @@ export default function AddPaymentPage() {
             console.log("Setting credit account ID:", creditLine.accountId);
             setCreditAccountId(creditLine.accountId);
           }
+          return !!(debitLine?.accountId && creditLine?.accountId);
         } else {
           console.log("Journal entry has less than 2 lines:", journalEntry.lines);
           // Fallback: if journal entry doesn't have proper lines, try to set accounts based on category
@@ -305,6 +318,7 @@ export default function AddPaymentPage() {
             console.log("Falling back to category-based account selection");
             setDefaultAccounts();
           }
+          return false;
         }
       } else {
         console.log("No journal entry found for reference:", reference);
@@ -313,6 +327,7 @@ export default function AddPaymentPage() {
           console.log("Falling back to category-based account selection");
           setDefaultAccounts();
         }
+        return false;
       }
     } catch (error) {
       console.error("Error loading journal entry accounts:", error);
@@ -321,6 +336,7 @@ export default function AddPaymentPage() {
         console.log("Falling back to category-based account selection due to error");
         setDefaultAccounts();
       }
+      return false;
     }
   };
 
