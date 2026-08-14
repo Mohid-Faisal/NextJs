@@ -142,15 +142,23 @@ const LoginPage = () => {
   return (
     <div className="h-screen w-full flex flex-col lg:flex-row bg-white dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
       {/* Left panel - Login Intro (60% width on desktop with thicker partition) */}
-      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-10 xl:p-14 select-none border-r-2 border-gray-300 dark:border-zinc-800">
-        {/* Top-left SaaS logo & top-right boxes picture */}
+      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-8 xl:p-10 pl-10 xl:pl-14 select-none border-r-2 border-gray-300 dark:border-zinc-800">
+        {/* Top-left SaaS logo */}
         <div className="relative z-20 flex items-center justify-between">
-          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
-          <img src="/boxes.png" alt="Courier Packages" className="h-20 xl:h-24 w-auto object-contain" />
+          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain -ml-1" />
         </div>
 
-        {/* Center content: Text layout */}
-        <div className="relative z-10 my-auto flex flex-col items-start justify-center max-w-xl mx-auto px-4 space-y-6">
+        {/* Boxes picture - positioned lower down and noticeably bigger in the upper-right */}
+        <div className="absolute top-16 xl:top-20 right-6 xl:right-10 z-10 pointer-events-none select-none">
+          <img 
+            src="/boxes.png" 
+            alt="Courier Packages" 
+            className="h-36 xl:h-48 2xl:h-56 w-auto object-contain drop-shadow-sm" 
+          />
+        </div>
+
+        {/* Center content: Text layout - aligned left */}
+        <div className="relative z-20 my-auto flex flex-col items-start justify-center max-w-xl w-full pr-4 space-y-6">
           <div className="flex items-center gap-2">
             <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
             <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
@@ -164,7 +172,7 @@ const LoginPage = () => {
             Management SaaS.
           </h2>
 
-          <p className="text-sm xl:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p className="text-sm xl:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg">
             A complete cloud-based solution to simplify your courier, cargo, and logistics operations, empowering you to deliver an exceptional experience to your customers.
           </p>
 
@@ -196,7 +204,7 @@ const LoginPage = () => {
         </div>
 
         {/* Footer of Left Panel */}
-        <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10">
+        <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10 -mb-2">
           © {new Date().getFullYear()} PSSWWE. All rights reserved.
         </div>
       </div>
