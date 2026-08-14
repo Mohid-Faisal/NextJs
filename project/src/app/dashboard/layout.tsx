@@ -4,7 +4,7 @@ import { PermissionProvider } from "@/components/PermissionContext";
 import SupportChat from "@/components/SupportChat";
 
 export const metadata: Metadata = {
-  title: "Courier Dashboard",
+  title: "Proxima Smart Solutions",
   description: "Admin and User Courier Portal",
 };
 
