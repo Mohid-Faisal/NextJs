@@ -24,12 +24,27 @@ import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowU
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
 import { usePermissions } from "@/components/PermissionContext";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TablePagination } from "@/components/TablePagination";
+import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
 import {
   format,
   parseISO,
 } from "date-fns";
+
+const paymentColumns: ColumnOption[] = [
+  { id: "id", label: "ID" },
+  { id: "type", label: "Type" },
+  { id: "category", label: "Category" },
+  { id: "date", label: "Date" },
+  { id: "amount", label: "Amount" },
+  { id: "fromAccount", label: "From" },
+  { id: "toAccount", label: "To" },
+  { id: "mode", label: "Mode" },
+  { id: "reference", label: "Ref / TID" },
+  { id: "invoice", label: "Invoice" },
+  { id: "journal", label: "Journal Entry" },
+  { id: "actions", label: "Actions" },
+];
 
 type Payment = {
   id: number;
@@ -98,6 +113,28 @@ export default function PaymentsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    id: true,
+    type: true,
+    category: true,
+    date: true,
+    amount: true,
+    fromAccount: true,
+    toAccount: true,
+    mode: true,
+    reference: true,
+    invoice: true,
+    journal: true,
+    actions: true,
+  });
+
+  const toggleColumn = (id: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [id]: prev[id] === false ? true : false,
+    }));
+  };
 
   // Details Dialog state
   const [selectedPaymentDetails, setSelectedPaymentDetails] = useState<Payment | null>(null);
@@ -751,6 +788,13 @@ export default function PaymentsPage() {
             Import
           </Button>
 
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={paymentColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
           {/* Date Range Filter */}
           <div className="flex items-center gap-1.5 shrink-0">
             <Select
@@ -835,84 +879,108 @@ export default function PaymentsPage() {
                       onChange={handleSelectAll}
                     />
                   </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("id")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">ID</span>
-                      <span className="sm:hidden">ID</span>
-                      {getSortIcon("id")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("transactionType")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">Type</span>
-                      <span className="sm:hidden">Type</span>
-                      {getSortIcon("transactionType")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("category")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">Category</span>
-                      <span className="sm:hidden">Cat</span>
-                      {getSortIcon("category")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("date")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">Date</span>
-                      <span className="sm:hidden">Date</span>
-                      {getSortIcon("date")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("amount")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">Amount</span>
-                      <span className="sm:hidden">Amt</span>
-                      {getSortIcon("amount")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("fromAccount")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">From</span>
-                      <span className="sm:hidden">From</span>
-                      {getSortIcon("fromAccount")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("toAccount")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">To</span>
-                      <span className="sm:hidden">To</span>
-                      {getSortIcon("toAccount")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("mode")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">Mode</span>
-                      <span className="sm:hidden">Mode</span>
-                      {getSortIcon("mode")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("reference")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">Ref / TID</span>
-                      <span className="sm:hidden">Ref</span>
-                      {getSortIcon("reference")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button onClick={() => handleSort("invoice")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">Invoice</span>
-                      <span className="sm:hidden">Inv</span>
-                      {getSortIcon("invoice")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">Journal Entry</span>
-                    <span className="sm:hidden">Journal</span>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">Actions</span>
-                    <span className="sm:hidden">Actions</span>
-                  </th>
+                  {visibleColumns.id !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("id")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">ID</span>
+                        <span className="sm:hidden">ID</span>
+                        {getSortIcon("id")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.type !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("transactionType")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">Type</span>
+                        <span className="sm:hidden">Type</span>
+                        {getSortIcon("transactionType")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.category !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("category")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">Category</span>
+                        <span className="sm:hidden">Cat</span>
+                        {getSortIcon("category")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.date !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("date")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">Date</span>
+                        <span className="sm:hidden">Date</span>
+                        {getSortIcon("date")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.amount !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("amount")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">Amount</span>
+                        <span className="sm:hidden">Amt</span>
+                        {getSortIcon("amount")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.fromAccount !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("fromAccount")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">From</span>
+                        <span className="sm:hidden">From</span>
+                        {getSortIcon("fromAccount")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.toAccount !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("toAccount")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">To</span>
+                        <span className="sm:hidden">To</span>
+                        {getSortIcon("toAccount")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.mode !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("mode")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">Mode</span>
+                        <span className="sm:hidden">Mode</span>
+                        {getSortIcon("mode")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.reference !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("reference")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">Ref / TID</span>
+                        <span className="sm:hidden">Ref</span>
+                        {getSortIcon("reference")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.invoice !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button onClick={() => handleSort("invoice")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
+                        <span className="hidden sm:inline">Invoice</span>
+                        <span className="sm:hidden">Inv</span>
+                        {getSortIcon("invoice")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.journal !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">Journal Entry</span>
+                      <span className="sm:hidden">Journal</span>
+                    </th>
+                  )}
+                  {visibleColumns.actions !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">Actions</span>
+                      <span className="sm:hidden">Actions</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
@@ -926,62 +994,86 @@ export default function PaymentsPage() {
                         onChange={() => handleToggleSelect(p.id)}
                       />
                     </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{p.id}</td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{p.transactionType}</span>
-                      <span className="sm:hidden">{p.transactionType?.substring(0, 4)}</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{p.category}</span>
-                      <span className="sm:hidden">{p.category?.substring(0, 8)}...</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{format(parseISO(p.date), "dd/MM/yy HH:mm")}</td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{(p as any).currency || currency || "PKR"} {p.amount.toLocaleString()}</td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{p.fromAccount}</span>
-                      <span className="sm:hidden">{p.fromAccount?.substring(0, 8)}...</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{p.toAccount}</span>
-                      <span className="sm:hidden">{p.toAccount?.substring(0, 8)}...</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{p.mode}</span>
-                      <span className="sm:hidden">{p.mode?.substring(0, 4)}</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{p.reference}</span>
-                      <span className="sm:hidden">{p.reference?.substring(0, 8)}...</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{p.invoice || ""}</span>
-                      <span className="sm:hidden">{p.invoice?.substring(0, 8) || ""}...</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      {p.journalEntryNumber ? (
-                        <button
-                          onClick={() => handleViewJournalEntry(p.journalEntryNumber!)}
-                          className="text-blue-600 hover:text-blue-800 hover:underline text-xs"
-                          title="View journal entry"
-                        >
-                          <span className="hidden sm:inline">{p.journalEntryNumber}</span>
-                          <span className="sm:hidden">{p.journalEntryNumber?.substring(0, 6)}...</span>
-                        </button>
-                      ) : (
-                        <span className="text-gray-400 text-xs">N/A</span>
-                      )}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleViewDetails(p)}
-                          className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors"
-                          title="View transaction details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {visibleColumns.id !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{p.id}</td>
+                    )}
+                    {visibleColumns.type !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{p.transactionType}</span>
+                        <span className="sm:hidden">{p.transactionType?.substring(0, 4)}</span>
+                      </td>
+                    )}
+                    {visibleColumns.category !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{p.category}</span>
+                        <span className="sm:hidden">{p.category?.substring(0, 8)}...</span>
+                      </td>
+                    )}
+                    {visibleColumns.date !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{format(parseISO(p.date), "dd/MM/yy HH:mm")}</td>
+                    )}
+                    {visibleColumns.amount !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{(p as any).currency || currency || "PKR"} {p.amount.toLocaleString()}</td>
+                    )}
+                    {visibleColumns.fromAccount !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{p.fromAccount}</span>
+                        <span className="sm:hidden">{p.fromAccount?.substring(0, 8)}...</span>
+                      </td>
+                    )}
+                    {visibleColumns.toAccount !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{p.toAccount}</span>
+                        <span className="sm:hidden">{p.toAccount?.substring(0, 8)}...</span>
+                      </td>
+                    )}
+                    {visibleColumns.mode !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{p.mode}</span>
+                        <span className="sm:hidden">{p.mode?.substring(0, 4)}</span>
+                      </td>
+                    )}
+                    {visibleColumns.reference !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{p.reference}</span>
+                        <span className="sm:hidden">{p.reference?.substring(0, 8)}...</span>
+                      </td>
+                    )}
+                    {visibleColumns.invoice !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{p.invoice || ""}</span>
+                        <span className="sm:hidden">{p.invoice?.substring(0, 8) || ""}...</span>
+                      </td>
+                    )}
+                    {visibleColumns.journal !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        {p.journalEntryNumber ? (
+                          <button
+                            onClick={() => handleViewJournalEntry(p.journalEntryNumber!)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline text-xs"
+                            title="View journal entry"
+                          >
+                            <span className="hidden sm:inline">{p.journalEntryNumber}</span>
+                            <span className="sm:hidden">{p.journalEntryNumber?.substring(0, 6)}...</span>
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-xs">N/A</span>
+                        )}
+                      </td>
+                    )}
+                    {visibleColumns.actions !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleViewDetails(p)}
+                            className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors"
+                            title="View transaction details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

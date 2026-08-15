@@ -58,6 +58,20 @@ import DeleteDialog from "@/components/DeleteDialog";
 import { TablePagination } from "@/components/TablePagination";
 import { getTrackingUrl } from "@/lib/tracking-links";
 import { usePermissions } from "@/components/PermissionContext";
+import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
+
+const shipmentColumns: ColumnOption[] = [
+  { id: "date", label: "Date" },
+  { id: "bookingNumber", label: "Booking #" },
+  { id: "parties", label: "Sender / Recipient" },
+  { id: "country", label: "Country" },
+  { id: "type", label: "Type" },
+  { id: "pieces", label: "Pcs" },
+  { id: "weight", label: "Weight" },
+  { id: "tracking", label: "Tracking" },
+  { id: "totalValue", label: "Total Value" },
+  { id: "actions", label: "Actions" },
+];
 
 function truncateName(name: string | null | undefined, maxLen: number): string {
   if (!name) return "N/A";
@@ -72,6 +86,26 @@ export default function ShipmentsPage() {
   const [orgId, setOrgId] = useState<number | null>(null);
   const [selectedBranch, setSelectedBranch] = useState("All");
   const [branches, setBranches] = useState<any[]>([]);
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    date: true,
+    bookingNumber: true,
+    parties: true,
+    country: true,
+    type: true,
+    pieces: true,
+    weight: true,
+    tracking: true,
+    totalValue: true,
+    actions: true,
+  });
+
+  const toggleColumn = (id: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [id]: prev[id] === false ? true : false,
+    }));
+  };
 
   useEffect(() => {
     fetch("/api/org/current")
@@ -1246,153 +1280,154 @@ export default function ShipmentsPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 min-w-0">
-        {/* Left side - Page size and Search field */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:max-w-2xl min-w-0">
-          {/* Search field */}
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search by invoice #, sender, receiver..."
-              value={searchTerm}
-              onChange={(e) => {
-                setPage(1);
-                setSearchTerm(e.target.value);
-              }}
-              className="pl-10 w-full rounded-lg border-gray-300 dark:border-gray-600"
-            />
-          </div>
+      {/* Filters and Actions Toolbar */}
+      <div className="mb-4 sm:mb-6 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5">
+        {/* Left side - Search field */}
+        <div className="relative w-full xl:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search by invoice #, sender, receiver..."
+            value={searchTerm}
+            onChange={(e) => {
+              setPage(1);
+              setSearchTerm(e.target.value);
+            }}
+            className="pl-9 h-9 w-full rounded-lg border-gray-300 dark:border-gray-600 text-xs sm:text-sm"
+          />
         </div>
 
-        {/* Right side - Refresh, Import, Export, Delivery Status and Date Range */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto min-w-0 shrink-0">
-          {/* Refresh Button */}
+        {/* Right side - Refresh, Import, Export, View, Branch, Period, Add Shipment */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          {/* Refresh Button (Icon only) */}
           <Button
             type="button"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold shadow-sm cursor-pointer"
+            title="Refresh"
+            className="w-9 h-9 p-0 shrink-0 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center rounded-lg text-sm font-semibold shadow-sm cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh
           </Button>
 
           {/* Import Button */}
           <Button
             onClick={() => setImportDialogOpen(true)}
-            className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
+            size="sm"
+            className="h-9 px-3 shrink-0 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 rounded-lg text-xs sm:text-sm font-semibold shadow-sm"
           >
-            <Download className="w-4 h-4" />
-            Import
+            <Download className="w-3.5 h-3.5" />
+            <span>Import</span>
           </Button>
 
           {/* Export Dropdown */}
-          <div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold">
-                  <Upload className="w-4 h-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[110px]">
-                <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
-                  <Table className="w-4 h-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
-                  <Printer className="w-4 h-4" />
-                  Print
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleExportPDF} 
-                  disabled={isGeneratingPDF}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  {isGeneratingPDF ? 'Generating...' : 'PDF'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-9 px-3 shrink-0 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 rounded-lg text-xs sm:text-sm font-semibold shadow-sm">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[110px]">
+              <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2">
+                <Table className="w-4 h-4" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2">
+                <Printer className="w-4 h-4" />
+                Print
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleExportPDF} 
+                disabled={isGeneratingPDF}
+                className="flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                {isGeneratingPDF ? 'Generating...' : 'PDF'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* Date Range Filter */}
-           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            {/* Branch Filter */}
-            <Select
-              value={selectedBranch}
-              onValueChange={(value) => {
-                setSelectedBranch(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Select Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Branches</SelectItem>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={b.code || b.id.toString()}>
-                    {b.code || b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={shipmentColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
 
-            <Select
-              value={periodType}
-              onValueChange={(value: string) => {
-                setPeriodType(value as any);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Select period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="month">Current Month</SelectItem>
-                <SelectItem value="last3month">Last 3 Month</SelectItem>
-                <SelectItem value="last6month">Last 6 Month</SelectItem>
-                <SelectItem value="year">Last 12 Months</SelectItem>
-                <SelectItem value="financialyear">Financial Year</SelectItem>
-                <SelectItem value="custom">Custom Period</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {periodType === 'custom' && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-500 shrink-0 mt-1" />
-                <Input
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => {
-                    setCustomStartDate(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full sm:w-44 min-w-[160px]"
-                />
-                <span className="text-gray-500 shrink-0">to</span>
-                <Input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => {
-                    setCustomEndDate(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full sm:w-44 min-w-[160px]"
-                />
-              </div>
-            )}
-          </div>
+          {/* Branch Filter */}
+          <Select
+            value={selectedBranch}
+            onValueChange={(value) => {
+              setSelectedBranch(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-[130px] sm:w-[140px] text-xs sm:text-sm shrink-0">
+              <SelectValue placeholder="Branch" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Branches</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={b.code || b.id.toString()}>
+                  {b.code || b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Period Filter */}
+          <Select
+            value={periodType}
+            onValueChange={(value: string) => {
+              setPeriodType(value as any);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-[130px] sm:w-[140px] text-xs sm:text-sm shrink-0">
+              <SelectValue placeholder="Period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Current Month</SelectItem>
+              <SelectItem value="last3month">Last 3 Month</SelectItem>
+              <SelectItem value="last6month">Last 6 Month</SelectItem>
+              <SelectItem value="year">Last 12 Months</SelectItem>
+              <SelectItem value="financialyear">Financial Year</SelectItem>
+              <SelectItem value="custom">Custom Period</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {periodType === 'custom' && (
+            <div className="flex items-center gap-1 shrink-0">
+              <Input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => {
+                  setCustomStartDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-32 text-xs"
+              />
+              <span className="text-xs text-gray-500">-</span>
+              <Input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => {
+                  setCustomEndDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-32 text-xs"
+              />
+            </div>
+          )}
 
           {/* Add Shipment Button */}
           <Button
             onClick={() => router.push('/dashboard/add-shipment')}
-            className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500 flex items-center gap-2"
+            size="sm"
+            className="h-9 bg-blue-500 text-white hover:bg-blue-600 border-blue-500 flex items-center gap-1.5 px-3 rounded-lg shadow-sm shrink-0"
           >
             <Plus className="w-4 h-4" />
-            Shipment
+            <span>Shipment</span>
           </Button>
         </div>
       </div>
@@ -1416,100 +1451,120 @@ export default function ShipmentsPage() {
                       onChange={handleSelectAll}
                     />
                   </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("shipmentDate")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Date</span>
-                      <span className="sm:hidden">D</span>
-                      {getSortIcon("shipmentDate")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("invoiceNumber")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Booking#</span>
-                      <span className="sm:hidden">B</span>
-                      {getSortIcon("invoiceNumber")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[180px]">
-                    <button
-                      onClick={() => handleSort("senderName")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Sender / Recipient</span>
-                      <span className="sm:hidden">S / R</span>
-                      {getSortIcon("senderName")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("destination")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Country</span>
-                      <span className="sm:hidden">D</span>
-                      {getSortIcon("destination")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("packaging")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Type</span>
-                      <span className="sm:hidden">T</span>
-                      {getSortIcon("packaging")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("amount")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Pcs</span>
-                      <span className="sm:hidden">P</span>
-                      {getSortIcon("amount")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("totalWeight")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Weight</span>
-                      <span className="sm:hidden">W</span>
-                      {getSortIcon("totalWeight")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[140px]">
-                    <button
-                      onClick={() => handleSort("trackingId")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Tracking</span>
-                      <span className="sm:hidden">T</span>
-                      {getSortIcon("trackingId")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("totalCost")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">Total</span>
-                      <span className="sm:hidden">T</span>
-                      {getSortIcon("totalCost")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">Actions</span>
-                    <span className="sm:hidden">A</span>
-                  </th>
+                  {visibleColumns.date !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("shipmentDate")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Date</span>
+                        <span className="sm:hidden">D</span>
+                        {getSortIcon("shipmentDate")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.bookingNumber !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("invoiceNumber")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Booking#</span>
+                        <span className="sm:hidden">B</span>
+                        {getSortIcon("invoiceNumber")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.parties !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[180px]">
+                      <button
+                        onClick={() => handleSort("senderName")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Sender / Recipient</span>
+                        <span className="sm:hidden">S / R</span>
+                        {getSortIcon("senderName")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.country !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("destination")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Country</span>
+                        <span className="sm:hidden">D</span>
+                        {getSortIcon("destination")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.type !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("packaging")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Type</span>
+                        <span className="sm:hidden">T</span>
+                        {getSortIcon("packaging")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.pieces !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("amount")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Pcs</span>
+                        <span className="sm:hidden">P</span>
+                        {getSortIcon("amount")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.weight !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("totalWeight")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Weight</span>
+                        <span className="sm:hidden">W</span>
+                        {getSortIcon("totalWeight")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.tracking !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left min-w-[140px]">
+                      <button
+                        onClick={() => handleSort("trackingId")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Tracking</span>
+                        <span className="sm:hidden">T</span>
+                        {getSortIcon("trackingId")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.totalValue !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("totalCost")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">Total</span>
+                        <span className="sm:hidden">T</span>
+                        {getSortIcon("totalCost")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.actions !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">Actions</span>
+                      <span className="sm:hidden">A</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <AnimatePresence>
@@ -1531,164 +1586,184 @@ export default function ShipmentsPage() {
                           onChange={() => handleToggleSelect(shipment.id)}
                         />
                       </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-left">
-                        <div className="flex flex-col gap-0.5">
-                          <span>{formatDate(shipment.shipmentDate || shipment.createdAt)}</span>
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono tracking-tight leading-none mt-0.5">
-                            {formatTime(shipment.shipmentDate || shipment.createdAt)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <button
-                          onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                          className="font-bold text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                        >
-                          {shipment.invoiceNumber}
-                        </button>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="flex items-center gap-3">
-                          {/* Initials Circle */}
-                          <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-300 shrink-0">
-                            {getInitials(shipment.senderName)}
+                      {visibleColumns.date !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 text-left">
+                          <div className="flex flex-col gap-0.5">
+                            <span>{formatDate(shipment.shipmentDate || shipment.createdAt)}</span>
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-mono tracking-tight leading-none mt-0.5">
+                              {formatTime(shipment.shipmentDate || shipment.createdAt)}
+                            </span>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                              <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
-                              <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
+                        </td>
+                      )}
+                      {visibleColumns.bookingNumber !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <button
+                            onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                            className="font-bold text-blue-600 hover:text-white hover:bg-blue-600 px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                          >
+                            {shipment.invoiceNumber}
+                          </button>
+                        </td>
+                      )}
+                      {visibleColumns.parties !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <div className="flex items-center gap-3">
+                            {/* Initials Circle */}
+                            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-300 shrink-0">
+                              {getInitials(shipment.senderName)}
                             </div>
-                            <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
-                              <ArrowRight className="h-3 w-3 shrink-0 text-slate-400 animate-pulse" />
-                              <span className="truncate">
-                                <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
-                                <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                <span className="hidden sm:inline">{shipment.senderName || "N/A"}</span>
+                                <span className="sm:hidden">{truncateName(shipment.senderName, 14)}</span>
+                              </div>
+                              <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                                <ArrowRight className="h-3 w-3 shrink-0 text-slate-400 animate-pulse" />
+                                <span className="truncate">
+                                  <span className="hidden sm:inline">{shipment.recipientName || "N/A"}</span>
+                                  <span className="sm:hidden">{truncateName(shipment.recipientName, 14)}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.country !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <span className="hidden sm:inline">{getCountryName(shipment.destination)}</span>
+                          <span className="sm:hidden">{getCountryName(shipment.destination)?.substring(0, 8)}...</span>
+                        </td>
+                      )}
+                      {visibleColumns.type !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.packaging || "N/A"}</td>
+                      )}
+                      {visibleColumns.pieces !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
+                      )}
+                      {visibleColumns.weight !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || shipment.weight || 0}</td>
+                      )}
+                      {visibleColumns.tracking !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <div className="flex min-w-0 flex-col items-start gap-1">
+                            {getTrackingUrl(shipment) ? (
+                              <a
+                                href={getTrackingUrl(shipment)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block max-w-full truncate font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              >
+                                <span className="hidden sm:inline">{shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}</span>
+                                <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
+                              </a>
+                            ) : (
+                              <button
+                                onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
+                                className="block max-w-full truncate text-left font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
+                              >
+                                <span className="hidden sm:inline">{shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}</span>
+                                <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
+                              </button>
+                            )}
+                            {deliveryStatusFilter === "All" && (
+                              <span
+                                className={`rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getDeliveryStatusColor(
+                                  shipment.deliveryStatus
+                                )}`}
+                              >
+                                {shipment.deliveryStatus || "N/A"}
                               </span>
-                            </div>
+                            )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{getCountryName(shipment.destination)}</span>
-                        <span className="sm:hidden">{getCountryName(shipment.destination)?.substring(0, 8)}...</span>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.packaging || "N/A"}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.amount || 1}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{shipment.totalWeight || shipment.weight || 0}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="flex min-w-0 flex-col items-start gap-1">
-                          {getTrackingUrl(shipment) ? (
-                            <a
-                              href={getTrackingUrl(shipment)!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block max-w-full truncate font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                            >
-                              <span className="hidden sm:inline">{shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}</span>
-                              <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
-                            </a>
-                          ) : (
-                            <button
-                              onClick={() => router.push(`/dashboard/shipments/${shipment.id}`)}
-                              className="block max-w-full truncate text-left font-bold text-slate-900 dark:text-white hover:text-white dark:hover:text-black hover:bg-slate-900 dark:hover:bg-white px-2 py-1 rounded transition-colors duration-200 cursor-pointer"
-                            >
-                              <span className="hidden sm:inline">{shipment.trackingId?.startsWith("#") ? shipment.trackingId : `#${shipment.trackingId}`}</span>
-                              <span className="sm:hidden">{shipment.trackingId?.startsWith("#") ? shipment.trackingId?.substring(0, 9) : `#${shipment.trackingId?.substring(0, 8)}`}...</span>
-                            </button>
-                          )}
-                          {deliveryStatusFilter === "All" && (
+                        </td>
+                      )}
+                      {visibleColumns.totalValue !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">
+                              {Number(shipment.totalCost || 0).toLocaleString()}
+                            </div>
                             <span
-                              className={`rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getDeliveryStatusColor(
-                                shipment.deliveryStatus
+                              className={`mt-1 inline-block rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getInvoiceColor(
+                                shipment.invoices?.[0]?.status ||
+                                  shipment.invoiceStatus ||
+                                  "N/A"
                               )}`}
                             >
-                              {shipment.deliveryStatus || "N/A"}
+                              <span className="hidden sm:inline">
+                                {shipment.invoices?.[0]?.status ||
+                                  shipment.invoiceStatus ||
+                                  "N/A"}
+                              </span>
+                              <span className="sm:hidden">
+                                {(shipment.invoices?.[0]?.status ||
+                                  shipment.invoiceStatus ||
+                                  "N/A").substring(0, 3)}
+                              </span>
                             </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <div className="min-w-0">
-                          <div className="font-semibold text-gray-900 dark:text-gray-100">
-                            {Number(shipment.totalCost || 0).toLocaleString()}
                           </div>
-                          <span
-                            className={`mt-1 inline-block rounded px-1.5 sm:px-2 py-0.5 text-xs font-medium ${getInvoiceColor(
-                              shipment.invoices?.[0]?.status ||
-                                shipment.invoiceStatus ||
-                                "N/A"
-                            )}`}
-                          >
-                            <span className="hidden sm:inline">
-                              {shipment.invoices?.[0]?.status ||
-                                shipment.invoiceStatus ||
-                                "N/A"}
-                            </span>
-                            <span className="sm:hidden">
-                              {(shipment.invoices?.[0]?.status ||
-                                shipment.invoiceStatus ||
-                                "N/A").substring(0, 3)}
-                            </span>
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-43">
-                            <DropdownMenuItem onSelect={() => handleEdit(shipment)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipments/${shipment.id}`)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipment-invoice/${shipment.id}`)}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Shipment Invoice
-                            </DropdownMenuItem>
-                            {shipment.invoices?.[0]?.id && (
-                              <>
-                                <DropdownMenuItem
-                                  onSelect={() => router.push(`/dashboard/receipt/${shipment.invoices![0].id}`)}
-                                >
-                                  📄 Print Receipt
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuItem onSelect={() => openManageTrackingDialogFor(shipment)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Tracking Status
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleMarkAsBooked(shipment)} className="text-purple-600 dark:text-purple-400">
-                              <PackageCheck className="mr-2 h-4 w-4" />
-                              Mark as Booked
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleMarkAsInTransit(shipment)} className="text-blue-600">
-                              <Truck className="mr-2 h-4 w-4" />
-                              Mark as In Transit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleMarkAsDelivered(shipment)} className="text-green-600">
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Mark as Delivered
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleMarkAsCancelled(shipment)} className="text-red-500">
-                              <XCircle className="mr-2 h-4 w-4" />
-                              Mark as Cancelled
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleDelete(shipment)} className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+                        </td>
+                      )}
+                      {visibleColumns.actions !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-43">
+                              <DropdownMenuItem onSelect={() => handleEdit(shipment)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipments/${shipment.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => router.push(`/dashboard/shipment-invoice/${shipment.id}`)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Shipment Invoice
+                              </DropdownMenuItem>
+                              {shipment.invoices?.[0]?.id && (
+                                <>
+                                  <DropdownMenuItem
+                                    onSelect={() => router.push(`/dashboard/receipt/${shipment.invoices![0].id}`)}
+                                  >
+                                    📄 Print Receipt
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuItem onSelect={() => openManageTrackingDialogFor(shipment)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Tracking Status
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleMarkAsBooked(shipment)} className="text-purple-600 dark:text-purple-400">
+                                <PackageCheck className="mr-2 h-4 w-4" />
+                                Mark as Booked
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleMarkAsInTransit(shipment)} className="text-blue-600">
+                                <Truck className="mr-2 h-4 w-4" />
+                                Mark as In Transit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleMarkAsDelivered(shipment)} className="text-green-600">
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Mark as Delivered
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleMarkAsCancelled(shipment)} className="text-red-500">
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Mark as Cancelled
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleDelete(shipment)} className="text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      )}
                     </motion.tr>
                   ))}
                 </tbody>

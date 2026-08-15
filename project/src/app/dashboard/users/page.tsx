@@ -17,8 +17,10 @@ import {
   Trash2,
   Lock,
   Shield,
-  MoreVertical
+  MoreVertical,
+  RefreshCw,
 } from "lucide-react";
+import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +43,15 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
+const userColumns: ColumnOption[] = [
+  { id: "userInfo", label: "User Info" },
+  { id: "role", label: "Role" },
+  { id: "twoFa", label: "2FA Status" },
+  { id: "status", label: "Status" },
+  { id: "lastLogin", label: "Last Login" },
+  { id: "actions", label: "Actions" },
+];
+
 type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE" | "PENDING";
 
 export default function UsersAndTeamsPage() {
@@ -54,6 +65,23 @@ export default function UsersAndTeamsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    userInfo: true,
+    role: true,
+    twoFa: true,
+    status: true,
+    lastLogin: true,
+    actions: true,
+  });
+
+  const toggleColumn = (id: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [id]: prev[id] === false ? true : false,
+    }));
+  };
 
   // Modal / Form States
   const [openModal, setOpenModal] = useState<"invite" | "edit" | null>(null);
@@ -67,6 +95,16 @@ export default function UsersAndTeamsPage() {
     branch: "HQ",
     department: "—"
   });
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchUsers();
+      toast.success("Users refreshed");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -335,29 +373,51 @@ export default function UsersAndTeamsPage() {
         </div>
       </div>
 
-      {/* Filters Row */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-        <div className="relative w-full sm:max-w-md">
+      {/* Filters and Actions Toolbar */}
+      <div className="mb-4 sm:mb-6 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5">
+        {/* Left side - Search bar */}
+        <div className="relative w-full xl:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input 
             placeholder="Search users by name, email or role..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 text-sm rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+            className="pl-9 h-9 text-xs sm:text-sm rounded-lg border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
           />
         </div>
         
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+        {/* Right side - Refresh, View Options, Invite User */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+          {/* Refresh Button */}
+          <Button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Refresh"
+            className="w-9 h-9 p-0 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 shrink-0 flex items-center rounded-lg shadow-sm cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
+
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={userColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
+          {/* Invite User Button */}
           <Button 
+            size="sm"
             onClick={() => {
               setEditingUser(null);
               setForm({ name: "", email: "", password: "", role: "Employee", status: "Active", branch: "HQ", department: "—" });
               setOpenModal("invite");
             }}
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg shadow-sm w-full sm:w-auto"
+            className="h-9 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 text-xs font-semibold px-3 rounded-lg shadow-sm shrink-0"
           >
             <Plus className="w-4 h-4" />
-            Invite User
+            <span>Invite User</span>
           </Button>
         </div>
       </div>
@@ -369,12 +429,24 @@ export default function UsersAndTeamsPage() {
             <table className="w-full text-left border-separate border-spacing-y-2 sm:border-spacing-y-4 px-6 pb-6 pt-2">
               <thead>
                 <tr className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
-                  <th className="px-5 py-3 w-1/3">User Info</th>
-                  <th className="px-5 py-3">Role</th>
-                  <th className="px-5 py-3 text-center">2FA Status</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Last Login</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                  {visibleColumns.userInfo !== false && (
+                    <th className="px-5 py-3 w-1/3">User Info</th>
+                  )}
+                  {visibleColumns.role !== false && (
+                    <th className="px-5 py-3">Role</th>
+                  )}
+                  {visibleColumns.twoFa !== false && (
+                    <th className="px-5 py-3 text-center">2FA Status</th>
+                  )}
+                  {visibleColumns.status !== false && (
+                    <th className="px-5 py-3">Status</th>
+                  )}
+                  {visibleColumns.lastLogin !== false && (
+                    <th className="px-5 py-3">Last Login</th>
+                  )}
+                  {visibleColumns.actions !== false && (
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="text-sm">
@@ -388,70 +460,82 @@ export default function UsersAndTeamsPage() {
                       transition={{ delay: i * 0.02, duration: 0.2 }}
                       className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/10 text-gray-700 dark:text-zinc-300"
                     >
-                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 rounded-l-xl border-t border-b border-l border-gray-100 dark:border-zinc-850">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold shadow-sm">
-                            {u.name ? u.name.charAt(0).toUpperCase() : "U"}
+                      {visibleColumns.userInfo !== false && (
+                        <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 rounded-l-xl border-t border-b border-l border-gray-100 dark:border-zinc-850">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold shadow-sm">
+                              {u.name ? u.name.charAt(0).toUpperCase() : "U"}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900 dark:text-white">{u.name}</div>
+                              <div className="text-xs text-gray-400 mt-0.5">{u.email}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-semibold text-gray-900 dark:text-white">{u.name}</div>
-                            <div className="text-xs text-gray-400 mt-0.5">{u.email}</div>
+                        </td>
+                      )}
+                      {visibleColumns.role !== false && (
+                        <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850">
+                          <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${getRoleBadgeStyle(u.role)}`}>
+                            {u.role || "Employee"}
+                          </span>
+                        </td>
+                      )}
+                      {visibleColumns.twoFa !== false && (
+                        <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850 text-center">
+                          <div className="flex justify-center">
+                            <Shield className="w-4 h-4 text-gray-300 dark:text-zinc-700" />
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850">
-                        <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${getRoleBadgeStyle(u.role)}`}>
-                          {u.role || "Employee"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850 text-center">
-                        <div className="flex justify-center">
-                          <Shield className="w-4 h-4 text-gray-300 dark:text-zinc-700" />
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850">
-                        <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${getStatusBadgeStyle(u.status)}`}>
-                          {u.status === "PENDING" ? "Pending" : (u.status || "Active")}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850 text-gray-405">
-                        {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never"}
-                      </td>
-                      <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 rounded-r-xl border-t border-b border-r border-gray-100 dark:border-zinc-850 text-right">
-                        {u.id === currentUserId ? (
-                          <span className="text-xs text-gray-400 font-medium italic pr-2 select-none">Logged In (You)</span>
-                        ) : (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setEditingUser(u);
-                                setForm({
-                                  name: u.name,
-                                  email: u.email,
-                                  password: "",
-                                  role: u.role || "Employee",
-                                  status: u.status || "Active",
-                                  branch: "HQ",
-                                  department: "—"
-                                });
-                                setOpenModal("edit");
-                              }} className="flex items-center gap-2">
-                                <Edit3 className="w-3.5 h-3.5" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteUser(u.id)} className="flex items-center gap-2 text-red-600">
-                                <Trash2 className="w-3.5 h-3.5" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </td>
+                        </td>
+                      )}
+                      {visibleColumns.status !== false && (
+                        <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850">
+                          <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${getStatusBadgeStyle(u.status)}`}>
+                            {u.status === "PENDING" ? "Pending" : (u.status || "Active")}
+                          </span>
+                        </td>
+                      )}
+                      {visibleColumns.lastLogin !== false && (
+                        <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 border-t border-b border-gray-100 dark:border-zinc-850 text-gray-405">
+                          {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never"}
+                        </td>
+                      )}
+                      {visibleColumns.actions !== false && (
+                        <td className="px-5 py-3.5 bg-gray-50/30 dark:bg-zinc-800/5 rounded-r-xl border-t border-b border-r border-gray-100 dark:border-zinc-850 text-right">
+                          {u.id === currentUserId ? (
+                            <span className="text-xs text-gray-400 font-medium italic pr-2 select-none">Logged In (You)</span>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {
+                                  setEditingUser(u);
+                                  setForm({
+                                    name: u.name,
+                                    email: u.email,
+                                    password: "",
+                                    role: u.role || "Employee",
+                                    status: u.status || "Active",
+                                    branch: "HQ",
+                                    department: "—"
+                                  });
+                                  setOpenModal("edit");
+                                }} className="flex items-center gap-2">
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDeleteUser(u.id)} className="flex items-center gap-2 text-red-600">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </td>
+                      )}
                     </motion.tr>
                   ))}
                 </AnimatePresence>

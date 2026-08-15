@@ -27,13 +27,23 @@ import DeleteDialog from "@/components/DeleteDialog";
 import ViewVendorDialog from "@/components/ViewVendorDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
 import { TablePagination } from "@/components/TablePagination";
+import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
 import { toDatetimeLocalValue } from "@/lib/noteFormats";
-
 
 const STATUSES = ["All", "Active", "Inactive"];
 const SORT_OPTIONS = ["Newest", "Oldest"];
+
+const vendorColumns: ColumnOption[] = [
+  { id: "id", label: "ID" },
+  { id: "CompanyName", label: "Company Name" },
+  { id: "PersonName", label: "Contact Person" },
+  { id: "Phone", label: "Phone" },
+  { id: "City", label: "City" },
+  { id: "Country", label: "Country" },
+  { id: "currentBalance", label: "Balance" },
+  { id: "actions", label: "Actions" },
+];
 
 type SortField = "id" | "CompanyName" | "PersonName" | "Phone" | "City" | "Country" | "currentBalance";
 type SortOrder = "asc" | "desc";
@@ -43,6 +53,24 @@ export default function VendorsPage() {
   const [vendors, setVendors] = useState<Vendors[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    id: true,
+    CompanyName: true,
+    PersonName: true,
+    Phone: true,
+    City: true,
+    Country: true,
+    currentBalance: true,
+    actions: true,
+  });
+
+  const toggleColumn = (id: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [id]: prev[id] === false ? true : false,
+    }));
+  };
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -382,11 +410,11 @@ export default function VendorsPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+      {/* Filters and Actions Toolbar */}
+      <div className="mb-4 sm:mb-6 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5">
         {/* Left side - Search bar */}
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
+        <div className="relative w-full xl:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Search by company, person name..."
             value={searchTerm}
@@ -394,71 +422,75 @@ export default function VendorsPage() {
               setPage(1);
               setSearchTerm(e.target.value);
             }}
-            className="pl-9 text-sm rounded-lg"
+            className="pl-9 h-9 text-xs sm:text-sm rounded-lg"
           />
         </div>
 
-        {/* Right side - Refresh, Import, Export, Add Vendor */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto">
-          <div className="flex gap-2">
-            {/* Refresh Button */}
-            <Button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+        {/* Right side - Refresh, Import, Export, View, Add Vendor */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+          {/* Refresh Button */}
+          <Button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Refresh"
+            className="w-9 h-9 p-0 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 shrink-0 flex items-center rounded-lg shadow-sm cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
 
-            {/* Import Button */}
-            <Button
-              onClick={() => setImportDialogOpen(true)}
-              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm"
-            >
-              <Download className="w-4 h-4" />
-              Import
-            </Button>
+          {/* Import Button */}
+          <Button
+            size="sm"
+            onClick={() => setImportDialogOpen(true)}
+            className="h-9 px-3 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 rounded-lg text-xs font-semibold shadow-sm shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Import</span>
+          </Button>
 
-            {/* Export Dropdown */}
-            <div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold">
-                    <Upload className="w-4 h-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[110px]">
-                  <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2 text-xs">
-                    <Table className="w-3.5 h-3.5" />
-                    Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2 text-xs">
-                    <Printer className="w-3.5 h-3.5" />
-                    Print
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={handleExportPDF} 
-                    disabled={isGeneratingPDF}
-                    className="flex items-center gap-2 text-xs"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    {isGeneratingPDF ? 'Generating...' : 'PDF'}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-9 px-3 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 rounded-lg text-xs font-semibold shrink-0 shadow-sm">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[110px]">
+              <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2 text-xs">
+                <Table className="w-3.5 h-3.5" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2 text-xs">
+                <Printer className="w-3.5 h-3.5" />
+                Print
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleExportPDF} 
+                disabled={isGeneratingPDF}
+                className="flex items-center gap-2 text-xs"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                {isGeneratingPDF ? 'Generating...' : 'PDF'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            {/* Add Vendor button */}
-            <Button asChild className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm">
-              <Link href="/dashboard/vendors/add-vendors">
-                <Plus className="w-4 h-4" />
-                Add Vendor
-              </Link>
-            </Button>
-          </div>
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={vendorColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
+          {/* Add Vendor button */}
+          <Button asChild size="sm" className="h-9 bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1.5 text-xs font-semibold px-3 rounded-lg shadow-sm shrink-0">
+            <Link href="/dashboard/vendors/add-vendors">
+              <Plus className="w-4 h-4" />
+              <span>Add Vendor</span>
+            </Link>
+          </Button>
         </div>
       </div>        
 
@@ -471,80 +503,96 @@ export default function VendorsPage() {
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
                 <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("id")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <span className="hidden sm:inline">ID</span>
-                      <span className="sm:hidden">ID</span>
-                      {getSortIcon("id")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("CompanyName")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <span className="hidden sm:inline">Company Name</span>
-                      <span className="sm:hidden">Company</span>
-                      {getSortIcon("CompanyName")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("PersonName")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <span className="hidden sm:inline">Contact Person</span>
-                      <span className="sm:hidden">Contact</span>
-                      {getSortIcon("PersonName")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("Phone")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <span className="hidden sm:inline">Phone</span>
-                      <span className="sm:hidden">Phone</span>
-                      {getSortIcon("Phone")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("City")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <span className="hidden sm:inline">City</span>
-                      <span className="sm:hidden">City</span>
-                      {getSortIcon("City")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("Country")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <span className="hidden sm:inline">Country</span>
-                      <span className="sm:hidden">Country</span>
-                      {getSortIcon("Country")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("currentBalance")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <span className="hidden sm:inline">Balance</span>
-                      <span className="sm:hidden">Balance</span>
-                      {getSortIcon("currentBalance")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">Action</span>
-                    <span className="sm:hidden">Action</span>
-                  </th>
+                  {visibleColumns.id !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("id")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <span className="hidden sm:inline">ID</span>
+                        <span className="sm:hidden">ID</span>
+                        {getSortIcon("id")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.CompanyName !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("CompanyName")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <span className="hidden sm:inline">Company Name</span>
+                        <span className="sm:hidden">Company</span>
+                        {getSortIcon("CompanyName")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.PersonName !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("PersonName")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <span className="hidden sm:inline">Contact Person</span>
+                        <span className="sm:hidden">Contact</span>
+                        {getSortIcon("PersonName")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.Phone !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("Phone")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <span className="hidden sm:inline">Phone</span>
+                        <span className="sm:hidden">Phone</span>
+                        {getSortIcon("Phone")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.City !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("City")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <span className="hidden sm:inline">City</span>
+                        <span className="sm:hidden">City</span>
+                        {getSortIcon("City")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.Country !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("Country")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <span className="hidden sm:inline">Country</span>
+                        <span className="sm:hidden">Country</span>
+                        {getSortIcon("Country")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.currentBalance !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("currentBalance")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      >
+                        <span className="hidden sm:inline">Balance</span>
+                        <span className="sm:hidden">Balance</span>
+                        {getSortIcon("currentBalance")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.actions !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">Action</span>
+                      <span className="sm:hidden">Action</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <AnimatePresence>
@@ -558,105 +606,121 @@ export default function VendorsPage() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{vendor.id}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{vendor.CompanyName}</span>
-                        <span className="sm:hidden">{vendor.CompanyName?.substring(0, 15)}...</span>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{vendor.PersonName}</span>
-                        <span className="sm:hidden">{vendor.PersonName?.substring(0, 12)}...</span>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{vendor.Phone}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{vendor.City}</td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span className="hidden sm:inline">{country.getCountryByCode(vendor.Country)?.name}</span>
-                        <span className="sm:hidden">{country.getCountryByCode(vendor.Country)?.name?.substring(0, 10)}...</span>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <span
-                          className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium ${
-                            vendor.currentBalance > 0
-                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                              : vendor.currentBalance < 0
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                          }`}
-                        >
-                          {vendor.currentBalance.toLocaleString()}
-                          </span>
-                      </td>
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="p-2 hover:bg-gray-100 rounded">
-                              <EllipsisVertical />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-36">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                router.push(`vendors/add-vendors?id=${vendor.id}`)
-                              }
-                            >
-                              ✏️ Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setVendorToDelete(vendor);
-                                setOpenDeleteDialog(true);
-                              }}
-                            >
-                              🗑️ Delete
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedVendor(vendor);
-                                setOpenViewDialog(true);
-                              }}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                router.push(`/dashboard/accounts/transactions/vendor/${vendor.id}`);
-                              }}
-                            >
-                              💰 Transactions
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setVendorForBalance(vendor);
-                                setStartingBalance(vendor.currentBalance?.toString() || "0");
-                                setStartingBalanceDate(toDatetimeLocalValue(new Date()));
-                                setOpenStartingBalanceDialog(true);
-                              }}
-                            >
-                              💵 Set Starting Balance
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <Dialog
-                          open={openDeleteDialog}
-                          onOpenChange={setOpenDeleteDialog}
-                        >
-                          <DialogContent className="max-w-md w-full">
-                            <DeleteDialog
-                              entityType="vendor"
-                              entityId={vendorToDelete?.id || 0}
-                              onDelete={() => {
-                                fetchVendors();
-                                setVendorToDelete(null);
-                              }}
-                              onClose={() => {
-                                setOpenDeleteDialog(false);
-                                setVendorToDelete(null);
-                              }}
-                            />
-                          </DialogContent>
-                        </Dialog>
-                      </td>
+                      {visibleColumns.id !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">{vendor.id}</td>
+                      )}
+                      {visibleColumns.CompanyName !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <span className="hidden sm:inline">{vendor.CompanyName}</span>
+                          <span className="sm:hidden">{vendor.CompanyName?.substring(0, 15)}...</span>
+                        </td>
+                      )}
+                      {visibleColumns.PersonName !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <span className="hidden sm:inline">{vendor.PersonName}</span>
+                          <span className="sm:hidden">{vendor.PersonName?.substring(0, 12)}...</span>
+                        </td>
+                      )}
+                      {visibleColumns.Phone !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{vendor.Phone}</td>
+                      )}
+                      {visibleColumns.City !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{vendor.City}</td>
+                      )}
+                      {visibleColumns.Country !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <span className="hidden sm:inline">{country.getCountryByCode(vendor.Country)?.name}</span>
+                          <span className="sm:hidden">{country.getCountryByCode(vendor.Country)?.name?.substring(0, 10)}...</span>
+                        </td>
+                      )}
+                      {visibleColumns.currentBalance !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <span
+                            className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium ${
+                              vendor.currentBalance > 0
+                                ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                : vendor.currentBalance < 0
+                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                            }`}
+                          >
+                            {vendor.currentBalance.toLocaleString()}
+                            </span>
+                        </td>
+                      )}
+                      {visibleColumns.actions !== false && (
+                        <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="p-2 hover:bg-gray-100 rounded">
+                                <EllipsisVertical />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-36">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(`vendors/add-vendors?id=${vendor.id}`)
+                                }
+                              >
+                                ✏️ Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setVendorToDelete(vendor);
+                                  setOpenDeleteDialog(true);
+                                }}
+                              >
+                                🗑️ Delete
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedVendor(vendor);
+                                  setOpenViewDialog(true);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  router.push(`/dashboard/accounts/transactions/vendor/${vendor.id}`);
+                                }}
+                              >
+                                💰 Transactions
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setVendorForBalance(vendor);
+                                  setStartingBalance(vendor.currentBalance?.toString() || "0");
+                                  setStartingBalanceDate(toDatetimeLocalValue(new Date()));
+                                  setOpenStartingBalanceDialog(true);
+                                }}
+                              >
+                                💵 Set Starting Balance
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Dialog
+                            open={openDeleteDialog}
+                            onOpenChange={setOpenDeleteDialog}
+                          >
+                            <DialogContent className="max-w-md w-full">
+                              <DeleteDialog
+                                entityType="vendor"
+                                entityId={vendorToDelete?.id || 0}
+                                onDelete={() => {
+                                  fetchVendors();
+                                  setVendorToDelete(null);
+                                }}
+                                onClose={() => {
+                                  setOpenDeleteDialog(false);
+                                  setVendorToDelete(null);
+                                }}
+                              />
+                            </DialogContent>
+                          </Dialog>
+                        </td>
+                      )}
                     </motion.tr>
                   ))}
                 </tbody>

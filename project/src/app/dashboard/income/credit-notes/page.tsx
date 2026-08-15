@@ -36,6 +36,18 @@ import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import CreateCreditNoteDialog from "@/components/CreateCreditNoteDialog";
 import { TablePagination } from "@/components/TablePagination";
+import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
+
+const creditNoteColumns: ColumnOption[] = [
+  { id: "creditNoteNumber", label: "Adjustment #" },
+  { id: "type", label: "Type" },
+  { id: "customer", label: "Customer" },
+  { id: "invoice", label: "Invoice #" },
+  { id: "date", label: "Date" },
+  { id: "amount", label: "Amount" },
+  { id: "description", label: "Description" },
+  { id: "actions", label: "Actions" },
+];
 
 type CreditNote = {
   id: number;
@@ -73,6 +85,24 @@ export default function CreditNotesPage() {
     pageSize === "all"
       ? 1
       : Math.max(1, Math.ceil(total / (pageSize as number)));
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    creditNoteNumber: true,
+    type: true,
+    customer: true,
+    invoice: true,
+    date: true,
+    amount: true,
+    description: true,
+    actions: true,
+  });
+
+  const toggleColumn = (id: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [id]: prev[id] === false ? true : false,
+    }));
+  };
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>("createdAt");
@@ -258,10 +288,11 @@ export default function CreditNotesPage() {
         </div>
       </div>
 
-      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+      {/* Filters and Actions Toolbar */}
+      <div className="mb-4 sm:mb-6 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5">
         {/* Left side - Search bar */}
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
+        <div className="relative w-full xl:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Search..."
             value={searchTerm}
@@ -269,56 +300,60 @@ export default function CreditNotesPage() {
               setPage(1);
               setSearchTerm(e.target.value);
             }}
-            className="pl-9 text-sm rounded-lg"
+            className="pl-9 h-9 text-xs sm:text-sm rounded-lg"
           />
         </div>
 
         {/* Right side - Action buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto justify-end">
-          <div className="flex gap-2">
-            {/* Refresh Button */}
-            <Button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+          {/* Refresh Button */}
+          <Button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Refresh"
+            className="w-9 h-9 p-0 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 shrink-0 flex items-center rounded-lg shadow-sm cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
 
-            {/* Export Dropdown */}
-            <div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="w-[110px] justify-between bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold">
-                    Export
-                    <Upload className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[110px]">
-                  <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2 text-xs">
-                    <Table className="w-3.5 h-3.5" />
-                    CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2 text-xs">
-                    <Printer className="w-3.5 h-3.5" />
-                    Print
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-9 px-3 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold shrink-0 flex items-center gap-1.5 rounded-lg shadow-sm">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[110px]">
+              <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2 text-xs">
+                <Table className="w-3.5 h-3.5" />
+                CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToPrint} className="flex items-center gap-2 text-xs">
+                <Printer className="w-3.5 h-3.5" />
+                Print
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            <Button
-              onClick={() => {
-                setEditNoteId(null);
-                setOpenCreateDialog(true);
-              }}
-              className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm"
-            >
-              <Plus className="w-4 h-4" /> Add New
-            </Button>
-          </div>
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={creditNoteColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
+          <Button
+            onClick={() => {
+              setEditNoteId(null);
+              setOpenCreateDialog(true);
+            }}
+            size="sm"
+            className="h-9 bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1.5 text-xs font-semibold px-3 rounded-lg shadow-sm shrink-0"
+          >
+            <Plus className="w-4 h-4" /> <span>Add New</span>
+          </Button>
         </div>
       </div>
 
@@ -332,62 +367,78 @@ export default function CreditNotesPage() {
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
               <thead>
                 <tr className="text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("creditNoteNumber")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">ADJUSTMENT</span>
-                      <span className="sm:hidden">ADJ</span>
-                      {getSortIcon("creditNoteNumber")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">TYPE</span>
-                    <span className="sm:hidden">TYPE</span>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("customer")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">CUSTOMER</span>
-                      <span className="sm:hidden">CUSTOMER</span>
-                      {getSortIcon("customer")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">INVOICE #</span>
-                    <span className="sm:hidden">INVOICE</span>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("date")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">DATE</span>
-                      <span className="sm:hidden">DATE</span>
-                      {getSortIcon("date")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <button
-                      onClick={() => handleSort("amount")}
-                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      <span className="hidden sm:inline">AMOUNT</span>
-                      <span className="sm:hidden">AMOUNT</span>
-                      {getSortIcon("amount")}
-                    </button>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">DESCRIPTION</span>
-                    <span className="sm:hidden">DESC</span>
-                  </th>
-                  <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
-                    <span className="hidden sm:inline">ACTIONS</span>
-                    <span className="sm:hidden">ACT</span>
-                  </th>
+                  {visibleColumns.creditNoteNumber !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("creditNoteNumber")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">ADJUSTMENT</span>
+                        <span className="sm:hidden">ADJ</span>
+                        {getSortIcon("creditNoteNumber")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.type !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">TYPE</span>
+                      <span className="sm:hidden">TYPE</span>
+                    </th>
+                  )}
+                  {visibleColumns.customer !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("customer")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">CUSTOMER</span>
+                        <span className="sm:hidden">CUSTOMER</span>
+                        {getSortIcon("customer")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.invoice !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">INVOICE #</span>
+                      <span className="sm:hidden">INVOICE</span>
+                    </th>
+                  )}
+                  {visibleColumns.date !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("date")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">DATE</span>
+                        <span className="sm:hidden">DATE</span>
+                        {getSortIcon("date")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.amount !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <button
+                        onClick={() => handleSort("amount")}
+                        className="flex items-center hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        <span className="hidden sm:inline">AMOUNT</span>
+                        <span className="sm:hidden">AMOUNT</span>
+                        {getSortIcon("amount")}
+                      </button>
+                    </th>
+                  )}
+                  {visibleColumns.description !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">DESCRIPTION</span>
+                      <span className="sm:hidden">DESC</span>
+                    </th>
+                  )}
+                  {visibleColumns.actions !== false && (
+                    <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
+                      <span className="hidden sm:inline">ACTIONS</span>
+                      <span className="sm:hidden">ACT</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
@@ -396,58 +447,73 @@ export default function CreditNotesPage() {
                     key={cn.id}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
                   >
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="bg-green-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
-                        <span className="hidden sm:inline">{cn.creditNoteNumber}</span>
-                        <span className="sm:hidden">{cn.creditNoteNumber?.substring(0, 8)}...</span>
-                      </span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${cn.type === "DEBIT" ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"}`}>
-                        {cn.type || (cn.description?.toLowerCase().startsWith("debit note") ? "DEBIT" : "CREDIT")}
-                      </span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{cn.customer?.PersonName || cn.customer?.CompanyName || "-"}</span>
-                      <span className="sm:hidden">{cn.customer?.PersonName?.substring(0, 10) || cn.customer?.CompanyName?.substring(0, 10) || "-"}...</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      {cn.invoice?.invoiceNumber ? (
-                        <span className="bg-blue-100 text-blue-800 px-1 sm:px-2 py-1 rounded text-xs font-medium">
-                          <span className="hidden sm:inline">{cn.invoice.invoiceNumber}</span>
-                          <span className="sm:hidden">{cn.invoice.invoiceNumber?.substring(0, 8)}...</span>
+                    {visibleColumns.creditNoteNumber !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="bg-green-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
+                          <span className="hidden sm:inline">{cn.creditNoteNumber}</span>
+                          <span className="sm:hidden">{cn.creditNoteNumber?.substring(0, 8)}...</span>
                         </span>
-                      ) : (
-                        <span className="text-gray-400 text-xs">No Invoice</span>
-                      )}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      {new Date(cn.date).toLocaleString(undefined, {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">
-                      {cn.currency} {cn.amount.toLocaleString()}
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <span className="hidden sm:inline">{cn.description || `${cn.creditNoteNumber} Adjustment`}</span>
-                      <span className="sm:hidden">{cn.description?.substring(0, 15) || `${cn.creditNoteNumber} Adjustment`.substring(0, 15)}...</span>
-                    </td>
-                    <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditNoteId(cn.id);
-                              setOpenCreateDialog(true);
-                            }}
-                          >
+                      </td>
+                    )}
+                    {visibleColumns.type !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${cn.type === "DEBIT" ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"}`}>
+                          {cn.type || (cn.description?.toLowerCase().startsWith("debit note") ? "DEBIT" : "CREDIT")}
+                        </span>
+                      </td>
+                    )}
+                    {visibleColumns.customer !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{cn.customer?.PersonName || cn.customer?.CompanyName || "-"}</span>
+                        <span className="sm:hidden">{cn.customer?.PersonName?.substring(0, 10) || cn.customer?.CompanyName?.substring(0, 10) || "-"}...</span>
+                      </td>
+                    )}
+                    {visibleColumns.invoice !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        {cn.invoice?.invoiceNumber ? (
+                          <span className="bg-blue-100 text-blue-800 px-1 sm:px-2 py-1 rounded text-xs font-medium">
+                            <span className="hidden sm:inline">{cn.invoice.invoiceNumber}</span>
+                            <span className="sm:hidden">{cn.invoice.invoiceNumber?.substring(0, 8)}...</span>
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No Invoice</span>
+                        )}
+                      </td>
+                    )}
+                    {visibleColumns.date !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        {new Date(cn.date).toLocaleString(undefined, {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </td>
+                    )}
+                    {visibleColumns.amount !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3 font-medium">
+                        {cn.currency} {cn.amount.toLocaleString()}
+                      </td>
+                    )}
+                    {visibleColumns.description !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <span className="hidden sm:inline">{cn.description || `${cn.creditNoteNumber} Adjustment`}</span>
+                        <span className="sm:hidden">{cn.description?.substring(0, 15) || `${cn.creditNoteNumber} Adjustment`.substring(0, 15)}...</span>
+                      </td>
+                    )}
+                    {visibleColumns.actions !== false && (
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditNoteId(cn.id);
+                                setOpenCreateDialog(true);
+                              }}
+                            >
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
@@ -490,6 +556,7 @@ export default function CreditNotesPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
+                  )}
                   </tr>
                 ))}
               </tbody>
