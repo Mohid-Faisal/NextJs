@@ -211,7 +211,7 @@ const LoginPage = () => {
             </Button>
           </div>
 
-          {/* 6 Features spread across full 2/3rds width with vertical dividers (no outer card box) */}
+          {/* 6 Features spread across full 2/3rds width with vertical dividers */}
           <div className="w-full mt-6 xl:mt-8 pt-2">
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 divide-y sm:divide-y-0 xl:divide-x divide-slate-200 dark:divide-zinc-800">
               {features.map((item, idx) => {
@@ -219,15 +219,15 @@ const LoginPage = () => {
                 return (
                   <div
                     key={idx}
-                    className="flex flex-col items-center text-center px-3 py-2 xl:py-1 group"
+                    className="flex flex-col items-center text-center px-2 py-2 xl:py-1 group"
                   >
-                    <div className="w-11 h-11 xl:w-12 xl:h-12 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/50 border border-indigo-100/80 dark:border-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-2xs mb-2 group-hover:scale-105 group-hover:bg-indigo-100/80 dark:group-hover:bg-indigo-900/60 transition-all duration-200">
+                    <div className="flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform duration-200">
                       <Icon className="w-5 h-5 xl:w-5.5 xl:h-5.5 text-indigo-600 dark:text-indigo-400" />
                     </div>
-                    <span className="text-[11px] xl:text-xs font-extrabold tracking-wider text-slate-900 dark:text-white uppercase mb-0.5">
+                    <span className="text-[10px] xl:text-[11px] font-extrabold tracking-wider text-slate-900 dark:text-white uppercase mb-0.5">
                       {item.title}
                     </span>
-                    <span className="text-[10px] xl:text-[11px] text-slate-500 dark:text-zinc-400 font-medium leading-tight max-w-[120px]">
+                    <span className="text-[9px] xl:text-[10px] text-slate-500 dark:text-zinc-400 font-medium leading-tight max-w-[110px]">
                       {item.subtitle}
                     </span>
                   </div>
