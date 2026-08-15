@@ -552,6 +552,7 @@ export default function CustomerTransactionsPage() {
                 text-transform: none;
                 letter-spacing: 0.5px;
                 white-space: nowrap;
+                vertical-align: middle;
               }
               td { 
                 padding: 8px;
@@ -559,7 +560,7 @@ export default function CustomerTransactionsPage() {
                 border: 1px solid #e2e8f0;
                 font-size: 11px;
                 color: #2d3748;
-                vertical-align: top;
+                vertical-align: middle;
               }
               td:first-child {
                 white-space: nowrap;
@@ -665,10 +666,10 @@ export default function CustomerTransactionsPage() {
                   </tbody>
                   <tfoot>
                     <tr style="background-color: #e2e8f0; font-weight: 700;">
-                      <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0;">Total:</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(totalDebit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(totalCredit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700;">${(finalBalance ?? 0).toLocaleString()}</td>
+                      <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(totalDebit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(totalCredit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(finalBalance ?? 0).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
