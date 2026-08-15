@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download, Coins, RefreshCw } from "lucide-react";
+import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download, Coins, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
 import DeleteDialog from "@/components/DeleteDialog";
 import { usePermissions } from "@/components/PermissionContext";
@@ -71,6 +71,8 @@ export default function PaymentsPage() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [modeFilter, setModeFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   // Date range states
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
@@ -96,6 +98,20 @@ export default function PaymentsPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+
+  // Details Dialog state
+  const [selectedPaymentDetails, setSelectedPaymentDetails] = useState<Payment | null>(null);
+  const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
+
+  const handleViewDetails = (payment: Payment) => {
+    setSelectedPaymentDetails(payment);
+    setOpenDetailsDialog(true);
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setRefreshKey((k) => k + 1);
+  };
 
   // Selection states
   const [selectedTransactionIds, setSelectedTransactionIds] = useState<number[]>([]);
@@ -678,7 +694,7 @@ export default function PaymentsPage() {
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
           <Input
-            placeholder="Search by category, amount, reference..."
+            placeholder="Search by description, category, amount, reference..."
             value={searchTerm}
             onChange={(e) => {
               setPage(1);
@@ -965,17 +981,24 @@ export default function PaymentsPage() {
                       )}
                     </td>
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleViewDetails(p)}
+                          className="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded transition-colors"
+                          title="View description & details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleEdit(p)}
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded transition-colors"
                           title="Edit payment"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(p)}
-                          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-950/50 rounded transition-colors"
                           title="Delete payment"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1194,6 +1217,151 @@ export default function PaymentsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transaction Details & Description Popup Dialog */}
+      <Dialog open={openDetailsDialog} onOpenChange={setOpenDetailsDialog}>
+        <DialogContent className="max-w-lg w-full p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl">
+          {selectedPaymentDetails && (
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/50 shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                        Transaction #{selectedPaymentDetails.id}
+                      </h3>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                        selectedPaymentDetails.transactionType === "Income"
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                          : selectedPaymentDetails.transactionType === "Expense"
+                          ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                      }`}>
+                        {selectedPaymentDetails.transactionType}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                      {format(parseISO(selectedPaymentDetails.date), "dd MMMM yyyy, hh:mm a")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount Banner */}
+              <div className="bg-slate-50 dark:bg-zinc-800/60 rounded-xl p-3.5 border border-slate-200/60 dark:border-zinc-700/60 flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider block">
+                    Amount
+                  </span>
+                  <span className="text-xl font-black text-slate-900 dark:text-white">
+                    {(selectedPaymentDetails as any).currency || currency || "PKR"} {selectedPaymentDetails.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider block">
+                    Mode
+                  </span>
+                  <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 mt-0.5">
+                    {selectedPaymentDetails.mode}
+                  </span>
+                </div>
+              </div>
+
+              {/* Transaction Key Details Grid */}
+              <div className="grid grid-cols-2 gap-2.5 text-xs">
+                <div className="p-2.5 bg-slate-50/70 dark:bg-zinc-800/40 rounded-xl border border-slate-100 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium block mb-0.5">Category</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
+                    {selectedPaymentDetails.category || "—"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 bg-slate-50/70 dark:bg-zinc-800/40 rounded-xl border border-slate-100 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium block mb-0.5">Journal Entry</span>
+                  {selectedPaymentDetails.journalEntryNumber ? (
+                    <button
+                      onClick={() => handleViewJournalEntry(selectedPaymentDetails.journalEntryNumber!)}
+                      className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 text-xs sm:text-sm"
+                    >
+                      {selectedPaymentDetails.journalEntryNumber}
+                    </button>
+                  ) : (
+                    <span className="text-slate-400 dark:text-zinc-500 font-semibold">—</span>
+                  )}
+                </div>
+
+                <div className="p-2.5 bg-slate-50/70 dark:bg-zinc-800/40 rounded-xl border border-slate-100 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium block mb-0.5">From Account</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200 text-xs">
+                    {selectedPaymentDetails.fromAccount || "—"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 bg-slate-50/70 dark:bg-zinc-800/40 rounded-xl border border-slate-100 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium block mb-0.5">To Account</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200 text-xs">
+                    {selectedPaymentDetails.toAccount || "—"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 bg-slate-50/70 dark:bg-zinc-800/40 rounded-xl border border-slate-100 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium block mb-0.5">Reference</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200 font-mono text-xs">
+                    {selectedPaymentDetails.reference || "—"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 bg-slate-50/70 dark:bg-zinc-800/40 rounded-xl border border-slate-100 dark:border-zinc-800">
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium block mb-0.5">Invoice</span>
+                  <span className="font-semibold text-slate-800 dark:text-zinc-200 font-mono text-xs">
+                    {selectedPaymentDetails.invoice || "—"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Description Section */}
+              <div className="space-y-1 pt-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  Description / Notes
+                </span>
+                <div className="bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 rounded-xl p-3 text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed min-h-[60px] max-h-[160px] overflow-y-auto">
+                  {selectedPaymentDetails.description?.trim() ? (
+                    selectedPaymentDetails.description
+                  ) : (
+                    <span className="text-slate-400 dark:text-zinc-500 italic">No description provided for this transaction.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <Button
+                  variant="outline"
+                  onClick={() => setOpenDetailsDialog(false)}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg"
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    setOpenDetailsDialog(false);
+                    handleEdit(selectedPaymentDetails);
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  Edit Transaction
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

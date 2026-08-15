@@ -112,15 +112,26 @@ export async function GET(request: NextRequest) {
 
     const orConditions: any[] = [
       // Category
-      { category: { contains: search} },
+      { category: { contains: search } },
       // From / To account names shown in table (customer/vendor or "Us")
-      { fromCustomer: { contains: search} },
-      { toVendor: { contains: search} },
+      { fromCustomer: { contains: search } },
+      { toVendor: { contains: search } },
       // Reference / Invoice / Description
-      { reference: { contains: search} },
-      { invoice: { contains: search} },
-      { description: { contains: search} },
+      { reference: { contains: search } },
+      { invoice: { contains: search } },
+      { description: { contains: search } },
     ];
+
+    if (searchRaw && searchRaw !== search) {
+      orConditions.push(
+        { category: { contains: searchRaw } },
+        { fromCustomer: { contains: searchRaw } },
+        { toVendor: { contains: searchRaw } },
+        { reference: { contains: searchRaw } },
+        { invoice: { contains: searchRaw } },
+        { description: { contains: searchRaw } },
+      );
+    }
 
     // Map textual search to transactionType enum (Income, Expense, etc.)
     const typeSearchKey = Object.keys(typeMap).find((key) =>
