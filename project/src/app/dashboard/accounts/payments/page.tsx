@@ -681,11 +681,11 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="mb-4 sm:mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+      {/* Filters and Actions Toolbar */}
+      <div className="mb-4 sm:mb-6 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5">
         {/* Left side - Search bar */}
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4.5 h-4.5" />
+        <div className="relative flex-1 min-w-[200px] max-w-full xl:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Search by description, category, amount, reference..."
             value={searchTerm}
@@ -693,67 +693,66 @@ export default function PaymentsPage() {
               setPage(1);
               setSearchTerm(e.target.value);
             }}
-            className="pl-9 text-sm rounded-lg"
+            className="pl-9 text-xs sm:text-sm rounded-lg h-9"
           />
         </div>
 
-        {/* Right side - Filters and Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto justify-end flex-wrap">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold h-9 shrink-0 flex items-center gap-1.5 rounded-lg"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+        {/* Right side - Filters and Actions (Single Line) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0 flex-nowrap shrink-0">
+          {/* Refresh Button (Icon only) */}
+          <Button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Refresh transactions"
+            className="w-9 h-9 p-0 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 shrink-0 flex items-center rounded-lg shadow-sm"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
 
-            {/* Export Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold h-9 shrink-0 flex items-center gap-1.5 rounded-lg">
-                  <Upload className="w-4 h-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[110px]">
-                <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2 text-xs">
-                  <Table className="w-3.5 h-3.5" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2 text-xs">
-                  <Printer className="w-3.5 h-3.5" />
-                  Print
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleExportPDF} 
-                  disabled={isGeneratingPDF}
-                  className="flex items-center gap-2 text-xs"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  {isGeneratingPDF ? 'Generating...' : 'PDF'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="h-9 px-3 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 text-xs font-semibold shrink-0 flex items-center gap-1.5 rounded-lg shadow-sm">
+                <Upload className="w-4 h-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[110px]">
+              <DropdownMenuItem onClick={handleExportExcel} className="flex items-center gap-2 text-xs">
+                <Table className="w-3.5 h-3.5" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPrint} className="flex items-center gap-2 text-xs">
+                <Printer className="w-3.5 h-3.5" />
+                Print
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleExportPDF} 
+                disabled={isGeneratingPDF}
+                className="flex items-center gap-2 text-xs"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                {isGeneratingPDF ? 'Generating...' : 'PDF'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            {/* Import Button */}
-            <Button
-              onClick={() => {
-                setImportFile(null);
-                setImportResults(null);
-                setImportDialogOpen(true);
-              }}
-              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2 rounded-lg text-xs font-semibold shadow-sm h-9 shrink-0"
-            >
-              <Download className="w-4 h-4" />
-              Import
-            </Button>
-          </div>
+          {/* Import Button */}
+          <Button
+            onClick={() => {
+              setImportFile(null);
+              setImportResults(null);
+              setImportDialogOpen(true);
+            }}
+            className="h-9 px-3 justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 rounded-lg text-xs font-semibold shadow-sm shrink-0"
+          >
+            <Download className="w-4 h-4" />
+            Import
+          </Button>
 
           {/* Date Range Filter */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Select
               value={periodType}
               onValueChange={(value: string) => {
@@ -761,7 +760,7 @@ export default function PaymentsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-[160px] h-9">
+              <SelectTrigger className="w-[135px] h-9 text-xs">
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
               <SelectContent>
@@ -776,7 +775,6 @@ export default function PaymentsPage() {
             
             {periodType === 'custom' && (
               <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-gray-500 shrink-0 hidden sm:block" />
                 <Input
                   type="date"
                   value={customStartDate}
@@ -784,9 +782,9 @@ export default function PaymentsPage() {
                     setCustomStartDate(e.target.value);
                     setPage(1);
                   }}
-                  className="w-[130px] sm:w-[140px] h-9"
+                  className="w-[125px] h-9 text-xs"
                 />
-                <span className="text-gray-500 shrink-0 text-xs sm:text-sm">to</span>
+                <span className="text-gray-500 shrink-0 text-xs">to</span>
                 <Input
                   type="date"
                   value={customEndDate}
@@ -794,7 +792,7 @@ export default function PaymentsPage() {
                     setCustomEndDate(e.target.value);
                     setPage(1);
                   }}
-                  className="w-[130px] sm:w-[140px] h-9"
+                  className="w-[125px] h-9 text-xs"
                 />
               </div>
             )}
@@ -802,7 +800,7 @@ export default function PaymentsPage() {
 
           {/* Mode Filter */}
           <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[140px] h-9 shrink-0">
+            <SelectTrigger className="w-[110px] h-9 shrink-0 text-xs">
               <SelectValue placeholder="Mode" />
             </SelectTrigger>
             <SelectContent>
@@ -813,8 +811,8 @@ export default function PaymentsPage() {
           </Select>
 
           {/* Add Payment Button */}
-          <Button asChild className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm h-9 shrink-0">
-            <Link href="/dashboard/accounts/payments/add" className="flex items-center gap-2">
+          <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 text-xs font-semibold px-3.5 h-9 rounded-lg shadow-sm shrink-0">
+            <Link href="/dashboard/accounts/payments/add" className="flex items-center gap-1.5">
               <Plus className="w-4 h-4" /> Transaction
             </Link>
           </Button>
