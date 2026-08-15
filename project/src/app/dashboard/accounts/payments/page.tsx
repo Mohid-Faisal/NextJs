@@ -977,24 +977,10 @@ export default function PaymentsPage() {
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleViewDetails(p)}
-                          className="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded transition-colors"
-                          title="View description & details"
+                          className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors"
+                          title="View transaction details"
                         >
                           <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(p)}
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded transition-colors"
-                          title="Edit payment"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(p)}
-                          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-950/50 rounded transition-colors"
-                          title="Delete payment"
-                        >
-                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -1356,24 +1342,38 @@ export default function PaymentsPage() {
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800">
                 <Button
                   variant="outline"
-                  onClick={() => setOpenDetailsDialog(false)}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg"
-                >
-                  Close
-                </Button>
-                <Button
                   onClick={() => {
                     setOpenDetailsDialog(false);
-                    handleEdit(selectedPaymentDetails);
+                    handleDelete(selectedPaymentDetails);
                   }}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                  className="border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 px-3.5 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
                 >
-                  <Edit className="w-3.5 h-3.5" />
-                  Edit Transaction
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
                 </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setOpenDetailsDialog(false)}
+                    className="px-4 py-2 text-xs font-semibold rounded-lg"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setOpenDetailsDialog(false);
+                      handleEdit(selectedPaymentDetails);
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    Edit Transaction
+                  </Button>
+                </div>
               </div>
             </div>
           )}
