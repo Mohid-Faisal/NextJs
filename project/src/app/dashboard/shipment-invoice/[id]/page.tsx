@@ -167,6 +167,79 @@ function numberToWords(num: number): string {
   return result.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+function getShipmentDimensionsAndTotals(shipment: any) {
+  if (!shipment) {
+    return {
+      totalPieces: 1,
+      netWeight: 0,
+      dimensions: '0X0X0',
+    };
+  }
+
+  let parsedPackages: Package[] = [];
+  if (shipment.packages) {
+    try {
+      parsedPackages = typeof shipment.packages === 'string'
+        ? JSON.parse(shipment.packages)
+        : shipment.packages;
+      if (!Array.isArray(parsedPackages)) parsedPackages = [];
+    } catch {
+      parsedPackages = [];
+    }
+  }
+
+  let totalPieces = 0;
+  let totalWeight = 0;
+  let maxLength = 0;
+  let maxWidth = 0;
+  let maxHeight = 0;
+
+  if (parsedPackages.length > 0) {
+    parsedPackages.forEach((pkg: any) => {
+      totalPieces += Number(pkg.amount) || 1;
+      totalWeight += Number(pkg.weight) || 0;
+
+      const pkgLength = typeof pkg.length === 'number' ? pkg.length : (typeof pkg.length === 'string' ? parseFloat(pkg.length) : 0);
+      const pkgWidth = typeof pkg.width === 'number' ? pkg.width : (typeof pkg.width === 'string' ? parseFloat(pkg.width) : 0);
+      const pkgHeight = typeof pkg.height === 'number' ? pkg.height : (typeof pkg.height === 'string' ? parseFloat(pkg.height) : 0);
+
+      if (pkgLength > 0 && pkgLength > maxLength) maxLength = pkgLength;
+      if (pkgWidth > 0 && pkgWidth > maxWidth) maxWidth = pkgWidth;
+      if (pkgHeight > 0 && pkgHeight > maxHeight) maxHeight = pkgHeight;
+    });
+
+    if (maxLength === 0 && maxWidth === 0 && maxHeight === 0) {
+      const shipLength = shipment.length ? (typeof shipment.length === 'number' ? shipment.length : parseFloat(String(shipment.length))) : 0;
+      const shipWidth = shipment.width ? (typeof shipment.width === 'number' ? shipment.width : parseFloat(String(shipment.width))) : 0;
+      const shipHeight = shipment.height ? (typeof shipment.height === 'number' ? shipment.height : parseFloat(String(shipment.height))) : 0;
+
+      if (shipLength > 0) maxLength = shipLength;
+      if (shipWidth > 0) maxWidth = shipWidth;
+      if (shipHeight > 0) maxHeight = shipHeight;
+    }
+  } else {
+    totalPieces = shipment.totalPackages || shipment.amount || 1;
+    totalWeight = shipment.totalWeight || shipment.weight || 0;
+    const shipLength = shipment.length ? (typeof shipment.length === 'number' ? shipment.length : parseFloat(String(shipment.length))) : 0;
+    const shipWidth = shipment.width ? (typeof shipment.width === 'number' ? shipment.width : parseFloat(String(shipment.width))) : 0;
+    const shipHeight = shipment.height ? (typeof shipment.height === 'number' ? shipment.height : parseFloat(String(shipment.height))) : 0;
+
+    maxLength = shipLength;
+    maxWidth = shipWidth;
+    maxHeight = shipHeight;
+  }
+
+  const dimensions = (maxLength > 0 || maxWidth > 0 || maxHeight > 0)
+    ? `${maxLength}X${maxWidth}X${maxHeight}`
+    : '0X0X0';
+
+  return {
+    totalPieces: totalPieces || shipment.totalPackages || shipment.amount || 1,
+    netWeight: totalWeight || shipment.totalWeight || shipment.weight || 0,
+    dimensions,
+  };
+}
+
 export default function ShipmentInvoicePage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : (Array.isArray(params.id) ? params.id[0] : '');
@@ -311,9 +384,7 @@ export default function ShipmentInvoicePage() {
       return;
     }
 
-    const totalPieces = shipment.totalPackages || shipment.amount || 1;
-    const netWeight = shipment.totalWeight || shipment.weight || 0;
-    const dimensions = `${shipment.length || 0}X${shipment.width || 0}X${shipment.height || 0}`;
+    const { totalPieces, netWeight, dimensions } = getShipmentDimensionsAndTotals(shipment);
     const getCountryName = (code: string | null | undefined) => {
       if (!code) return 'N/A';
       return getCountryNameFromCode(String(code)) || code;
@@ -592,9 +663,7 @@ export default function ShipmentInvoicePage() {
   }
 
   // Calculate totals
-  const totalPieces = shipment.totalPackages || shipment.amount || 1;
-  const netWeight = shipment.totalWeight || shipment.weight || 0;
-  const dimensions = `${shipment.length || 0}X${shipment.width || 0}X${shipment.height || 0}`;
+  const { totalPieces, netWeight, dimensions } = getShipmentDimensionsAndTotals(shipment);
   
   // Get country names
   const getCountryName = (code: string | null | undefined) => {
