@@ -149,11 +149,20 @@ const LoginPage = () => {
         </div>
 
         {/* Boxes picture - pushed slightly more to the right */}
-        <div className="absolute top-[26%] xl:top-[28%] right-2 xl:right-4 z-10 pointer-events-none select-none">
+        <div className="absolute top-[20%] xl:top-[22%] right-2 xl:right-4 z-10 pointer-events-none select-none">
           <img 
             src="/boxes.png" 
             alt="Courier Packages" 
-            className="h-36 xl:h-48 2xl:h-56 w-auto object-contain" 
+            className="h-32 xl:h-40 2xl:h-44 w-auto object-contain" 
+          />
+        </div>
+
+        {/* Smart Logistics Network 3D artwork in the bottom-right space */}
+        <div className="absolute bottom-2 xl:bottom-3 right-2 xl:right-6 z-10 pointer-events-none select-none">
+          <img 
+            src="/logistics-hub.png" 
+            alt="Smart Logistics Network" 
+            className="h-36 xl:h-48 2xl:h-54 w-auto object-contain" 
           />
         </div>
 
