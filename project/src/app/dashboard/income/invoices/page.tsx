@@ -794,7 +794,7 @@ export default function IncomeInvoicesPage() {
             className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 min-w-[120px] cursor-default select-none"
           >
             <span className="text-lg sm:text-xl font-bold text-green-700 dark:text-green-300">
-              {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {Math.round(totalAmount).toLocaleString()}
             </span>
             <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-300 mt-0.5">Total Amount</span>
           </div>

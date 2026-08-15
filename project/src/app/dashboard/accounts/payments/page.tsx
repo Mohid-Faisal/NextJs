@@ -674,7 +674,7 @@ export default function PaymentsPage() {
             className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[120px] bg-white dark:bg-gray-900 text-gray-850 dark:text-gray-250 shadow-sm border border-gray-150/40 cursor-default select-none"
           >
             <span className="text-lg font-bold text-green-600 dark:text-green-300">
-              {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {Math.round(totalAmount).toLocaleString()}
             </span>
             <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Amount</span>
           </div>

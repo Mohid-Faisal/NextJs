@@ -254,7 +254,7 @@ export default function DebitNotesPage() {
           </div>
           <div className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[120px] bg-white dark:bg-gray-900 text-gray-850 dark:text-gray-200 shadow-sm border border-gray-150/40">
             <span className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-300">
-              {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {Math.round(totalAmount).toLocaleString()}
             </span>
             <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Total Amount

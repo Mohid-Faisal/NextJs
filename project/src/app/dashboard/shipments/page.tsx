@@ -1239,7 +1239,7 @@ export default function ShipmentsPage() {
             className="px-4 py-2 text-xs sm:text-sm font-medium rounded-md flex flex-col items-center justify-center min-w-[120px] bg-slate-200/50 dark:bg-slate-700/50 border border-slate-300/30 text-gray-700 dark:text-gray-200 select-none"
           >
             <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white font-mono">
-              {Number(totalValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {Math.round(Number(totalValue || 0)).toLocaleString()}
             </span>
             <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Value</span>
           </div>
