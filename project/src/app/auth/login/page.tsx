@@ -148,12 +148,12 @@ const LoginPage = () => {
           <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
         </div>
 
-        {/* Boxes picture - seamless transparent blend with no border or box shadow */}
-        <div className="absolute top-16 xl:top-20 right-6 xl:right-12 z-10 pointer-events-none select-none">
+        {/* Boxes picture - positioned on the right side of the heading */}
+        <div className="absolute top-[28%] xl:top-[30%] right-6 xl:right-12 z-10 pointer-events-none select-none">
           <img 
             src="/boxes.png" 
             alt="Courier Packages" 
-            className="h-28 xl:h-36 2xl:h-40 w-auto object-contain" 
+            className="h-32 xl:h-40 2xl:h-48 w-auto object-contain" 
           />
         </div>
 
