@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, User, Download } from "lucide-react";
+import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, User, Download, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Country as country } from "country-state-city";
@@ -79,32 +79,44 @@ export default function RecipientsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "remote">("all");
   const [remoteTotal, setRemoteTotal] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
   const fetchRecipients = async () => {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: pageSize === 'all' ? 'all' : String(pageSize),
-      ...(searchTerm && { search: searchTerm }),
-      sortField: sortField,
-      sortOrder: sortOrder,
-      ...(activeTab === "remote" ? { onlyRemote: "true" } : {}),
-    });
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: pageSize === 'all' ? 'all' : String(pageSize),
+        ...(searchTerm && { search: searchTerm }),
+        sortField: sortField,
+        sortOrder: sortOrder,
+        ...(activeTab === "remote" ? { onlyRemote: "true" } : {}),
+      });
 
-    const res = await fetch(`/api/recipients?${params}`);
-    const { recipients, total, remoteTotal } = await res.json();
-    setRecipients(recipients);
-    setTotal(total);
+      const res = await fetch(`/api/recipients?${params}`);
+      const { recipients, total, remoteTotal } = await res.json();
+      setRecipients(recipients || []);
+      setTotal(total || 0);
 
-    // grandTotal should always reflect the full count of recipients (all)
-    if (activeTab === "all" && typeof total === "number") {
-      setGrandTotal(total);
+      // grandTotal should always reflect the full count of recipients (all)
+      if (activeTab === "all" && typeof total === "number") {
+        setGrandTotal(total);
+      }
+
+      if (typeof remoteTotal === "number") {
+        setRemoteTotal(remoteTotal);
+      }
+    } catch (err) {
+      console.error("Error fetching recipients:", err);
+    } finally {
+      setRefreshing(false);
     }
+  };
 
-    if (typeof remoteTotal === "number") {
-      setRemoteTotal(remoteTotal);
-    }
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchRecipients();
   };
 
   useEffect(() => {
@@ -418,8 +430,19 @@ export default function RecipientsPage() {
           />
         </div>
 
-        {/* Right side - Import, Export, Add Recipient */}
+        {/* Right side - Refresh, Import, Export, Add Recipient */}
         <div className="flex gap-2">
+          {/* Refresh Button */}
+          <Button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+
           {/* Import Button */}
           <Button
             onClick={() => setImportDialogOpen(true)}

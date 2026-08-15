@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, Users, Download } from "lucide-react";
+import { Plus, EllipsisVertical, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, Users, Download, RefreshCw } from "lucide-react";
 import { Country as country } from "country-state-city";
 import { useRouter } from "next/navigation";
 import DeleteDialog from "@/components/DeleteDialog";
@@ -402,29 +402,41 @@ export default function CustomersPage() {
   const [withBalanceTotal, setWithBalanceTotal] = useState(0);
   const [activeTotal, setActiveTotal] = useState(0);
   const [inactiveTotal, setInactiveTotal] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
   const fetchCustomers = async () => {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: pageSize === 'all' ? 'all' : String(pageSize),
-      ...(searchTerm && { search: searchTerm }),
-      sortField: sortField,
-      sortOrder: sortOrder,
-      ...(activeTab === "withBalance" ? { onlyWithBalance: "true" } : {}),
-      ...(activeTab === "active" ? { status: "Active" } : {}),
-      ...(activeTab === "inactive" ? { status: "Inactive" } : {}),
-    });
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: pageSize === 'all' ? 'all' : String(pageSize),
+        ...(searchTerm && { search: searchTerm }),
+        sortField: sortField,
+        sortOrder: sortOrder,
+        ...(activeTab === "withBalance" ? { onlyWithBalance: "true" } : {}),
+        ...(activeTab === "active" ? { status: "Active" } : {}),
+        ...(activeTab === "inactive" ? { status: "Inactive" } : {}),
+      });
 
-    const res = await fetch(`/api/customers?${params}`);
-    const { customers, total, grandTotal: gt, withBalanceTotal: wbt, activeTotal: at, inactiveTotal: it } = await res.json();
-    setCustomers(customers);
-    setTotal(total);
-    if (typeof gt === "number") setGrandTotal(gt);
-    if (typeof wbt === "number") setWithBalanceTotal(wbt);
-    if (typeof at === "number") setActiveTotal(at);
-    if (typeof it === "number") setInactiveTotal(it);
+      const res = await fetch(`/api/customers?${params}`);
+      const { customers, total, grandTotal: gt, withBalanceTotal: wbt, activeTotal: at, inactiveTotal: it } = await res.json();
+      setCustomers(customers || []);
+      setTotal(total || 0);
+      if (typeof gt === "number") setGrandTotal(gt);
+      if (typeof wbt === "number") setWithBalanceTotal(wbt);
+      if (typeof at === "number") setActiveTotal(at);
+      if (typeof it === "number") setInactiveTotal(it);
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchCustomers();
   };
 
   useEffect(() => {
@@ -784,9 +796,20 @@ export default function CustomersPage() {
           />
         </div>
 
-        {/* Right side - Import, Export, Add Customer */}
+        {/* Right side - Refresh, Import, Export, Add Customer */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto">
           <div className="flex gap-2">
+            {/* Refresh Button */}
+            <Button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+
             {/* Import Button */}
             <Button
               onClick={() => setImportDialogOpen(true)}

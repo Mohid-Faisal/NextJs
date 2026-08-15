@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Plus, Eye, EllipsisVertical, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, Briefcase, Download } from "lucide-react";
+import { Plus, Eye, EllipsisVertical, Search, ArrowUpDown, ArrowUp, ArrowDown, Printer, FileText, Table, Upload, Check, Briefcase, Download, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import {Country as country}  from "country-state-city";
 import { useRouter } from "next/navigation";
@@ -86,22 +86,35 @@ export default function VendorsPage() {
     toast.success("Vendors template downloaded successfully!");
   };
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(total / pageSize);
 
   const fetchVendors = async () => {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: pageSize === 'all' ? 'all' : String(pageSize),
-      ...(statusFilter !== "All" && { status: statusFilter }),
-      ...(searchTerm && { search: searchTerm }),
-      sortField: sortField,
-      sortOrder: sortOrder,
-    });
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: pageSize === 'all' ? 'all' : String(pageSize),
+        ...(statusFilter !== "All" && { status: statusFilter }),
+        ...(searchTerm && { search: searchTerm }),
+        sortField: sortField,
+        sortOrder: sortOrder,
+      });
 
-    const res = await fetch(`/api/vendors?${params}`);
-    const { vendors, total } = await res.json();
-    setVendors(vendors);
-    setTotal(total);
+      const res = await fetch(`/api/vendors?${params}`);
+      const { vendors, total } = await res.json();
+      setVendors(vendors || []);
+      setTotal(total || 0);
+    } catch (err) {
+      console.error("Error fetching vendors:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchVendors();
   };
 
   useEffect(() => {
@@ -385,9 +398,20 @@ export default function VendorsPage() {
           />
         </div>
 
-        {/* Right side - Import, Export, Add Vendor */}
+        {/* Right side - Refresh, Import, Export, Add Vendor */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto">
           <div className="flex gap-2">
+            {/* Refresh Button */}
+            <Button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+
             {/* Import Button */}
             <Button
               onClick={() => setImportDialogOpen(true)}

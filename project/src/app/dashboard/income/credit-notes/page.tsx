@@ -24,6 +24,7 @@ import {
   Pencil,
   Search,
   Upload,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -76,12 +77,13 @@ export default function CreditNotesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [refreshing, setRefreshing] = useState(false);
 
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [editNoteId, setEditNoteId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const fetchCreditNotes = async () => {
+  const fetchCreditNotes = async () => {
+    try {
       const params = new URLSearchParams({
         page: String(page),
         limit: pageSize === "all" ? "all" : String(pageSize),
@@ -93,11 +95,22 @@ export default function CreditNotesPage() {
       const res = await fetch(`/api/credit-notes?${params.toString()}`);
       const json = await res.json();
       
-      setCreditNotes(json.creditNotes);
-      setTotal(json.total);
+      setCreditNotes(json.creditNotes || []);
+      setTotal(json.total || 0);
       setTotalAmount(json.totalAmount ?? 0);
-    };
+    } catch (err) {
+      console.error("Error fetching credit notes:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchCreditNotes();
+  };
+
+  useEffect(() => {
     fetchCreditNotes();
   }, [page, pageSize, searchTerm, sortField, sortOrder]);
 
@@ -263,6 +276,17 @@ export default function CreditNotesPage() {
         {/* Right side - Action buttons */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto justify-end">
           <div className="flex gap-2">
+            {/* Refresh Button */}
+            <Button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+
             {/* Export Dropdown */}
             <div>
               <DropdownMenu>

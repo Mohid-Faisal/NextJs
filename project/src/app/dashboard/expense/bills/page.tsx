@@ -35,6 +35,7 @@ import {
   Search,
   Upload,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -314,6 +315,13 @@ export default function ExpenseBillsPage() {
 
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setRefreshKey((k) => k + 1);
+  };
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
@@ -411,36 +419,42 @@ export default function ExpenseBillsPage() {
       return;
     }
     const fetchInvoices = async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: pageSize === "all" ? "all" : String(pageSize),
-        profile: "Vendor", // Only fetch vendor invoices
-        ...(statusFilter !== "All" && { status: statusFilter }),
-        ...(searchTerm && { search: searchTerm }),
-        ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
-        ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
-        sortField: sortField,
-        sortOrder: sortOrder,
-        ...(selectedBranch !== "All" && { agency: selectedBranch }),
-      });
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: pageSize === "all" ? "all" : String(pageSize),
+          profile: "Vendor", // Only fetch vendor invoices
+          ...(statusFilter !== "All" && { status: statusFilter }),
+          ...(searchTerm && { search: searchTerm }),
+          ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+          ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+          sortField: sortField,
+          sortOrder: sortOrder,
+          ...(selectedBranch !== "All" && { agency: selectedBranch }),
+        });
 
-      const res = await fetch(`/api/accounts/invoices?${params.toString()}`);
-      const json = await res.json();
-      console.log('Vendor Invoices data:', json.invoices); // Debug log
-      
-      // Validate that all invoices are vendor invoices
-      const vendorInvoices = json.invoices.filter((invoice: any) => invoice.profile === "Vendor");
-      console.log('Filtered Vendor Invoices:', vendorInvoices.length, 'out of', json.invoices.length);
-      
-      setInvoices(vendorInvoices);
-      setTotal(json.total || 0);
-      setTotalAmount(json.totalAmount || 0);
-      setStatusCounts(json.statusCounts || {});
-      setAllStatusCount(json.allStatusCount || 0);
+        const res = await fetch(`/api/accounts/invoices?${params.toString()}`);
+        const json = await res.json();
+        console.log('Vendor Invoices data:', json.invoices); // Debug log
+        
+        // Validate that all invoices are vendor invoices
+        const vendorInvoices = (json.invoices || []).filter((invoice: any) => invoice.profile === "Vendor");
+        console.log('Filtered Vendor Invoices:', vendorInvoices.length, 'out of', json.invoices?.length || 0);
+        
+        setInvoices(vendorInvoices);
+        setTotal(json.total || 0);
+        setTotalAmount(json.totalAmount || 0);
+        setStatusCounts(json.statusCounts || {});
+        setAllStatusCount(json.allStatusCount || 0);
+      } catch (err) {
+        console.error("Error fetching vendor bills:", err);
+      } finally {
+        setRefreshing(false);
+      }
     };
 
     fetchInvoices();
-  }, [page, pageSize, statusFilter, searchTerm, dateRange, sortField, sortOrder, selectedBranch]);
+  }, [page, pageSize, statusFilter, searchTerm, dateRange, sortField, sortOrder, selectedBranch, refreshKey]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -771,8 +785,19 @@ export default function ExpenseBillsPage() {
           />
         </div>
 
-        {/* Right side - Export and Date Range */}
+        {/* Right side - Refresh, Export and Date Range */}
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+          {/* Refresh Button */}
+          <Button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+
           {/* Export Dropdown */}
           <div>
             <DropdownMenu>

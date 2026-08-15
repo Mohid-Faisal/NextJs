@@ -38,6 +38,7 @@ import {
   Sparkles,
   XCircle,
   PackageCheck,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Country } from "country-state-city";
@@ -110,6 +111,13 @@ export default function ShipmentsPage() {
   const [totalValue, setTotalValue] = useState(0);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setRefreshKey((k) => k + 1);
+  };
   
   const handleDownloadTemplate = () => {
     const headers = [
@@ -293,37 +301,43 @@ export default function ShipmentsPage() {
       return;
     }
     const fetchShipments = async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: pageSize === 'all' ? 'all' : String(pageSize),
-        ...(searchTerm && { search: searchTerm }),
-        ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
-        ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
-        ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
-        sortField,
-        sortOrder,
-        ...(typeParam && { type: typeParam }),
-        ...(selectedBranch !== "All" && { agency: selectedBranch }),
-      });
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: pageSize === 'all' ? 'all' : String(pageSize),
+          ...(searchTerm && { search: searchTerm }),
+          ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
+          ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
+          ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+          sortField,
+          sortOrder,
+          ...(typeParam && { type: typeParam }),
+          ...(selectedBranch !== "All" && { agency: selectedBranch }),
+        });
 
-      const res = await fetch(`/api/shipments?${params}`);
-      const data = await res.json();
-      if (res.ok) {
-        setShipments(data.shipments || []);
-        setTotal(data.total || 0);
-        if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
-        if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
-        if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
-        if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
-        if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
-        if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
-      } else {
-        toast.error(data.error || "Failed to fetch shipments");
+        const res = await fetch(`/api/shipments?${params}`);
+        const data = await res.json();
+        if (res.ok) {
+          setShipments(data.shipments || []);
+          setTotal(data.total || 0);
+          if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
+          if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
+          if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
+          if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
+          if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
+          if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
+        } else {
+          toast.error(data.error || "Failed to fetch shipments");
+        }
+      } catch (err) {
+        console.error("Error fetching shipments:", err);
+      } finally {
+        setRefreshing(false);
       }
     };
 
     fetchShipments();
-  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate, typeParam, selectedBranch]);
+  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate, typeParam, selectedBranch, refreshKey]);
 
   useEffect(() => {
     setPage(1);
@@ -1251,8 +1265,19 @@ export default function ShipmentsPage() {
           </div>
         </div>
 
-        {/* Right side - Import, Export, Delivery Status and Date Range */}
+        {/* Right side - Refresh, Import, Export, Delivery Status and Date Range */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-end w-full lg:w-auto min-w-0 shrink-0">
+          {/* Refresh Button */}
+          <Button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="w-[110px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold shadow-sm cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+
           {/* Import Button */}
           <Button
             onClick={() => setImportDialogOpen(true)}
