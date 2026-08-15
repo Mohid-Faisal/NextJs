@@ -157,8 +157,8 @@ const LoginPage = () => {
           <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
         </div>
 
-        {/* Boxes picture - pushed slightly more to the right */}
-        <div className="absolute top-[26%] xl:top-[28%] right-2 xl:right-4 z-10 pointer-events-none select-none">
+        {/* Boxes picture - aligned with heading */}
+        <div className="absolute top-[30%] xl:top-[32%] right-2 xl:right-4 z-10 pointer-events-none select-none">
           <img 
             src="/boxes.png" 
             alt="Courier Packages" 
@@ -166,8 +166,8 @@ const LoginPage = () => {
           />
         </div>
 
-        {/* Center content: Text layout - indented nicely */}
-        <div className="relative z-20 my-auto flex flex-col items-start justify-center max-w-xl w-full pl-6 xl:pl-8 pr-4 space-y-6">
+        {/* Center content: Text layout - pushed down nicely */}
+        <div className="relative z-20 my-auto pt-12 xl:pt-16 flex flex-col items-start justify-center max-w-xl w-full pl-6 xl:pl-8 pr-4 space-y-5 xl:space-y-6">
           <div className="flex items-center gap-2">
             <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
             <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
