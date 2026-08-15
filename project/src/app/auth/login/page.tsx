@@ -141,8 +141,8 @@ const LoginPage = () => {
 
   return (
     <div className="h-screen w-full flex flex-col lg:flex-row bg-white dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
-      {/* Left panel - Login Intro (60% width on desktop with thicker partition) */}
-      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-6 xl:p-8 pl-6 xl:pl-8 pb-4 xl:pb-6 select-none border-r-2 border-gray-300 dark:border-zinc-800">
+      {/* Left panel - Login Intro (2/3rds width on desktop with thicker partition) */}
+      <div className="hidden lg:flex lg:w-2/3 relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-6 xl:p-8 pl-6 xl:pl-8 pb-4 xl:pb-6 select-none border-r-2 border-gray-300 dark:border-zinc-800">
         {/* Top-left SaaS logo - positioned more top and left */}
         <div className="absolute top-4 xl:top-6 left-2 xl:left-3 z-20">
           <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
@@ -209,8 +209,8 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Right panel - Form container (40% width on desktop, blending seamlessly into background) */}
-      <div className="w-full lg:w-[40%] flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto bg-white dark:bg-zinc-950">
+      {/* Right panel - Form container (1/3rd width on desktop, blending seamlessly into background) */}
+      <div className="w-full lg:w-1/3 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto bg-white dark:bg-zinc-950">
         {/* Theme Toggle */}
         <div className="absolute top-6 right-6 z-20">
           <ThemeToggle />
