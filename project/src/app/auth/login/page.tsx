@@ -158,11 +158,11 @@ const LoginPage = () => {
         </div>
 
         {/* Boxes picture - centered vertically between top and stats */}
-        <div className="absolute top-[20%] xl:top-[22%] right-2 xl:right-4 z-10 pointer-events-none select-none">
+        <div className="absolute top-[18%] xl:top-[20%] right-2 xl:right-4 z-10 pointer-events-none select-none">
           <img 
             src="/boxes.png" 
             alt="Courier Packages" 
-            className="h-36 xl:h-48 2xl:h-56 w-auto object-contain" 
+            className="h-44 xl:h-56 2xl:h-64 w-auto object-contain" 
           />
         </div>
 
