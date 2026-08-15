@@ -13,19 +13,55 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FcGoogle } from "react-icons/fc";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { ArrowLeft, Mail, Lock, Sparkles, Loader2, Search, Package, Truck, MapPin, BarChart3, FileText, Globe } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Sparkles, Loader2, Search, ShieldCheck, Clock, Users, Cloud, Cog, Headphones } from "lucide-react";
 
 import { motion } from "framer-motion";
 import Particles from "@/components/Particles";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const features = [
-  { icon: Package, title: "Shipment", subtitle: "Management" },
-  { icon: Truck, title: "Courier", subtitle: "Integration" },
-  { icon: MapPin, title: "Real-time", subtitle: "Tracking" },
-  { icon: BarChart3, title: "Analytics &", subtitle: "Reports" },
-  { icon: FileText, title: "Automated", subtitle: "Waybills" },
-  { icon: Globe, title: "Global Cargo", subtitle: "& Freight" },
+  {
+    icon: ShieldCheck,
+    title: "SECURE",
+    subtitle: "Your Data, Our Priority",
+    color: "text-cyan-500 dark:text-cyan-400",
+    bg: "bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200/60 dark:border-cyan-800/50",
+  },
+  {
+    icon: Clock,
+    title: "REAL-TIME",
+    subtitle: "Tracking & Updates",
+    color: "text-sky-500 dark:text-sky-400",
+    bg: "bg-sky-50 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/50",
+  },
+  {
+    icon: Users,
+    title: "MULTI-BRANCH",
+    subtitle: "Manage all branches from one system",
+    color: "text-purple-500 dark:text-purple-400",
+    bg: "bg-purple-50 dark:bg-purple-950/40 border-purple-200/60 dark:border-purple-800/50",
+  },
+  {
+    icon: Cloud,
+    title: "CLOUD BASED",
+    subtitle: "Access Anywhere, Anytime",
+    color: "text-blue-500 dark:text-blue-400",
+    bg: "bg-blue-50 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50",
+  },
+  {
+    icon: Cog,
+    title: "AUTOMATED",
+    subtitle: "Reduce manual work & save time",
+    color: "text-amber-500 dark:text-amber-400",
+    bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50",
+  },
+  {
+    icon: Headphones,
+    title: "DEDICATED SUPPORT",
+    subtitle: "We're here for you, every step of the way",
+    color: "text-rose-500 dark:text-rose-400",
+    bg: "bg-rose-50 dark:bg-rose-950/40 border-rose-200/60 dark:border-rose-800/50",
+  },
 ];
 
 const Background = ({ isDark }: { isDark: boolean }) => (
@@ -167,7 +203,7 @@ const LoginPage = () => {
         </div>
 
         {/* Center content: Text layout - pushed down nicely */}
-        <div className="relative z-20 my-auto pt-12 xl:pt-16 flex flex-col items-start justify-center max-w-xl w-full pl-6 xl:pl-8 pr-4 space-y-5 xl:space-y-6">
+        <div className="relative z-20 my-auto pt-10 xl:pt-14 flex flex-col items-start justify-center w-full pl-6 xl:pl-8 pr-4 xl:pr-6 space-y-5 xl:space-y-6">
           <div className="flex items-center gap-2">
             <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
             <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
@@ -211,23 +247,31 @@ const LoginPage = () => {
             </Button>
           </div>
 
-          {/* 6 Feature Highlights below buttons */}
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 xl:gap-4 pt-3 xl:pt-4 w-full max-w-xl">
-            {features.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div key={idx} className="flex flex-col items-center text-center group cursor-default">
-                  <div className="w-11 h-11 xl:w-12 xl:h-12 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100/80 dark:border-indigo-900/50 shadow-2xs group-hover:scale-105 group-hover:border-indigo-300 dark:group-hover:border-indigo-700 transition-all duration-200 mb-1.5">
-                    <Icon className="w-5 h-5 xl:w-5.5 xl:h-5.5 text-indigo-600 dark:text-indigo-400" />
+          {/* 6 Features spread across full 2/3rds width inside a very light box with vertical dividers */}
+          <div className="w-full mt-4 xl:mt-6 rounded-2xl bg-slate-50/40 dark:bg-zinc-900/30 border border-slate-200/60 dark:border-zinc-800/50 p-3 xl:p-4 shadow-2xs backdrop-blur-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 divide-y sm:divide-y-0 xl:divide-x divide-slate-200/80 dark:divide-zinc-800/80">
+              {features.map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={idx}
+                    className="flex flex-col items-center text-center px-2 py-2 xl:py-1 group"
+                  >
+                    <div
+                      className={`w-10 h-10 xl:w-11 xl:h-11 rounded-xl flex items-center justify-center border shadow-2xs mb-2 group-hover:scale-105 transition-transform duration-200 ${item.bg}`}
+                    >
+                      <Icon className={`w-5 h-5 xl:w-5.5 xl:h-5.5 ${item.color}`} />
+                    </div>
+                    <span className="text-[11px] xl:text-xs font-extrabold tracking-wider text-slate-900 dark:text-white uppercase mb-0.5">
+                      {item.title}
+                    </span>
+                    <span className="text-[10px] xl:text-[11px] text-slate-500 dark:text-zinc-400 font-medium leading-tight max-w-[120px]">
+                      {item.subtitle}
+                    </span>
                   </div>
-                  <span className="text-[11px] xl:text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">
-                    {item.title}
-                    <br />
-                    {item.subtitle}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 
