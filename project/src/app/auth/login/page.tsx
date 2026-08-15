@@ -13,11 +13,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FcGoogle } from "react-icons/fc";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { ArrowLeft, Mail, Lock, Sparkles, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Sparkles, Loader2, Search, Package, Truck, MapPin, BarChart3, FileText, Globe } from "lucide-react";
 
 import { motion } from "framer-motion";
 import Particles from "@/components/Particles";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+
+const features = [
+  { icon: Package, title: "Shipment", subtitle: "Management" },
+  { icon: Truck, title: "Courier", subtitle: "Integration" },
+  { icon: MapPin, title: "Real-time", subtitle: "Tracking" },
+  { icon: BarChart3, title: "Analytics &", subtitle: "Reports" },
+  { icon: FileText, title: "Automated", subtitle: "Waybills" },
+  { icon: Globe, title: "Global Cargo", subtitle: "& Freight" },
+];
 
 const Background = ({ isDark }: { isDark: boolean }) => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
@@ -200,6 +209,25 @@ const LoginPage = () => {
                 </>
               )}
             </Button>
+          </div>
+
+          {/* 6 Feature Highlights below buttons */}
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 xl:gap-4 pt-3 xl:pt-4 w-full max-w-xl">
+            {features.map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <div key={idx} className="flex flex-col items-center text-center group cursor-default">
+                  <div className="w-11 h-11 xl:w-12 xl:h-12 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100/80 dark:border-indigo-900/50 shadow-2xs group-hover:scale-105 group-hover:border-indigo-300 dark:group-hover:border-indigo-700 transition-all duration-200 mb-1.5">
+                    <Icon className="w-5 h-5 xl:w-5.5 xl:h-5.5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <span className="text-[11px] xl:text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">
+                    {item.title}
+                    <br />
+                    {item.subtitle}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
