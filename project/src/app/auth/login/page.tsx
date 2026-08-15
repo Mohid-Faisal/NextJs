@@ -142,14 +142,14 @@ const LoginPage = () => {
   return (
     <div className="h-screen w-full flex flex-col lg:flex-row bg-white dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
       {/* Left panel - Login Intro (60% width on desktop with thicker partition) */}
-      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-6 xl:p-8 pl-8 xl:pl-10 pb-6 xl:pb-8 select-none border-r-2 border-gray-300 dark:border-zinc-800">
-        {/* Top-left SaaS logo */}
-        <div className="relative z-20 flex items-center justify-between">
-          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain -ml-1 -mt-1" />
+      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-6 xl:p-8 pl-6 xl:pl-8 pb-4 xl:pb-6 select-none border-r-2 border-gray-300 dark:border-zinc-800">
+        {/* Top-left SaaS logo - positioned more top and left */}
+        <div className="absolute top-4 xl:top-6 left-4 xl:left-6 z-20">
+          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
         </div>
 
-        {/* Boxes picture - positioned on the right side of the heading, enlarged */}
-        <div className="absolute top-[26%] xl:top-[28%] right-6 xl:right-10 z-10 pointer-events-none select-none">
+        {/* Boxes picture - pushed slightly more to the right */}
+        <div className="absolute top-[26%] xl:top-[28%] right-2 xl:right-4 z-10 pointer-events-none select-none">
           <img 
             src="/boxes.png" 
             alt="Courier Packages" 
@@ -157,8 +157,8 @@ const LoginPage = () => {
           />
         </div>
 
-        {/* Center content: Text layout - indented nicely to the right */}
-        <div className="relative z-20 my-auto flex flex-col items-start justify-center max-w-xl w-full pl-4 xl:pl-6 pr-4 space-y-6">
+        {/* Center content: Text layout - indented nicely */}
+        <div className="relative z-20 my-auto flex flex-col items-start justify-center max-w-xl w-full pl-6 xl:pl-8 pr-4 space-y-6">
           <div className="flex items-center gap-2">
             <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
             <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
@@ -203,8 +203,8 @@ const LoginPage = () => {
           </div>
         </div>
 
-        {/* Footer of Left Panel */}
-        <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10 -ml-1 -mb-2">
+        {/* Footer of Left Panel - positioned more bottom and left */}
+        <div className="text-xs text-slate-400 dark:text-zinc-500 absolute bottom-3 xl:bottom-4 left-4 xl:left-6 z-10">
           © {new Date().getFullYear()} PSSWWE. All rights reserved.
         </div>
       </div>
