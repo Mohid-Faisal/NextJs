@@ -20,48 +20,12 @@ import Particles from "@/components/Particles";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const features = [
-  {
-    icon: ShieldCheck,
-    title: "SECURE",
-    subtitle: "Your Data, Our Priority",
-    color: "text-cyan-500 dark:text-cyan-400",
-    bg: "bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200/60 dark:border-cyan-800/50",
-  },
-  {
-    icon: Clock,
-    title: "REAL-TIME",
-    subtitle: "Tracking & Updates",
-    color: "text-sky-500 dark:text-sky-400",
-    bg: "bg-sky-50 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/50",
-  },
-  {
-    icon: Users,
-    title: "MULTI-BRANCH",
-    subtitle: "Manage all branches from one system",
-    color: "text-purple-500 dark:text-purple-400",
-    bg: "bg-purple-50 dark:bg-purple-950/40 border-purple-200/60 dark:border-purple-800/50",
-  },
-  {
-    icon: Cloud,
-    title: "CLOUD BASED",
-    subtitle: "Access Anywhere, Anytime",
-    color: "text-blue-500 dark:text-blue-400",
-    bg: "bg-blue-50 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50",
-  },
-  {
-    icon: Cog,
-    title: "AUTOMATED",
-    subtitle: "Reduce manual work & save time",
-    color: "text-amber-500 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50",
-  },
-  {
-    icon: Headphones,
-    title: "DEDICATED SUPPORT",
-    subtitle: "We're here for you, every step of the way",
-    color: "text-rose-500 dark:text-rose-400",
-    bg: "bg-rose-50 dark:bg-rose-950/40 border-rose-200/60 dark:border-rose-800/50",
-  },
+  { icon: ShieldCheck, title: "SECURE", subtitle: "Your Data, Our Priority" },
+  { icon: Clock, title: "REAL-TIME", subtitle: "Tracking & Updates" },
+  { icon: Users, title: "MULTI-BRANCH", subtitle: "Manage all branches from one system" },
+  { icon: Cloud, title: "CLOUD BASED", subtitle: "Access Anywhere, Anytime" },
+  { icon: Cog, title: "AUTOMATED", subtitle: "Reduce manual work & save time" },
+  { icon: Headphones, title: "DEDICATED SUPPORT", subtitle: "We're here for you, every step of the way" },
 ];
 
 const Background = ({ isDark }: { isDark: boolean }) => (
@@ -247,20 +211,18 @@ const LoginPage = () => {
             </Button>
           </div>
 
-          {/* 6 Features spread across full 2/3rds width inside a very light box with vertical dividers */}
-          <div className="w-full mt-4 xl:mt-6 rounded-2xl bg-slate-50/40 dark:bg-zinc-900/30 border border-slate-200/60 dark:border-zinc-800/50 p-3 xl:p-4 shadow-2xs backdrop-blur-xs">
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 divide-y sm:divide-y-0 xl:divide-x divide-slate-200/80 dark:divide-zinc-800/80">
+          {/* 6 Features spread across full 2/3rds width with vertical dividers (no outer card box) */}
+          <div className="w-full mt-6 xl:mt-8 pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 divide-y sm:divide-y-0 xl:divide-x divide-slate-200 dark:divide-zinc-800">
               {features.map((item, idx) => {
                 const Icon = item.icon;
                 return (
                   <div
                     key={idx}
-                    className="flex flex-col items-center text-center px-2 py-2 xl:py-1 group"
+                    className="flex flex-col items-center text-center px-3 py-2 xl:py-1 group"
                   >
-                    <div
-                      className={`w-10 h-10 xl:w-11 xl:h-11 rounded-xl flex items-center justify-center border shadow-2xs mb-2 group-hover:scale-105 transition-transform duration-200 ${item.bg}`}
-                    >
-                      <Icon className={`w-5 h-5 xl:w-5.5 xl:h-5.5 ${item.color}`} />
+                    <div className="w-11 h-11 xl:w-12 xl:h-12 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/50 border border-indigo-100/80 dark:border-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-2xs mb-2 group-hover:scale-105 group-hover:bg-indigo-100/80 dark:group-hover:bg-indigo-900/60 transition-all duration-200">
+                      <Icon className="w-5 h-5 xl:w-5.5 xl:h-5.5 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <span className="text-[11px] xl:text-xs font-extrabold tracking-wider text-slate-900 dark:text-white uppercase mb-0.5">
                       {item.title}
