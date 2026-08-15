@@ -157,8 +157,8 @@ const LoginPage = () => {
           <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
         </div>
 
-        {/* Boxes picture - aligned with heading */}
-        <div className="absolute top-[30%] xl:top-[32%] right-2 xl:right-4 z-10 pointer-events-none select-none">
+        {/* Boxes picture - centered vertically between top and stats */}
+        <div className="absolute top-[20%] xl:top-[22%] right-2 xl:right-4 z-10 pointer-events-none select-none">
           <img 
             src="/boxes.png" 
             alt="Courier Packages" 
