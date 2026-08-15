@@ -188,7 +188,8 @@ function getShipmentDimensionsAndTotals(shipment: any) {
     }
   }
 
-  let totalPieces = 0;
+  // Number of boxes/packages goes into "Shipment Pieces"
+  const totalBoxes = parsedPackages.length > 0 ? parsedPackages.length : (Number(shipment.totalPackages) || 1);
   let totalWeight = 0;
   let maxLength = 0;
   let maxWidth = 0;
@@ -196,7 +197,6 @@ function getShipmentDimensionsAndTotals(shipment: any) {
 
   if (parsedPackages.length > 0) {
     parsedPackages.forEach((pkg: any) => {
-      totalPieces += Number(pkg.amount) || 1;
       totalWeight += Number(pkg.weight) || 0;
 
       const pkgLength = typeof pkg.length === 'number' ? pkg.length : (typeof pkg.length === 'string' ? parseFloat(pkg.length) : 0);
@@ -218,7 +218,6 @@ function getShipmentDimensionsAndTotals(shipment: any) {
       if (shipHeight > 0) maxHeight = shipHeight;
     }
   } else {
-    totalPieces = shipment.totalPackages || shipment.amount || 1;
     totalWeight = shipment.totalWeight || shipment.weight || 0;
     const shipLength = shipment.length ? (typeof shipment.length === 'number' ? shipment.length : parseFloat(String(shipment.length))) : 0;
     const shipWidth = shipment.width ? (typeof shipment.width === 'number' ? shipment.width : parseFloat(String(shipment.width))) : 0;
@@ -234,7 +233,7 @@ function getShipmentDimensionsAndTotals(shipment: any) {
     : '0X0X0';
 
   return {
-    totalPieces: totalPieces || shipment.totalPackages || shipment.amount || 1,
+    totalPieces: totalBoxes,
     netWeight: totalWeight || shipment.totalWeight || shipment.weight || 0,
     dimensions,
   };
@@ -326,22 +325,23 @@ export default function ShipmentInvoicePage() {
 
     const initial: EditableItem[] = [];
     if (parsedPackages.length > 0) {
-      parsedPackages.forEach((pkg, i) => {
+      parsedPackages.forEach((pkg: any, i) => {
+        const pieceCount = Number(pkg.amount) || Number(pkg.pieces) || Number(pkg.qty) || 1;
         initial.push({
           id: `item-${Date.now()}-${i}`,
-          qty: pkg.amount || 1,
+          qty: pieceCount,
           description: pkg.packageDescription || shipment.packageDescription || 'GOODS',
           hsCode: pkg.hsCode || '',
-          unitValue: pkg.unitValue ?? pkg.decValue ?? 0
+          unitValue: Number(pkg.unitValue) || Number(pkg.decValue) || 0
         });
       });
     } else {
       initial.push({
         id: `item-${Date.now()}-0`,
-        qty: shipment.amount || 1,
+        qty: Number(shipment.amount) || 1,
         description: shipment.packageDescription || 'GOODS',
         hsCode: '',
-        unitValue: shipment.decValue ?? 0
+        unitValue: Number(shipment.decValue) || 0
       });
     }
     setItems(initial);
