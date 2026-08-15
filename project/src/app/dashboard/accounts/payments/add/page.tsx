@@ -929,14 +929,14 @@ export default function AddPaymentPage() {
 
                 <div>
                   <Label className="text-sm sm:text-base font-medium mb-2 sm:mb-3 block">
-                    Reference
+                    Reference / TID
                   </Label>
                   <Input
                     value={formData.reference}
                     onChange={(e) =>
                       handleInputChange("reference", e.target.value)
                     }
-                    placeholder="Transaction reference number"
+                    placeholder="Reference / TID (e.g. REF-12345 / TID)"
                     className={`h-8 sm:h-8 ${isEditMode ? "bg-gray-100 cursor-not-allowed" : ""}`}
                     readOnly={isEditMode}
                   />

@@ -893,7 +893,7 @@ export default function PaymentsPage() {
                   </th>
                   <th className="px-2 sm:px-3 lg:px-4 py-2 text-left">
                     <button onClick={() => handleSort("reference")} className="flex items-center hover:text-gray-700 dark:hover:text-gray-200">
-                      <span className="hidden sm:inline">Reference</span>
+                      <span className="hidden sm:inline">Ref / TID</span>
                       <span className="sm:hidden">Ref</span>
                       {getSortIcon("reference")}
                     </button>
@@ -1310,7 +1310,7 @@ export default function PaymentsPage() {
                 </div>
 
                 <div className="p-2.5 bg-slate-50/70 dark:bg-zinc-800/40 rounded-xl border border-slate-100 dark:border-zinc-800">
-                  <span className="text-slate-500 dark:text-zinc-400 font-medium block mb-0.5">Reference</span>
+                  <span className="text-slate-500 dark:text-zinc-400 font-medium block mb-0.5">Ref / TID</span>
                   <span className="font-semibold text-slate-800 dark:text-zinc-200 font-mono text-xs">
                     {selectedPaymentDetails.reference || "—"}
                   </span>
