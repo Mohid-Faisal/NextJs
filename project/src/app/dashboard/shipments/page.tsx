@@ -1298,6 +1298,13 @@ export default function ShipmentsPage() {
 
         {/* Right side - Refresh, Import, Export, View, Branch, Period, Add Shipment */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={shipmentColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
           {/* Refresh Button (Icon only) */}
           <Button
             type="button"
@@ -1346,13 +1353,6 @@ export default function ShipmentsPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* View Column Selector */}
-          <TableViewOptions
-            columns={shipmentColumns}
-            visibleColumns={visibleColumns}
-            onToggleColumn={toggleColumn}
-          />
 
           {/* Branch Filter */}
           <Select

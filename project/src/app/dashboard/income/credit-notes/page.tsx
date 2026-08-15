@@ -306,6 +306,13 @@ export default function CreditNotesPage() {
 
         {/* Right side - Action buttons */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={creditNoteColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
           {/* Refresh Button */}
           <Button
             type="button"
@@ -336,13 +343,6 @@ export default function CreditNotesPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* View Column Selector */}
-          <TableViewOptions
-            columns={creditNoteColumns}
-            visibleColumns={visibleColumns}
-            onToggleColumn={toggleColumn}
-          />
 
           <Button
             onClick={() => {

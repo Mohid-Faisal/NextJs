@@ -458,6 +458,13 @@ export default function RecipientsPage() {
 
         {/* Right side - Refresh, Import, Export, View, Add Recipient */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={recipientColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
           {/* Refresh Button */}
           <Button
             type="button"
@@ -506,13 +513,6 @@ export default function RecipientsPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* View Column Selector */}
-          <TableViewOptions
-            columns={recipientColumns}
-            visibleColumns={visibleColumns}
-            onToggleColumn={toggleColumn}
-          />
 
           {/* Add Recipient button */}
           <Button asChild size="sm" className="h-9 bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1.5 text-xs font-semibold px-3 rounded-lg shadow-sm shrink-0">

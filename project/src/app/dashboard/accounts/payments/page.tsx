@@ -736,6 +736,13 @@ export default function PaymentsPage() {
 
         {/* Right side - Filters and Actions (Single Line) */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0 flex-nowrap shrink-0">
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={paymentColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
           {/* Refresh Button (Icon only) */}
           <Button
             type="button"
@@ -787,13 +794,6 @@ export default function PaymentsPage() {
             <Download className="w-4 h-4" />
             Import
           </Button>
-
-          {/* View Column Selector */}
-          <TableViewOptions
-            columns={paymentColumns}
-            visibleColumns={visibleColumns}
-            onToggleColumn={toggleColumn}
-          />
 
           {/* Date Range Filter */}
           <div className="flex items-center gap-1.5 shrink-0">

@@ -818,8 +818,15 @@ export default function ExpenseBillsPage() {
           />
         </div>
 
-        {/* Right side - Refresh, Export, View and Date Range */}
+        {/* Right side - View, Refresh, Export and Date Range */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={billColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
           {/* Refresh Button (Icon only) */}
           <Button
             type="button"
@@ -850,13 +857,6 @@ export default function ExpenseBillsPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* View Column Selector */}
-          <TableViewOptions
-            columns={billColumns}
-            visibleColumns={visibleColumns}
-            onToggleColumn={toggleColumn}
-          />
 
           {/* Branch Filter */}
           <Select

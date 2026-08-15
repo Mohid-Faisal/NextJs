@@ -386,8 +386,15 @@ export default function UsersAndTeamsPage() {
           />
         </div>
         
-        {/* Right side - Refresh, View Options, Invite User */}
+        {/* Right side - View Options, Refresh, Invite User */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={userColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
           {/* Refresh Button */}
           <Button
             type="button"
@@ -398,13 +405,6 @@ export default function UsersAndTeamsPage() {
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
           </Button>
-
-          {/* View Column Selector */}
-          <TableViewOptions
-            columns={userColumns}
-            visibleColumns={visibleColumns}
-            onToggleColumn={toggleColumn}
-          />
 
           {/* Invite User Button */}
           <Button 

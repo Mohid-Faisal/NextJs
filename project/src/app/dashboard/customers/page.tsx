@@ -828,8 +828,15 @@ export default function CustomersPage() {
           />
         </div>
 
-        {/* Right side - Refresh, Import, Export, View, Add Customer */}
+        {/* Right side - View, Refresh, Import, Export, Add Customer */}
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+          {/* View Column Selector */}
+          <TableViewOptions
+            columns={customerColumns}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+          />
+
           {/* Refresh Button */}
           <Button
             type="button"
@@ -878,13 +885,6 @@ export default function CustomersPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* View Column Selector */}
-          <TableViewOptions
-            columns={customerColumns}
-            visibleColumns={visibleColumns}
-            onToggleColumn={toggleColumn}
-          />
 
           {/* Add Customer button */}
           <AddCustomerDialog
