@@ -129,8 +129,8 @@ export async function PUT(
         toPartyType: body.toPartyType,
         toVendorId: body.toVendorId,
         mode: body.paymentMethod,
-        reference: body.reference,
-        description: body.description,
+        reference: body.reference && typeof body.reference === "string" && body.reference.trim() !== "" ? body.reference.trim() : null,
+        description: body.description || null,
       },
     });
 
