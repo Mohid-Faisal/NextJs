@@ -1097,118 +1097,140 @@ export default function PaymentsPage() {
       </AnimatePresence>
 
       {/* Import Transactions Dialog */}
+      {/* Import Modal */}
       <Dialog open={importDialogOpen} onOpenChange={(open) => {
         if (!importing) setImportDialogOpen(open);
       }}>
-        <DialogContent className="max-w-3xl p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex gap-3 items-center">
-              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 text-[#4F46E5] rounded-lg flex items-center justify-center">
-                <Download className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Import Transactions</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Bulk upload from CSV or Excel file</p>
-              </div>
+        <DialogContent className="max-w-3xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-zinc-800 pb-4 shrink-0">
+            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/40 text-[#4F46E5] rounded-xl flex items-center justify-center border border-indigo-100 dark:border-indigo-900/50 shrink-0">
+              <Download className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Import Transactions</h3>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Bulk upload from CSV or Excel file</p>
             </div>
           </div>
 
-          <div className="p-2">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Upload a .xlsx / .xls file with columns:
-              <span className="font-medium"> Transaction Type, Category, Date, Amount, Payment Method, Reference, Description</span>.
-              Only Income and Expense rows are supported. The chart-of-accounts is matched by category name.
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
+              Upload a <code className="bg-slate-100 dark:bg-zinc-800 px-1 py-0.5 rounded font-mono text-xs">.xlsx</code> or <code className="bg-slate-100 dark:bg-zinc-800 px-1 py-0.5 rounded font-mono text-xs">.csv</code> file with columns:
+              <span className="font-semibold text-slate-800 dark:text-zinc-200"> Transaction Type, Category, Date, Amount, Payment Method, Reference, Description</span>.
+              The chart-of-accounts is matched by category name.
             </p>
 
-            <div className="flex justify-between items-center bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-sm mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl p-3.5 text-xs sm:text-sm">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-600" />
-                <span className="text-gray-700 dark:text-gray-300 font-medium">Download the template to see the required format.</span>
+                <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="text-slate-700 dark:text-zinc-300 font-medium">Download the pre-formatted template</span>
               </div>
-              <button onClick={handleDownloadTemplate} className="text-blue-600 hover:text-blue-800 font-bold underline">
-                Download template
+              <button 
+                type="button"
+                onClick={handleDownloadTemplate} 
+                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 font-bold underline shrink-0"
+              >
+                Download Template
               </button>
             </div>
 
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center bg-gray-50 dark:bg-gray-800/40 mb-4">
-              <Download className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+            <div className="border-2 border-dashed border-slate-300 dark:border-zinc-700 hover:border-indigo-400 rounded-xl p-6 text-center bg-slate-50/70 dark:bg-zinc-800/40 transition-colors">
+              <Upload className="w-8 h-8 mx-auto text-indigo-500 mb-2 opacity-80" />
+              <p className="text-xs text-slate-600 dark:text-zinc-400 mb-2 font-medium">Select Excel (.xlsx) or CSV file from your computer</p>
               <input
                 type="file"
-                accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
                 onChange={(e) => {
                   setImportFile(e.target.files?.[0] || null);
                   setImportResults(null);
                 }}
-                className="block mx-auto text-sm"
+                className="block mx-auto text-xs text-slate-600 dark:text-zinc-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-950 dark:file:text-indigo-300 hover:file:bg-indigo-100 cursor-pointer"
                 disabled={importing}
               />
               {importFile && (
-                <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
-                  Selected: <span className="font-medium">{importFile.name}</span> ({(importFile.size / 1024).toFixed(1)} KB)
-                </p>
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs text-slate-700 dark:text-zinc-200 font-medium shadow-sm">
+                  <span>Selected: <strong>{importFile.name}</strong> ({(importFile.size / 1024).toFixed(1)} KB)</span>
+                </div>
               )}
             </div>
 
+            {/* Import Results Table */}
             {importResults && (
-              <div className="mb-4">
-                <div className="flex flex-wrap gap-3 mb-3 text-sm">
-                  <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+              <div className="space-y-3 pt-2">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700 font-medium">
                     Processed: <strong>{importResults.summary.processed}</strong>
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800">
+                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 font-medium">
                     Imported: <strong>{importResults.summary.imported}</strong>
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800">
+                  <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800 font-medium">
                     Failed: <strong>{importResults.summary.failed}</strong>
                   </span>
                 </div>
-                <div className="max-h-64 overflow-y-auto border rounded-md">
-                  <table className="min-w-full text-xs">
-                    <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                      <tr className="text-left">
-                        <th className="px-3 py-2">Row</th>
-                        <th className="px-3 py-2">Status</th>
-                        <th className="px-3 py-2">Type</th>
-                        <th className="px-3 py-2">Category</th>
-                        <th className="px-3 py-2">Amount</th>
-                        <th className="px-3 py-2">JE</th>
-                        <th className="px-3 py-2">Message</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {importResults.results.map((r) => (
-                        <tr key={r.row} className="border-t border-gray-100 dark:border-gray-800">
-                          <td className="px-3 py-1.5">{r.row}</td>
-                          <td className="px-3 py-1.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] ${r.success ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"}`}>
-                              {r.success ? "OK" : "Failed"}
-                            </span>
-                          </td>
-                          <td className="px-3 py-1.5">{r.type || "-"}</td>
-                          <td className="px-3 py-1.5">{r.category || "-"}</td>
-                          <td className="px-3 py-1.5">{r.amount ? r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
-                          <td className="px-3 py-1.5">{r.journalEntry || "-"}</td>
-                          <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{r.message || ""}</td>
+
+                <div className="rounded-xl border border-slate-200 dark:border-zinc-750 overflow-hidden shadow-sm">
+                  <div className="max-h-60 overflow-x-auto overflow-y-auto">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead className="bg-slate-50 dark:bg-zinc-800/90 sticky top-0 border-b border-slate-200 dark:border-zinc-700 z-10">
+                        <tr>
+                          <th className="px-3 py-2.5 font-semibold text-slate-700 dark:text-zinc-300 w-14">Row</th>
+                          <th className="px-3 py-2.5 font-semibold text-slate-700 dark:text-zinc-300 w-24">Status</th>
+                          <th className="px-3 py-2.5 font-semibold text-slate-700 dark:text-zinc-300 whitespace-nowrap">Type</th>
+                          <th className="px-3 py-2.5 font-semibold text-slate-700 dark:text-zinc-300 whitespace-nowrap">Category</th>
+                          <th className="px-3 py-2.5 font-semibold text-slate-700 dark:text-zinc-300 whitespace-nowrap text-right">Amount</th>
+                          <th className="px-3 py-2.5 font-semibold text-slate-700 dark:text-zinc-300 whitespace-nowrap">JE</th>
+                          <th className="px-3 py-2.5 font-semibold text-slate-700 dark:text-zinc-300 min-w-[260px]">Message</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 bg-white dark:bg-zinc-900">
+                        {importResults.results.map((r) => (
+                          <tr key={r.row} className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                            <td className="px-3 py-2 align-top font-mono text-slate-600 dark:text-zinc-400">{r.row}</td>
+                            <td className="px-3 py-2 align-top">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                r.success 
+                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" 
+                                  : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                              }`}>
+                                {r.success ? "Success" : "Failed"}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 align-top whitespace-nowrap font-medium text-slate-800 dark:text-zinc-200">{r.type || "-"}</td>
+                            <td className="px-3 py-2 align-top whitespace-nowrap text-slate-800 dark:text-zinc-200">{r.category || "-"}</td>
+                            <td className="px-3 py-2 align-top whitespace-nowrap text-right font-semibold text-slate-900 dark:text-white">
+                              {r.amount ? r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}
+                            </td>
+                            <td className="px-3 py-2 align-top whitespace-nowrap font-mono text-indigo-600 dark:text-indigo-400">{r.journalEntry || "-"}</td>
+                            <td className="px-3 py-2 align-top text-slate-600 dark:text-zinc-400 leading-relaxed break-words text-xs">{r.message || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
+          </div>
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setImportDialogOpen(false)}
-                disabled={importing}
-              >
-                Close
-              </Button>
-              <Button onClick={handleImport} disabled={!importFile || importing}>
-                {importing ? "Importing..." : "Import"}
-              </Button>
-            </div>
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setImportDialogOpen(false)}
+              disabled={importing}
+              className="px-4 py-2 text-xs font-semibold rounded-lg"
+            >
+              Close
+            </Button>
+            <Button 
+              onClick={handleImport} 
+              disabled={!importFile || importing}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-semibold rounded-lg"
+            >
+              {importing ? "Importing..." : "Import"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
