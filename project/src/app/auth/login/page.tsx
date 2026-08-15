@@ -144,7 +144,7 @@ const LoginPage = () => {
       {/* Left panel - Login Intro (60% width on desktop with thicker partition) */}
       <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-6 xl:p-8 pl-6 xl:pl-8 pb-4 xl:pb-6 select-none border-r-2 border-gray-300 dark:border-zinc-800">
         {/* Top-left SaaS logo - positioned more top and left */}
-        <div className="absolute top-4 xl:top-6 left-4 xl:left-6 z-20">
+        <div className="absolute top-4 xl:top-6 left-2 xl:left-3 z-20">
           <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
         </div>
 
