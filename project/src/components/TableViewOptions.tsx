@@ -55,7 +55,7 @@ export function TableViewOptions({
           return (
             <DropdownMenuCheckboxItem
               key={column.id}
-              className="text-xs sm:text-sm cursor-pointer capitalize"
+              className="text-xs sm:text-sm cursor-pointer"
               checked={isChecked}
               onCheckedChange={() => onToggleColumn(column.id)}
             >
