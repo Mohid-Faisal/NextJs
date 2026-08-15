@@ -142,23 +142,23 @@ const LoginPage = () => {
   return (
     <div className="h-screen w-full flex flex-col lg:flex-row bg-white dark:bg-zinc-950 transition-colors duration-500 overflow-hidden">
       {/* Left panel - Login Intro (60% width on desktop with thicker partition) */}
-      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-8 xl:p-12 pl-12 xl:pl-16 select-none border-r-2 border-gray-300 dark:border-zinc-800">
+      <div className="hidden lg:flex lg:w-[60%] relative overflow-hidden bg-white dark:bg-zinc-950 flex-col justify-between p-6 xl:p-8 pl-8 xl:pl-10 pb-6 xl:pb-8 select-none border-r-2 border-gray-300 dark:border-zinc-800">
         {/* Top-left SaaS logo */}
         <div className="relative z-20 flex items-center justify-between">
-          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain" />
+          <img src="/SaaS-Logo.png" alt="PSS Proxima Smart Solutions Logo" className="h-16 xl:h-20 w-auto object-contain -ml-1 -mt-1" />
         </div>
 
-        {/* Boxes picture - positioned on the right side of the heading */}
-        <div className="absolute top-[28%] xl:top-[30%] right-6 xl:right-12 z-10 pointer-events-none select-none">
+        {/* Boxes picture - positioned on the right side of the heading, enlarged */}
+        <div className="absolute top-[26%] xl:top-[28%] right-6 xl:right-10 z-10 pointer-events-none select-none">
           <img 
             src="/boxes.png" 
             alt="Courier Packages" 
-            className="h-32 xl:h-40 2xl:h-48 w-auto object-contain" 
+            className="h-36 xl:h-48 2xl:h-56 w-auto object-contain" 
           />
         </div>
 
         {/* Center content: Text layout - indented nicely to the right */}
-        <div className="relative z-20 my-auto flex flex-col items-start justify-center max-w-xl w-full pl-2 xl:pl-4 pr-4 space-y-6">
+        <div className="relative z-20 my-auto flex flex-col items-start justify-center max-w-xl w-full pl-4 xl:pl-6 pr-4 space-y-6">
           <div className="flex items-center gap-2">
             <span className="h-1 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
             <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
@@ -204,7 +204,7 @@ const LoginPage = () => {
         </div>
 
         {/* Footer of Left Panel */}
-        <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10 pl-2 xl:pl-4 -mb-1">
+        <div className="text-xs text-slate-400 dark:text-zinc-500 relative z-10 -ml-1 -mb-2">
           © {new Date().getFullYear()} PSSWWE. All rights reserved.
         </div>
       </div>
