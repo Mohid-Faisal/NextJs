@@ -29,6 +29,7 @@ import BulkUploadModal from "@/components/BulkUploadModal";
 import { ChevronDown, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Country, State } from "country-state-city";
+import { matchHsCode, type HsCodeItem } from "@/lib/matchHsCode";
 
 // Add type for sender/recipient
 interface Party {
@@ -180,6 +181,7 @@ interface Package {
   decValue: number;
   vendorWeight: number;
   remarks: string;
+  hsCode?: string;
 }
 
 const AddShipmentPage = () => {
@@ -198,6 +200,7 @@ const AddShipmentPage = () => {
   // Search draft for the combobox panels (independent of selected display name)
   const [senderSearchDraft, setSenderSearchDraft] = useState("");
   const [recipientSearchDraft, setRecipientSearchDraft] = useState("");
+  const [hsCodesList, setHsCodesList] = useState<HsCodeItem[]>([]);
 
   // Refs for search inputs
   const senderSearchRef = useRef<HTMLInputElement>(null);
@@ -236,13 +239,14 @@ const AddShipmentPage = () => {
     }
   }, []);
 
-  // Fetch agencies and offices
+  // Fetch agencies, offices, and HS codes
   useEffect(() => {
     const fetchAgenciesAndOffices = async () => {
       try {
-        const [agenciesRes, officesRes] = await Promise.all([
+        const [agenciesRes, officesRes, hsCodesRes] = await Promise.all([
           fetch("/api/agencies"),
           fetch("/api/offices"),
+          fetch("/api/settings/hscodes"),
         ]);
 
         if (agenciesRes.ok) {
@@ -266,8 +270,15 @@ const AddShipmentPage = () => {
             }))
           );
         }
+
+        if (hsCodesRes.ok) {
+          const hsCodesData = await hsCodesRes.json();
+          if (Array.isArray(hsCodesData)) {
+            setHsCodesList(hsCodesData);
+          }
+        }
       } catch (error) {
-        console.error("Failed to fetch agencies and offices:", error);
+        console.error("Failed to fetch initial settings:", error);
       }
     };
 
@@ -331,6 +342,14 @@ const AddShipmentPage = () => {
       packages.map((pkg) => {
         if (pkg.id === id) {
           const updatedPackage = { ...pkg, [field]: value };
+
+          // Auto-match HS Code when package description changes
+          if (field === "packageDescription" && typeof value === "string") {
+            const autoHs = matchHsCode(value, hsCodesList);
+            if (autoHs) {
+              updatedPackage.hsCode = autoHs;
+            }
+          }
 
           // Auto-calculate weight volume when length, width, or height changes
           if (field === "length" || field === "width" || field === "height") {
@@ -767,7 +786,10 @@ const AddShipmentPage = () => {
       destination: destination,
 
       // Package information
-      packages: packages,
+      packages: packages.map((pkg) => ({
+        ...pkg,
+        hsCode: pkg.hsCode || matchHsCode(pkg.packageDescription, hsCodesList) || "",
+      })),
       packageTotals: totals,
 
       // Selected sender and recipient data

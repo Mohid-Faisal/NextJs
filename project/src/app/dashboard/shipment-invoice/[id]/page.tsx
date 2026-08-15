@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
 import { Country } from 'country-state-city';
 import { getCountryNameFromCode, getStateNameFromCode } from '@/lib/utils';
+import { matchHsCode, type HsCodeItem } from '@/lib/matchHsCode';
 
 interface Package {
   id?: string;
@@ -249,6 +250,25 @@ export default function ShipmentInvoicePage() {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<EditableItem[]>([]);
   const [itemsInitialized, setItemsInitialized] = useState(false);
+  const [hsCodesList, setHsCodesList] = useState<HsCodeItem[]>([]);
+
+  // Fetch HS codes catalog
+  useEffect(() => {
+    const fetchHsCodes = async () => {
+      try {
+        const res = await fetch("/api/settings/hscodes");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setHsCodesList(data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch HS codes:", err);
+      }
+    };
+    fetchHsCodes();
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -327,31 +347,59 @@ export default function ShipmentInvoicePage() {
     if (parsedPackages.length > 0) {
       parsedPackages.forEach((pkg: any, i) => {
         const pieceCount = Number(pkg.amount) || Number(pkg.pieces) || Number(pkg.qty) || 1;
+        const desc = pkg.packageDescription || shipment.packageDescription || 'GOODS';
+        const matchedHs = pkg.hsCode || matchHsCode(desc, hsCodesList);
         initial.push({
           id: `item-${Date.now()}-${i}`,
           qty: pieceCount,
-          description: pkg.packageDescription || shipment.packageDescription || 'GOODS',
-          hsCode: pkg.hsCode || '',
+          description: desc,
+          hsCode: matchedHs || '',
           unitValue: Number(pkg.unitValue) || Number(pkg.decValue) || 0
         });
       });
     } else {
+      const desc = shipment.packageDescription || 'GOODS';
+      const matchedHs = matchHsCode(desc, hsCodesList);
       initial.push({
         id: `item-${Date.now()}-0`,
         qty: Number(shipment.amount) || 1,
-        description: shipment.packageDescription || 'GOODS',
-        hsCode: '',
+        description: desc,
+        hsCode: matchedHs || '',
         unitValue: Number(shipment.decValue) || 0
       });
     }
     setItems(initial);
     setItemsInitialized(true);
-  }, [shipment, itemsInitialized]);
+  }, [shipment, itemsInitialized, hsCodesList]);
+
+  // Auto-fill HS codes for items if HS codes catalog loaded after items
+  useEffect(() => {
+    if (!hsCodesList.length || !items.length) return;
+    setItems((prev) =>
+      prev.map((it) => {
+        if (!it.hsCode && it.description) {
+          const autoHs = matchHsCode(it.description, hsCodesList);
+          if (autoHs) {
+            return { ...it, hsCode: autoHs };
+          }
+        }
+        return it;
+      })
+    );
+  }, [hsCodesList]);
 
   const updateItem = (id: string, field: keyof EditableItem, value: string | number) => {
-    setItems(prev => prev.map(it =>
-      it.id === id ? { ...it, [field]: value } : it
-    ));
+    setItems(prev => prev.map(it => {
+      if (it.id !== id) return it;
+      const updated = { ...it, [field]: value };
+      if (field === 'description' && typeof value === 'string') {
+        const autoHs = matchHsCode(value, hsCodesList);
+        if (autoHs) {
+          updated.hsCode = autoHs;
+        }
+      }
+      return updated;
+    }));
   };
 
   const addRow = () => {
