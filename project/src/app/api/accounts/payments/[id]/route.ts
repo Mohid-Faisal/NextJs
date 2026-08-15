@@ -95,7 +95,26 @@ export async function PUT(
     const oldDate = existingPayment.date;
     const oldDescription = existingPayment.description;
     const oldReference = existingPayment.reference;
-    const oldInvoice = existingPayment.invoice;
+    // Enforce unique reference number per organization if reference is provided
+    if (body.reference && typeof body.reference === "string" && body.reference.trim() !== "") {
+      const trimmedRef = body.reference.trim();
+      const existingWithRef = await prisma.payment.findFirst({
+        where: orgWhere(session, {
+          reference: trimmedRef,
+          id: { not: paymentId },
+        }),
+      });
+
+      if (existingWithRef) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `A transaction with reference "${trimmedRef}" already exists (Transaction #${existingWithRef.id}). Reference number must be unique.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Update the payment
     const updatedPayment = await prisma.payment.update({

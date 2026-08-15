@@ -330,6 +330,26 @@ export async function POST(req: NextRequest) {
       toVendor: "Us",
     };
 
+    // Enforce unique reference number per organization if reference is provided
+    if (data.reference && typeof data.reference === "string" && data.reference.trim() !== "") {
+      const trimmedRef = data.reference.trim();
+      const existingRef = await prisma.payment.findFirst({
+        where: orgWhere(session, {
+          reference: trimmedRef,
+        }),
+      });
+
+      if (existingRef) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `A transaction with reference "${trimmedRef}" already exists (Transaction #${existingRef.id}). Reference number must be unique.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Deduplication check: if identical payment created in last 10 seconds, return existing payment
     const tenSecondsAgo = new Date(Date.now() - 10000);
     const existingDuplicate = await prisma.payment.findFirst({

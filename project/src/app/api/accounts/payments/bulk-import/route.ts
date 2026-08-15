@@ -366,6 +366,20 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
+      if (parsed.reference) {
+        const existingRef = await prisma.payment.findFirst({
+          where: orgWhere(session, { reference: parsed.reference }),
+        });
+        if (existingRef) {
+          results.push({
+            row: excelRow,
+            success: false,
+            message: `Reference "${parsed.reference}" already exists on Transaction #${existingRef.id}. References must be unique.`,
+          });
+          continue;
+        }
+      }
+
       // Try to insert with retry-on-collision for the JE entryNumber
       let attempt = 0;
       let inserted = false;
