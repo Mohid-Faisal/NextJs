@@ -174,13 +174,6 @@ export default function PaymentsPage() {
     document.body.removeChild(link);
     toast.success("Payments template downloaded successfully!");
   };
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    setRefreshKey((k) => k + 1);
-  };
 
   // Check for query parameter when coming from dashboard
   useEffect(() => {
