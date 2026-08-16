@@ -119,27 +119,58 @@ export async function PUT(
       }
     });
 
-    // Update shipment if it exists
-    if (body.shipment && currentInvoice.shipment) {
-      const shipmentUpdateData: any = {
-        trackingId: body.shipment.trackingId || currentInvoice.shipment.trackingId,
-        destination: body.shipment.destination || currentInvoice.shipment.destination,
-        ...(body.referenceNumber !== undefined && { referenceNumber: body.referenceNumber }),
-        discount: parseFloat(body.discount) || 0,
-        ...(body.shipment.packages !== undefined && { packages: body.shipment.packages }),
-        ...(body.shipment.calculatedValues !== undefined && { calculatedValues: body.shipment.calculatedValues }),
-      };
+    // Update shipment if linked
+    const targetShipmentId = shipmentId || currentInvoice.shipmentId || currentInvoice.shipment?.id;
+    if (targetShipmentId) {
+      const isVendor = Boolean(
+        currentInvoice.vendorId || 
+        currentInvoice.vendor || 
+        currentInvoice.profile?.toLowerCase() === 'vendor'
+      );
 
-      // Update shipment totalCost and price if amount changed
-      if (amountChanged) {
-        shipmentUpdateData.totalCost = newAmount;
-        shipmentUpdateData.price = newAmount; // Update price as well
+      const shipmentUpdateData: any = {};
+
+      if (body.shipment) {
+        if (body.shipment.trackingId) shipmentUpdateData.trackingId = body.shipment.trackingId;
+        if (body.shipment.destination) shipmentUpdateData.destination = body.shipment.destination;
+        if (body.referenceNumber !== undefined) shipmentUpdateData.referenceNumber = body.referenceNumber;
+        if (body.discount !== undefined) shipmentUpdateData.discount = parseFloat(body.discount) || 0;
+        if (body.shipment.packages !== undefined) shipmentUpdateData.packages = body.shipment.packages;
+        if (body.shipment.calculatedValues !== undefined) shipmentUpdateData.calculatedValues = body.shipment.calculatedValues;
       }
 
-      await prisma.shipment.update({
-        where: { id: shipmentId },
-        data: shipmentUpdateData
-      });
+      // Update pricing fields when invoice amount changes
+      if (amountChanged) {
+        if (isVendor) {
+          // Editing a Vendor invoice updates the shipment's Cost of Service (COS)
+          shipmentUpdateData.cos = newAmount;
+
+          // Also synchronize calculatedValues if present
+          const existingCalc = shipmentUpdateData.calculatedValues || currentInvoice.shipment?.calculatedValues;
+          if (existingCalc) {
+            try {
+              const calc = typeof existingCalc === 'string' ? JSON.parse(existingCalc) : { ...existingCalc };
+              calc.cos = newAmount;
+              calc.vendorPrice = newAmount;
+              shipmentUpdateData.calculatedValues = calc;
+            } catch (e) {
+              console.error("Error updating calculatedValues for vendor invoice edit:", e);
+            }
+          }
+        } else {
+          // Editing a Customer invoice updates totalCost and price
+          shipmentUpdateData.totalCost = newAmount;
+          shipmentUpdateData.price = newAmount;
+        }
+      }
+
+      if (Object.keys(shipmentUpdateData).length > 0) {
+        await prisma.shipment.update({
+          where: { id: targetShipmentId },
+          data: shipmentUpdateData
+        });
+        console.log(`Updated shipment ${targetShipmentId} for ${isVendor ? `vendor invoice (cos=${newAmount})` : `customer invoice (totalCost=${newAmount})`}`);
+      }
     }
 
     // Update customer/vendor balances and transactions if amount changed

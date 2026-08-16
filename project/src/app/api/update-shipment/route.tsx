@@ -369,8 +369,9 @@ async function handleShipmentUpdate(req: Request) {
     const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
     // Vendor invoice: use CoS (Cost of Service) if in manual mode, otherwise use original price without fixed charge
     const effectiveManualRate = manualRate !== undefined ? Boolean(manualRate) : (existingShipment.manualRate || false);
+    const effectiveCos = cos !== undefined ? (parseFloat(String(cos)) || 0) : (existingShipment.cos || 0);
     const vendorTotalCost = effectiveManualRate 
-      ? Math.round((parseFloat(cos) || 0))
+      ? Math.round(effectiveCos)
       : Math.round(originalPrice - effectiveFixedCharge);
     
     // For backward compatibility, also calculate the old format

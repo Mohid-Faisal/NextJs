@@ -88,6 +88,8 @@ export async function PUT(
         totalAmount: true,
         customerId: true,
         vendorId: true,
+        shipmentId: true,
+        profile: true,
       },
     });
 
@@ -185,18 +187,50 @@ export async function PUT(
       }
     }
 
-    // Update shipment totalCost if this is a customer invoice and totalAmount changed
+    // Update linked shipment pricing when totalAmount changes
     let shipmentUpdateResult: { updated: boolean; error: string | null } = { updated: false, error: null };
-    if (invoice.profile === "Customer" && oldAmount !== newAmount && invoice.shipmentId) {
+    const targetShipmentId = invoice.shipmentId || currentInvoice.shipmentId;
+    if (oldAmount !== newAmount && targetShipmentId) {
       try {
-        await prisma.shipment.update({
-          where: { id: invoice.shipmentId },
-          data: { totalCost: newAmount }
-        });
-        shipmentUpdateResult.updated = true;
-        console.log(`Updated shipment ${invoice.shipmentId} totalCost from ${oldAmount} to ${newAmount}`);
+        const isVendor = invoice.profile === "Vendor" || Boolean(invoice.vendorId || currentInvoice.vendorId);
+        if (isVendor) {
+          const currentShip = await prisma.shipment.findUnique({
+            where: { id: targetShipmentId },
+            select: { calculatedValues: true }
+          });
+          let updatedCalculatedValues: any = undefined;
+          if (currentShip?.calculatedValues) {
+            try {
+              const rawCalc: any = currentShip.calculatedValues;
+              const calc = typeof rawCalc === 'string' 
+                ? JSON.parse(rawCalc) 
+                : { ...rawCalc };
+              calc.cos = newAmount;
+              calc.vendorPrice = newAmount;
+              updatedCalculatedValues = calc;
+            } catch (e) {
+              console.error("Error parsing shipment calculatedValues:", e);
+            }
+          }
+          await prisma.shipment.update({
+            where: { id: targetShipmentId },
+            data: { 
+              cos: newAmount,
+              ...(updatedCalculatedValues ? { calculatedValues: updatedCalculatedValues } : {})
+            }
+          });
+          shipmentUpdateResult.updated = true;
+          console.log(`Updated shipment ${targetShipmentId} cos from ${oldAmount} to ${newAmount}`);
+        } else {
+          await prisma.shipment.update({
+            where: { id: targetShipmentId },
+            data: { totalCost: newAmount }
+          });
+          shipmentUpdateResult.updated = true;
+          console.log(`Updated shipment ${targetShipmentId} totalCost from ${oldAmount} to ${newAmount}`);
+        }
       } catch (shipmentError) {
-        console.error("Error updating shipment totalCost:", shipmentError);
+        console.error("Error updating shipment:", shipmentError);
         shipmentUpdateResult.error = shipmentError instanceof Error ? shipmentError.message : "Unknown error";
         // Continue with the response even if shipment update fails
       }
@@ -210,7 +244,7 @@ export async function PUT(
       balanceUpdateResult,
       journalUpdated: oldAmount !== newAmount || oldCustomerId !== newCustomerId || oldVendorId !== newVendorId,
       journalUpdateResult,
-      shipmentUpdated: invoice.profile === "Customer" && oldAmount !== newAmount && invoice.shipmentId,
+      shipmentUpdated: oldAmount !== newAmount && Boolean(targetShipmentId),
       shipmentUpdateResult
     });
   } catch (error) {
