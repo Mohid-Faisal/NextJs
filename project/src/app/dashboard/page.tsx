@@ -609,14 +609,14 @@ const DashboardPage = () => {
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
             <ResponsiveContainer width="100%" height={400} className="sm:h-[450px]">
-              <BarChart data={data.topCustomers.slice(0, 25)} margin={{ top: 5, right: 30, left: 0, bottom: 50 }}>
+              <BarChart data={data.topCustomers.slice(0, 25)} margin={{ top: 5, right: 30, left: 0, bottom: 70 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
                 <XAxis 
                   dataKey="customer" 
                   stroke="#6B7280" 
                   angle={-45} 
                   textAnchor="end" 
-                  height={50} 
+                  height={80} 
                   fontSize={10}
                   interval={0}
                 />
@@ -674,13 +674,12 @@ const DashboardPage = () => {
                     return null;
                   }}
                 />
-                <Legend />
                 <Bar yAxisId="left" dataKey="shipments" fill="#10B981" radius={[4, 4, 0, 0]} name="shipments" />
                 <Line yAxisId="right" type="monotone" dataKey="totalSpent" stroke="#F59E0B" strokeWidth={3} name="totalSpent" />
                 <Line yAxisId="right" type="monotone" dataKey="avgOrderValue" stroke="#EF4444" strokeWidth={2} name="avgOrderValue" />
               </BarChart>
             </ResponsiveContainer>
-            <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center">
+            <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center font-medium">
               Shipments (bars), Total Spent (orange line), Avg Order Value (red line)
             </div>
           </motion.div>
