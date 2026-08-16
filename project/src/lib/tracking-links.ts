@@ -17,9 +17,9 @@ const trackingLinks: Record<string, (id: string) => string> = {
   UPS_C2S: (id) => `https://www.ups.com/track?tracknum=${id}`,
 
   // DPD Europe & UK
-  DPD: (id) => `https://track.dpd.co.uk/parcels/${id}`,
+  DPD: (id) => `https://www.dpd.co.uk/apps/tracking/?reference=${id}`,
   DPD_EU: (id) => `https://tracking.dpd.de/status/en_US/parcel/${id}`,
-  DPD_LHR: (id) => `https://track.dpd.co.uk/parcels/${id}`,
+  DPD_LHR: (id) => `https://www.dpd.co.uk/apps/tracking/?reference=${id}`,
 
   // DHL (all variants)
   DHL: (id) => `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
@@ -91,7 +91,7 @@ export function getTrackingUrl(shipment: {
     if (combined.includes("EU") || combined.includes("GERMANY") || combined.includes("DE")) {
       return `https://tracking.dpd.de/status/en_US/parcel/${cleanId}`;
     }
-    return `https://track.dpd.co.uk/parcels/${cleanId}`;
+    return `https://www.dpd.co.uk/apps/tracking/?reference=${cleanId}`;
   }
   if (combined.includes("DHL")) {
     return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
