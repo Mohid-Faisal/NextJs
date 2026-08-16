@@ -68,18 +68,17 @@ export function getTrackingUrl(shipment: {
   const shippingMode = shipment.shippingMode?.trim().toUpperCase() || "";
   const agency = shipment.agency?.trim().toUpperCase() || "";
 
-  // 1. Direct key match in serviceMode
+  // 1. Direct exact key match in serviceMode
   if (mode && trackingLinks[mode]) {
     return trackingLinks[mode](cleanId);
   }
 
-  // 2. Pattern heuristics:
-  // UPS tracking numbers always start with "1Z"
+  // 2. Pattern heuristic: UPS tracking numbers always start with "1Z"
   if (/^1Z/i.test(cleanId)) {
     return `https://www.ups.com/track?tracknum=${cleanId}`;
   }
 
-  // 3. Provider identification via serviceMode, vendor, agency, or shippingMode
+  // 3. Provider identification via serviceMode, vendor, agency, or shippingMode (PRIORITIZED BEFORE DIGIT FALLBACKS)
   const combined = `${mode} ${vendor} ${shippingMode} ${agency}`;
 
   if (combined.includes("UPS")) {
@@ -88,24 +87,14 @@ export function getTrackingUrl(shipment: {
   if (combined.includes("FEDEX") || combined.includes("FDX")) {
     return `https://www.fedex.com/apps/fedextrack/?action=track&trackingnumber=${cleanId}`;
   }
-  if (combined.includes("DHL")) {
-    return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
-  }
-
-  // 12-digit standard FedEx express tracking number pattern (e.g. 875819715090)
-  if (/^\d{12}$/.test(cleanId) && !cleanId.startsWith("000")) {
-    return `https://www.fedex.com/apps/fedextrack/?action=track&trackingnumber=${cleanId}`;
-  }
-
-  // 10-digit standard DHL tracking number pattern
-  if (/^\d{10}$/.test(cleanId)) {
-    return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
-  }
   if (combined.includes("DPD")) {
     if (combined.includes("EU") || combined.includes("GERMANY") || combined.includes("DE")) {
       return `https://tracking.dpd.de/status/en_US/parcel/${cleanId}`;
     }
     return `https://track.dpd.co.uk/parcels/${cleanId}`;
+  }
+  if (combined.includes("DHL")) {
+    return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
   }
   if (combined.includes("DPEX")) {
     return `https://dpexonline.com/trace-and-track/index?id=${cleanId}`;
@@ -132,7 +121,18 @@ export function getTrackingUrl(shipment: {
     return `https://mulphilog.com/tracking?consignmentNo=${cleanId}`;
   }
 
-  // 4. Default fallback to internal platform tracking page
+  // 4. Generic length heuristics ONLY when no courier provider is identified
+  // 12-digit standard FedEx express tracking number pattern
+  if (/^\d{12}$/.test(cleanId) && !cleanId.startsWith("000")) {
+    return `https://www.fedex.com/apps/fedextrack/?action=track&trackingnumber=${cleanId}`;
+  }
+
+  // 10-digit standard DHL tracking number pattern
+  if (/^\d{10}$/.test(cleanId)) {
+    return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
+  }
+
+  // 5. Default fallback to internal platform tracking page
   return `/tracking?id=${encodeURIComponent(cleanId)}`;
 }
 
