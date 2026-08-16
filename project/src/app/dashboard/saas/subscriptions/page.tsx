@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileText, ShieldAlert, BadgePercent, Clock, Activity, RefreshCw, ArrowLeft } from "lucide-react";
+import { FileText, ShieldAlert, BadgePercent, Clock, Activity, RefreshCw, ArrowLeft, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,6 +19,7 @@ type SubscriptionRecord = {
   status: string;
   startDate: string;
   nextRenewal: string;
+  isDemo?: boolean;
 };
 
 interface DecodedToken {
@@ -51,21 +52,25 @@ export default function SaasSubscriptionsPage() {
       const data = await res.json();
       if (res.ok && data.organizations) {
         const mappedSubs = data.organizations.map((org: any) => {
-          const planPrice = org.plan?.priceMonthlyUsd ?? 0;
-          const nextRenewal = org.currentPeriodEnd 
-            ? new Date(org.currentPeriodEnd).toLocaleDateString()
-            : org.status === "trial" 
-              ? new Date(new Date(org.createdAt).setDate(new Date(org.createdAt).getDate() + 14)).toLocaleDateString()
-              : "N/A";
+          const isDemo = org.id === 1 || org.slug === "pss-demo" || org.name?.toLowerCase().includes("demo");
+          const planPrice = isDemo ? 0 : (org.plan?.priceMonthlyUsd ?? 0);
+          const nextRenewal = isDemo 
+            ? "Perpetual (Demo)"
+            : org.currentPeriodEnd 
+              ? new Date(org.currentPeriodEnd).toLocaleDateString()
+              : org.status === "trial" 
+                ? new Date(new Date(org.createdAt).setDate(new Date(org.createdAt).getDate() + 14)).toLocaleDateString()
+                : "N/A";
 
           return {
             id: org.id,
             orgName: org.name,
-            planName: org.plan?.name || "Free Trial",
+            planName: isDemo ? "Demo (No Subscription)" : (org.plan?.name || "Free Trial"),
             planPrice,
-            status: org.subscriptionStatus || (org.status === "suspended" ? "suspended" : org.status === "trial" ? "trialing" : "inactive"),
+            status: isDemo ? "demo" : (org.subscriptionStatus || (org.status === "suspended" ? "suspended" : org.status === "trial" ? "trialing" : "inactive")),
             startDate: new Date(org.createdAt).toLocaleDateString(),
             nextRenewal,
+            isDemo,
           };
         });
         setSubscriptions(mappedSubs);
@@ -112,8 +117,11 @@ export default function SaasSubscriptionsPage() {
   const subVariant = (status: string) => {
     switch (status) {
       case "active":
-      case "trialing":
         return "default";
+      case "trialing":
+        return "secondary";
+      case "demo":
+        return "outline";
       case "suspended":
       case "canceled":
         return "destructive";
@@ -122,9 +130,11 @@ export default function SaasSubscriptionsPage() {
     }
   };
 
-  const monthlyRecurrentRevenue = subscriptions
-    .filter(s => s.status === "active")
-    .reduce((acc, s) => acc + s.planPrice, 0);
+  const paidSubs = subscriptions.filter(s => s.status === "active" && !s.isDemo);
+  const monthlyRecurrentRevenue = paidSubs.reduce((acc, s) => acc + s.planPrice, 0);
+  const trialSubs = subscriptions.filter(s => s.status === "trialing" && !s.isDemo);
+  const nonDemoSubs = subscriptions.filter(s => !s.isDemo);
+  const demoSubs = subscriptions.filter(s => s.isDemo);
 
   return (
     <div className="p-6 space-y-4">
@@ -154,7 +164,9 @@ export default function SaasSubscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${monthlyRecurrentRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
-            <p className="text-xs text-muted-foreground mt-1">From active paid subscriptions</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              From {paidSubs.length} active paid subscription{paidSubs.length === 1 ? "" : "s"}
+            </p>
           </CardContent>
         </Card>
 
@@ -164,7 +176,7 @@ export default function SaasSubscriptionsPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{subscriptions.filter(s => s.status === "trialing").length}</div>
+            <div className="text-2xl font-bold">{trialSubs.length}</div>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
               Currently in 14-day trials
             </p>
@@ -177,8 +189,12 @@ export default function SaasSubscriptionsPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{subscriptions.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">All tenants on database</p>
+            <div className="text-2xl font-bold">{nonDemoSubs.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {demoSubs.length > 0 
+                ? `Active client tenants (${demoSubs.length} demo account excluded)`
+                : "All tenants on database"}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -202,20 +218,57 @@ export default function SaasSubscriptionsPage() {
             </TableHeader>
             <TableBody>
               {subscriptions.map((sub) => (
-                <TableRow key={sub.id}>
-                  <TableCell className="font-semibold">{sub.orgName}</TableCell>
+                <TableRow key={sub.id} className={sub.isDemo ? "bg-slate-50/50 dark:bg-slate-900/20" : ""}>
+                  <TableCell className="font-semibold">
+                    <div className="flex items-center gap-2">
+                      <span>{sub.orgName}</span>
+                      {sub.isDemo && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                          Demo Account
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="capitalize">{sub.planName}</TableCell>
                   <TableCell>
-                    <Badge variant={subVariant(sub.status)} className="capitalize">
-                      {sub.status}
-                    </Badge>
+                    {sub.isDemo ? (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+                        Demo (No Sub)
+                      </span>
+                    ) : (
+                      <Badge variant={subVariant(sub.status)} className="capitalize">
+                        {sub.status}
+                      </Badge>
+                    )}
                   </TableCell>
-                  <TableCell className="font-medium">${sub.planPrice}</TableCell>
+                  <TableCell className="font-medium">
+                    {sub.isDemo ? (
+                      <span className="text-muted-foreground text-xs font-medium">$0.00 <span className="text-[10px] text-gray-400">(Demo)</span></span>
+                    ) : (
+                      `$${sub.planPrice}`
+                    )}
+                  </TableCell>
                   <TableCell>{sub.startDate}</TableCell>
-                  <TableCell>{sub.nextRenewal}</TableCell>
+                  <TableCell>
+                    {sub.isDemo ? (
+                      <span className="text-xs text-muted-foreground">Perpetual (No Renewal)</span>
+                    ) : (
+                      sub.nextRenewal
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => toast.info(`Managing subscription for ${sub.orgName}`)}>
-                      Manage
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        if (sub.isDemo) {
+                          toast.info(`${sub.orgName} is an internal demo workspace with no billing subscription.`);
+                        } else {
+                          toast.info(`Managing subscription for ${sub.orgName}`);
+                        }
+                      }}
+                    >
+                      {sub.isDemo ? "Demo Info" : "Manage"}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -227,3 +280,4 @@ export default function SaasSubscriptionsPage() {
     </div>
   );
 }
+

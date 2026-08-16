@@ -334,9 +334,20 @@ export default function SaasManageOrganizationsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedOrgs.map((org) => (
-                    <TableRow key={org.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/20">
-                      <TableCell className="font-semibold text-slate-900 dark:text-white">{org.name}</TableCell>
+                  paginatedOrgs.map((org) => {
+                    const isDemo = org.id === 1 || org.slug === "pss-demo" || org.name?.toLowerCase().includes("demo");
+                    return (
+                    <TableRow key={org.id} className={`hover:bg-slate-50/50 dark:hover:bg-zinc-800/20 ${isDemo ? "bg-slate-50/30 dark:bg-slate-900/10" : ""}`}>
+                      <TableCell className="font-semibold text-slate-900 dark:text-white">
+                        <div className="flex items-center gap-2">
+                          <span>{org.name}</span>
+                          {isDemo && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                              Demo Account
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground font-medium">{org.slug}</TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(org.status)} className="capitalize text-[10px] px-2 py-0.5 rounded-full font-bold">
@@ -405,8 +416,9 @@ export default function SaasManageOrganizationsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  );
+                })
+              )}
               </TableBody>
             </Table>
           </div>

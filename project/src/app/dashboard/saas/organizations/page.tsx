@@ -197,13 +197,15 @@ export default function SaasOrganizationsPage() {
     );
   }
 
-  // Calculate dynamic stats
-  const activeSubs = orgs.filter(o => o.status === "active" || o.status === "trial").length;
-  const noSubs = orgs.filter(o => !o.plan).length;
-  const suspendedCount = orgs.filter(o => o.status === "suspended").length;
+  // Calculate dynamic stats (exclude internal demo accounts)
+  const isDemoOrg = (o: any) => o.id === 1 || o.slug === "pss-demo" || o.name?.toLowerCase().includes("demo");
+  const activeSubs = orgs.filter(o => !isDemoOrg(o) && (o.status === "active" || o.status === "trial")).length;
+  const noSubs = orgs.filter(o => !isDemoOrg(o) && !o.plan).length;
+  const suspendedCount = orgs.filter(o => !isDemoOrg(o) && o.status === "suspended").length;
 
-  // Calculate expiring subscriptions dynamically (next 7 days)
+  // Calculate expiring subscriptions dynamically (next 7 days, excluding demo)
   const expiringOrgs = orgs.filter((o) => {
+    if (isDemoOrg(o)) return false;
     if (!o.currentPeriodEnd) return false;
     const expiryTime = new Date(o.currentPeriodEnd).getTime();
     const nowTime = Date.now();

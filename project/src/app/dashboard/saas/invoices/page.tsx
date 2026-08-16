@@ -66,6 +66,8 @@ export default function SaasInvoicesPage() {
         // 2. Generate trial/free invoices for orgs with no payment proofs
         const trialInvoices: SaaSInvoice[] = [];
         data.organizations.forEach((org: any) => {
+          const isDemo = org.id === 1 || org.slug === "pss-demo" || org.name?.toLowerCase().includes("demo");
+          if (isDemo) return;
           const hasProofs = (org.paymentProofs || []).length > 0;
           if (!hasProofs && org.status === "trial") {
             trialInvoices.push({
