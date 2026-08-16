@@ -1,3 +1,12 @@
+function getDpdUkParcelId(id: string): string {
+  const clean = id.trim().replace(/^#/, "");
+  // DPD UK 10-digit consignment references map to 14-digit parcel identifiers with 1550 prefix
+  if (/^\d{10}$/.test(clean)) {
+    return `1550${clean}`;
+  }
+  return clean;
+}
+
 const trackingLinks: Record<string, (id: string) => string> = {
   // DPEX
   DPEX: (id) => `https://dpexonline.com/trace-and-track/index?id=${id}`,
@@ -17,9 +26,9 @@ const trackingLinks: Record<string, (id: string) => string> = {
   UPS_C2S: (id) => `https://www.ups.com/track?tracknum=${id}`,
 
   // DPD Europe & UK
-  DPD: (id) => `https://www.dpd.co.uk/apps/tracking/?reference=${id}`,
+  DPD: (id) => `https://track.dpd.co.uk/parcels/${getDpdUkParcelId(id)}`,
   DPD_EU: (id) => `https://tracking.dpd.de/status/en_US/parcel/${id}`,
-  DPD_LHR: (id) => `https://www.dpd.co.uk/apps/tracking/?reference=${id}`,
+  DPD_LHR: (id) => `https://track.dpd.co.uk/parcels/${getDpdUkParcelId(id)}`,
 
   // DHL (all variants)
   DHL: (id) => `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${id}&submit=1`,
@@ -91,7 +100,7 @@ export function getTrackingUrl(shipment: {
     if (combined.includes("EU") || combined.includes("GERMANY") || combined.includes("DE")) {
       return `https://tracking.dpd.de/status/en_US/parcel/${cleanId}`;
     }
-    return `https://www.dpd.co.uk/apps/tracking/?reference=${cleanId}`;
+    return `https://track.dpd.co.uk/parcels/${getDpdUkParcelId(cleanId)}`;
   }
   if (combined.includes("DHL")) {
     return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
