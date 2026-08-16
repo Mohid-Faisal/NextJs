@@ -54,6 +54,7 @@ export function getTrackingUrl(shipment: {
   serviceMode?: string | null;
   vendor?: string | null;
   shippingMode?: string | null;
+  agency?: string | null;
   trackingId?: string | null;
 }): string | null {
   const id = shipment.trackingId?.trim();
@@ -65,27 +66,39 @@ export function getTrackingUrl(shipment: {
   const mode = shipment.serviceMode?.trim().toUpperCase() || "";
   const vendor = shipment.vendor?.trim().toUpperCase() || "";
   const shippingMode = shipment.shippingMode?.trim().toUpperCase() || "";
+  const agency = shipment.agency?.trim().toUpperCase() || "";
 
   // 1. Direct key match in serviceMode
   if (mode && trackingLinks[mode]) {
     return trackingLinks[mode](cleanId);
   }
 
-  // 2. Pattern heuristic: UPS tracking numbers always start with "1Z"
+  // 2. Pattern heuristics:
+  // UPS tracking numbers always start with "1Z"
   if (/^1Z/i.test(cleanId)) {
     return `https://www.ups.com/track?tracknum=${cleanId}`;
   }
 
-  // 3. Provider identification via serviceMode, vendor, or shippingMode
-  const combined = `${mode} ${vendor} ${shippingMode}`;
+  // 3. Provider identification via serviceMode, vendor, agency, or shippingMode
+  const combined = `${mode} ${vendor} ${shippingMode} ${agency}`;
 
   if (combined.includes("UPS")) {
     return `https://www.ups.com/track?tracknum=${cleanId}`;
   }
-  if (combined.includes("FEDEX")) {
+  if (combined.includes("FEDEX") || combined.includes("FDX")) {
     return `https://www.fedex.com/fedextrack/?trknbr=${cleanId}`;
   }
   if (combined.includes("DHL")) {
+    return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
+  }
+
+  // 12-digit standard FedEx express tracking number pattern (e.g. 875819715090)
+  if (/^\d{12}$/.test(cleanId) && !cleanId.startsWith("000")) {
+    return `https://www.fedex.com/fedextrack/?trknbr=${cleanId}`;
+  }
+
+  // 10-digit standard DHL tracking number pattern
+  if (/^\d{10}$/.test(cleanId)) {
     return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
   }
   if (combined.includes("DPD")) {
