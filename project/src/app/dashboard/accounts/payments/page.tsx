@@ -31,6 +31,21 @@ import {
   parseISO,
 } from "date-fns";
 
+const formatPaymentDate = (dateVal?: string | Date | null, formatPattern = "dd/MM/yy HH:mm") => {
+  if (!dateVal) return "-";
+  try {
+    const d = typeof dateVal === "string" ? parseISO(dateVal) : new Date(dateVal);
+    if (isNaN(d.getTime())) {
+      const fallback = new Date(dateVal);
+      if (isNaN(fallback.getTime())) return String(dateVal);
+      return format(fallback, formatPattern);
+    }
+    return format(d, formatPattern);
+  } catch {
+    return String(dateVal || "-");
+  }
+};
+
 const paymentColumns: ColumnOption[] = [
   { id: "id", label: "ID" },
   { id: "type", label: "Type" },
@@ -155,13 +170,14 @@ export default function PaymentsPage() {
   const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false);
 
   const selectedTotal = useMemo(() => {
+    if (!Array.isArray(payments)) return 0;
     return payments
-      .filter((p) => selectedTransactionIds.includes(p.id))
-      .reduce((sum, p) => sum + p.amount, 0);
+      .filter((p) => p && selectedTransactionIds.includes(p.id))
+      .reduce((sum, p) => sum + (p?.amount || 0), 0);
   }, [payments, selectedTransactionIds]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
+    if (e.target.checked && Array.isArray(payments)) {
       setSelectedTransactionIds(payments.map((p) => p.id));
     } else {
       setSelectedTransactionIds([]);
@@ -304,13 +320,24 @@ export default function PaymentsPage() {
 
       try {
         const res = await fetch(`/api/accounts/payments?${params.toString()}`);
+        if (!res.ok) {
+          setPayments([]);
+          setTotal(0);
+          setTotalAmount(0);
+          return;
+        }
         const json = await res.json();
-        setPayments(json.payments);
-        setTotal(json.total);
-        setTotalAmount(json.totalAmount ?? 0);
-        if (json.counts) {
+        setPayments(Array.isArray(json?.payments) ? json.payments : []);
+        setTotal(typeof json?.total === "number" ? json.total : 0);
+        setTotalAmount(typeof json?.totalAmount === "number" ? json.totalAmount : 0);
+        if (json?.counts) {
           setCounts(json.counts);
         }
+      } catch (err) {
+        console.error("Error fetching payments:", err);
+        setPayments([]);
+        setTotal(0);
+        setTotalAmount(0);
       } finally {
         setRefreshing(false);
       }
@@ -546,17 +573,18 @@ export default function PaymentsPage() {
     }
   };
 
-  const getPaymentExportData = (payments: Payment[]) => {
+  const getPaymentExportData = (paymentsList: Payment[]) => {
+    if (!Array.isArray(paymentsList)) return { headers: [], data: [] };
     const headers = ["ID", "Type", "Category", "Date", "Amount", "From", "To", "Mode", "Reference", "Invoice"];
-    const data = payments.map(payment => [
+    const data = paymentsList.map(payment => [
       payment.id,
-      payment.transactionType,
-      payment.category,
-      format(parseISO(payment.date), "dd-MM-yyyy HH:mm"),
-      `${(payment as any).currency || currency || "PKR"} ${payment.amount.toLocaleString()}`,
-      payment.fromAccount,
-      payment.toAccount,
-      payment.mode,
+      payment.transactionType || "",
+      payment.category || "",
+      formatPaymentDate(payment.date, "dd-MM-yyyy HH:mm"),
+      `${(payment as any)?.currency || currency || "PKR"} ${(payment.amount || 0).toLocaleString()}`,
+      payment.fromAccount || "",
+      payment.toAccount || "",
+      payment.mode || "",
       payment.reference || "N/A",
       payment.invoice || "N/A"
     ]);
@@ -612,13 +640,19 @@ export default function PaymentsPage() {
       sortOrder: sortOrder,
     });
 
-    const res = await fetch(`/api/accounts/payments?${params.toString()}`);
-    const json = await res.json();
-    setPayments(json.payments);
-    setTotal(json.total);
-    setTotalAmount(json.totalAmount ?? 0);
-    if (json.counts) {
-      setCounts(json.counts);
+    try {
+      const res = await fetch(`/api/accounts/payments?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        setPayments(Array.isArray(json?.payments) ? json.payments : []);
+        setTotal(typeof json?.total === "number" ? json.total : 0);
+        setTotalAmount(typeof json?.totalAmount === "number" ? json.totalAmount : 0);
+        if (json?.counts) {
+          setCounts(json.counts);
+        }
+      }
+    } catch (err) {
+      console.error("Error refreshing payments:", err);
     }
   };
 
@@ -865,7 +899,7 @@ export default function PaymentsPage() {
 
       <Card className="shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <CardContent className="p-3 sm:p-4 lg:p-6 overflow-x-auto">
-          {payments.length === 0 ? (
+          {(!Array.isArray(payments) || payments.length === 0) ? (
             <p className="text-gray-600 dark:text-gray-400 text-center py-10 text-lg">No payments found.</p>
           ) : (
             <table className="min-w-full table-auto border-separate border-spacing-y-2 sm:border-spacing-y-4">
@@ -984,7 +1018,7 @@ export default function PaymentsPage() {
                 </tr>
               </thead>
               <tbody className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-light">
-                {payments.map((p) => (
+                {Array.isArray(payments) && payments.map((p) => (
                   <tr key={p.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300">
                     <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
                       <input
@@ -1010,10 +1044,10 @@ export default function PaymentsPage() {
                       </td>
                     )}
                     {visibleColumns.date !== false && (
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{format(parseISO(p.date), "dd/MM/yy HH:mm")}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{formatPaymentDate(p.date, "dd/MM/yy HH:mm")}</td>
                     )}
                     {visibleColumns.amount !== false && (
-                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{(p as any).currency || currency || "PKR"} {p.amount.toLocaleString()}</td>
+                      <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">{(p as any)?.currency || currency || "PKR"} {(p?.amount || 0).toLocaleString()}</td>
                     )}
                     {visibleColumns.fromAccount !== false && (
                       <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-3">
@@ -1338,7 +1372,7 @@ export default function PaymentsPage() {
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                      {format(parseISO(selectedPaymentDetails.date), "dd MMMM yyyy, hh:mm a")}
+                      {formatPaymentDate(selectedPaymentDetails.date, "dd MMMM yyyy, hh:mm a")}
                     </p>
                   </div>
                 </div>
@@ -1351,7 +1385,7 @@ export default function PaymentsPage() {
                     Amount
                   </span>
                   <span className="text-xl font-black text-slate-900 dark:text-white">
-                    {(selectedPaymentDetails as any).currency || currency || "PKR"} {selectedPaymentDetails.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {(selectedPaymentDetails as any)?.currency || currency || "PKR"} {(selectedPaymentDetails?.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="text-right">
