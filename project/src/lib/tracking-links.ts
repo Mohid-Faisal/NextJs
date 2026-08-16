@@ -6,9 +6,9 @@ const trackingLinks: Record<string, (id: string) => string> = {
   PARCEL_FORCE: (id) => `https://www7.parcelforce.com/track-trace?trackNumber=${id}`,
 
   // FedEx (all variants)
-  FEDEX: (id) => `https://www.fedex.com/fedextrack/?trknbr=${id}`,
-  FEDEX_LHE: (id) => `https://www.fedex.com/fedextrack/?trknbr=${id}`,
-  FEDEX_DXB: (id) => `https://www.fedex.com/fedextrack/?trknbr=${id}`,
+  FEDEX: (id) => `https://www.fedex.com/apps/fedextrack/?action=track&trackingnumber=${id}`,
+  FEDEX_LHE: (id) => `https://www.fedex.com/apps/fedextrack/?action=track&trackingnumber=${id}`,
+  FEDEX_DXB: (id) => `https://www.fedex.com/apps/fedextrack/?action=track&trackingnumber=${id}`,
 
   // UPS (all variants)
   UPS: (id) => `https://www.ups.com/track?tracknum=${id}`,
@@ -86,7 +86,7 @@ export function getTrackingUrl(shipment: {
     return `https://www.ups.com/track?tracknum=${cleanId}`;
   }
   if (combined.includes("FEDEX") || combined.includes("FDX")) {
-    return `https://www.fedex.com/fedextrack/?trknbr=${cleanId}`;
+    return `https://www.fedex.com/apps/fedextrack/?action=track&trackingnumber=${cleanId}`;
   }
   if (combined.includes("DHL")) {
     return `https://www.dhl.com/pk-en/home/tracking.html?tracking-id=${cleanId}&submit=1`;
@@ -94,7 +94,7 @@ export function getTrackingUrl(shipment: {
 
   // 12-digit standard FedEx express tracking number pattern (e.g. 875819715090)
   if (/^\d{12}$/.test(cleanId) && !cleanId.startsWith("000")) {
-    return `https://www.fedex.com/fedextrack/?trknbr=${cleanId}`;
+    return `https://www.fedex.com/apps/fedextrack/?action=track&trackingnumber=${cleanId}`;
   }
 
   // 10-digit standard DHL tracking number pattern
