@@ -19,6 +19,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 import { Table, Plus, Edit, Trash2, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, Printer, FileText, Upload, Download, Coins, RefreshCw, Eye } from "lucide-react";
 import { toast } from "sonner";
@@ -1208,7 +1212,7 @@ export default function PaymentsPage() {
 
       {/* Import Transactions Dialog */}
       {/* Import Modal */}
-      <Dialog open={importDialogOpen} onOpenChange={(open) => {
+      <Dialog open={importDialogOpen} onOpenChange={(open: boolean) => {
         if (!importing) setImportDialogOpen(open);
       }}>
         <DialogContent className="max-w-3xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">

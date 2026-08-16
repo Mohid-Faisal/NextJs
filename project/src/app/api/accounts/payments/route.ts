@@ -14,7 +14,7 @@ type PaymentJournalEntry = { entryNumber: string; reference: string | null; tota
  * Prefer Payment-{id}/PAY-{id} (current format); fall back to legacy bank-ref JE.reference.
  */
 async function attachJournalEntriesToPayments(
-  session: { organizationId: number },
+  session: any,
   payments: any[]
 ) {
   if (payments.length === 0) return payments;
