@@ -4,6 +4,7 @@ import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransact
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { checkShipmentLimit } from "@/lib/billing/usage";
+import { withUniqueRetry } from "@/lib/withUniqueRetry";
 
 /**
  * POST /api/add-shipment
@@ -383,7 +384,18 @@ export async function POST(req: NextRequest) {
         packageTotals: packageTotals ? JSON.stringify(packageTotals) : undefined,
         calculatedValues: calculatedValues ? JSON.stringify(calculatedValues) : undefined,
       }),
-    });
+        });
+
+        return created;
+      },
+      {
+        retries: 2,
+        onRetry: async () => {
+          console.warn("add-shipment: invoice number collision detected, regenerating");
+          invoiceNumber = await generateInvoiceNumber(prisma, session.organizationId);
+        },
+      }
+    );
     
     console.log('Shipment saved to database:', {
       id: shipment.id,

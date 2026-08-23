@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", "schedule:weekly"],
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": { "enabled": true },
+  "packageRules": [
+    {
+      "description": "Auto-merge safe dev-dependency patch/minor updates",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Group Next.js + React together (they move in lockstep)",
+      "matchPackagePatterns": ["^next$", "^react$", "^react-dom$", "^@types/react"],
+      "groupName": "nextjs-react"
+    },
+    {
+      "description": "Hold major upgrades of runtime-critical libs for manual review",
+      "matchPackagePatterns": ["prisma", "@prisma/client", "stripe", "bcrypt"],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}

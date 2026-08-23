@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
@@ -75,6 +76,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/bcrypt": "^6.0.0",
     "@types/country-list": "^2.1.4",
