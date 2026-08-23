@@ -141,28 +141,32 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      shipment: {
-        trackingId: shipment.trackingId,
-        invoiceNumber: shipment.invoiceNumber,
-        destination: shipment.destination,
-        deliveryStatus: shipment.deliveryStatus,
-        trackingStatus: shipment.trackingStatus,
-        trackingStatusHistory: parseHistory(shipment.trackingStatusHistory ?? []),
-        shippingMode: shipment.shippingMode,
-        serviceMode: shipment.serviceMode,
-        packaging: shipment.packaging,
-        shipmentDate: shipment.shipmentDate,
-        deliveryTime: shipment.deliveryTime,
-        totalWeight: shipment.totalWeight ?? shipment.weight,
-        amount: shipment.amount,
-        packageDescription: shipment.packageDescription,
-      },
-      recipient,
-      organization: org ? { name: org.name, logoUrl: org.logoUrl } : null
-    });
-  } catch (error) {
+      const res = NextResponse.json({
+        success: true,
+        shipment: {
+          trackingId: shipment.trackingId,
+          invoiceNumber: shipment.invoiceNumber,
+          destination: shipment.destination,
+          deliveryStatus: shipment.deliveryStatus,
+          trackingStatus: shipment.trackingStatus,
+          trackingStatusHistory: parseHistory(shipment.trackingStatusHistory ?? []),
+          shippingMode: shipment.shippingMode,
+          serviceMode: shipment.serviceMode,
+          packaging: shipment.packaging,
+          shipmentDate: shipment.shipmentDate,
+          deliveryTime: shipment.deliveryTime,
+          totalWeight: shipment.totalWeight ?? shipment.weight,
+          amount: shipment.amount,
+          packageDescription: shipment.packageDescription,
+        },
+        recipient,
+        organization: org ? { name: org.name, logoUrl: org.logoUrl } : null
+      });
+      // Public, non-sensitive payload — short shared-cache window absorbs
+      // repeated polling and QR rescans without hitting the database.
+      res.headers.set("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=300");
+      return res;
+    } catch (error) {
     console.error("Public track API error:", error);
     return NextResponse.json(
       { error: "An error occurred while tracking. Please try again." },

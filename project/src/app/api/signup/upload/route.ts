@@ -37,6 +37,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File too large. Maximum 5MB." }, { status: 400 });
     }
 
+    // SECURITY: sniff actual content — declared MIME/extension are spoofable.
+    try {
+      const { fileTypeFromBuffer } = await import("file-type");
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const detected = await fileTypeFromBuffer(buffer);
+      if (!detected || !allowedTypes.includes(detected.mime)) {
+        return NextResponse.json(
+          { error: "File content does not look like an allowed type" },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json({ error: "Could not read file contents" }, { status: 400 });
+    }
+
     const storageUrl = process.env.NEXT_PUBLIC_CPANEL_STORAGE_URL;
     const secretKey = process.env.CPANEL_UPLOAD_SECRET_KEY;
 

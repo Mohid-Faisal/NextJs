@@ -16,7 +16,33 @@ export const dynamic = "force-dynamic";
  */
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf"];
+const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"]);
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+/**
+ * SECURITY: sniff actual file contents (magic bytes) — declared MIME type and
+ * extension are both client-controlled and trivially spoofed.
+ */
+async function sniffFileType(file: File): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const { fileTypeFromBuffer } = await import("file-type");
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const detected = await fileTypeFromBuffer(buffer);
+    if (!detected) {
+      return { ok: false, reason: "Unrecognized file content" };
+    }
+    if (!ALLOWED_MIME_TYPES.has(detected.mime)) {
+      return { ok: false, reason: `File content (${detected.mime}) is not an allowed type` };
+    }
+    // Declared type must roughly agree with detected content
+    if (file.type && file.type !== "application/octet-stream" && file.type !== detected.mime) {
+      return { ok: false, reason: "File content does not match its declared type" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "Could not read file contents" };
+  }
+}
 
 function getFileExtension(name: string): string {
   const idx = name.lastIndexOf(".");
@@ -57,6 +83,15 @@ export async function POST(req: NextRequest) {
     if (file.type && !file.type.startsWith("image/") && file.type !== "application/pdf") {
       return NextResponse.json(
         { success: false, error: "Only image and PDF files are accepted" },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: verify actual content matches (magic-byte sniffing).
+    const sniff = await sniffFileType(file);
+    if (!sniff.ok) {
+      return NextResponse.json(
+        { success: false, error: sniff.reason ?? "File content rejected" },
         { status: 400 }
       );
     }

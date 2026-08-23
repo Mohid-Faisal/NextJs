@@ -40,7 +40,10 @@ const nextConfig: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          { key: "Content-Security-Policy", value: csp },
+          // PHASE 1 (report-only): observe violations before enforcing.
+          // Once clean for a week, move this value to the enforcing
+          // "Content-Security-Policy" header below.
+          { key: "Content-Security-Policy-Report-Only", value: csp },
         ],
       },
     ];

@@ -7,6 +7,7 @@ import { attachSessionCookie } from "@/lib/auth/cookies";
 import { ensureDemoAccountExists, DEMO_EMAIL } from "@/lib/auth/demoAccount";
 import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
 import { audit } from "@/lib/audit";
+import { sendNewDeviceLoginAlertEmail } from "@/lib/email";
 
 // Uniform error message — never reveal whether an email exists or its state.
 const INVALID_CREDENTIALS = "Invalid email or password.";
@@ -138,6 +139,29 @@ export async function POST(req: Request) {
         userAgent: req.headers.get("user-agent"),
       }
     );
+
+    // Security alert: sign-in from an IP this account has never used before.
+    try {
+      const currentIp = ip === "unknown" ? null : ip;
+      const priorSessions = await prisma.authSession.findMany({
+        where: { userId: user.id, ipAddress: { not: null } },
+        select: { ipAddress: true },
+        take: 100,
+        orderBy: { createdAt: "desc" },
+      });
+      const seenIps = new Set(priorSessions.map((s) => s.ipAddress));
+      if (currentIp && seenIps.size > 0 && !seenIps.has(currentIp)) {
+        await sendNewDeviceLoginAlertEmail(
+          user.email,
+          user.name,
+          currentIp,
+          req.headers.get("user-agent"),
+          new Date()
+        );
+      }
+    } catch (alertErr) {
+      console.error("Login alert check failed:", alertErr);
+    }
 
     // Token is delivered as an httpOnly cookie — never in the response body.
     const res = NextResponse.json({

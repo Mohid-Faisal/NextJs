@@ -327,14 +327,18 @@ export async function POST(req: NextRequest) {
     // SECTION 6: SHIPMENT CREATION
     // ============================================================================
     // Generate unique invoice number for this shipment (atomic, per-org)
-    const invoiceNumber = await generateInvoiceNumber(prisma, session.organizationId);
+    let invoiceNumber = await generateInvoiceNumber(prisma, session.organizationId);
 
-    // Create shipment record in database with all fields
-    const shipment = await prisma.shipment.create({
-      data: orgData(session, {
-        trackingId,
-        referenceNumber: referenceNumber,
-        invoiceNumber,
+    // Create shipment record in database with all fields.
+    // withUniqueRetry: on a rare invoiceNumber collision (P2002), regenerate
+    // the number and try again instead of failing the request.
+    const shipment = await withUniqueRetry(
+      async () => {
+        const created = await prisma.shipment.create({
+          data: orgData(session, {
+            trackingId,
+            referenceNumber: referenceNumber,
+            invoiceNumber,
         shipmentDate: shipmentDate ? new Date(shipmentDate) : new Date(),
         agency,
         office,

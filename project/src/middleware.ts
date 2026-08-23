@@ -22,8 +22,35 @@ function getJwtSecretKey(): Uint8Array {
 }
 
 export async function middleware(req: NextRequest) {
-  const token = req.cookies.get("token")?.value;
   const pathname = req.nextUrl.pathname;
+
+  // CSRF hardening: browsers ALWAYS attach an Origin header to cross-site
+  // requests. If one is present on a state-changing API call and it does not
+  // match our host, reject. Server-to-server callers (Bearer tokens, crons,
+  // Stripe webhooks) omit Origin entirely and are unaffected.
+  if (
+    pathname.startsWith("/api") &&
+    !["GET", "HEAD", "OPTIONS"].includes(req.method)
+  ) {
+    const origin = req.headers.get("origin");
+    if (origin) {
+      const host = req.headers.get("host");
+      let originHost: string | null = null;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        originHost = null;
+      }
+      if (!host || !originHost || originHost !== host) {
+        return NextResponse.json(
+          { success: false, error: "Cross-origin request rejected" },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
+  const token = req.cookies.get("token")?.value;
 
   // Exclude static assets, auth pages, and API routes
   const isAuthPage = pathname.startsWith("/auth");

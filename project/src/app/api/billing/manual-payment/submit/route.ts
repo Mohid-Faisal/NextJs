@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { fetchExchangeRates } from "@/lib/currency";
+import { audit } from "@/lib/audit";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
 
@@ -82,6 +83,13 @@ export async function POST(req: NextRequest) {
         status: "pending",
         notes: billingCycle ? `Billing Cycle: ${String(billingCycle).toUpperCase()}` : null,
       },
+    });
+
+    await audit(session, req, "billing.payment_proof_submitted", "PaymentProof", proof.id, {
+      planCode,
+      amount: numericAmount,
+      method: proof.method,
+      referenceId: trimmedRef,
     });
 
     return NextResponse.json({ success: true, proof });

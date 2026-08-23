@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth/requireSuperAdmin";
+import { audit } from "@/lib/audit";
 
 /**
  * PATCH /api/saas/payment-proofs/[id]
@@ -13,6 +14,7 @@ export async function PATCH(
 ) {
   const auth = await requireSuperAdmin(req);
   if (auth.error) return auth.error;
+  const admin = auth.session;
 
   try {
     const { id } = await params;
@@ -102,6 +104,13 @@ export async function PATCH(
         organization: { select: { name: true } },
         plan: { select: { name: true } },
       },
+    });
+
+    await audit(admin, req, status === "approved" ? "billing.payment_proof_approved" : "billing.payment_proof_rejected", "PaymentProof", proofId, {
+      organizationId: proof.organizationId,
+      planId: proof.planId,
+      amount: proof.amount,
+      months: status === "approved" ? Math.floor(months) || 1 : undefined,
     });
 
     return NextResponse.json({ success: true, proof: updatedProof });

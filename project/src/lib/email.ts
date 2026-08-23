@@ -299,6 +299,47 @@ export async function sendPassword2FACodeEmail(
   }
 }
 
+
+/**
+ * Security alert: sign-in from an IP address not seen before for this user.
+ * Best-effort — failures are logged, never thrown into the login path.
+ */
+export async function sendNewDeviceLoginAlertEmail(
+  userEmail: string,
+  userName: string,
+  ip: string | null,
+  userAgent: string | null,
+  loginTime: Date
+) {
+  try {
+    const { data: emailData, error } = await resend.emails.send({
+      from: "PSS_Support@psswwe.com",
+      to: userEmail,
+      subject: "New device sign-in detected",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <h2 style="color: #4F46E5;">New device sign-in detected</h2>
+          <p>Hi ${escapeHtml(userName)},</p>
+          <p>Your account was just accessed from an IP address we haven't seen before:</p>
+          <div style="background: #F3F4F6; border: 1px solid #E5E7EB; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 4px 0;"><strong>Time:</strong> ${loginTime.toISOString()}</p>
+            <p style="margin: 4px 0;"><strong>IP address:</strong> ${ip ?? "unknown"}</p>
+            <p style="margin: 4px 0;"><strong>Device:</strong> ${escapeHtml((userAgent ?? "unknown").slice(0, 200))}</p>
+          </div>
+          <p style="color: #dc2626; font-weight: bold;">If this wasn't you, reset your password immediately and contact support.</p>
+        </div>
+      `,
+    });
+    if (error) {
+      console.error("Error sending new-device login alert:", error);
+      return false;
+    }
+    return !!emailData;
+  } catch (err) {
+    console.error("Error in sendNewDeviceLoginAlertEmail:", err);
+    return false;
+  }
+}
 export interface EmployeeInvitationEmailData {
   employeeName: string;
   employeeEmail: string;
