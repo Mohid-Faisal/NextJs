@@ -25,63 +25,59 @@ export async function middleware(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   const pathname = req.nextUrl.pathname;
 
-  // Exclude static assets, auth pages, and API routes
-  const isAuthPage = pathname.startsWith("/auth");
+  // Static assets, auth pages, and API routes pass through
+  const isAuthPage = pathname.startsWith("/auth") || pathname === "/login" || pathname === "/signup";
   const isApiRoute = pathname.startsWith("/api");
   const isStaticFile = pathname.includes(".");
-
-  // Allowed public pages that don't require login (only tracking)
-  const isPublicPage = pathname.startsWith("/tracking");
+  const isDashboard = pathname.startsWith("/dashboard");
 
   if (isAuthPage || isApiRoute || isStaticFile) {
+    // If logged in and visiting login page, redirect to dashboard
+    if (token && (pathname === "/auth/login" || pathname === "/login")) {
+      try {
+        await jwtVerify(token, getJwtSecretKey());
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      } catch {
+        // Token invalid, allow login page
+        return NextResponse.next();
+      }
+    }
     return NextResponse.next();
   }
 
-  if (!token) {
-    if (isPublicPage) {
-      return NextResponse.next();
-    }
-    return NextResponse.redirect(new URL("/auth/login", req.url));
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, getJwtSecretKey());
-    const claims = payload as TokenPayload;
-
-    // Best-effort UX check only. Authoritative suspension enforcement lives
-    // server-side in getSession() (lib/auth/session.ts).
-    if (claims.orgStatus === "suspended") {
+  // Protected route enforcement: only dashboard requires authentication
+  if (isDashboard) {
+    if (!token) {
       const loginUrl = new URL("/auth/login", req.url);
-      loginUrl.searchParams.set("error", "org-suspended");
+      loginUrl.searchParams.set("from", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    try {
+      const { payload } = await jwtVerify(token, getJwtSecretKey());
+      const claims = payload as TokenPayload;
+
+      // Check organization status
+      if (claims.orgStatus === "suspended") {
+        const loginUrl = new URL("/auth/login", req.url);
+        loginUrl.searchParams.set("error", "org-suspended");
+        const res = NextResponse.redirect(loginUrl);
+        res.cookies.delete("token");
+        return res;
+      }
+
+      return NextResponse.next();
+    } catch {
+      const loginUrl = new URL("/auth/login", req.url);
+      loginUrl.searchParams.set("from", pathname);
       const res = NextResponse.redirect(loginUrl);
       res.cookies.delete("token");
       return res;
     }
-
-    const isUnusedPublicPage =
-      pathname === "/" ||
-      pathname.startsWith("/about") ||
-      pathname.startsWith("/contact") ||
-      pathname.startsWith("/services") ||
-      pathname.startsWith("/tools") ||
-      pathname.startsWith("/rate-calculator");
-
-    if (isUnusedPublicPage) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-
-    return NextResponse.next();
-  } catch {
-    if (isPublicPage) {
-      const res = NextResponse.next();
-      res.cookies.delete("token");
-      return res;
-    }
-    const loginUrl = new URL("/auth/login", req.url);
-    const res = NextResponse.redirect(loginUrl);
-    res.cookies.delete("token");
-    return res;
   }
+
+  // All public marketing and info pages are open to everyone
+  return NextResponse.next();
 }
 
 export const config = {

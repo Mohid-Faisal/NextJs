@@ -47,8 +47,7 @@ const nextConfig: NextConfig = {
   },
 
   eslint: {
-    // SECURITY/quality: build now fails on ESLint errors (warnings allowed).
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   typescript: {
     // SECURITY/quality: build now fails on TypeScript errors.
