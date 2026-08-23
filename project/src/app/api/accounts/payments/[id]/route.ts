@@ -463,7 +463,12 @@ export async function DELETE(
           );
 
           await prisma.invoice.update({
-            where: { invoiceNumber: payment.invoice },
+            where: {
+              organizationId_invoiceNumber: {
+                organizationId: session.organizationId,
+                invoiceNumber: payment.invoice,
+              },
+            },
             data: { status: paymentStatus.status }
           });
 

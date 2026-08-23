@@ -4,15 +4,66 @@ import { sendUserApprovalEmail } from "@/lib/email";
 import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
 import { fetchExchangeRates } from "@/lib/currency";
 
+/**
+ * SECURITY: previously fully unauthenticated — anyone could upsert ANY
+ * organization's subscription/plan/status or forge payment proofs.
+ *
+ * Now this endpoint only works for a user who has VERIFIED their email and
+ * is in the PENDING_PLAN_SELECTION state, and ONLY for the organization
+ * they own (resolved server-side from their membership — the client-supplied
+ * organizationId must match it). Self-service trial selection adds no
+ * privilege beyond what open signup already grants.
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, organizationId, planCode, paymentMethod, referenceId, receiptUrl, billingCycle } = body;
+    const { userId, planCode, paymentMethod, referenceId, receiptUrl, billingCycle } = body;
 
-    if (!userId || !organizationId || !planCode) {
+    if (!userId || !planCode) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields: userId, organizationId, planCode" },
+        { success: false, message: "Missing required fields: userId, planCode" },
         { status: 400 }
+      );
+    }
+
+    const parsedUserId = parseInt(userId, 10);
+    if (isNaN(parsedUserId)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid userId" },
+        { status: 400 }
+      );
+    }
+
+    // Only a user whose email verification completed may pick a plan, and
+    // only for their own workspace.
+    const user = await prisma.user.findUnique({
+      where: { id: parsedUserId },
+      select: { id: true, name: true, email: true, status: true },
+    });
+    if (!user || user.status !== "PENDING_PLAN_SELECTION") {
+      return NextResponse.json(
+        { success: false, message: "Plan selection not available for this account." },
+        { status: 403 }
+      );
+    }
+
+    const ownership = await prisma.organizationMember.findFirst({
+      where: { userId: user.id, role: "OWNER" },
+      select: { organizationId: true },
+    });
+    if (!ownership) {
+      return NextResponse.json(
+        { success: false, message: "No organization found for this account." },
+        { status: 403 }
+      );
+    }
+    const organizationId = ownership.organizationId;
+
+    // If the client supplied an organizationId it must be their own.
+    if (body.organizationId !== undefined && parseInt(body.organizationId, 10) !== organizationId) {
+      return NextResponse.json(
+        { success: false, message: "Organization mismatch." },
+        { status: 403 }
       );
     }
 
@@ -35,14 +86,14 @@ export async function POST(request: NextRequest) {
 
     // Upsert subscription for the organization
     await prisma.subscription.upsert({
-      where: { organizationId: parseInt(organizationId, 10) },
+      where: { organizationId: organizationId },
       update: {
         planId: plan.id,
         status: isTrial ? "trialing" : "pending",
         trialEndsAt,
       },
       create: {
-        organizationId: parseInt(organizationId, 10),
+        organizationId: organizationId,
         planId: plan.id,
         status: isTrial ? "trialing" : "pending",
         trialEndsAt,
@@ -51,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     // Update organization status based on selected plan
     await prisma.organization.update({
-      where: { id: parseInt(organizationId, 10) },
+      where: { id: organizationId },
       data: {
         status: isTrial ? "trial" : "pending",
       },
@@ -59,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // Ensure Chart of Accounts is initialized for the organization when upgrading
     try {
-      const orgId = parseInt(organizationId, 10);
+      const orgId = organizationId;
       const existingCount = await prisma.chartOfAccount.count({
         where: { organizationId: orgId }
       });
@@ -80,7 +131,7 @@ export async function POST(request: NextRequest) {
     if (paymentMethod && referenceId) {
       // Retrieve organization currency resolved during signup
       const orgDetails = await prisma.organization.findUnique({
-        where: { id: parseInt(organizationId, 10) },
+        where: { id: organizationId },
         select: { currency: true }
       });
       const currency = orgDetails?.currency || "PKR";
@@ -108,7 +159,7 @@ export async function POST(request: NextRequest) {
 
       await prisma.paymentProof.create({
         data: {
-          organizationId: parseInt(organizationId, 10),
+          organizationId: organizationId,
           planId: plan.id,
           amount: amount,
           currency: currency,

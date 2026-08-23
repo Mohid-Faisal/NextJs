@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
 
-// Public upload endpoint for signup receipt screenshots (no auth required)
+// Public upload endpoint for signup receipt screenshots (no auth required —
+// used before account creation). Hardened with strict type/extension checks,
+// size caps and per-IP rate limiting to prevent abuse as a free file host.
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf"];
+
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const limit = rateLimit(`signup-upload:${ip}`, 10, 60 * 60 * 1000);
+    if (!limit.allowed) return rateLimitResponse(limit);
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 
@@ -10,10 +19,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Validate file type
+    // Validate file type (declared MIME + extension must both be allowed)
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({ error: "Invalid file type. Accepted: JPEG, PNG, WebP, GIF, PDF" }, { status: 400 });
+    }
+
+    const name = file.name || "";
+    const extIdx = name.lastIndexOf(".");
+    const ext = extIdx === -1 ? "" : name.slice(extIdx).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json({ error: "Invalid file extension" }, { status: 400 });
     }
 
     // Max 5MB

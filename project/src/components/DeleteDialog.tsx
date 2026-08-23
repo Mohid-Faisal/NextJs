@@ -46,22 +46,11 @@ const DeleteDialog = ({
       // For shipments, proceed to 2FA verification
       setIsSendingCode(true);
       try {
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("token="))
-          ?.split("=")[1];
-
-        if (!token) {
-          toast.error("Authentication required");
-          return;
-        }
-
-        // Send 2FA code to user's email
+        // Session cookie is httpOnly — sent automatically with the request.
         const response = await fetch(`/api/shipments/${primaryId}/send-2fa`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ password }),
         });
@@ -99,16 +88,8 @@ const DeleteDialog = ({
 
     setIsVerifying(true);
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-
-      if (!token) {
-        toast.error("Authentication required");
-        return;
-      }
-
+      // Session cookie is httpOnly — it is sent automatically with the
+      // same-origin request, no Authorization header needed.
       const idsToDelete = isBulk ? entityIds : [entityId];
       let successCount = 0;
       let failCount = 0;
@@ -119,7 +100,6 @@ const DeleteDialog = ({
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ password, verificationCode }),
           });
@@ -140,7 +120,6 @@ const DeleteDialog = ({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
         });
       } catch {
@@ -178,17 +157,8 @@ const DeleteDialog = ({
     setIsDeleting(true);
 
     try {
-      // Get the token from cookies
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-
-      if (!token) {
-        toast.error("Authentication required");
-        return;
-      }
-
+      // Session cookie is httpOnly — it is sent automatically with the
+      // same-origin request, no Authorization header needed.
       const idsToDelete = isBulk ? entityIds : [entityId];
       let successCount = 0;
       let failCount = 0;
@@ -205,7 +175,6 @@ const DeleteDialog = ({
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ password }),
           });

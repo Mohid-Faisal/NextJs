@@ -10,9 +10,9 @@ import {
   TrendingUp, Clock, Landmark
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
-} from "recharts";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from "@/components/charts";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -408,11 +408,11 @@ export default function SaasOrganizationsPage() {
                   <YAxis 
                     tickLine={false} 
                     axisLine={false} 
-                    tickFormatter={(val) => `${stats?.currency || "PKR"} ${val}`}
+                    tickFormatter={(val: any) => `${stats?.currency || "PKR"} ${val}`}
                     tick={{ fill: "#94a3b8", fontSize: 11 }}
                   />
                   <Tooltip 
-                    formatter={(value) => [`${stats?.currency || "PKR"} ${value}`, "Revenue"]}
+                    formatter={(value: any) => [`${stats?.currency || "PKR"} ${value}`, "Revenue"]}
                     contentStyle={{ 
                       background: "rgba(15, 23, 42, 0.9)", 
                       border: "none", 

@@ -1,24 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import { withAuth } from "@/lib/api/withAuth";
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const auth = await requireApiSession(request);
-    if (auth.error) return auth.error;
-    const session = auth.session;
+const updateAgencySchema = z.object({
+  code: z.string().min(1).max(50),
+  name: z.string().min(1).max(200),
+});
 
-    const { id } = await params;
-    const idNum = parseInt(id, 10);
-    const body = await request.json();
-    const { code, name } = body;
-
-    if (!code || !name) {
-      return NextResponse.json({ error: "Code and name are required" }, { status: 400 });
+export const PUT = withAuth(
+  {
+    permission: "manage_services",
+    bodySchema: updateAgencySchema,
+    limit: { requests: 60, windowMs: 60 * 1000 },
+  },
+  async ({ session, body, params }) => {
+    const idNum = parseInt(params.id, 10);
+    if (isNaN(idNum)) {
+      return NextResponse.json({ error: "Invalid agency ID" }, { status: 400 });
     }
 
     const existing = await prisma.agency.findFirst({
@@ -28,32 +28,31 @@ export async function PUT(
       return NextResponse.json({ error: "Agency not found" }, { status: 404 });
     }
 
-    const agency = await prisma.agency.update({
-      where: { id: idNum },
-      data: { code, name },
-    });
-
-    return NextResponse.json(agency);
-  } catch (error: any) {
-    console.error("Error updating agency:", error);
-    if (error.code === "P2002") {
-      return NextResponse.json({ error: "Agency code already exists" }, { status: 400 });
+    try {
+      const agency = await prisma.agency.update({
+        where: { id: idNum },
+        data: { code: body.code, name: body.name },
+      });
+      return NextResponse.json(agency);
+    } catch (error: any) {
+      if (error?.code === "P2002") {
+        return NextResponse.json({ error: "Agency code already exists" }, { status: 400 });
+      }
+      throw error;
     }
-    return NextResponse.json({ error: error.message || "Failed to update agency" }, { status: 500 });
   }
-}
+);
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const auth = await requireApiSession(request);
-    if (auth.error) return auth.error;
-    const session = auth.session;
-
-    const { id } = await params;
-    const idNum = parseInt(id, 10);
+export const DELETE = withAuth(
+  {
+    permission: "manage_services",
+    limit: { requests: 60, windowMs: 60 * 1000 },
+  },
+  async ({ session, params }) => {
+    const idNum = parseInt(params.id, 10);
+    if (isNaN(idNum)) {
+      return NextResponse.json({ error: "Invalid agency ID" }, { status: 400 });
+    }
 
     const existing = await prisma.agency.findFirst({
       where: orgWhere(session, { id: idNum }),
@@ -67,8 +66,5 @@ export async function DELETE(
     });
 
     return NextResponse.json({ message: "Agency deleted successfully" });
-  } catch (error: any) {
-    console.error("Error deleting agency:", error);
-    return NextResponse.json({ error: error.message || "Failed to delete agency" }, { status: 500 });
   }
-}
+);

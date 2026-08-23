@@ -9,6 +9,56 @@ export interface EmailData {
   text?: string;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export async function sendPasswordResetCodeEmail(
+  userEmail: string,
+  userName: string,
+  verificationCode: string
+) {
+  try {
+    const { data: emailData, error } = await resend.emails.send({
+      from: "PSS_Support@psswwe.com",
+      to: userEmail,
+      subject: "Password Reset Code",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <h2 style="color: #4F46E5;">Password Reset Request</h2>
+          <p>Hi ${escapeHtml(userName)},</p>
+          <p>We received a request to reset your account password. Use the verification code below to continue:</p>
+
+          <div style="background: #F3F4F6; border: 1px solid #E5E7EB; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+            <h1 style="color: #1F2937; font-size: 32px; letter-spacing: 5px; margin: 0;">${verificationCode}</h1>
+          </div>
+
+          <p><strong>This code will expire in 10 minutes.</strong></p>
+
+          <p style="color: #dc2626; font-weight: bold;">If you did not request a password reset, ignore this email — your password will remain unchanged.</p>
+
+          <p>Best regards,<br>Your Platform Team</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending password reset email:", error);
+      throw new Error("Failed to send password reset email");
+    }
+
+    return emailData;
+  } catch (error) {
+    console.error("Error in sendPasswordResetCodeEmail:", error);
+    throw error;
+  }
+}
+
 export async function sendEmail(data: EmailData) {
   try {
     const { data: emailData, error } = await resend.emails.send({

@@ -1,5 +1,6 @@
 "use client";
 
+import { getClientSession } from "@/lib/clientSession";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,8 +30,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
 
 type Plan = {
   id: number;
@@ -44,10 +43,6 @@ type Plan = {
     subscriptions: number;
   };
 };
-
-interface DecodedToken {
-  platformRole?: string | null;
-}
 
 export default function SaasPlansPage() {
   const router = useRouter();
@@ -83,15 +78,9 @@ export default function SaasPlansPage() {
 
   useEffect(() => {
     setMounted(true);
-    const token = Cookies.get("token");
-    if (token) {
-      try {
-        const decoded = jwtDecode<DecodedToken>(token);
-        setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
-      } catch (err) {
-        console.error("Token decoding failed:", err);
-      }
-    }
+    getClientSession().then((user) => {
+      setIsSuperAdmin(!!user && user.platformRole === "SUPER_ADMIN");
+    });
   }, []);
 
   const loadPlans = async () => {

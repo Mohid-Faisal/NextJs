@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { send2FACodeEmail } from "@/lib/email";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
-
-// Helper function to decode JWT token
-function decodeToken(token: string) {
-  try {
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    return jwt.verify(token, secret) as { id: string; [key: string]: unknown };
-  } catch (error) {
-    return null;
-  }
-}
 
 export async function POST(
   request: NextRequest,
@@ -27,7 +16,7 @@ export async function POST(
 
     const { id } = await params;
     const shipmentId = parseInt(id);
-    
+
     if (isNaN(shipmentId)) {
       return NextResponse.json(
         { error: "Invalid shipment ID" },
@@ -35,24 +24,8 @@ export async function POST(
       );
     }
 
-    // Get the authorization header
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Authorization token required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = decodeToken(token);
-    
-    if (!decoded) {
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      );
-    }
+    // SECURITY: identity now comes from the validated session (httpOnly
+    // cookie or Bearer) instead of requiring a raw Bearer token decode.
 
     // Get the request body for password verification
     const body: { password: string } = await request.json();
@@ -67,7 +40,7 @@ export async function POST(
 
     // Get the current user
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(decoded.id) },
+      where: { id: session.userId },
     });
 
     if (!user) {

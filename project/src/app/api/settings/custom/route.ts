@@ -1,19 +1,49 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import type { SessionPayload } from "@/lib/auth/session";
+import { withAuth } from "@/lib/api/withAuth";
+import { audit } from "@/lib/audit";
+
+/**
+ * SECURITY: AppSetting is a platform-global table. Previously ANY
+ * authenticated user (any role, any tenant) could overwrite any key —
+ * including `settings_role_permissions`, which governs permissions for
+ * EVERY tenant.
+ *
+ * Now:
+ *  - Writes are restricted to org OWNER/ADMIN (via withAuth).
+ *  - Every write goes to an org-scoped key: `org{organizationId}:{key}`.
+ *  - Reads resolve the org-scoped key first and fall back to the legacy
+ *    global row for backwards compatibility.
+ */
+
+function scopedKey(session: SessionPayload, key: string): string {
+  return `org${session.organizationId}:${key}`;
+}
+
+async function readSetting(session: SessionPayload, key: string) {
+  const scoped = await prisma.appSetting.findUnique({
+    where: { key: scopedKey(session, key) },
+  });
+  if (scoped) return scoped;
+
+  // Legacy fallback: pre-hardening global rows.
+  return prisma.appSetting.findUnique({ where: { key } });
+}
 
 export async function GET(req: NextRequest) {
   const auth = await requireApiSession(req);
   if (auth.error) return auth.error;
+  const session = auth.session;
 
   const key = req.nextUrl.searchParams.get("key");
   if (!key) {
     return NextResponse.json({ error: "Missing key parameter" }, { status: 400 });
   }
 
-  const setting = await prisma.appSetting.findUnique({
-    where: { key },
-  });
+  const setting = await readSetting(session, key);
 
   if (!setting) {
     // Provide default values if not configured yet
@@ -62,20 +92,31 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(setting);
 }
 
-export async function POST(req: NextRequest) {
-  const auth = await requireApiSession(req);
-  if (auth.error) return auth.error;
+const writeSettingSchema = z.object({
+  key: z.string().min(1).max(200),
+  value: z.string().max(100_000),
+});
 
-  const { key, value } = await req.json();
-  if (!key) {
-    return NextResponse.json({ error: "Missing key" }, { status: 400 });
+// Writes are OWNER/ADMIN-only and rate limited; the body is validated
+// server-side via withAuth + Zod.
+export const POST = withAuth(
+  {
+    roles: ["OWNER", "ADMIN"],
+    limit: { requests: 60, windowMs: 60 * 1000 },
+    bodySchema: writeSettingSchema,
+  },
+  async ({ req, session, body }) => {
+    const setting = await prisma.appSetting.upsert({
+      where: { key: scopedKey(session, body.key) },
+      update: { value: body.value },
+      create: { key: scopedKey(session, body.key), value: body.value },
+    });
+
+    // Role/permission changes are security-relevant — record them.
+    if (body.key === "settings_role_permissions") {
+      await audit(session, req, "permissions.updated", "AppSetting", body.key);
+    }
+
+    return NextResponse.json(setting);
   }
-
-  const setting = await prisma.appSetting.upsert({
-    where: { key },
-    update: { value },
-    create: { key, value },
-  });
-
-  return NextResponse.json(setting);
-}
+);

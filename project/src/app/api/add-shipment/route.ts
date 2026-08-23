@@ -326,8 +326,8 @@ export async function POST(req: NextRequest) {
     // ============================================================================
     // SECTION 6: SHIPMENT CREATION
     // ============================================================================
-    // Generate unique invoice number for this shipment
-    const invoiceNumber = await generateInvoiceNumber(prisma);
+    // Generate unique invoice number for this shipment (atomic, per-org)
+    const invoiceNumber = await generateInvoiceNumber(prisma, session.organizationId);
 
     // Create shipment record in database with all fields
     const shipment = await prisma.shipment.create({

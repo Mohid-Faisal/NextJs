@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { audit } from "@/lib/audit";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
 const ASSIGNABLE_ROLES = ["OWNER", "ADMIN", "STAFF", "ACCOUNTANT"];
@@ -45,6 +46,15 @@ export async function PATCH(
       );
     }
 
+    // SECURITY: only an OWNER may grant or revoke the OWNER role — otherwise
+    // an ADMIN could promote themselves (or anyone) to OWNER.
+    if (role === "OWNER" && session.orgRole !== "OWNER") {
+      return NextResponse.json(
+        { success: false, error: "Only owners can assign the OWNER role." },
+        { status: 403 }
+      );
+    }
+
     const member = await loadMember(memberId, session.organizationId);
     if (!member) {
       return NextResponse.json({ success: false, error: "Member not found" }, { status: 404 });
@@ -65,6 +75,11 @@ export async function PATCH(
       where: { id: memberId },
       data: { role },
       select: { id: true, role: true, userId: true },
+    });
+
+    await audit(session, req, "member.role_changed", "OrganizationMember", memberId, {
+      fromRole: member.role,
+      toRole: role,
     });
 
     return NextResponse.json({ success: true, member: updated });

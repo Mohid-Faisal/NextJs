@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Printer, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getCountryNameFromCode, getStateNameFromCode } from '@/lib/utils';
+import { readCachedBranding } from '@/lib/branding';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -99,9 +100,9 @@ export default function ReceiptPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const address = localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore";
-      const phone = localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333";
-      const email = localStorage.getItem("brand_support_email") || "info@psswwe.com";
+      const address = readCachedBranding().supportAddress;
+      const phone = readCachedBranding().supportPhone;
+      const email = readCachedBranding().supportEmail;
       setSupportAddress(address);
       setSupportPhone(phone);
       setSupportEmail(email);

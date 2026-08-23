@@ -25,25 +25,65 @@ const ResetPasswordPage = () => {
   const router = useRouter();
   const [form, setForm] = useState({
     email: "",
+    code: "",
     password: "",
     confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Step 1: request a reset code by email.
+  const handleSendCode = async () => {
+    if (!form.email) {
+      toast.error("Please enter your registered email.");
+      return;
+    }
+    setSendingCode(true);
+    try {
+      const response = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        toast.success(data.message || "Reset code sent. Check your inbox.");
+        setCodeSent(true);
+      } else {
+        toast.error(data.message || "Failed to send reset code.");
+      }
+    } catch (err) {
+      console.error("Reset code error:", err);
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  // Step 2: verify code and set the new password.
   const handleReset = async () => {
 
     try {
       const validated = ResetPasswordSchema.parse(form);
 
+      if (validated.password !== form.confirmPassword) {
+        toast.error("Passwords do not match.");
+        return;
+      }
+
+      setSubmitting(true);
       const response = await fetch("/api/reset-password", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: validated.email,
+          code: form.code,
           password: validated.password,
         }),
       });
@@ -63,6 +103,8 @@ const ResetPasswordPage = () => {
         console.error("Reset error:", err);
         toast.error("An unexpected error occurred.");
       }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -90,15 +132,40 @@ const ResetPasswordPage = () => {
           <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="Enter your registered email"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="Enter your registered email"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSendCode}
+                  disabled={sendingCode || !form.email}
+                >
+                  {sendingCode ? "Sending..." : codeSent ? "Resend Code" : "Send Code"}
+                </Button>
+              </div>
             </div>
+
+            {codeSent && (
+              <div className="space-y-2">
+                <Label htmlFor="code">Verification Code</Label>
+                <Input
+                  id="code"
+                  name="code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={form.code}
+                  onChange={handleChange}
+                  placeholder="6-digit code from your email"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
@@ -173,9 +240,9 @@ const ResetPasswordPage = () => {
             <Button
               onClick={handleReset}
               className="w-full mt-2 text-lg"
-              disabled={strength === "weak"}
+              disabled={strength === "weak" || !codeSent || submitting}
             >
-              Reset Password
+              {submitting ? "Resetting..." : "Reset Password"}
             </Button>
 
             <div className="text-sm text-center mt-4">

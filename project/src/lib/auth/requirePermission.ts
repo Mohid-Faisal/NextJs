@@ -102,11 +102,21 @@ export async function requirePermission(
   }
 
   try {
-    const setting = await prisma.appSetting.findUnique({
-      where: { key: "settings_role_permissions" }
-    });
+    // SECURITY: permissions are stored per-organization
+    // (`org{organizationId}:settings_role_permissions`) so one tenant's admin
+    // can never redefine another tenant's role capabilities. Falls back to
+    // the legacy global row for pre-hardening data.
+    const [orgSetting, globalSetting] = await Promise.all([
+      prisma.appSetting.findUnique({
+        where: { key: `org${session.organizationId}:settings_role_permissions` }
+      }),
+      prisma.appSetting.findUnique({
+        where: { key: "settings_role_permissions" }
+      }),
+    ]);
 
     let permissionsMapping = defaultPermissions;
+    const setting = orgSetting ?? globalSetting;
     if (setting) {
       try {
         permissionsMapping = JSON.parse(setting.value);

@@ -1,5 +1,6 @@
 "use client";
 
+import { getClientSession } from "@/lib/clientSession";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
@@ -14,12 +15,6 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
-
-interface DecodedToken {
-  platformRole?: string | null;
-}
 
 export default function CreatePlanPage() {
   const router = useRouter();
@@ -66,15 +61,9 @@ export default function CreatePlanPage() {
 
   useEffect(() => {
     setMounted(true);
-    const token = Cookies.get("token");
-    if (token) {
-      try {
-        const decoded = jwtDecode<DecodedToken>(token);
-        setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
-      } catch (err) {
-        console.error("Token decoding failed:", err);
-      }
-    }
+    getClientSession().then((user) => {
+      setIsSuperAdmin(!!user && user.platformRole === "SUPER_ADMIN");
+    });
   }, []);
 
   // Sync Slug with Name

@@ -1,31 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import jwt from "jsonwebtoken";
 import { sendEmail } from "@/lib/email";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * SECURITY hardening vs. previous version:
+ *  - Full session validation (user status/approval/org checks) instead of a
+ *    raw jwt.verify that accepted tokens of deleted/suspended users.
+ *  - Recipients are restricted to members of the caller's organization
+ *    (previously ANY platform user could be targeted — cross-tenant spam).
+ *  - Only OWNER/ADMIN roles may send bulk email; per-IP rate limiting.
+ */
 export async function POST(req: NextRequest) {
   try {
-    // Verify JWT token
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
+    const privileged =
+      session.platformRole === "SUPER_ADMIN" ||
+      session.orgRole === "OWNER" ||
+      session.orgRole === "ADMIN";
+
+    if (!privileged) {
+      return NextResponse.json(
+        { error: "Forbidden: only organization admins can send emails." },
+        { status: 403 }
+      );
     }
 
-    const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    
-    let decoded;
-    try {
-      decoded = jwt.verify(token, secret) as { id: string; [key: string]: unknown };
-    } catch (error) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
+    const ip = getClientIp(req);
+    const limit = rateLimit(`email-send:${ip}:${session.organizationId}`, 30, 60 * 60 * 1000);
+    if (!limit.allowed) return rateLimitResponse(limit);
 
-    const { recipients, subject, body, emailType } = await req.json();
+    const { recipients, subject, body } = await req.json();
 
     // Validate required fields
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       return NextResponse.json({ error: "Recipients are required" }, { status: 400 });
+    }
+
+    if (recipients.length > 200) {
+      return NextResponse.json({ error: "Too many recipients (max 200)" }, { status: 400 });
     }
 
     if (!subject || !subject.trim()) {
@@ -36,12 +62,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email body is required" }, { status: 400 });
     }
 
-    // Get user details for recipients
+    // Get user details for recipients — ONLY users who belong to the
+    // caller's organization.
+    const recipientIds = recipients
+      .map((r: any) => parseInt(r.id))
+      .filter((n: number) => !isNaN(n));
+
     const recipientUsers = await prisma.user.findMany({
       where: {
-        id: {
-          in: recipients.map((r: any) => parseInt(r.id))
-        }
+        id: { in: recipientIds },
+        memberships: {
+          some: { organizationId: session.organizationId },
+        },
       },
       select: {
         id: true,
@@ -59,19 +91,19 @@ export async function POST(req: NextRequest) {
     // Send emails to each recipient
     const emailPromises = recipientUsers.map(async (user) => {
       try {
-        // Replace placeholders in email body
-        let personalizedBody = body
-          .replace(/\{\{name\}\}/g, user.name || "User")
-          .replace(/\{\{email\}\}/g, user.email)
-          .replace(/\{\{role\}\}/g, user.role || "User")
-          .replace(/\{\{status\}\}/g, user.status || "Unknown");
+        // Replace placeholders — escaped so user content cannot inject HTML
+        // through placeholder values.
+        let personalizedBody = escapeHtml(String(body))
+          .replace(/\{\{name\}\}/g, escapeHtml(user.name || "User"))
+          .replace(/\{\{email\}\}/g, escapeHtml(user.email))
+          .replace(/\{\{role\}\}/g, escapeHtml(user.role || "User"))
+          .replace(/\{\{status\}\}/g, escapeHtml(user.status || "Unknown"));
 
-        // Send email using the email service
         await sendEmail({
           to: user.email,
-          subject: subject,
+          subject: subject.trim(),
           html: personalizedBody.replace(/\n/g, '<br>'),
-          text: personalizedBody
+          text: personalizedBody.replace(/<[^>]*>/g, "")
         });
 
         return { success: true, email: user.email };

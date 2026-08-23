@@ -1,22 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import jwt from "jsonwebtoken";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
 
+/**
+ * SECURITY hardening vs. previous version:
+ *  - Full session validation instead of raw jwt.verify (which accepted
+ *    tokens of deleted/suspended users).
+ *  - Only returns users who are members of the CALLER'S organization —
+ *    previously enumerated every user on the platform (cross-tenant PII).
+ *  - Restricted to OWNER/ADMIN roles.
+ */
 export async function GET(req: NextRequest) {
   try {
-    // Verify JWT token
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
 
-    const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    
-    try {
-      jwt.verify(token, secret);
-    } catch (error) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    const privileged =
+      session.platformRole === "SUPER_ADMIN" ||
+      session.orgRole === "OWNER" ||
+      session.orgRole === "ADMIN";
+
+    if (!privileged) {
+      return NextResponse.json(
+        { error: "Forbidden: only organization admins can list members." },
+        { status: 403 }
+      );
     }
 
     // Get query parameters
@@ -24,23 +33,27 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const role = searchParams.get("role") || "";
     const status = searchParams.get("status") || "";
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")));
 
-    // Build where clause
-    const where: any = {};
-    
+    // Tenant scope: only users with a membership in the caller's org.
+    const where: any = {
+      memberships: {
+        some: { organizationId: session.organizationId },
+      },
+    };
+
     if (search) {
       where.OR = [
         { name: { contains: search} },
         { email: { contains: search} }
       ];
     }
-    
+
     if (role) {
       where.role = role;
     }
-    
+
     if (status) {
       where.status = status;
     }
@@ -64,14 +77,22 @@ export async function GET(req: NextRequest) {
       prisma.user.count({ where })
     ]);
 
-    // Get unique roles and statuses for filters
+    // Get unique roles and statuses for filters (within this org)
+    const orgUserIds = await prisma.organizationMember.findMany({
+      where: { organizationId: session.organizationId },
+      select: { userId: true },
+    });
+    const memberWhere = { id: { in: orgUserIds.map(m => m.userId) } };
+
     const [roles, statuses] = await Promise.all([
       prisma.user.findMany({
+        where: memberWhere,
         select: { role: true },
         distinct: ['role'],
         orderBy: { role: 'asc' }
       }),
       prisma.user.findMany({
+        where: memberWhere,
         select: { status: true },
         distinct: ['status'],
         orderBy: { status: 'asc' }

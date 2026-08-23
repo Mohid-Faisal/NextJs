@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { validateLogoUrl } from "@/lib/logoUrl";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
 
@@ -81,6 +82,17 @@ export async function PATCH(req: NextRequest) {
     }
     if (body.logoUrl === null || typeof body.logoUrl === "string") {
       const logo = typeof body.logoUrl === "string" ? body.logoUrl.trim() : null;
+      if (logo) {
+        // SECURITY: logoUrl is consumed by server-side fetch/path-join sinks;
+        // reject values that could be used for SSRF or path traversal.
+        const check = validateLogoUrl(logo);
+        if (!check.ok) {
+          return NextResponse.json(
+            { success: false, error: check.reason },
+            { status: 400 }
+          );
+        }
+      }
       data.logoUrl = logo || null;
     }
     if (body.website === null || typeof body.website === "string") {

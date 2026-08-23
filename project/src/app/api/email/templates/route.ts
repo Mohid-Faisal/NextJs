@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { requireApiSession } from "@/lib/auth/requireApiSession";
+import type { SessionPayload } from "@/lib/auth/session";
+
+/**
+ * SECURITY hardening vs. previous version:
+ *  - Full session validation (user status/approval) instead of raw jwt.verify.
+ *  - Templates are namespaced per organization — previously ANY authenticated
+ *    user could read/mutate/delete templates belonging to other tenants, and
+ *    unbounded growth allowed memory exhaustion.
+ */
 
 // In-memory storage for templates (replace with database when models are available)
-let templates: any[] = [
+const defaultTemplates: any[] = [
   {
     id: 1,
     name: "Welcome Email",
@@ -29,24 +38,49 @@ let templates: any[] = [
   }
 ];
 
-let nextId = 4;
+type OrgTemplates = { templates: any[]; nextId: number };
+const orgTemplateStore = new Map<number, OrgTemplates>();
+const MAX_TEMPLATES_PER_ORG = 100;
+
+function getOrgTemplates(organizationId: number): OrgTemplates {
+  let entry = orgTemplateStore.get(organizationId);
+  if (!entry) {
+    // Seed with shared defaults; defaults are copied so mutations by one
+    // org never affect another.
+    entry = {
+      templates: defaultTemplates.map((t, i) => ({ ...t, id: i + 1 })),
+      nextId: defaultTemplates.length + 1,
+    };
+    orgTemplateStore.set(organizationId, entry);
+  }
+  return entry;
+}
+
+function requireAdminRole(session: SessionPayload): NextResponse | null {
+  const privileged =
+    session.platformRole === "SUPER_ADMIN" ||
+    session.orgRole === "OWNER" ||
+    session.orgRole === "ADMIN";
+
+  if (!privileged) {
+    return NextResponse.json(
+      { error: "Forbidden: only organization admins can manage templates." },
+      { status: 403 }
+    );
+  }
+  return null;
+}
 
 export async function GET(req: NextRequest) {
   try {
-    // Verify JWT token
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
 
-    const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    
-    try {
-      jwt.verify(token, secret);
-    } catch (error) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
+    const denied = requireAdminRole(session);
+    if (denied) return denied;
+
+    const store = getOrgTemplates(session.organizationId);
 
     // Get query parameters
     const { searchParams } = new URL(req.url);
@@ -54,14 +88,14 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
 
     // Build where clause
-    let filteredTemplates = templates;
-    
+    let filteredTemplates = store.templates;
+
     if (category) {
       filteredTemplates = filteredTemplates.filter(t => t.category === category);
     }
-    
+
     if (search) {
-      filteredTemplates = filteredTemplates.filter(t => 
+      filteredTemplates = filteredTemplates.filter(t =>
         t.name.toLowerCase().includes(search.toLowerCase()) ||
         t.subject.toLowerCase().includes(search.toLowerCase()) ||
         t.body.toLowerCase().includes(search.toLowerCase())
@@ -84,19 +118,20 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify JWT token
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
 
-    const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    
-    try {
-      jwt.verify(token, secret);
-    } catch (error) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    const denied = requireAdminRole(session);
+    if (denied) return denied;
+
+    const store = getOrgTemplates(session.organizationId);
+
+    if (store.templates.length >= MAX_TEMPLATES_PER_ORG) {
+      return NextResponse.json(
+        { error: `Template limit reached (${MAX_TEMPLATES_PER_ORG})` },
+        { status: 400 }
+      );
     }
 
     const { name, subject, body, category } = await req.json();
@@ -120,15 +155,15 @@ export async function POST(req: NextRequest) {
 
     // Create template
     const template = {
-      id: nextId++,
-      name: name.trim(),
-      subject: subject.trim(),
-      body: body.trim(),
-      category: category.trim(),
+      id: store.nextId++,
+      name: String(name).trim().slice(0, 200),
+      subject: String(subject).trim().slice(0, 300),
+      body: String(body).trim().slice(0, 20000),
+      category: String(category).trim().slice(0, 100),
       createdAt: new Date().toISOString()
     };
 
-    templates.push(template);
+    store.templates.push(template);
 
     return NextResponse.json({
       success: true,
@@ -147,20 +182,14 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    // Verify JWT token
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
 
-    const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    
-    try {
-      jwt.verify(token, secret);
-    } catch (error) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
+    const denied = requireAdminRole(session);
+    if (denied) return denied;
+
+    const store = getOrgTemplates(session.organizationId);
 
     const { id, name, subject, body, category } = await req.json();
 
@@ -185,21 +214,21 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Category is required" }, { status: 400 });
     }
 
-    // Find and update template
-    const templateIndex = templates.findIndex(t => t.id === parseInt(id));
+    // Find and update template (org-scoped)
+    const templateIndex = store.templates.findIndex(t => t.id === parseInt(id));
     if (templateIndex === -1) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
     const updatedTemplate = {
-      ...templates[templateIndex],
-      name: name.trim(),
-      subject: subject.trim(),
-      body: body.trim(),
-      category: category.trim()
+      ...store.templates[templateIndex],
+      name: String(name).trim().slice(0, 200),
+      subject: String(subject).trim().slice(0, 300),
+      body: String(body).trim().slice(0, 20000),
+      category: String(category).trim().slice(0, 100)
     };
 
-    templates[templateIndex] = updatedTemplate;
+    store.templates[templateIndex] = updatedTemplate;
 
     return NextResponse.json({
       success: true,
@@ -218,20 +247,14 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    // Verify JWT token
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireApiSession(req);
+    if (auth.error) return auth.error;
+    const session = auth.session;
 
-    const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    
-    try {
-      jwt.verify(token, secret);
-    } catch (error) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
+    const denied = requireAdminRole(session);
+    if (denied) return denied;
+
+    const store = getOrgTemplates(session.organizationId);
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
@@ -240,13 +263,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Template ID is required" }, { status: 400 });
     }
 
-    // Find and delete template
-    const templateIndex = templates.findIndex(t => t.id === parseInt(id));
+    // Find and delete template (org-scoped)
+    const templateIndex = store.templates.findIndex(t => t.id === parseInt(id));
     if (templateIndex === -1) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    const deletedTemplate = templates.splice(templateIndex, 1)[0];
+    const deletedTemplate = store.templates.splice(templateIndex, 1)[0];
 
     return NextResponse.json({
       success: true,

@@ -288,7 +288,15 @@ export async function runVendorBulkAutoPay(
             });
 
             await tx.invoice.update({
-              where: { invoiceNumber: inv.invoiceNumber },
+              where:
+                organizationId != null
+                  ? {
+                      organizationId_invoiceNumber: {
+                        organizationId,
+                        invoiceNumber: inv.invoiceNumber,
+                      },
+                    }
+                  : { id: inv.id },
               data: { status: "Paid" },
             });
 
@@ -337,8 +345,14 @@ export async function runVendorBulkAutoPay(
         // Non-unique error: maybe Prisma reported failure but Postgres actually committed
         // (interactive-style timeouts can do that). Re-check the invoice status to recover.
         try {
-          const check = await prisma.invoice.findUnique({
-            where: { invoiceNumber: inv.invoiceNumber },
+          const check = await prisma.invoice.findFirst({
+            where:
+              organizationId != null
+                ? {
+                    organizationId,
+                    invoiceNumber: inv.invoiceNumber,
+                  }
+                : { invoiceNumber: inv.invoiceNumber },
             select: { status: true },
           });
           if (check?.status === "Paid") {

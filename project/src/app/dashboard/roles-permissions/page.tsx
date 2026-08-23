@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
+import { getClientSession } from "@/lib/clientSession";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,25 +156,25 @@ export default function RolesAndPermissionsPage() {
   };
 
   useEffect(() => {
-    const token = Cookies.get("token");
-    if (token) {
-      try {
-        const decoded = jwtDecode<any>(token);
-        const isSuper = decoded.platformRole === "SUPER_ADMIN";
-        const isOwner = decoded.orgRole === "OWNER";
-        if (isSuper || isOwner) {
-          setIsAuthorized(true);
-          fetchPermissionsAndPlan();
-        } else {
-          setIsAuthorized(false);
-        }
-      } catch (err) {
-        console.error("Token decoding error", err);
+    let cancelled = false;
+    getClientSession().then((user) => {
+      if (cancelled) return;
+      if (!user) {
+        setIsAuthorized(false);
+        return;
+      }
+      const isSuper = user.platformRole === "SUPER_ADMIN";
+      const isOwner = user.orgRole === "OWNER";
+      if (isSuper || isOwner) {
+        setIsAuthorized(true);
+        fetchPermissionsAndPlan();
+      } else {
         setIsAuthorized(false);
       }
-    } else {
-      setIsAuthorized(false);
-    }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleTogglePermission = async (role: RoleName, code: string, checked: boolean) => {

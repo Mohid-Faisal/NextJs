@@ -3,11 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
-import { 
-  Menu, Bell, Maximize2, Minimize2, Search, Upload, Package, 
-  User, Settings, LogOut 
+import {
+  Menu, Bell, Maximize2, Minimize2, Search, Upload, Package,
+  User, Settings, LogOut
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import BulkUploadModal from "./BulkUploadModal";
@@ -19,15 +17,9 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { usePermissions } from "@/components/PermissionContext";
+import { getClientSession, clearClientSessionCache } from "@/lib/clientSession";
 
 const PUBLIC_TOOLS_ADMIN_EMAIL = "mohidfaisal321@gmail.com";
-
-interface DecodedToken {
-  name?: string;
-  email?: string;
-  platformRole?: string | null;
-  orgRole?: string | null;
-}
 
 const Navbar = ({
   onToggleSidebar,
@@ -113,21 +105,22 @@ const Navbar = ({
     };
   }, []);
 
-  // Who may change the global flag (UI only; protect POST in production via API auth if needed)
+  // Who may change the global flag (UI only; the POST endpoint enforces auth)
   useEffect(() => {
-    const token = Cookies.get("token");
-    if (!token) return;
-    try {
-      const decoded = jwtDecode<DecodedToken>(token);
-      const email = (decoded.email || "").trim().toLowerCase();
-      setUserName(decoded.name || "User");
+    let cancelled = false;
+    getClientSession().then((user) => {
+      if (cancelled) return;
+      if (!user) return;
+      const email = (user.email || "").trim().toLowerCase();
+      setUserName(user.name || "User");
       setUserEmail(email);
-      setOrgRole(decoded.orgRole || "");
-      setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
+      setOrgRole(user.orgRole || "");
+      setIsSuperAdmin(user.platformRole === "SUPER_ADMIN");
       setShowPublicToolsToggle(email === PUBLIC_TOOLS_ADMIN_EMAIL.toLowerCase());
-    } catch {
-      setShowPublicToolsToggle(false);
-    }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loadOrg = useCallback(async () => {
@@ -155,8 +148,14 @@ const Navbar = ({
     };
   }, [loadOrg]);
 
-  const handleLogout = () => {
-    Cookies.remove("token");
+  const handleLogout = async () => {
+    // Session cookie is httpOnly — clear it server-side.
+    clearClientSessionCache();
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } catch {
+      // ignore network errors; redirect anyway
+    }
     router.push("/auth/login");
   };
 

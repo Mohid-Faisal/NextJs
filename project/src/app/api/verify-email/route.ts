@@ -1,16 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendUserApprovalEmail } from "@/lib/email";
+import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
 
+/**
+ * SECURITY: 6-digit codes were previously verifiable with unlimited
+ * attempts — brute-forceable within the expiry window. Now rate limited
+ * per account and per IP.
+ */
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const ipLimit = rateLimit(`verify-email:ip:${ip}`, 20, 10 * 60 * 1000);
+    if (!ipLimit.allowed) return rateLimitResponse(ipLimit);
+
     const body = await request.json();
     const { userId, verificationCode } = body;
+
+    const parsedUserId = parseInt(userId, 10);
+    if (!parsedUserId || isNaN(parsedUserId)) {
+      return NextResponse.json(
+        { success: false, message: "User not found or already verified" },
+        { status: 400 }
+      );
+    }
+
+    // Brute-force guard per account: 8 attempts per verification window.
+    const attemptLimit = rateLimit(`verify-email:user:${parsedUserId}`, 8, 10 * 60 * 1000);
+    if (!attemptLimit.allowed) return rateLimitResponse(attemptLimit);
 
     // Find user with pending verification
     const user = await prisma.user.findFirst({
       where: {
-        id: userId,
+        id: parsedUserId,
         status: {
           startsWith: "PENDING_VERIFICATION_"
         }
@@ -38,7 +60,7 @@ export async function POST(request: NextRequest) {
     const expiryTimestamp = parseInt(statusParts[3]);
 
     // Check if code matches and hasn't expired
-    if (storedCode !== verificationCode) {
+    if (storedCode !== String(verificationCode)) {
       return NextResponse.json(
         { success: false, message: "Invalid verification code" },
         { status: 400 }

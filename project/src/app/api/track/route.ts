@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
+import { verifyTrackingToken } from "@/lib/trackingToken";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +25,30 @@ function parseHistory(raw: unknown): TrackingHistoryEntry[] {
   );
 }
 
+/**
+ * PUBLIC tracking endpoint.
+ *
+ * SECURITY: previously returned the ENTIRE shipment row (internal costs,
+ * vendor cost, profit margin, full addresses) plus the full recipient record,
+ * with no rate limiting, and performed unauthenticated database writes.
+ *
+ * Now returns an explicit allow-list of public fields only, never writes,
+ * and is rate limited against tracking-ID enumeration.
+ */
 export async function GET(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const limit = rateLimit(`track:${ip}`, 30, 60 * 1000);
+    if (!limit.allowed) return rateLimitResponse(limit);
+
     const { searchParams } = new URL(request.url);
-    const bookingId = searchParams.get("bookingId")?.trim();
+
+    // Two lookup paths:
+    //  ?t=<signed-token>  — unguessable, expiring link (QR codes, emails)
+    //  ?bookingId=<id>    — direct lookup (rate limited against enumeration)
+    const signedToken = searchParams.get("t")?.trim() ?? "";
+    const signedId = signedToken ? verifyTrackingToken(signedToken) : null;
+    const bookingId = signedId ?? searchParams.get("bookingId")?.trim();
 
     if (!bookingId) {
       return NextResponse.json(
@@ -42,6 +64,27 @@ export async function GET(request: NextRequest) {
           { invoiceNumber: { equals: bookingId } },
           { trackingId: { equals: bookingId } }
         ]
+      },
+      select: {
+        id: true,
+        organizationId: true,
+        trackingId: true,
+        invoiceNumber: true,
+        destination: true,
+        deliveryStatus: true,
+        trackingStatus: true,
+        trackingStatusHistory: true,
+        shippingMode: true,
+        serviceMode: true,
+        packaging: true,
+        shipmentDate: true,
+        deliveryTime: true,
+        weight: true,
+        totalWeight: true,
+        totalPackages: true,
+        amount: true,
+        packageDescription: true,
+        recipientName: true,
       }
     });
 
@@ -70,62 +113,54 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Auto-populate initial tracking history if empty (e.g. legacy shipments)
-    const existingHistory = parseHistory(shipment.trackingStatusHistory ?? []);
-    let finalShipment = shipment;
-    if (existingHistory.length === 0) {
-      try {
-        const shipmentDateTime = shipment.shipmentDate
-          ? new Date(shipment.shipmentDate)
-          : new Date(shipment.createdAt);
-        const bookingDateTime = new Date(shipmentDateTime.getTime() - 2.5 * 60 * 60 * 1000);
-
-        const initialTrackingHistory = [
-          { status: "Booked", timestamp: bookingDateTime.toISOString(), location: "Lahore, Pakistan" },
-          { status: "Picked Up", timestamp: shipmentDateTime.toISOString(), location: "Lahore, Pakistan" },
-        ];
-
-        finalShipment = await prisma.shipment.update({
-          where: { id: shipment.id },
-          data: {
-            trackingStatusHistory: initialTrackingHistory as unknown as object,
-            trackingStatus: "Picked Up",
-          }
-        });
-      } catch (dbErr) {
-        console.error("Failed to auto-populate initial tracking history:", dbErr);
-      }
-    }
-
-    // Look up recipient details
-    let recipient = null;
-    if (finalShipment.recipientName) {
-      const name = String(finalShipment.recipientName).trim();
+    // Look up recipient — only minimal public contact fields are exposed.
+    let recipient: { CompanyName: string; PersonName: string; City?: string; Country?: string } | null = null;
+    if (shipment.recipientName) {
+      const name = String(shipment.recipientName).trim();
       if (name) {
-        recipient =
+        const match =
           (await prisma.recipients.findFirst({
-            where: { organizationId: finalShipment.organizationId, CompanyName: { equals: name } },
+            where: { organizationId: shipment.organizationId, CompanyName: { equals: name } },
+            select: { CompanyName: true, PersonName: true, City: true, Country: true },
           })) ||
           (await prisma.recipients.findFirst({
-            where: { organizationId: finalShipment.organizationId, PersonName: { equals: name } },
+            where: { organizationId: shipment.organizationId, PersonName: { equals: name } },
+            select: { CompanyName: true, PersonName: true, City: true, Country: true },
           })) ||
           (await prisma.recipients.findFirst({
             where: {
-              organizationId: finalShipment.organizationId,
+              organizationId: shipment.organizationId,
               OR: [
                 { CompanyName: { contains: name } },
                 { PersonName: { contains: name } },
               ],
             },
+            select: { CompanyName: true, PersonName: true, City: true, Country: true },
           }));
+        recipient = match;
       }
     }
 
     return NextResponse.json({
       success: true,
-      shipment: finalShipment,
+      shipment: {
+        trackingId: shipment.trackingId,
+        invoiceNumber: shipment.invoiceNumber,
+        destination: shipment.destination,
+        deliveryStatus: shipment.deliveryStatus,
+        trackingStatus: shipment.trackingStatus,
+        trackingStatusHistory: parseHistory(shipment.trackingStatusHistory ?? []),
+        shippingMode: shipment.shippingMode,
+        serviceMode: shipment.serviceMode,
+        packaging: shipment.packaging,
+        shipmentDate: shipment.shipmentDate,
+        deliveryTime: shipment.deliveryTime,
+        totalWeight: shipment.totalWeight ?? shipment.weight,
+        amount: shipment.amount,
+        packageDescription: shipment.packageDescription,
+      },
       recipient,
-      organization: org ? { id: shipment.organizationId, name: org.name, logoUrl: org.logoUrl } : null
+      organization: org ? { name: org.name, logoUrl: org.logoUrl } : null
     });
   } catch (error) {
     console.error("Public track API error:", error);

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import Cookies from "js-cookie";
 import Link from "next/link";
 
 import { Input } from "@/components/ui/input";
@@ -81,10 +80,19 @@ const LoginPage = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    const token = Cookies.get("token");
-    if (token) {
-      router.push("/dashboard");
-    }
+    // Session cookie is httpOnly now — ask the server instead of reading it.
+    let cancelled = false;
+    fetch("/api/auth/session")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.authenticated) {
+          router.push("/dashboard");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,7 +118,7 @@ const LoginPage = () => {
 
       if (response.ok) {
         toast.success("Login successful!");
-        Cookies.set("token", data.token, { expires: 1 });
+        // Session is set server-side as an httpOnly cookie.
         router.push("/dashboard");
       } else {
         toast.error(data.message || "Login failed.");
@@ -136,7 +144,7 @@ const LoginPage = () => {
       const data = await response.json();
       if (response.ok) {
         toast.success("Welcome to Unified Demo Workspace!");
-        Cookies.set("token", data.token, { expires: 1 });
+        // Session is set server-side as an httpOnly cookie.
         router.push("/dashboard");
       } else {
         toast.error(data.message || "Demo login failed.");

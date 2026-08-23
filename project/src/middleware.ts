@@ -4,9 +4,22 @@ import { jwtVerify } from "jose";
 
 type TokenPayload = {
   organizationId?: number;
-  orgRole?: string;
   orgStatus?: string;
 };
+
+/**
+ * SECURITY: fail closed when JWT_SECRET is missing — never fall back to a
+ * known constant (token forgery risk).
+ */
+function getJwtSecretKey(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret === "your-secret-key") {
+    throw new Error(
+      "JWT_SECRET is not configured. Set a strong random JWT_SECRET environment variable."
+    );
+  }
+  return new TextEncoder().encode(secret);
+}
 
 export async function middleware(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
@@ -32,12 +45,11 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    const secret = new TextEncoder().encode(
-      process.env.JWT_SECRET || "your-secret-key"
-    );
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getJwtSecretKey());
     const claims = payload as TokenPayload;
 
+    // Best-effort UX check only. Authoritative suspension enforcement lives
+    // server-side in getSession() (lib/auth/session.ts).
     if (claims.orgStatus === "suspended") {
       const loginUrl = new URL("/auth/login", req.url);
       loginUrl.searchParams.set("error", "org-suspended");
@@ -58,14 +70,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
-    const res = NextResponse.next();
-    if (claims.organizationId != null) {
-      res.headers.set("x-organization-id", String(claims.organizationId));
-    }
-    if (claims.orgRole) {
-      res.headers.set("x-org-role", claims.orgRole);
-    }
-    return res;
+    return NextResponse.next();
   } catch {
     if (isPublicPage) {
       const res = NextResponse.next();

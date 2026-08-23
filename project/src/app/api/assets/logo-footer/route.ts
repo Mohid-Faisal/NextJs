@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { resolvePublicLogoPath, safeRemoteLogoUrl } from "@/lib/logoUrl";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
     // Get logo as base64
     let logoBase64 = '';
     let logoPath = path.join(process.cwd(), 'public', 'logo_final.png');
-    
+
     const auth = await requireApiSession(req);
     if (auth.session) {
       const org = await prisma.organization.findUnique({
@@ -19,22 +20,28 @@ export async function GET(req: NextRequest) {
       });
 
       if (org && org.logoUrl) {
-        if (org.logoUrl.startsWith('http://') || org.logoUrl.startsWith('https://')) {
+        // SECURITY: SSRF/arbitrary-file-read protection. Only safe https(s)
+        // remote URLs are fetched, and local paths are resolved with a
+        // containment check inside the public directory.
+        const remoteUrl = safeRemoteLogoUrl(org.logoUrl);
+        if (remoteUrl) {
           try {
-            const res = await fetch(org.logoUrl);
+            const res = await fetch(remoteUrl, { redirect: "error" });
             if (res.ok) {
-              const buffer = await res.arrayBuffer();
-              const base64 = Buffer.from(buffer).toString('base64');
-              const contentType = res.headers.get('content-type') || 'image/png';
-              logoBase64 = `data:${contentType};base64,${base64}`;
+              const contentType = res.headers.get('content-type') || '';
+              if (contentType.startsWith('image/')) {
+                const buffer = await res.arrayBuffer();
+                const base64 = Buffer.from(buffer).toString('base64');
+                logoBase64 = `data:${contentType};base64,${base64}`;
+              }
             }
           } catch (err) {
             console.error('Error fetching remote logo:', err);
           }
-        } else if (org.logoUrl.startsWith('/')) {
-          const customPath = path.join(process.cwd(), 'public', org.logoUrl);
-          if (fs.existsSync(customPath)) {
-            logoPath = customPath;
+        } else {
+          const containedPath = resolvePublicLogoPath(org.logoUrl);
+          if (containedPath && fs.existsSync(containedPath)) {
+            logoPath = containedPath;
           }
         }
       }

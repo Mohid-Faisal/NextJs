@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 
 const modelMap: Record<string, any> = {
@@ -10,6 +11,17 @@ const modelMap: Record<string, any> = {
   packagingType: prisma.packagingType,
   serviceMode: prisma.serviceMode,
   hscodes: prisma.hsCode,
+};
+
+// SECURITY: mutating operational config requires the matching permission —
+// previously any authenticated role (incl. Customer/Vendor) could write.
+const writePermissionMap: Record<string, string> = {
+  deliveryTime: "manage_statuses",
+  deliveryStatus: "manage_statuses",
+  shippingMode: "manage_statuses",
+  packagingType: "manage_statuses",
+  serviceMode: "manage_services",
+  hscodes: "manage_hscodes",
 };
 
 const orderByMap: Record<string, any> = {
@@ -34,11 +46,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
-  const auth = await requireApiSession(req);
+  const { type } = await params;
+  const auth = await requirePermission(req, writePermissionMap[type] ?? "manage_statuses");
   if (auth.error) return auth.error;
   const session = auth.session;
 
-  const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
@@ -57,11 +69,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ typ
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
-  const auth = await requireApiSession(req);
+  const { type } = await params;
+  const auth = await requirePermission(req, writePermissionMap[type] ?? "manage_statuses");
   if (auth.error) return auth.error;
   const session = auth.session;
 
-  const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 
@@ -96,11 +108,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ type
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
-  const auth = await requireApiSession(req);
+  const { type } = await params;
+  const auth = await requirePermission(req, writePermissionMap[type] ?? "manage_statuses");
   if (auth.error) return auth.error;
   const session = auth.session;
 
-  const {type} = await params
   const model = modelMap[type];
   if (!model) return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 

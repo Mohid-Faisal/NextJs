@@ -177,6 +177,7 @@ export async function POST(req: NextRequest) {
         lines.map((line: any) =>
           tx.journalEntryLine.create({
             data: {
+              organizationId: session.organizationId,
               journalEntryId: entry.id,
               accountId: line.accountId,
               debitAmount: line.debitAmount || 0,

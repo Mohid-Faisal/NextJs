@@ -10,6 +10,7 @@ import { createJournalEntryForPaymentProcess } from "@/lib/accounts/createJourna
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
+import { audit } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +42,36 @@ export async function POST(req: NextRequest) {
     if (!debitAccountId || !creditAccountId) {
       return NextResponse.json(
         { error: "Both debit and credit accounts are required" },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: reject non-positive amounts (negative values would reverse
+    // transactions and corrupt balances).
+    const paymentAmountNum = parseFloat(paymentAmount);
+    if (!isFinite(paymentAmountNum) || paymentAmountNum <= 0) {
+      return NextResponse.json(
+        { error: "Payment amount must be a positive number" },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: journal lines must only reference GL accounts that belong to
+    // the caller's organization. Previously any account ID was accepted,
+    // allowing cross-tenant postings.
+    const [debitAccount, creditAccount] = await Promise.all([
+      prisma.chartOfAccount.findFirst({
+        where: orgWhere(session, { id: parseInt(debitAccountId, 10) }),
+        select: { id: true },
+      }),
+      prisma.chartOfAccount.findFirst({
+        where: orgWhere(session, { id: parseInt(creditAccountId, 10) }),
+        select: { id: true },
+      }),
+    ]);
+    if (!debitAccount || !creditAccount) {
+      return NextResponse.json(
+        { error: "Debit or credit account not found in your organization" },
         { status: 400 }
       );
     }
@@ -115,7 +146,6 @@ export async function POST(req: NextRequest) {
     }
 
     const invoice = invoiceCheck;
-    const paymentAmountNum = parseFloat(paymentAmount);
 
     if (paymentType === "CUSTOMER_PAYMENT") {
       if (!invoice.customerId) {
@@ -213,8 +243,20 @@ export async function POST(req: NextRequest) {
     );
 
     await prisma.invoice.update({
-      where: { invoiceNumber },
+      where: {
+        organizationId_invoiceNumber: {
+          organizationId: session.organizationId,
+          invoiceNumber,
+        },
+      },
       data: { status: paymentStatus.status },
+    });
+
+    await audit(session, req, "payment.processed", "Payment", payment.id, {
+      invoiceNumber,
+      amount: paymentAmountNum,
+      paymentType,
+      reference,
     });
 
     return NextResponse.json({

@@ -22,16 +22,8 @@ import {
   Lock,
   KeyRound
 } from "lucide-react";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
 import { toast } from "sonner";
-
-interface DecodedToken {
-  name: string;
-  email?: string;
-  platformRole?: string | null;
-  orgRole?: string | null;
-}
+import { getClientSession } from "@/lib/clientSession";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -68,15 +60,12 @@ export default function ProfilePage() {
     const fetchProfileAndOrg = async () => {
       setLoading(true);
       try {
-        // 1. Decode token
-        const token = Cookies.get("token");
-        let email = "";
-        if (token) {
-          const decoded = jwtDecode<DecodedToken>(token);
-          setUserName(decoded.name || "User");
-          email = (decoded.email || "").trim().toLowerCase();
-          setUserEmail(email);
-          setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
+        // 1. Resolve identity from the server session (JWT is httpOnly now)
+        const user = await getClientSession();
+        if (user) {
+          setUserName(user.name || "User");
+          setUserEmail((user.email || "").trim().toLowerCase());
+          setIsSuperAdmin(user.platformRole === "SUPER_ADMIN");
         }
 
         // 2. Fetch User Profile
@@ -182,12 +171,11 @@ export default function ProfilePage() {
 
     setIsSendingCode(true);
     try {
-      const token = Cookies.get("token");
+      // Session cookie is httpOnly — sent automatically with same-origin requests.
       const res = await fetch("/api/profile/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           action: "send-2fa",
@@ -217,12 +205,11 @@ export default function ProfilePage() {
 
     setIsSubmittingPassword(true);
     try {
-      const token = Cookies.get("token");
+      // Session cookie is httpOnly — sent automatically with same-origin requests.
       const res = await fetch("/api/profile/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           action: "change-password",

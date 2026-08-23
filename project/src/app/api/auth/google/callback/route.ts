@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveMembership, createOrganizationForSignup } from "@/lib/auth/membership";
-import { signSessionToken } from "@/lib/auth/session";
+import { createSession } from "@/lib/auth/session";
+import { attachSessionCookie } from "@/lib/auth/cookies";
 
 export async function GET(req: Request) {
   try {
@@ -159,24 +160,28 @@ export async function GET(req: Request) {
       );
       response.cookies.delete("google_signup_data");
     } else {
-      // Returning approved user — issue JWT and redirect to dashboard
-      const token = signSessionToken({
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-        organizationId: membership.organizationId,
-        orgRole: membership.orgRole,
-        orgStatus: membership.orgStatus,
-        platformRole: user.platformRole,
-      });
+      // Returning approved user — create a server-side session bound to the
+      // JWT via `sid`, delivered as an httpOnly cookie.
+      const { token } = await createSession(
+        {
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          organizationId: membership.organizationId,
+          orgRole: membership.orgRole,
+          orgStatus: membership.orgStatus,
+          platformRole: user.platformRole,
+        },
+        {
+          ip: req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+          userAgent: req.headers.get("user-agent"),
+        }
+      );
 
       response = NextResponse.redirect(new URL("/dashboard", req.url));
-      response.cookies.set("token", token, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        httpOnly: false, // Must be false so client-side logout can clear it
-        secure: process.env.NODE_ENV === "production",
-      });
+      // SECURITY: session cookie must be httpOnly — client logout now goes
+      // through POST /api/logout which clears it server-side.
+      attachSessionCookie(response, token);
     }
 
     return response;

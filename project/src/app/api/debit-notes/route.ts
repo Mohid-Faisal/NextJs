@@ -230,8 +230,9 @@ export async function POST(request: NextRequest) {
       otherIncomeId = ids.otherIncomeId;
     }
 
-    // Generate debit note number
+    // Generate debit note number (org-scoped)
     const lastDebitNote = await prisma.debitNote.findFirst({
+      where: { vendor: { organizationId: session.organizationId } },
       orderBy: { id: "desc" },
     });
 
@@ -252,6 +253,7 @@ export async function POST(request: NextRequest) {
         // Create the debit note
         const debitNote = await tx.debitNote.create({
           data: {
+            organizationId: session.organizationId,
             debitNoteNumber,
             billId: billId ? parseInt(billId) : null,
             vendorId: parseInt(vendorId),
@@ -321,6 +323,7 @@ export async function POST(request: NextRequest) {
         // Debit Account
         await tx.journalEntryLine.create({
           data: {
+            organizationId: session.organizationId,
             journalEntryId: journalEntry.id,
             accountId: debitAccId,
             debitAmount: parseFloat(amount),
@@ -333,6 +336,7 @@ export async function POST(request: NextRequest) {
         // Credit Account
         await tx.journalEntryLine.create({
           data: {
+            organizationId: session.organizationId,
             journalEntryId: journalEntry.id,
             accountId: creditAccId,
             debitAmount: 0,
@@ -370,6 +374,7 @@ export async function POST(request: NextRequest) {
         // Create the debit note
         const debitNote = await tx.debitNote.create({
           data: {
+            organizationId: session.organizationId,
             debitNoteNumber,
             billId: billId ? parseInt(billId) : null,
             vendorId: parseInt(vendorId),
@@ -438,6 +443,7 @@ export async function POST(request: NextRequest) {
         // Debit Account
         await tx.journalEntryLine.create({
           data: {
+            organizationId: session.organizationId,
             journalEntryId: journalEntry.id,
             accountId: debitAccId,
             debitAmount: Math.abs(parseFloat(amount)),
@@ -450,6 +456,7 @@ export async function POST(request: NextRequest) {
         // Credit Account
         await tx.journalEntryLine.create({
           data: {
+            organizationId: session.organizationId,
             journalEntryId: journalEntry.id,
             accountId: creditAccId,
             debitAmount: 0,

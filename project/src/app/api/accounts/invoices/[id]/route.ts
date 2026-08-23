@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/utils";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
 
@@ -74,7 +75,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(req);
+    // SECURITY: invoice edits are accounting operations gated behind the
+    // revenue/accounting permission (also enforces plan restrictions).
+    const auth = await requirePermission(req, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -110,6 +113,50 @@ export async function PUT(
     const newCustomerId = body.customerId !== undefined ? (body.customerId ? parseInt(body.customerId) : null) : oldCustomerId;
     const oldVendorId = currentInvoice.vendorId;
     const newVendorId = body.vendorId !== undefined ? (body.vendorId ? parseInt(body.vendorId) : null) : oldVendorId;
+
+    // SECURITY: validate related-entity IDs belong to the caller's
+    // organization. Previously client-supplied customerId/vendorId/shipmentId
+    // were trusted, allowing cross-tenant linking and cross-tenant writes to
+    // customer balances and shipment records downstream.
+    if (body.customerId !== undefined && body.customerId !== null && body.customerId !== "") {
+      const custId = parseInt(body.customerId);
+      const owned = await prisma.customers.findFirst({
+        where: orgWhere(session, { id: custId }),
+        select: { id: true },
+      });
+      if (!owned) {
+        return NextResponse.json(
+          { success: false, message: "Customer not found in your organization" },
+          { status: 400 }
+        );
+      }
+    }
+    if (body.vendorId !== undefined && body.vendorId !== null && body.vendorId !== "") {
+      const vendId = parseInt(body.vendorId);
+      const ownedVendor = await prisma.vendors.findFirst({
+        where: orgWhere(session, { id: vendId }),
+        select: { id: true },
+      });
+      if (!ownedVendor) {
+        return NextResponse.json(
+          { success: false, message: "Vendor not found in your organization" },
+          { status: 400 }
+        );
+      }
+    }
+    if (body.shipmentId !== undefined && body.shipmentId !== null && body.shipmentId !== "") {
+      const shipId = parseInt(body.shipmentId);
+      const ownedShipment = await prisma.shipment.findFirst({
+        where: orgWhere(session, { id: shipId }),
+        select: { id: true },
+      });
+      if (!ownedShipment) {
+        return NextResponse.json(
+          { success: false, message: "Shipment not found in your organization" },
+          { status: 400 }
+        );
+      }
+    }
 
     // Build update data object with only provided fields
     const updateData: any = {};
@@ -192,42 +239,49 @@ export async function PUT(
     const targetShipmentId = invoice.shipmentId || currentInvoice.shipmentId;
     if (oldAmount !== newAmount && targetShipmentId) {
       try {
-        const isVendor = invoice.profile === "Vendor" || Boolean(invoice.vendorId || currentInvoice.vendorId);
-        if (isVendor) {
-          const currentShip = await prisma.shipment.findUnique({
-            where: { id: targetShipmentId },
-            select: { calculatedValues: true }
-          });
-          let updatedCalculatedValues: any = undefined;
-          if (currentShip?.calculatedValues) {
-            try {
-              const rawCalc: any = currentShip.calculatedValues;
-              const calc = typeof rawCalc === 'string' 
-                ? JSON.parse(rawCalc) 
-                : { ...rawCalc };
-              calc.cos = newAmount;
-              calc.vendorPrice = newAmount;
-              updatedCalculatedValues = calc;
-            } catch (e) {
-              console.error("Error parsing shipment calculatedValues:", e);
-            }
-          }
-          await prisma.shipment.update({
-            where: { id: targetShipmentId },
-            data: { 
-              cos: newAmount,
-              ...(updatedCalculatedValues ? { calculatedValues: updatedCalculatedValues } : {})
-            }
-          });
-          shipmentUpdateResult.updated = true;
-          console.log(`Updated shipment ${targetShipmentId} cos from ${oldAmount} to ${newAmount}`);
+        // Defense-in-depth: never touch another tenant's shipment.
+        const ownedShipment = await prisma.shipment.findFirst({
+          where: orgWhere(session, { id: targetShipmentId }),
+          select: { id: true },
+        });
+        if (!ownedShipment) {
+          shipmentUpdateResult.error = "Linked shipment does not belong to your organization";
         } else {
-          await prisma.shipment.update({
-            where: { id: targetShipmentId },
-            data: { totalCost: newAmount }
-          });
-          shipmentUpdateResult.updated = true;
-          console.log(`Updated shipment ${targetShipmentId} totalCost from ${oldAmount} to ${newAmount}`);
+          const isVendor = invoice.profile === "Vendor" || Boolean(invoice.vendorId || currentInvoice.vendorId);
+          if (isVendor) {
+            const currentShip = await prisma.shipment.findFirst({
+              where: orgWhere(session, { id: targetShipmentId }),
+              select: { calculatedValues: true }
+            });
+            let updatedCalculatedValues: any = undefined;
+            if (currentShip?.calculatedValues) {
+              try {
+                const rawCalc: any = currentShip.calculatedValues;
+                const calc = typeof rawCalc === 'string'
+                  ? JSON.parse(rawCalc)
+                  : { ...rawCalc };
+                calc.cos = newAmount;
+                calc.vendorPrice = newAmount;
+                updatedCalculatedValues = calc;
+              } catch (e) {
+                console.error("Error parsing shipment calculatedValues:", e);
+              }
+            }
+            await prisma.shipment.update({
+              where: { id: targetShipmentId },
+              data: {
+                cos: newAmount,
+                ...(updatedCalculatedValues ? { calculatedValues: updatedCalculatedValues } : {})
+              }
+            });
+            shipmentUpdateResult.updated = true;
+          } else {
+            await prisma.shipment.update({
+              where: { id: targetShipmentId },
+              data: { totalCost: newAmount }
+            });
+            shipmentUpdateResult.updated = true;
+          }
         }
       } catch (shipmentError) {
         console.error("Error updating shipment:", shipmentError);
