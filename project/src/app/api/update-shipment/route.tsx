@@ -718,21 +718,12 @@ async function handleShipmentUpdate(req: Request) {
             });
           }
 
-          // 3. Update customer/vendor balances and journal entries if amount changed
-          // Only update if pricing data was provided (or CoS in manual mode) and amount actually changed
-          // Use the same logic as invoice update route
-          if ((price !== undefined || fuelSurcharge !== undefined || discount !== undefined || (effectiveManualRate && cos !== undefined)) && oldInvoiceAmount !== finalInvoiceAmount) {
-            try {
-              // Use the proper utility functions for balance and journal entry updates
-              // These functions handle transactions, balances, and journal entries correctly
-              const description = `Updated invoice for shipment: ${effectiveTrackingId || invoice.trackingNumber || 'N/A'} - ${effectiveDestination || invoice.destination || 'N/A'}`;
-              
-              // Update balances using the utility function (same as invoice update)
-              // This function handles:
-              // - Finding transactions by reference: invoice.invoiceNumber
-              // - Calculating balance correctly: previousBalance - amountDifference for customers
-              // - Calculating balance correctly: previousBalance + amountDifference for vendors
-              // - Updating transaction amount to full newAmount
+          // 3. Update customer/vendor balances and journal entries
+          try {
+            const description = `Updated invoice for shipment: ${effectiveTrackingId || invoice.trackingNumber || 'N/A'} - ${effectiveDestination || invoice.destination || 'N/A'}`;
+            
+            // If invoice amount actually changed, update party balance transactions
+            if (oldInvoiceAmount !== finalInvoiceAmount) {
               await updateInvoiceBalance(
                 tx,
                 invoice.id,
@@ -743,8 +734,10 @@ async function handleShipmentUpdate(req: Request) {
                 invoice.vendorId,
                 invoice.vendorId
               );
+            }
 
-              // Update journal entries using the utility function (same as invoice update)
+            // Always synchronize or create missing journal entries
+            if (finalInvoiceAmount > 0) {
               await updateJournalEntriesForInvoice(
                 tx,
                 invoice.id,
@@ -758,12 +751,12 @@ async function handleShipmentUpdate(req: Request) {
                 description,
                 session.organizationId
               );
-              
-              console.log(`Successfully updated balances and journal entries for invoice ${invoice.invoiceNumber}`);
-            } catch (balanceError) {
-              console.error(`Error updating balances and journal entries for invoice ${invoice.invoiceNumber}:`, balanceError);
-              // Continue with the transaction even if balance/journal update fails
             }
+            
+            console.log(`Successfully updated balances and journal entries for invoice ${invoice.invoiceNumber}`);
+          } catch (balanceError) {
+            console.error(`Error updating balances and journal entries for invoice ${invoice.invoiceNumber}:`, balanceError);
+            // Continue with the transaction even if balance/journal update fails
           }
 
           return updatedInvoice;

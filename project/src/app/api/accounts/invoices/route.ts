@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { Country } from "country-state-city";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import {
+  createJournalEntryForTransaction,
+  addCustomerTransaction,
+  addVendorTransaction,
+} from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   try {
@@ -393,6 +398,81 @@ export async function POST(req: NextRequest) {
         shipment: true,
       },
     });
+
+    // For standalone invoices (not created via add-shipment/bulk-upload which post their own JEs),
+    // post customer/vendor transactions and General Ledger journal entries.
+    const invAmount = parseFloat(totalAmount) || 0;
+    const invDate = new Date(invoiceDate);
+
+    if (invAmount > 0) {
+      try {
+        if (parsedCustomerId || profile === "Customer") {
+          // If not linked to a shipment, record customer ledger debit
+          if (!parsedShipmentId && parsedCustomerId) {
+            await addCustomerTransaction(
+              prisma,
+              parsedCustomerId,
+              "DEBIT",
+              invAmount,
+              `Invoice ${invoiceNumber}${destination ? ` | ${destination}` : ""}`,
+              invoiceNumber,
+              invoiceNumber,
+              invDate,
+              session.organizationId
+            );
+          }
+          // Post revenue journal entry if none exists yet
+          const existingRevenueJE = await prisma.journalEntry.findFirst({
+            where: orgWhere(session, { reference: invoiceNumber }),
+          });
+          if (!existingRevenueJE) {
+            await createJournalEntryForTransaction(
+              prisma,
+              "CUSTOMER_DEBIT",
+              invAmount,
+              `Customer invoice ${invoiceNumber}${trackingNumber ? ` for shipment ${trackingNumber}` : ""}`,
+              invoiceNumber,
+              invoiceNumber,
+              invDate,
+              session.organizationId
+            );
+          }
+        } else if (parsedVendorId || profile === "Vendor") {
+          // If not linked to a shipment, record vendor ledger debit
+          if (!parsedShipmentId && parsedVendorId) {
+            await addVendorTransaction(
+              prisma,
+              parsedVendorId,
+              "DEBIT",
+              invAmount,
+              `Vendor bill ${invoiceNumber}${destination ? ` | ${destination}` : ""}`,
+              invoiceNumber,
+              invoiceNumber,
+              invDate,
+              session.organizationId
+            );
+          }
+          // Post vendor expense journal entry if none exists yet
+          const existingExpenseJE = await prisma.journalEntry.findFirst({
+            where: orgWhere(session, { reference: invoiceNumber }),
+          });
+          if (!existingExpenseJE) {
+            await createJournalEntryForTransaction(
+              prisma,
+              "VENDOR_DEBIT",
+              invAmount,
+              `Vendor bill ${invoiceNumber}${trackingNumber ? ` for shipment ${trackingNumber}` : ""}`,
+              invoiceNumber,
+              invoiceNumber,
+              invDate,
+              session.organizationId
+            );
+          }
+        }
+      } catch (accountingError) {
+        console.error("Error creating accounting entries for invoice:", accountingError);
+      }
+    }
 
     return NextResponse.json(invoice);
   } catch (error) {

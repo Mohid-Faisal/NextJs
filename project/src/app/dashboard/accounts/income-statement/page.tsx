@@ -464,12 +464,14 @@ export default function IncomeStatementPage() {
 
     // Calculate balances from journal entries
     entries.forEach(entry => {
-      if (!entry.accountId) return;
-      
-      const account = accounts.find(acc => acc.id === entry.accountId);
+      const account =
+        (entry.accountId ? accounts.find(acc => acc.id === entry.accountId) : undefined) ||
+        (entry.accountCode ? accounts.find(acc => acc.code === entry.accountCode) : undefined) ||
+        (entry.accountName ? accounts.find(acc => acc.accountName.toLowerCase() === entry.accountName.toLowerCase()) : undefined);
+
       if (!account || (account.category !== 'Revenue' && account.category !== 'Expense')) return;
 
-      const currentBalance = balanceMap.get(entry.accountId);
+      const currentBalance = balanceMap.get(account.id);
       if (!currentBalance) return;
 
       const debitAmount = entry.debitAmount || 0;
@@ -485,7 +487,7 @@ export default function IncomeStatementPage() {
         newBalance += debitAmount - creditAmount;
       }
 
-      balanceMap.set(entry.accountId, {
+      balanceMap.set(account.id, {
         ...currentBalance,
         balance: newBalance,
         debitAmount: currentBalance.debitAmount + debitAmount,

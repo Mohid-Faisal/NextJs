@@ -386,16 +386,27 @@ export async function DELETE(
 
     // Find related journal entries that were created for this shipment
     console.log("🔍 Searching for related journal entries...");
+    const allInvoiceNumbers = Array.from(
+      new Set(
+        [
+          invoiceNumber,
+          vendorInvoiceNumber,
+          ...relatedInvoices.map((inv) => inv.invoiceNumber),
+        ].filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+      )
+    );
+
     const journalEntryOr: any[] = [];
+    if (allInvoiceNumbers.length > 0) {
+      journalEntryOr.push({ reference: { in: allInvoiceNumbers } });
+      allInvoiceNumbers.forEach((invNum) => {
+        journalEntryOr.push({ reference: `CREDIT-${invNum}` });
+      });
+    }
     if (trackingId) {
       journalEntryOr.push({ reference: trackingId });
-      journalEntryOr.push({ description: { contains: trackingId } });
-    }
-    if (invoiceNumber) {
-      journalEntryOr.push({ description: { contains: invoiceNumber } });
-    }
-    if (vendorInvoiceNumber) {
-      journalEntryOr.push({ description: { contains: vendorInvoiceNumber } });
+      journalEntryOr.push({ description: `Customer invoice for shipment ${trackingId}` });
+      journalEntryOr.push({ description: `Vendor invoice for shipment ${trackingId}` });
     }
 
     const relatedJournalEntries = journalEntryOr.length

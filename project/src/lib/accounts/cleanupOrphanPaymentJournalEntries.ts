@@ -168,11 +168,26 @@ export async function cleanupOrphanPaymentJournalEntriesAfterDelete(
 
   // Only delete unclaimed JEs that used a non-unique shared reference
   // (never delete Payment-{id} here — safe cleanup already handled those)
+  // Ensure we NEVER delete journal entries belonging to invoices, credit notes, debit notes, or shipments
   const orphanIds = jes
-    .filter(
-      (je) =>
-        !claimedJEs.has(je.id) && paymentIdFromReference(je.reference) == null
-    )
+    .filter((je) => {
+      if (claimedJEs.has(je.id)) return false;
+      if (paymentIdFromReference(je.reference) != null) return false;
+      const ref = (je.reference ?? "").trim();
+      // Protect any reference that looks like an invoice number, credit note, debit note, or starting balance
+      if (
+        ref.startsWith("CREDIT-") ||
+        ref.startsWith("DEBIT-") ||
+        ref.startsWith("CN-") ||
+        ref.startsWith("DN-") ||
+        ref.startsWith("STARTING-BALANCE") ||
+        ref.startsWith("JE-") ||
+        /^\d+$/.test(ref)
+      ) {
+        return false;
+      }
+      return true;
+    })
     .map((je) => je.id);
 
   removed += await deleteJournalEntriesByIds(orphanIds);

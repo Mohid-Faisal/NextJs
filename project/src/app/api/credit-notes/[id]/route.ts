@@ -341,10 +341,7 @@ export async function DELETE(
       // Find and delete related journal entries
       const journalEntries = await tx.journalEntry.findMany({
         where: orgWhere(session, {
-          OR: [
-            { reference: creditNote.creditNoteNumber },
-            { description: { contains: creditNote.creditNoteNumber } }
-          ]
+          reference: creditNote.creditNoteNumber,
         }),
         include: { lines: true }
       });

@@ -336,10 +336,7 @@ export async function DELETE(
     await prisma.$transaction(async (tx) => {
       const journalEntries = await tx.journalEntry.findMany({
         where: orgWhere(session, {
-          OR: [
-            { reference: debitNote.debitNoteNumber },
-            { description: { contains: debitNote.debitNoteNumber } },
-          ],
+          reference: debitNote.debitNoteNumber,
         }),
         include: { lines: true },
       });
