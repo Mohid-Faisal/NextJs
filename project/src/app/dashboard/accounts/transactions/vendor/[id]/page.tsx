@@ -1243,19 +1243,19 @@ export default function VendorTransactionsPage() {
           </div>
           <div className="text-2xl font-bold">
             <span
-              className={
-                vendor.currentBalance > 0
+              className={`font-mono ${
+                Number(vendor.currentBalance || 0) > 0
                   ? "text-red-600 dark:text-red-400"
-                  : vendor.currentBalance < 0
+                  : Number(vendor.currentBalance || 0) < 0
                   ? "text-green-600 dark:text-green-400"
                   : "text-gray-600 dark:text-gray-400"
-              }
+              }`}
             >
-              {vendor.currentBalance.toLocaleString()}
+              {Math.round(Number(vendor.currentBalance || 0)).toLocaleString()}
             </span>
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Credit Limit: {vendor.creditLimit.toLocaleString()}
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+            Credit Limit: {Math.round(Number(vendor.creditLimit || 0)).toLocaleString()}
           </div>
         </div>
       </div>

@@ -107,7 +107,7 @@ export default function AccountsReceivablePage() {
 
   // For accounts receivable, negative balance means they owe us, so we sum the absolute values
   const totalReceivable = Array.isArray(filteredCustomers) 
-    ? Math.abs(filteredCustomers.reduce((sum, c) => sum + (c.currentBalance || 0), 0))
+    ? Math.abs(filteredCustomers.reduce((sum, c) => sum + Number(c.currentBalance || 0), 0))
     : 0;
 
   const exportToExcel = (data: any[], headers: string[], filename: string) => {

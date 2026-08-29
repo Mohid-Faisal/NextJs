@@ -355,13 +355,13 @@ export default function ShipmentsPage() {
         const data = await res.json();
         if (res.ok) {
           setShipments(data.shipments || []);
-          setTotal(data.total || 0);
-          if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
-          if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
-          if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
-          if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
-          if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
-          if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
+          setTotal(Number(data.total || 0));
+          if (data.grandTotal !== undefined && data.grandTotal !== null) setGrandTotal(Number(data.grandTotal));
+          if (data.bookedCount !== undefined && data.bookedCount !== null) setBookedCount(Number(data.bookedCount));
+          if (data.inTransitCount !== undefined && data.inTransitCount !== null) setInTransitCount(Number(data.inTransitCount));
+          if (data.deliveredCount !== undefined && data.deliveredCount !== null) setDeliveredCount(Number(data.deliveredCount));
+          if (data.cancelledCount !== undefined && data.cancelledCount !== null) setCancelledCount(Number(data.cancelledCount));
+          if (data.totalValue !== undefined && data.totalValue !== null) setTotalValue(Number(data.totalValue));
         } else {
           toast.error(data.error || "Failed to fetch shipments");
         }
@@ -495,13 +495,13 @@ export default function ShipmentsPage() {
     const data = await refreshRes.json();
     if (refreshRes.ok) {
       setShipments(data.shipments || []);
-      setTotal(data.total || 0);
-      if (typeof data.grandTotal === "number") setGrandTotal(data.grandTotal);
-      if (typeof data.bookedCount === "number") setBookedCount(data.bookedCount);
-      if (typeof data.inTransitCount === "number") setInTransitCount(data.inTransitCount);
-      if (typeof data.deliveredCount === "number") setDeliveredCount(data.deliveredCount);
-      if (typeof data.cancelledCount === "number") setCancelledCount(data.cancelledCount);
-      if (typeof data.totalValue === "number") setTotalValue(data.totalValue);
+      setTotal(Number(data.total || 0));
+      if (data.grandTotal !== undefined && data.grandTotal !== null) setGrandTotal(Number(data.grandTotal));
+      if (data.bookedCount !== undefined && data.bookedCount !== null) setBookedCount(Number(data.bookedCount));
+      if (data.inTransitCount !== undefined && data.inTransitCount !== null) setInTransitCount(Number(data.inTransitCount));
+      if (data.deliveredCount !== undefined && data.deliveredCount !== null) setDeliveredCount(Number(data.deliveredCount));
+      if (data.cancelledCount !== undefined && data.cancelledCount !== null) setCancelledCount(Number(data.cancelledCount));
+      if (data.totalValue !== undefined && data.totalValue !== null) setTotalValue(Number(data.totalValue));
     } else {
       toast.error(data.error || "Failed to refresh shipments");
     }

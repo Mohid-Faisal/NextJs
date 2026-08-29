@@ -103,11 +103,11 @@ export async function POST(req: NextRequest) {
     }
 
     const totalDebit = lines.reduce(
-      (sum: number, line: any) => sum + (line.debitAmount || 0),
+      (sum: number, line: any) => sum + Number(line.debitAmount || 0),
       0
     );
     const totalCredit = lines.reduce(
-      (sum: number, line: any) => sum + (line.creditAmount || 0),
+      (sum: number, line: any) => sum + Number(line.creditAmount || 0),
       0
     );
 

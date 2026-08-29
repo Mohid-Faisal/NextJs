@@ -117,7 +117,7 @@ export async function GET(req: Request) {
     const uniqueRecipients = [...new Set(shipments.map(s => s.recipientName))];
 
     // Calculate total shipment value
-    const totalShipmentValue = shipments.reduce((sum, shipment) => sum + shipment.totalCost, 0);
+    const totalShipmentValue = shipments.reduce((sum, shipment) => sum + Number(shipment.totalCost || 0), 0);
 
     return {
       ...customer,

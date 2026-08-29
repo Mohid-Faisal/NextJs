@@ -558,7 +558,7 @@ export default function AccountBooksPage() {
                     <div className="text-center">
                       <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Amount</div>
                       <div className="text-base sm:text-lg font-bold text-purple-600">
-                        PKR {filteredEntries.reduce((sum, entry) => sum + (entry.amount || 0), 0).toLocaleString()}
+                        PKR {filteredEntries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0).toLocaleString()}
                       </div>
                     </div>
                   </>
@@ -697,7 +697,7 @@ export default function AccountBooksPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   <span>Total Entries: {filteredEntries.length}</span>
                   <span>
-                    Total Amount: PKR {filteredEntries.reduce((sum, entry) => sum + entry.amount, 0).toLocaleString()}
+                    Total Amount: PKR {filteredEntries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0).toLocaleString()}
                   </span>
                 </div>
               </div>

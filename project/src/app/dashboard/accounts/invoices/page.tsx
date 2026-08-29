@@ -214,7 +214,7 @@ export default function InvoicesPage() {
   };
 
   const totalAmount = useMemo(
-    () => invoices.reduce((acc, i) => acc + i.totalAmount, 0),
+    () => invoices.reduce((acc, i) => acc + Number(i.totalAmount || 0), 0),
     [invoices]
   );
 
