@@ -1,24 +1,8 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { verifySessionToken } from "@/lib/auth/session";
+import { getSession } from "@/lib/auth/session";
 
 const SETTING_KEY = "public_tools_disabled";
-const ADMIN_EMAIL = "mohidfaisal321@gmail.com";
-
-async function assertAdminCanChangeFlag(): Promise<boolean> {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-    if (!token) return false;
-    const decoded = verifySessionToken(token) as { email?: string } | null;
-    if (!decoded) return false;
-    const email = (decoded.email || "").trim().toLowerCase();
-    return email === ADMIN_EMAIL.toLowerCase();
-  } catch {
-    return false;
-  }
-}
 
 /** No DB row, or value "true" => public tools blocked (404). Value "false" => tools enabled. */
 function rowToDisabled(value: string | null | undefined): boolean {
@@ -41,8 +25,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const allowed = await assertAdminCanChangeFlag();
-    if (!allowed) {
+    const session = await getSession(request);
+    if (!session || session.platformRole !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransaction, addVendorTransaction, createJournalEntryForTransaction } from "@/lib/utils";
+import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransaction, addVendorTransaction, createJournalEntryForTransaction } from "@/lib/server/ledger";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { checkShipmentLimit } from "@/lib/billing/usage";
@@ -325,68 +325,378 @@ export async function POST(req: NextRequest) {
     console.log('=== END PRICING CALCULATIONS ===');
 
     // ============================================================================
-    // SECTION 6: SHIPMENT CREATION
+    // SECTION 6: PREPARE INVOICE LINE ITEMS
     // ============================================================================
-    // Generate unique invoice number for this shipment (atomic, per-org)
+    const customerLineItems: { description: string; value: number }[] = [];
+    let parsedPackages = packages;
+    if (typeof packages === "string") {
+      try {
+        parsedPackages = JSON.parse(packages);
+      } catch (e) {
+        console.error("Error parsing packages:", e);
+        parsedPackages = [];
+      }
+    }
+
+    if (Array.isArray(parsedPackages) && parsedPackages.length > 0) {
+      const totalWeightVal = parsedPackages.reduce(
+        (sum: number, pkg: any) => sum + Math.max(pkg.weight || 0, pkg.weightVol || 0),
+        0
+      );
+      parsedPackages.forEach((pkg: any) => {
+        const packageWeight = Math.max(pkg.weight || 0, pkg.weightVol || 0);
+        const packageProportion =
+          totalWeightVal > 0 ? packageWeight / totalWeightVal : 1 / parsedPackages.length;
+        const packageValue = Math.round(originalPrice * packageProportion);
+        const description = pkg.packageDescription || "Shipping Service";
+        customerLineItems.push({ description, value: packageValue });
+      });
+    } else {
+      customerLineItems.push({ description: "Shipping Service", value: Math.round(originalPrice) });
+    }
+
+    if (profitPercentageValue > 0) {
+      customerLineItems.push({ description: "Profit", value: Math.round(profitAmount) });
+    }
+
+    const vendorLineItems: { description: string; value: number }[] = [];
+    if (Array.isArray(parsedPackages) && parsedPackages.length > 0) {
+      const totalWeightVal = parsedPackages.reduce(
+        (sum: number, pkg: any) => sum + Math.max(pkg.weight || 0, pkg.weightVol || 0),
+        0
+      );
+      parsedPackages.forEach((pkg: any) => {
+        const packageWeight = Math.max(pkg.weight || 0, pkg.weightVol || 0);
+        const packageProportion =
+          totalWeightVal > 0 ? packageWeight / totalWeightVal : 1 / parsedPackages.length;
+        const packageValue = Math.round(originalPrice * packageProportion);
+        const description = pkg.packageDescription || "Vendor Service";
+        vendorLineItems.push({ description, value: packageValue });
+      });
+    } else {
+      vendorLineItems.push({ description: "Vendor Service", value: Math.round(originalPrice) });
+    }
+
+    // ============================================================================
+    // SECTION 7: ATOMIC SHIPMENT & INVOICE CREATION TRANSACTION
+    // ============================================================================
     let invoiceNumber = await generateInvoiceNumber(prisma, session.organizationId);
 
-    // Create shipment record in database with all fields.
-    // withUniqueRetry: on a rare invoiceNumber collision (P2002), regenerate
-    // the number and try again instead of failing the request.
-    const shipment = await withUniqueRetry(
+    const txResult = await withUniqueRetry(
       async () => {
-        const created = await prisma.shipment.create({
-          data: orgData(session, {
-            trackingId,
-            referenceNumber: referenceNumber,
-            invoiceNumber,
-        shipmentDate: shipmentDate ? new Date(shipmentDate) : new Date(),
-        agency,
-        office,
-        senderName: finalSenderName,
-        senderAddress: finalSenderAddress,
-        recipientName: finalRecipientName,
-        recipientAddress: finalRecipientAddress,
-        destination: finalDestination,
-        deliveryTime,
-        invoiceStatus: "Unpaid", // Default to Unpaid, will be updated after calculation
-        deliveryStatus,
-        shippingMode,
-        packaging,
-        vendor,
-        serviceMode,
-        amount: parseInt(amount) || 1,
-        packageDescription,
-        weight: parseFloat(weight) || 0,
-        length: parseFloat(length) || 0,
-        width: parseFloat(width) || 0,
-        height: parseFloat(height) || 0,
-        weightVol: parseFloat(weightVol) || 0,
-        fixedCharge: parseFloat(fixedCharge) || 0,
-        decValue: parseFloat(decValue) || 0,
-        price: originalPrice, // Store original price without profit
-        discount: discountPercentage,
-        fuelSurcharge: fuelSurchargeAmount,
-        insurance: parseFloat(insurance) || 0,
-        customs: parseFloat(customs) || 0,
-        tax: parseFloat(tax) || 0,
-        declaredValue: parseFloat(declaredValue) || 0,
-        reissue: parseFloat(reissue) || 0,
-        profitPercentage: profitPercentageValue, // Store the profit percentage
-        cos: parseFloat(cos) || 0, // Store Cost of Service
-        totalCost: customerTotalCost, // Use customer total cost for shipment record
-        subtotal,
-        manualRate: Boolean(manualRate),
-        totalPackages: parseInt(totalPackages) || 0,
-        totalWeight: parseFloat(totalWeight) || 0,
-        totalWeightVol: parseFloat(totalWeightVol) || 0,
-        packages: packages ? JSON.stringify(packages) : undefined,
-        packageTotals: packageTotals ? JSON.stringify(packageTotals) : undefined,
-        calculatedValues: calculatedValues ? JSON.stringify(calculatedValues) : undefined,
-      }),
-        });
+        return await prisma.$transaction(
+          async (tx) => {
+            const vendorInvoiceNumber = generateVendorInvoiceNumber(invoiceNumber);
 
-        return created;
+            // 7.1 Customer and Vendor Lookup
+            let customerId: number | null = null;
+            let customerBalance = 0;
+            if (finalSenderName) {
+              const customer = await tx.customers.findFirst({
+                where: orgWhere(session, { CompanyName: finalSenderName }),
+              });
+              customerId = customer?.id || null;
+              customerBalance = customer?.currentBalance || 0;
+            }
+
+            let vendorId: number | null = null;
+            let vendorBalance = 0;
+            if (vendor) {
+              const vendorRecord = await tx.vendors.findFirst({
+                where: orgWhere(session, { CompanyName: vendor }),
+              });
+              vendorId = vendorRecord?.id || null;
+              vendorBalance = vendorRecord?.currentBalance || 0;
+            }
+
+            // 7.2 Customer Balance Calculations
+            let appliedBalance = 0;
+            let remainingAmount = 0;
+            let calculatedInvoiceStatus = "Unpaid";
+            if (customerBalance > 0) {
+              remainingAmount = Math.max(0, customerTotalCost - customerBalance);
+              appliedBalance = Math.min(customerBalance, customerTotalCost);
+            } else {
+              remainingAmount = customerTotalCost;
+              appliedBalance = 0;
+            }
+
+            if (remainingAmount === 0) {
+              calculatedInvoiceStatus = "Paid";
+            } else if (appliedBalance > 0) {
+              calculatedInvoiceStatus = "Partial";
+            }
+
+            // 7.3 Vendor Balance Calculations
+            let vendorAppliedBalance = 0;
+            let vendorRemainingAmount = 0;
+            let vendorCalculatedInvoiceStatus = "Unpaid";
+            if (vendorBalance > 0) {
+              vendorRemainingAmount = vendorTotalCost;
+              vendorAppliedBalance = 0;
+            } else {
+              vendorAppliedBalance = Math.min(Math.abs(vendorBalance), vendorTotalCost);
+              vendorRemainingAmount = Math.max(0, vendorTotalCost - vendorAppliedBalance);
+            }
+
+            if (vendorRemainingAmount === 0) {
+              vendorCalculatedInvoiceStatus = "Paid";
+            } else if (vendorAppliedBalance > 0) {
+              vendorCalculatedInvoiceStatus = "Partial";
+            }
+
+            // 7.4 Create Shipment Record
+            const shipmentDateObj = shipmentDate ? new Date(shipmentDate) : new Date();
+            const bookingDateTime = new Date(shipmentDateObj.getTime() - 2.5 * 60 * 60 * 1000);
+            const initialTrackingHistory = [
+              { status: "Booked", timestamp: bookingDateTime.toISOString(), location: "Lahore, Pakistan" },
+              { status: "Picked Up", timestamp: shipmentDateObj.toISOString(), location: "Lahore, Pakistan" },
+            ];
+
+            const shipment = await tx.shipment.create({
+              data: orgData(session, {
+                trackingId,
+                referenceNumber: referenceNumber || null,
+                invoiceNumber,
+                shipmentDate: shipmentDateObj,
+                agency,
+                office,
+                senderName: finalSenderName,
+                senderAddress: finalSenderAddress,
+                recipientName: finalRecipientName,
+                recipientAddress: finalRecipientAddress,
+                destination: finalDestination,
+                deliveryTime,
+                invoiceStatus: calculatedInvoiceStatus,
+                deliveryStatus,
+                shippingMode,
+                packaging,
+                vendor,
+                serviceMode,
+                amount: parseInt(amount) || 1,
+                packageDescription,
+                weight: parseFloat(weight) || 0,
+                length: parseFloat(length) || 0,
+                width: parseFloat(width) || 0,
+                height: parseFloat(height) || 0,
+                weightVol: parseFloat(weightVol) || 0,
+                fixedCharge: parseFloat(fixedCharge) || 0,
+                decValue: parseFloat(decValue) || 0,
+                price: originalPrice,
+                discount: discountPercentage,
+                fuelSurcharge: fuelSurchargeAmount,
+                insurance: parseFloat(insurance) || 0,
+                customs: parseFloat(customs) || 0,
+                tax: parseFloat(tax) || 0,
+                declaredValue: parseFloat(declaredValue) || 0,
+                reissue: parseFloat(reissue) || 0,
+                profitPercentage: profitPercentageValue,
+                cos: parseFloat(cos) || 0,
+                totalCost: customerTotalCost,
+                subtotal,
+                manualRate: Boolean(manualRate),
+                totalPackages: parseInt(totalPackages) || 0,
+                totalWeight: parseFloat(totalWeight) || 0,
+                totalWeightVol: parseFloat(totalWeightVol) || 0,
+                packages: packages ? JSON.stringify(packages) : undefined,
+                packageTotals: packageTotals ? JSON.stringify(packageTotals) : undefined,
+                calculatedValues: calculatedValues ? JSON.stringify(calculatedValues) : undefined,
+                trackingStatusHistory: initialTrackingHistory as unknown as object,
+                trackingStatus: "Picked Up",
+              }) as any,
+            });
+
+            // 7.5 Create Customer Invoice
+            const finalCustomerLineItems = [...customerLineItems];
+            if (appliedBalance > 0) {
+              finalCustomerLineItems.push({
+                description: "Balance Applied",
+                value: Math.round(-appliedBalance),
+              });
+            }
+
+            const customerInvoice = await tx.invoice.create({
+              data: orgData(session, {
+                invoiceNumber,
+                invoiceDate: shipmentDateObj,
+                trackingNumber: trackingId,
+                destination: finalDestination,
+                weight: parseFloat(totalWeight) || 0,
+                profile: "Customer",
+                fscCharges: Math.round(fuelSurchargeAmount),
+                discount: Math.round(discountAmount),
+                lineItems: finalCustomerLineItems,
+                customerId,
+                vendorId: null,
+                shipmentId: shipment.id,
+                disclaimer: "Thank you for your business",
+                totalAmount: customerTotalCost,
+                currency: "PKR",
+                status: calculatedInvoiceStatus,
+              }),
+            });
+
+            // 7.6 Create Vendor Invoice
+            const finalVendorLineItems = [...vendorLineItems];
+            if (vendorAppliedBalance > 0) {
+              finalVendorLineItems.push({
+                description: "Balance Applied",
+                value: Math.round(-vendorAppliedBalance),
+              });
+            }
+
+            const vendorInvoice = await tx.invoice.create({
+              data: orgData(session, {
+                invoiceNumber: vendorInvoiceNumber,
+                invoiceDate: shipmentDateObj,
+                trackingNumber: trackingId,
+                destination: finalDestination,
+                weight: parseFloat(totalWeight) || 0,
+                profile: "Vendor",
+                fscCharges: 0,
+                discount: Math.round(discountAmount),
+                lineItems: finalVendorLineItems,
+                customerId: null,
+                vendorId,
+                shipmentId: shipment.id,
+                disclaimer: "Vendor invoice - original cost without profit",
+                totalAmount: vendorTotalCost,
+                currency: "PKR",
+                status: vendorCalculatedInvoiceStatus,
+              }),
+            });
+
+            // 7.7 Record Customer Transactions & Journal Entries
+            if (customerId && remainingAmount >= 0) {
+              await addCustomerTransaction(
+                tx,
+                customerId,
+                "DEBIT",
+                remainingAmount,
+                `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
+                invoiceNumber,
+                invoiceNumber,
+                shipmentDateObj,
+                session.organizationId
+              );
+            }
+
+            const customerRevenueAmount =
+              (customerInvoice?.totalAmount > 0
+                ? customerInvoice.totalAmount
+                : null) ??
+              (customerTotalCost > 0 ? customerTotalCost : remainingAmount);
+            if (customerRevenueAmount > 0) {
+              await createJournalEntryForTransaction(
+                tx,
+                "CUSTOMER_DEBIT",
+                customerRevenueAmount,
+                `Customer invoice for shipment ${trackingId}`,
+                invoiceNumber,
+                invoiceNumber,
+                shipmentDateObj,
+                session.organizationId
+              );
+            }
+
+            if (appliedBalance > 0 && customerId) {
+              await addCustomerTransaction(
+                tx,
+                customerId,
+                "CREDIT",
+                appliedBalance,
+                `Balance applied for invoice ${invoiceNumber}`,
+                `CREDIT-${invoiceNumber}`,
+                invoiceNumber,
+                shipmentDateObj,
+                session.organizationId
+              );
+              await createJournalEntryForTransaction(
+                tx,
+                "CUSTOMER_CREDIT",
+                appliedBalance,
+                `Customer credit applied for invoice ${invoiceNumber}`,
+                `CREDIT-${invoiceNumber}`,
+                invoiceNumber,
+                shipmentDateObj,
+                session.organizationId
+              );
+            }
+
+            // 7.8 Record Vendor Transactions & Journal Entries
+            if (vendorId && vendorRemainingAmount >= 0) {
+              await addVendorTransaction(
+                tx,
+                vendorId,
+                "DEBIT",
+                vendorRemainingAmount,
+                `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
+                vendorInvoiceNumber,
+                vendorInvoiceNumber,
+                shipmentDateObj,
+                session.organizationId
+              );
+            }
+
+            const vendorExpenseAmount =
+              (vendorInvoice?.totalAmount > 0
+                ? vendorInvoice.totalAmount
+                : null) ??
+              (vendorTotalCost > 0 ? vendorTotalCost : vendorRemainingAmount);
+            if (vendorExpenseAmount > 0) {
+              await createJournalEntryForTransaction(
+                tx,
+                "VENDOR_DEBIT",
+                vendorExpenseAmount,
+                `Vendor invoice for shipment ${trackingId}`,
+                vendorInvoiceNumber,
+                vendorInvoiceNumber,
+                shipmentDateObj,
+                session.organizationId
+              );
+            }
+
+            if (vendorAppliedBalance > 0 && vendorId) {
+              await addVendorTransaction(
+                tx,
+                vendorId,
+                "CREDIT",
+                vendorAppliedBalance,
+                `Balance applied for vendor invoice ${vendorInvoiceNumber}`,
+                `CREDIT-${vendorInvoiceNumber}`,
+                vendorInvoiceNumber,
+                shipmentDateObj,
+                session.organizationId
+              );
+              await createJournalEntryForTransaction(
+                tx,
+                "VENDOR_CREDIT",
+                vendorAppliedBalance,
+                `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
+                `CREDIT-${vendorInvoiceNumber}`,
+                vendorInvoiceNumber,
+                shipmentDateObj,
+                session.organizationId
+              );
+            }
+
+            return {
+              shipment,
+              customerInvoice,
+              vendorInvoice,
+              customerBalance,
+              appliedBalance,
+              remainingAmount,
+              calculatedInvoiceStatus,
+              vendorBalance,
+              vendorAppliedBalance,
+              vendorRemainingAmount,
+              vendorCalculatedInvoiceStatus,
+              invoiceNumber,
+            };
+          },
+          { timeout: 30000 }
+        );
       },
       {
         retries: 2,
@@ -396,484 +706,20 @@ export async function POST(req: NextRequest) {
         },
       }
     );
-    
-    console.log('Shipment saved to database:', {
-      id: shipment.id,
-      trackingId: shipment.trackingId,
-      referenceNumber: shipment.referenceNumber,
-      invoiceNumber: shipment.invoiceNumber,
-      destination: shipment.destination,
-      totalCost: shipment.totalCost,
-      subtotal: shipment.subtotal,
-      profitPercentage: shipment.profitPercentage,
-      totalPackages: shipment.totalPackages,
-      totalWeight: shipment.totalWeight,
-      createdAt: shipment.createdAt,
-    });
 
-    // ============================================================================
-    // SECTION 6.1: AUTO-ADD INITIAL TRACKING STATUS (Booked + Picked Up)
-    // ============================================================================
-    const shipmentDateTime = shipment.shipmentDate ? new Date(shipment.shipmentDate) : new Date(shipment.createdAt);
-    const bookingDateTime = new Date(shipmentDateTime.getTime() - 2.5 * 60 * 60 * 1000); // 2.5 hours before shipment date
-    const initialTrackingHistory = [
-      { status: "Booked", timestamp: bookingDateTime.toISOString(), location: "Lahore, Pakistan" },
-      { status: "Picked Up", timestamp: shipmentDateTime.toISOString(), location: "Lahore, Pakistan" },
-    ];
-    await prisma.shipment.update({
-      where: { id: shipment.id },
-      data: {
-        trackingStatusHistory: initialTrackingHistory as unknown as object,
-        trackingStatus: "Picked Up",
-      } as Record<string, unknown>,
-    });
-
-    // ============================================================================
-    // SECTION 7: INVOICE CREATION
-    // ============================================================================
-    // Initialize variables for invoice creation
-    let customerInvoice = null;
-    let vendorInvoice = null;
-    
-    // Initialize balance calculation variables
-    let customerBalance = 0;
-    let appliedBalance = 0;
-    let remainingAmount = 0;
-    let calculatedInvoiceStatus = "Unpaid";
-    let vendorBalance = 0;
-    let vendorAppliedBalance = 0;
-    let vendorRemainingAmount = 0;
-    let vendorCalculatedInvoiceStatus = "Unpaid";
-
-    try {
-      // Generate vendor invoice number (customer invoice + 5)
-      const vendorInvoiceNumber = generateVendorInvoiceNumber(invoiceNumber);
-
-      // ============================================================================
-      // SECTION 6.1: CUSTOMER AND VENDOR LOOKUP
-      // ============================================================================
-      // Find customer and vendor IDs from database
-      let customerId = null;
-      let vendorId = null;
-
-      // Find customer by name
-      if (finalSenderName) {
-        const customer = await prisma.customers.findFirst({
-          where: orgWhere(session, { CompanyName: finalSenderName }),
-        });
-        customerId = customer?.id || null;
-        customerBalance = customer?.currentBalance || 0;
-      }
-
-      // Find vendor by name
-      if (vendor) {
-        const vendorRecord = await prisma.vendors.findFirst({
-          where: orgWhere(session, { CompanyName: vendor }),
-        });
-        vendorId = vendorRecord?.id || null;
-        vendorBalance = vendorRecord?.currentBalance || 0;
-      }
-
-      // ============================================================================
-      // SECTION 6.2: CUSTOMER BALANCE CALCULATIONS
-      // ============================================================================
-      // Calculate how much of customer's balance to apply to this invoice
-      if (customerBalance > 0) {
-        // Calculate remaining amount based on customer balance
-        remainingAmount = Math.max(0, customerTotalCost - customerBalance);
-        appliedBalance = Math.min(customerBalance, customerTotalCost);
-      }
-      else {
-        remainingAmount = customerTotalCost;
-        appliedBalance = 0;
-      }
-      
-      // Determine invoice status based on remaining amount
-      if (remainingAmount === 0) {
-        calculatedInvoiceStatus = "Paid";
-      } else if (appliedBalance > 0) {
-        calculatedInvoiceStatus = "Partial";
-      }
-
-      // ============================================================================
-      // SECTION 6.3: VENDOR BALANCE CALCULATIONS
-      // ============================================================================
-      // Calculate vendor balance application (inverted logic)
-      // If vendor has positive balance, we owe them money, so apply it to reduce our debt
-      // If vendor has negative balance, they owe us money, so we apply their debt to reduce our invoice
-      if (vendorBalance > 0) {
-        // We owe them money, apply their credit to reduce our debt
-        vendorRemainingAmount = vendorTotalCost;
-        vendorAppliedBalance = 0;
-      } else {
-        // They owe us money, apply their debt to reduce our invoice
-        vendorAppliedBalance = Math.min(Math.abs(vendorBalance), vendorTotalCost);
-        vendorRemainingAmount = Math.max(0, vendorTotalCost - vendorAppliedBalance);
-      }
-      
-      console.log('Vendor balance:', vendorBalance);
-      console.log('Vendor total cost:', vendorTotalCost);
-      console.log('Vendor remaining amount:', vendorRemainingAmount);
-      console.log('Vendor applied balance:', vendorAppliedBalance);
-      
-      // Determine vendor invoice status based on remaining amount
-      if (vendorRemainingAmount === 0) {
-        vendorCalculatedInvoiceStatus = "Paid";
-      } else if (vendorAppliedBalance > 0) {
-        vendorCalculatedInvoiceStatus = "Partial";
-      }
-
-      // ============================================================================
-      // SECTION 6.4: CUSTOMER INVOICE CREATION
-      // ============================================================================
-      // Create customer invoice using the existing accounts API
-      // Use package descriptions from packages array instead of hardcoded "Shipping Service"
-      const customerLineItems: { description: string; value: number }[] = [];
-      
-      // Parse packages if it's a string
-      let parsedPackages = packages;
-      if (typeof packages === 'string') {
-        try {
-          parsedPackages = JSON.parse(packages);
-        } catch (e) {
-          console.error('Error parsing packages:', e);
-          parsedPackages = [];
-        }
-      }
-      
-      // Create line items from packages using their descriptions
-      if (Array.isArray(parsedPackages) && parsedPackages.length > 0) {
-        // Distribute the original price across packages based on their weight/value
-        const totalWeight = parsedPackages.reduce((sum: number, pkg: any) => sum + (Math.max(pkg.weight || 0, pkg.weightVol || 0)), 0);
-        parsedPackages.forEach((pkg: any) => {
-          const packageWeight = Math.max(pkg.weight || 0, pkg.weightVol || 0);
-          const packageProportion = totalWeight > 0 ? packageWeight / totalWeight : 1 / parsedPackages.length;
-          const packageValue = Math.round(originalPrice * packageProportion);
-          const description = pkg.packageDescription || 'Shipping Service';
-          customerLineItems.push({ description, value: packageValue });
-        });
-      } else {
-        // Fallback if no packages: use original price with default description
-        customerLineItems.push({ description: "Shipping Service", value: Math.round(originalPrice) });
-      }
-      
-      // Note: Fuel Surcharge and Discount are NOT added as line items since they're already in fscCharges and discount fields
-      
-      // Add profit line item if profit percentage is greater than 0
-      if (profitPercentageValue > 0) {
-        customerLineItems.push({ description: "Profit", value: Math.round(profitAmount) });
-      }
-
-      // Add balance applied line item if customer has balance
-      if (appliedBalance > 0) {
-        customerLineItems.push({ description: "Balance Applied", value: Math.round(-appliedBalance) });
-      }
-
-      customerInvoice = await prisma.invoice.create({
-        data: orgData(session, {
-          invoiceNumber: invoiceNumber,
-          invoiceDate: shipmentDate ? new Date(shipmentDate) : new Date(),
-          trackingNumber: trackingId,
-          destination: finalDestination,
-          weight: parseFloat(totalWeight) || 0,
-          profile: "Customer",
-          fscCharges: Math.round(fuelSurchargeAmount),
-          discount: Math.round(discountAmount),
-          lineItems: customerLineItems,
-          customerId: customerId,
-          vendorId: null,
-          shipmentId: shipment.id,
-          disclaimer: "Thank you for your business",
-          totalAmount: customerTotalCost, // Use original customer total cost (includes profit)
-          currency: "PKR",
-          status: calculatedInvoiceStatus
-        })
-      });
-
-      // Update shipment invoiceStatus to match calculated status
-      await prisma.shipment.update({
-        where: { id: shipment.id },
-        data: { invoiceStatus: calculatedInvoiceStatus }
-      });
-
-      // ============================================================================
-      // SECTION 6.5: VENDOR INVOICE CREATION
-      // ============================================================================
-      // Create vendor invoice using direct DB write
-      // Vendor invoice uses original price without profit
-      // Use package descriptions from packages array instead of hardcoded "Vendor Service"
-      const vendorLineItems: { description: string; value: number }[] = [];
-      
-      // Parse packages if it's a string (reuse from customer invoice)
-      let vendorParsedPackages = packages;
-      if (typeof packages === 'string') {
-        try {
-          vendorParsedPackages = JSON.parse(packages);
-        } catch (e) {
-          console.error('Error parsing packages for vendor invoice:', e);
-          vendorParsedPackages = [];
-        }
-      }
-      
-      // Create line items from packages using their descriptions
-      if (Array.isArray(vendorParsedPackages) && vendorParsedPackages.length > 0) {
-        // Distribute the original price across packages based on their weight/value
-        const totalWeight = vendorParsedPackages.reduce((sum: number, pkg: any) => sum + (Math.max(pkg.weight || 0, pkg.weightVol || 0)), 0);
-        vendorParsedPackages.forEach((pkg: any) => {
-          const packageWeight = Math.max(pkg.weight || 0, pkg.weightVol || 0);
-          const packageProportion = totalWeight > 0 ? packageWeight / totalWeight : 1 / vendorParsedPackages.length;
-          const packageValue = Math.round(originalPrice * packageProportion);
-          const description = pkg.packageDescription || 'Vendor Service';
-          vendorLineItems.push({ description, value: packageValue });
-        });
-      } else {
-        // Fallback if no packages: use original price with default description
-        vendorLineItems.push({ description: "Vendor Service", value: Math.round(originalPrice) });
-      }
-      
-      // Note: Fuel Surcharge and Discount are NOT added as line items since they're already in fscCharges and discount fields
-      
-      // Add balance applied line item if vendor has balance (positive or negative)
-      if (vendorAppliedBalance > 0) {
-        vendorLineItems.push({ description: "Balance Applied", value: Math.round(-vendorAppliedBalance) });
-      }
-      
-      // Ensure vendor total cost is properly rounded
-      const roundedVendorTotalCost = Math.round(vendorTotalCost);
-
-      vendorInvoice = await prisma.invoice.create({
-        data: orgData(session, {
-          invoiceNumber: vendorInvoiceNumber,
-          invoiceDate: shipmentDate ? new Date(shipmentDate) : new Date(),
-          trackingNumber: trackingId,
-          destination: finalDestination,
-          weight: parseFloat(totalWeight) || 0,
-          profile: "Vendor",
-          fscCharges: 0,
-          discount: Math.round(discountAmount),
-          lineItems: vendorLineItems,
-          customerId: null,
-          vendorId: vendorId,
-          shipmentId: shipment.id,
-          disclaimer: "Vendor invoice - original cost without profit",
-          totalAmount: vendorTotalCost, // Use original vendor total cost (no profit)
-          currency: "PKR",
-          status: vendorCalculatedInvoiceStatus
-        })
-      });
-
-      console.log('Invoices created successfully:', {
-        customerInvoice: customerInvoice?.invoiceNumber,
-        vendorInvoice: vendorInvoice?.invoiceNumber
-      });
-
-          // ============================================================================
-    // SECTION 8: FINANCIAL TRANSACTIONS
-    // ============================================================================
-      try {
-        // ============================================================================
-        // SECTION 7.1: CUSTOMER TRANSACTIONS
-        // ============================================================================
-        // Customer transaction (DEBIT - they owe us money)
-        if (customerId && remainingAmount >= 0) {
-          await addCustomerTransaction(
-            prisma,
-            customerId,
-            'DEBIT',
-            remainingAmount,
-            `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
-            invoiceNumber,
-            invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-        }
-
-        // Post revenue from the saved invoice amount (not just price-derived totals).
-        // price can be 0 while invoice.totalAmount is set; prefer the invoice.
-        const customerRevenueAmount =
-          (customerInvoice?.totalAmount > 0
-            ? customerInvoice.totalAmount
-            : null) ??
-          (customerTotalCost > 0 ? customerTotalCost : remainingAmount);
-        if (customerRevenueAmount > 0) {
-          await createJournalEntryForTransaction(
-            prisma,
-            'CUSTOMER_DEBIT',
-            customerRevenueAmount,
-            `Customer invoice for shipment ${trackingId}`,
-            invoiceNumber,
-            invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-        }
-
-        // If customer has balance and it was applied, create a payment transaction
-        if (customerId && appliedBalance > 0) {
-          // Create payment record for balance application
-          await prisma.payment.create({
-            data: orgData(session, {
-              transactionType: "INCOME",
-              category: "Balance Applied",
-              date: new Date(),
-              amount: appliedBalance,
-              fromPartyType: "CUSTOMER",
-              fromCustomerId: customerId,
-              fromCustomer: finalSenderName || "",
-              toPartyType: "US",
-              toVendorId: null,
-              toVendor: "",
-              mode: "CASH",
-              reference: invoiceNumber,
-              invoice: invoiceNumber,
-              description: `Credit applied for invoice ${invoiceNumber}`,
-            }),
-          });
-          
-          // Create CREDIT transaction for customer (reduces their balance)
-          await addCustomerTransaction(
-            prisma,
-            customerId,
-            'DEBIT',
-            appliedBalance,
-            `Credit applied for invoice ${invoiceNumber}`,
-            `CREDIT-${invoiceNumber}`,
-            invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-
-          // Create journal entry for customer credit transaction
-          await createJournalEntryForTransaction(
-            prisma,
-            'CUSTOMER_CREDIT',
-            appliedBalance,
-            `Customer credit applied for invoice ${invoiceNumber}`,
-            `CREDIT-${invoiceNumber}`,
-            invoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-        }
-
-        // ============================================================================
-        // SECTION 7.2: VENDOR TRANSACTIONS
-        // ============================================================================
-        // Vendor transaction (DEBIT - we owe vendor money)
-        if (vendorId && vendorRemainingAmount >= 0) {
-          await addVendorTransaction(
-            prisma,
-            vendorId,
-            'DEBIT',
-            vendorRemainingAmount,
-            `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
-            vendorInvoiceNumber,
-            vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-        }
-
-        // Prefer saved vendor invoice amount (same reason as customer revenue).
-        const vendorExpenseAmount =
-          (vendorInvoice?.totalAmount > 0 ? vendorInvoice.totalAmount : null) ??
-          (vendorTotalCost > 0 ? vendorTotalCost : vendorRemainingAmount);
-        if (vendorExpenseAmount > 0) {
-          await createJournalEntryForTransaction(
-            prisma,
-            'VENDOR_DEBIT',
-            vendorExpenseAmount,
-            `Vendor invoice for shipment ${trackingId}`,
-            vendorInvoiceNumber,
-            vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-        }
-
-        // If vendor has balance and it was applied, create a payment transaction
-        if (vendorId && vendorAppliedBalance > 0) {
-          // Create payment record for vendor balance application
-          await prisma.payment.create({
-            data: orgData(session, {
-              transactionType: "EXPENSE",
-              category: "Balance Applied",
-              date: new Date(),
-              amount: vendorAppliedBalance,
-              fromPartyType: "US",
-              fromCustomerId: null,
-              fromCustomer: "",
-              toPartyType: "VENDOR",
-              toVendorId: vendorId,
-              toVendor: vendor || "",
-              mode: "CASH",
-              reference: vendorInvoiceNumber,
-              invoice: vendorInvoiceNumber,
-              description: `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
-            }),
-          });
-
-          // Create CREDIT transaction for vendor (reduces what we owe them)
-          await addVendorTransaction(
-            prisma,
-            vendorId,
-            'DEBIT',
-            vendorAppliedBalance,
-            `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
-            `CREDIT-${vendorInvoiceNumber}`,
-            vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-
-          // Create journal entry for vendor credit transaction
-          await createJournalEntryForTransaction(
-            prisma,
-            'VENDOR_CREDIT',
-            vendorAppliedBalance,
-            `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
-            `CREDIT-${vendorInvoiceNumber}`,
-            vendorInvoiceNumber,
-            shipmentDate ? new Date(shipmentDate) : new Date(),
-            session.organizationId
-          );
-
-          // // Create journal entry for company credit transaction
-          // await createJournalEntryForTransaction(
-          //   prisma,
-          //   'COMPANY_CREDIT',
-          //   vendorAppliedBalance,
-          //   `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
-          //   `CREDIT-${vendorInvoiceNumber}`,
-          //   vendorInvoiceNumber
-          // );
-        }
-
-        console.log('Financial transactions created successfully');
-
-      } catch (transactionError) {
-        console.error('Error creating financial transactions:', transactionError);
-        throw transactionError;
-      }
-
-    } catch (invoiceError) {
-      console.error("Error creating invoices:", invoiceError);
-      try {
-        await prisma.invoice.deleteMany({
-          where: {
-            shipmentId: shipment.id,
-            organizationId: session.organizationId,
-          },
-        });
-        await prisma.shipment.delete({
-          where: { id: shipment.id },
-        });
-      } catch (cleanupError) {
-        console.error("Failed to roll back shipment after invoice error:", cleanupError);
-      }
-      throw invoiceError;
-    }
+    const {
+      shipment,
+      customerInvoice,
+      vendorInvoice,
+      customerBalance,
+      appliedBalance,
+      remainingAmount,
+      calculatedInvoiceStatus,
+      vendorBalance,
+      vendorAppliedBalance,
+      vendorRemainingAmount,
+      vendorCalculatedInvoiceStatus,
+    } = txResult;
 
     // ============================================================================
     // SECTION 9: RESPONSE

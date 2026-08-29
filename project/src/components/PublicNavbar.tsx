@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import Image from "next/image";
+
 const PublicNavbar = () => {
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -10,9 +12,12 @@ const PublicNavbar = () => {
           <div className="flex h-14 sm:h-16 items-center justify-between gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
-              <img
+              <Image
                 src="/logo_final.png"
                 alt="PSS Logo"
+                width={140}
+                height={40}
+                priority
                 className="h-9 sm:h-10 w-auto object-contain"
               />
             </Link>

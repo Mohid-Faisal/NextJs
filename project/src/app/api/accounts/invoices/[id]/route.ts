@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/utils";
+import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/server/ledger";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";

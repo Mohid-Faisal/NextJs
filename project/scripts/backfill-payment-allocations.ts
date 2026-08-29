@@ -36,7 +36,12 @@ function parseAllocationsDescription(description: string | null): Array<{
 }
 
 async function main() {
-  const created: Array<{ paymentId: number; invoiceId: number; amount: number }> = [];
+  const created: Array<{
+    organizationId: number;
+    paymentId: number;
+    invoiceId: number;
+    amount: number;
+  }> = [];
   const skipped: string[] = [];
 
   const withDesc = await prisma.payment.findMany({
@@ -68,6 +73,8 @@ async function main() {
       select: { id: true, invoiceNumber: true },
     });
     const byNumber = new Map(invoices.map((i) => [i.invoiceNumber, i.id]));
+    const seen = new Set<number>();
+    let allocated = 0;
     for (const item of parsed) {
       const invoiceId = byNumber.get(item.invoiceNumber);
       if (invoiceId == null) {
@@ -76,7 +83,45 @@ async function main() {
         );
         continue;
       }
-      created.push({ paymentId: payment.id, invoiceId, amount: item.amount });
+      created.push({
+        organizationId: payment.organizationId,
+        paymentId: payment.id,
+        invoiceId,
+        amount: item.amount,
+      });
+      seen.add(invoiceId);
+      allocated += item.amount;
+    }
+
+    // ALLOCATIONS: in the description is only the FIFO excess, not the
+    // invoice the payment was taken against. Credit the remainder there.
+    const remainder = Number(payment.amount) - allocated;
+    if (payment.invoice && remainder > 0.009) {
+      let originalId = byNumber.get(payment.invoice);
+      if (originalId == null) {
+        const original = await prisma.invoice.findUnique({
+          where: {
+            organizationId_invoiceNumber: {
+              organizationId: payment.organizationId,
+              invoiceNumber: payment.invoice,
+            },
+          },
+          select: { id: true },
+        });
+        originalId = original?.id;
+      }
+      if (originalId == null) {
+        skipped.push(
+          `payment ${payment.id}: original invoice ${payment.invoice} not in org ${payment.organizationId}`
+        );
+      } else if (!seen.has(originalId)) {
+        created.push({
+          organizationId: payment.organizationId,
+          paymentId: payment.id,
+          invoiceId: originalId,
+          amount: remainder,
+        });
+      }
     }
   }
 
@@ -113,6 +158,7 @@ async function main() {
       continue;
     }
     created.push({
+      organizationId: payment.organizationId,
       paymentId: payment.id,
       invoiceId: invoice.id,
       amount: Number(payment.amount),

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkRemoteArea } from "@/lib/utils";
+import { checkRemoteArea } from "@/lib/server/ledger";
 import bcrypt from "bcrypt";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";

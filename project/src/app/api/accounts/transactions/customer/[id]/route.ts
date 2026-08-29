@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addCustomerTransaction, createJournalEntryForTransaction, generateVendorInvoiceNumber } from "@/lib/utils";
+import { addCustomerTransaction, createJournalEntryForTransaction, generateVendorInvoiceNumber } from "@/lib/server/ledger";
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
 import { debitVoucherDateFromInvoice } from "@/lib/accounts/invoiceDebitVoucherDate";

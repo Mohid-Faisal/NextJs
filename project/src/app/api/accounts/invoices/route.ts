@@ -9,7 +9,7 @@ import {
   createJournalEntryForTransaction,
   addCustomerTransaction,
   addVendorTransaction,
-} from "@/lib/utils";
+} from "@/lib/server/ledger";
 
 export async function GET(req: NextRequest) {
   try {

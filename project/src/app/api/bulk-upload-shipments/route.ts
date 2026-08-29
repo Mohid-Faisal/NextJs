@@ -7,8 +7,8 @@ import {
   addCustomerTransaction, 
   addVendorTransaction, 
   createJournalEntryForTransaction,
-  getCountryNameFromCode 
-} from "@/lib/utils";
+} from "@/lib/server/ledger";
+import { getCountryNameFromCode } from "@/lib/utils";
 import { Country } from "country-state-city";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";

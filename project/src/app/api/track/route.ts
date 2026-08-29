@@ -82,7 +82,6 @@ export async function GET(request: NextRequest) {
         weight: true,
         totalWeight: true,
         totalPackages: true,
-        amount: true,
         packageDescription: true,
         recipientName: true,
       }
@@ -156,7 +155,6 @@ export async function GET(request: NextRequest) {
           shipmentDate: shipment.shipmentDate,
           deliveryTime: shipment.deliveryTime,
           totalWeight: shipment.totalWeight ?? shipment.weight,
-          amount: shipment.amount,
           packageDescription: shipment.packageDescription,
         },
         recipient,

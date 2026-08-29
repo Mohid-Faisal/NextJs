@@ -100,7 +100,7 @@ export async function PUT(
     const amountChanged = oldAmount !== newAmount;
 
     // Import utility functions
-    const { updateInvoiceBalance, updateJournalEntriesForInvoice } = await import('@/lib/utils');
+    const { updateInvoiceBalance, updateJournalEntriesForInvoice } = await import('@/lib/server/ledger');
 
     // Update invoice
     const updatedInvoice = await prisma.invoice.update({

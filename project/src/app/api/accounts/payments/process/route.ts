@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   addCustomerTransaction,
   addVendorTransaction,
-} from "@/lib/utils";
+} from "@/lib/server/ledger";
 import {
   calculateInvoicePaymentStatus,
   processPaymentWithAllocation,

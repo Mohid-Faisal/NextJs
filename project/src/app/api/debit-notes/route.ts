@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addVendorTransaction } from "@/lib/utils";
+import { addVendorTransaction } from "@/lib/server/ledger";
 import {
   formatAdjustmentReference,
   inferAdjustmentType,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Menu, Bell, Maximize2, Minimize2, Search, Package,
@@ -17,8 +18,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { usePermissions } from "@/components/PermissionContext";
 import { getClientSession, clearClientSessionCache } from "@/lib/clientSession";
-
-const PUBLIC_TOOLS_ADMIN_EMAIL = "mohidfaisal321@gmail.com";
 
 const Navbar = ({
   onToggleSidebar,
@@ -115,7 +114,7 @@ const Navbar = ({
       setUserEmail(email);
       setOrgRole(user.orgRole || "");
       setIsSuperAdmin(user.platformRole === "SUPER_ADMIN");
-      setShowPublicToolsToggle(email === PUBLIC_TOOLS_ADMIN_EMAIL.toLowerCase());
+      setShowPublicToolsToggle(user.platformRole === "SUPER_ADMIN");
     });
     return () => {
       cancelled = true;
@@ -228,9 +227,12 @@ const Navbar = ({
               className="h-12 w-auto object-contain max-w-[180px]"
             />
           ) : isSuperAdmin ? (
-            <img 
+            <Image 
               src="/logo_final.png" 
               alt="PSS Logo" 
+              width={160}
+              height={56}
+              priority
               className="h-14 w-auto object-contain"
             />
           ) : (

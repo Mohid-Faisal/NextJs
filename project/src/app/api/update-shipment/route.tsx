@@ -8,7 +8,7 @@ import {
   syncShipmentInvoiceDebitTransactionDescriptions,
   updateInvoiceBalance,
   updateJournalEntriesForInvoice,
-} from "@/lib/utils";
+} from "@/lib/server/ledger";
 
 // Function to update existing journal entries for transactions
 async function updateJournalEntryForTransaction(

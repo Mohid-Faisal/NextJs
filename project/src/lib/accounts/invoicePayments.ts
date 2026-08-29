@@ -2,7 +2,7 @@ import { createJournalEntryForPaymentProcess } from "@/lib/accounts/createJourna
 import {
   addCustomerTransaction,
   addVendorTransaction,
-} from "@/lib/utils";
+} from "@/lib/server/ledger";
 import { money } from "@/lib/money";
 
 export type PlannedAllocation = {
