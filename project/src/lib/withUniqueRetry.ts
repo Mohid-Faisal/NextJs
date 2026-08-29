@@ -12,12 +12,23 @@
  */
 
 export function isUniqueViolation(e: unknown): boolean {
-  return (
+  if (
     typeof e === "object" &&
     e !== null &&
     "code" in e &&
     (e as { code?: unknown }).code === "P2002"
-  );
+  ) {
+    const meta = (e as { meta?: { target?: string | string[] } }).meta;
+    const target = Array.isArray(meta?.target)
+      ? meta?.target.join(",")
+      : String(meta?.target || "");
+    // User-entered trackingId or referenceNumber collisions cannot be resolved by retry
+    if (target.includes("trackingId") || target.includes("referenceNumber")) {
+      return false;
+    }
+    return true;
+  }
+  return false;
 }
 
 export async function withUniqueRetry<T>(

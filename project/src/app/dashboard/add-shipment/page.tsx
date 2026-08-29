@@ -690,6 +690,8 @@ const AddShipmentPage = () => {
     vendorPrice: 0,
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -815,16 +817,18 @@ const AddShipmentPage = () => {
     console.log("Destination (Recipient Country):", destination);
 
     const isEditing = Boolean(editId);
-    const res = await fetch(
-      isEditing ? "/api/update-shipment" : "/api/add-shipment",
-      {
-        method: isEditing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          isEditing ? { id: Number(editId), ...shipmentData } : shipmentData
-        ),
-      }
-    );
+    try {
+      setIsSubmitting(true);
+      const res = await fetch(
+        isEditing ? "/api/update-shipment" : "/api/add-shipment",
+        {
+          method: isEditing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            isEditing ? { id: Number(editId), ...shipmentData } : shipmentData
+          ),
+        }
+      );
 
     const data = await res.json();
     console.log("Backend response:", data);
@@ -950,7 +954,10 @@ const AddShipmentPage = () => {
       
       toast.error(errorMessage);
     }
-  };
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Prefill once per shipment after settings (vendors + services) are fully loaded.
   // Do not re-run when filterServicesByVendor changes serviceModes (that wiped edits).
@@ -2264,8 +2271,8 @@ const AddShipmentPage = () => {
               >
                 Price list calculation
               </Button>
-              <Button type="submit" className="bg-green-500 w-full sm:w-auto">
-                Save
+              <Button type="submit" disabled={isSubmitting} className="bg-green-500 w-full sm:w-auto">
+                {isSubmitting ? "Saving..." : "Save"}
               </Button>
             </div>
           </CardContent>
