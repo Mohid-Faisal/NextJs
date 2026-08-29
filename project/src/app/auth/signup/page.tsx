@@ -81,6 +81,7 @@ const SignupPage = () => {
   const [step, setStep] = useState<"signup" | "plan" | "payment" | "verification" | "pending">("signup");
   const [verificationCode, setVerificationCode] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
+  const [planSelectionToken, setPlanSelectionToken] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -238,6 +239,7 @@ const SignupPage = () => {
           organizationId: orgId,
           planCode,
           billingCycle: isAnnual ? "annually" : "monthly",
+          planSelectionToken,
         })
       });
       const data = await res.json();
@@ -265,6 +267,7 @@ const SignupPage = () => {
           userId,
           organizationId: orgId,
           planCode: "trial",
+          planSelectionToken,
         })
       });
       const data = await res.json();
@@ -303,6 +306,7 @@ const SignupPage = () => {
           referenceId: referenceId.trim(),
           receiptUrl,
           billingCycle: isAnnual ? "annually" : "monthly",
+          planSelectionToken,
         }),
       });
 
@@ -351,6 +355,7 @@ const SignupPage = () => {
 
       if (response.ok && data.success) {
         setUserId(data.userId);
+        if (data.planSelectionToken) setPlanSelectionToken(data.planSelectionToken);
         if (data.organization?.id) {
           setOrgId(data.organization.id);
         }
@@ -428,6 +433,7 @@ const SignupPage = () => {
       });
       const data = await response.json();
       if (response.ok && data.success) {
+        if (data.planSelectionToken) setPlanSelectionToken(data.planSelectionToken);
         if (tab === "org") {
           setStep("plan");
         } else {

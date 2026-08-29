@@ -854,13 +854,25 @@ export async function POST(req: NextRequest) {
 
       } catch (transactionError) {
         console.error('Error creating financial transactions:', transactionError);
-        // Don't fail the shipment creation if transaction creation fails
+        throw transactionError;
       }
 
     } catch (invoiceError) {
-      console.error('Error creating invoices:', invoiceError);
-      // Don't fail the shipment creation if invoice creation fails
-      // The shipment is already saved, we just log the error
+      console.error("Error creating invoices:", invoiceError);
+      try {
+        await prisma.invoice.deleteMany({
+          where: {
+            shipmentId: shipment.id,
+            organizationId: session.organizationId,
+          },
+        });
+        await prisma.shipment.delete({
+          where: { id: shipment.id },
+        });
+      } catch (cleanupError) {
+        console.error("Failed to roll back shipment after invoice error:", cleanupError);
+      }
+      throw invoiceError;
     }
 
     // ============================================================================

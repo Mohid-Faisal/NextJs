@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 

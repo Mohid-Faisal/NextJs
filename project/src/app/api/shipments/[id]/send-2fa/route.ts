@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { send2FACodeEmail } from "@/lib/email";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import { randomInt } from "node:crypto";
 
 export async function POST(
   request: NextRequest,
@@ -73,7 +74,7 @@ export async function POST(
     }
 
     // Generate 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationCode = randomInt(100000, 1000000).toString();
     
     // Store the verification code temporarily (you might want to use Redis in production)
     // For now, we'll store it in the user's status field temporarily

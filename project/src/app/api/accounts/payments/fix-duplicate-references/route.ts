@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 

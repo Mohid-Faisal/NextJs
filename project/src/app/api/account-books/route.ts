@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
-import { cleanupOrphanPaymentJournalEntries } from "@/lib/accounts/cleanupOrphanPaymentJournalEntries";
-import { reconcileInvoiceJournalEntries } from "@/lib/accounts/reconcileInvoiceJournalEntries";
+import { parseListPaging } from "@/lib/money";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -18,18 +17,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
-    const limitParam = searchParams.get('limit');
-    const limit = limitParam === 'all' ? undefined : parseInt(limitParam || '1000') || 1000;
-
-    // Self-healing: auto-reconcile invoice revenue/expense JEs and clean orphan payment JEs
-    try {
-      await Promise.all([
-        reconcileInvoiceJournalEntries(session, dateFrom || undefined, dateTo || undefined),
-        cleanupOrphanPaymentJournalEntries(session),
-      ]);
-    } catch (healError) {
-      console.error("Auto-reconciliation / orphan cleanup failed:", healError);
-    }
+    const { take: limit } = parseListPaging(searchParams, 1000);
 
     const whereClause: any = orgWhere(session);
 

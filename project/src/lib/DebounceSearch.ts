@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import { debounce } from "lodash";
 
+export function useDebouncedValue<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
 export function useDebouncedSearch(
   query: string,
   fetchUrl: string,

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import { parseWorkbook, getFirstWorksheet, sheetToMatrix } from "@/lib/excel";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import { parseListPaging } from "@/lib/money";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,9 +40,9 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const workbook = XLSX.read(buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+    const workbook = await parseWorkbook(buffer);
+    const sheet = getFirstWorksheet(workbook);
+    const raw: any[][] = sheet ? sheetToMatrix(sheet) : [];
 
     console.log("📋 Raw Excel data:", raw.slice(0, 10)); // Log first 10 rows for debugging
 
@@ -251,9 +252,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const vendor = searchParams.get("vendor");
   const service = searchParams.get("service");
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "10");
-  const skip = (page - 1) * limit;
+  const { page, take: limit, skip } = parseListPaging(searchParams, 10);
   const search = searchParams.get("search")?.trim() || "";
 
   // If only service is provided, search for all vendors with that service

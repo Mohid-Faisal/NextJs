@@ -12,8 +12,15 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Surface for diagnostics; wire to Sentry later.
     console.error("[app-error]", error);
+    void fetch("/api/client-error", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: error?.message,
+        digest: error?.digest,
+      }),
+    }).catch(() => {});
   }, [error]);
 
   return (

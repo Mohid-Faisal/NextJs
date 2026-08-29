@@ -130,6 +130,9 @@ export async function runVendorBulkAutoPay(
 > {
   const log = options?.onProgress;
   const organizationId = options?.organizationId;
+  if (organizationId == null) {
+    return { ok: false, status: 400, error: "organizationId is required" };
+  }
   if (!Number.isFinite(vendorId)) {
     return { ok: false, status: 400, error: "Valid vendorId is required" };
   }
@@ -137,7 +140,7 @@ export async function runVendorBulkAutoPay(
   const vendor = await prisma.vendors.findFirst({
     where: {
       id: vendorId,
-      ...(organizationId != null ? { organizationId } : {}),
+      organizationId,
     },
   });
   if (!vendor) {
@@ -155,7 +158,7 @@ export async function runVendorBulkAutoPay(
   }
 
   const accounts = await prisma.chartOfAccount.findMany({
-    where: { isActive: true },
+    where: { isActive: true, organizationId },
   });
   const coaRows: ChartAccountRow[] = accounts.map((a) => ({
     id: a.id,
@@ -178,7 +181,7 @@ export async function runVendorBulkAutoPay(
     where: {
       vendorId,
       profile: "Vendor",
-      ...(organizationId != null ? { organizationId } : {}),
+      organizationId,
     },
     include: {
       shipment: { select: { shipmentDate: true } },
@@ -247,9 +250,9 @@ export async function runVendorBulkAutoPay(
       try {
         await prisma.$transaction(
           async (tx) => {
-            await tx.payment.create({
+            const payment = await tx.payment.create({
               data: {
-                ...(organizationId != null ? { organizationId } : {}),
+                organizationId,
                 transactionType: "EXPENSE",
                 category: "Vendor Payment",
                 date: paymentDate,
@@ -267,9 +270,18 @@ export async function runVendorBulkAutoPay(
               },
             });
 
+            await tx.paymentAllocation.create({
+              data: {
+                organizationId,
+                paymentId: payment.id,
+                invoiceId: inv.id,
+                amount: remaining,
+              },
+            });
+
             await tx.vendorTransaction.create({
               data: {
-                ...(organizationId != null ? { organizationId } : {}),
+                organizationId,
                 vendorId,
                 type: "CREDIT",
                 amount: remaining,
@@ -302,7 +314,7 @@ export async function runVendorBulkAutoPay(
 
             await tx.journalEntry.create({
               data: {
-                ...(organizationId != null ? { organizationId } : {}),
+                organizationId,
                 entryNumber,
                 date: paymentDate,
                 description: `Invoice Payment: Vendor payment for ${inv.invoiceNumber} - ${DESCRIPTION}`,

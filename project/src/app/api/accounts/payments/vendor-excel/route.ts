@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import { parseWorkbook, getFirstWorksheet, sheetToJson } from "@/lib/excel";
 import { parse, isValid, format } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
-import { processPaymentWithAllocation } from "@/lib/utils";
-import { createJournalEntryForPaymentProcess } from "@/lib/accounts/createJournalEntryForPaymentProcess";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { processPaymentWithAllocation } from "@/lib/accounts/invoicePayments";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import {
   ChartAccountRow,
@@ -143,7 +142,7 @@ function rowToParsed(
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -168,16 +167,15 @@ export async function POST(req: NextRequest) {
     }
 
     const buf = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buf, { type: "buffer" });
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) {
+    const workbook = await parseWorkbook(buf);
+    const sheet = getFirstWorksheet(workbook);
+    if (!sheet) {
       return NextResponse.json(
         { error: "Workbook has no sheets" },
         { status: 400 }
       );
     }
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    const rows = sheetToJson<Record<string, unknown>>(sheet, {
       defval: "",
     });
 
@@ -279,18 +277,6 @@ export async function POST(req: NextRequest) {
       const reference = invoiceNumber;
       const paymentDateStr = format(paymentDate, "yyyy-MM-dd");
 
-      const body = {
-        invoiceNumber,
-        paymentAmount,
-        paymentType: "VENDOR_PAYMENT" as const,
-        paymentMethod,
-        reference,
-        description: description || undefined,
-        paymentDate: paymentDateStr,
-        debitAccountId: accountIds.debitAccountId,
-        creditAccountId: accountIds.creditAccountId,
-      };
-
       try {
         const result = await processPaymentWithAllocation(
           prisma,
@@ -303,13 +289,6 @@ export async function POST(req: NextRequest) {
           paymentDateStr,
           accountIds.debitAccountId,
           accountIds.creditAccountId,
-          session.organizationId
-        );
-
-        await createJournalEntryForPaymentProcess(
-          result.payment,
-          body,
-          result.invoice,
           session.organizationId
         );
 

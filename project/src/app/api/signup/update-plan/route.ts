@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { sendUserApprovalEmail } from "@/lib/email";
 import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
 import { fetchExchangeRates } from "@/lib/currency";
+import {
+  PLAN_SELECTION_COOKIE,
+  clearPlanSelectionCookie,
+  verifyPlanSelectionToken,
+} from "@/lib/auth/planSelectionToken";
 
 /**
  * SECURITY: previously fully unauthenticated — anyone could upsert ANY
@@ -17,20 +22,39 @@ import { fetchExchangeRates } from "@/lib/currency";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, planCode, paymentMethod, referenceId, receiptUrl, billingCycle } = body;
+    const { userId, planCode, paymentMethod, referenceId, receiptUrl, billingCycle, planSelectionToken } = body;
 
-    if (!userId || !planCode) {
+    if (!planCode) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields: userId, planCode" },
+        { success: false, message: "Missing required fields: planCode" },
         { status: 400 }
       );
     }
 
-    const parsedUserId = parseInt(userId, 10);
-    if (isNaN(parsedUserId)) {
+    const cookieToken = request.cookies.get(PLAN_SELECTION_COOKIE)?.value;
+    const token = (typeof planSelectionToken === "string" && planSelectionToken) || cookieToken;
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: "Invalid userId" },
-        { status: 400 }
+        { success: false, message: "Plan selection session expired. Please sign up again." },
+        { status: 401 }
+      );
+    }
+
+    let tokenUserId: number;
+    try {
+      tokenUserId = await verifyPlanSelectionToken(token);
+    } catch {
+      return NextResponse.json(
+        { success: false, message: "Plan selection session expired. Please sign up again." },
+        { status: 401 }
+      );
+    }
+
+    const parsedUserId = userId != null ? parseInt(userId, 10) : tokenUserId;
+    if (isNaN(parsedUserId) || parsedUserId !== tokenUserId) {
+      return NextResponse.json(
+        { success: false, message: "Plan selection not available for this account." },
+        { status: 403 }
       );
     }
 
@@ -204,7 +228,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, message: "Subscription plan updated successfully." });
+    const res = NextResponse.json({ success: true, message: "Subscription plan updated successfully." });
+    return clearPlanSelectionCookie(res);
   } catch (error) {
     console.error("Error updating signup plan:", error);
     return NextResponse.json(

@@ -6,7 +6,7 @@
  *   - .env points at STAGING (DATABASE_URL + DIRECT_URL)
  *
  * Usage:
- *   $env:PROD_DIRECT_URL="postgresql://postgres.mnmpptjhqtuskhgzjqqr:Mohid%402003@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require"
+ *   $env:PROD_DIRECT_URL="postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=require"
  *   npx tsx scripts/copy-prod-to-staging.ts
  *
  * Dry run (counts only):
@@ -15,8 +15,8 @@
 
 import { PrismaClient } from "@prisma/client";
 
-const STAGING_REF = "vevbhriugutsaothxtcy";
-const PROD_REF = "mnmpptjhqtuskhgzjqqr";
+const STAGING_REF = process.env.STAGING_REF || "";
+const PROD_REF = process.env.PROD_REF || "";
 const BATCH = 500;
 
 const TABLES = [
@@ -53,6 +53,11 @@ const TABLES = [
 ] as const;
 
 function assertSafe() {
+  if (!STAGING_REF || !PROD_REF) {
+    throw new Error(
+      "Set STAGING_REF and PROD_REF environment variables (Supabase project refs). Do not hardcode credentials in this script."
+    );
+  }
   const staging = process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "";
   if (!staging.includes(STAGING_REF)) {
     throw new Error(

@@ -1,25 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgChartAccountByCode } from "@/lib/tenant/findOrgChartAccount";
 import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
+import { parseListPaging } from "@/lib/money";
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const { page, take: limit, skip } = parseListPaging(searchParams, 50);
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category") || "";
     const type = searchParams.get("type") || "";
     const isActive = searchParams.get("isActive");
-
-    const skip = (page - 1) * limit;
 
     const where: any = { ...orgWhere(session) };
 
@@ -71,7 +69,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -123,7 +121,7 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 

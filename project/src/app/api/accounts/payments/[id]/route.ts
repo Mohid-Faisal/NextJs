@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { calculateInvoicePaymentStatus } from "@/lib/utils";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { calculateInvoicePaymentStatus } from "@/lib/accounts/invoicePayments";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgPayment } from "@/lib/tenant/findOrgPayment";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
@@ -16,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -73,7 +73,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -317,7 +317,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -459,7 +459,9 @@ export async function DELETE(
           const paymentStatus = await calculateInvoicePaymentStatus(
             prisma,
             payment.invoice,
-            invoice.totalAmount
+            invoice.totalAmount,
+            session.organizationId,
+            invoice.id
           );
 
           await prisma.invoice.update({
@@ -544,7 +546,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 

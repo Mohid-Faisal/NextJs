@@ -42,52 +42,65 @@ export async function GET(
       );
     }
 
-    // Prefer customer linked via invoice; otherwise resolve by shipment.senderName
+    // Prefer customer linked via invoice; otherwise resolve by shipment.senderName.
+    // Recipient is looked up using multiple strategies because
+    // shipment.recipientName can be either a company name OR a person name
+    // depending on how the shipment was created. All lookups are independent,
+    // so they run in parallel and results are picked in priority order.
     let customer = shipment.invoices?.[0]?.customer ?? null;
-    if (!customer && shipment.senderName) {
-      const name = String(shipment.senderName).trim();
-      if (name) {
-        customer =
-          (await prisma.customers.findFirst({
-            where: orgWhere(session, { CompanyName: { equals: name } }),
-          })) ||
-          (await prisma.customers.findFirst({
-            where: orgWhere(session, { PersonName: { equals: name } }),
-          })) ||
-          (await prisma.customers.findFirst({
-            where: orgWhere(session, {
-              OR: [
-                { CompanyName: { contains: name } },
-                { PersonName: { contains: name } },
-              ],
-            }),
-          }));
-      }
-    }
-
-    // Look up recipient using multiple strategies because shipment.recipientName
-    // can be either a company name OR a person name depending on how the
-    // shipment was created.
     let recipient = null;
-    if (shipment.recipientName) {
-      const name = String(shipment.recipientName).trim();
-      if (name) {
-        recipient =
-          (await prisma.recipients.findFirst({
-            where: orgWhere(session, { CompanyName: { equals: name } }),
-          })) ||
-          (await prisma.recipients.findFirst({
-            where: orgWhere(session, { PersonName: { equals: name } }),
-          })) ||
-          (await prisma.recipients.findFirst({
-            where: orgWhere(session, {
-              OR: [
-                { CompanyName: { contains: name } },
-                { PersonName: { contains: name } },
-              ],
+
+    const senderName =
+      !customer && shipment.senderName ? String(shipment.senderName).trim() : "";
+    const recipientName = shipment.recipientName
+      ? String(shipment.recipientName).trim()
+      : "";
+
+    const [customerMatches, recipientMatches] = await Promise.all([
+      senderName
+        ? Promise.all([
+            prisma.customers.findFirst({
+              where: orgWhere(session, { CompanyName: { equals: senderName } }),
             }),
-          }));
-      }
+            prisma.customers.findFirst({
+              where: orgWhere(session, { PersonName: { equals: senderName } }),
+            }),
+            prisma.customers.findFirst({
+              where: orgWhere(session, {
+                OR: [
+                  { CompanyName: { contains: senderName } },
+                  { PersonName: { contains: senderName } },
+                ],
+              }),
+            }),
+          ])
+        : Promise.resolve(null),
+      recipientName
+        ? Promise.all([
+            prisma.recipients.findFirst({
+              where: orgWhere(session, { CompanyName: { equals: recipientName } }),
+            }),
+            prisma.recipients.findFirst({
+              where: orgWhere(session, { PersonName: { equals: recipientName } }),
+            }),
+            prisma.recipients.findFirst({
+              where: orgWhere(session, {
+                OR: [
+                  { CompanyName: { contains: recipientName } },
+                  { PersonName: { contains: recipientName } },
+                ],
+              }),
+            }),
+          ])
+        : Promise.resolve(null),
+    ]);
+
+    if (customerMatches) {
+      customer = customerMatches[0] || customerMatches[1] || customerMatches[2];
+    }
+    if (recipientMatches) {
+      recipient =
+        recipientMatches[0] || recipientMatches[1] || recipientMatches[2];
     }
 
     return NextResponse.json({
@@ -104,69 +117,11 @@ export async function GET(
   }
 }
 
-// export async function PUT(
-//   request: NextRequest,
-//   { params }: { params: { id: string } }
-// ) {
-//   try {
-//     const shipmentId = parseInt(params.id);
-//     const body = await request.json();
-
-//     // Get the shipment to verify it exists
-//     const existingShipment = await prisma.shipment.findUnique({
-//       where: { id: shipmentId },
-//     });
-
-//     if (!existingShipment) {
-//       return NextResponse.json(
-//         { success: false, message: "Shipment not found" },
-//         { status: 404 }
-//       );
-//     }
-
-//     // Update the shipment
-//     const updatedShipment = await prisma.shipment.update({
-//       where: { id: shipmentId },
-//       data: {
-//         awbNumber: body.awbNumber,
-//         senderName: body.senderName,
-//         senderPhone: body.senderPhone,
-//         senderAddress: body.senderAddress,
-//         recipientName: body.recipientName,
-//         recipientPhone: body.recipientPhone,
-//         recipientAddress: body.recipientAddress,
-//         destination: body.destination,
-//         weight: body.weight,
-//         dimensions: body.dimensions,
-//         description: body.description,
-//         deliveryStatus: body.deliveryStatus,
-//         invoiceStatus: body.invoiceStatus,
-//         totalCost: body.totalCost,
-//         notes: body.notes,
-//       },
-//     });
-
-//     return NextResponse.json({
-//       success: true,
-//       message: "Shipment updated successfully",
-//       data: updatedShipment,
-//     });
-//   } catch (error) {
-//     console.error("Update shipment error:", error);
-//     return NextResponse.json(
-//       { success: false, message: "Failed to update shipment" },
-//       { status: 500 }
-//     );
-//   }
-// }
-
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("🚀 DELETE shipment request started");
-
     const auth = await requirePermission(request, "delete_shipment");
     if (auth.error) return auth.error;
     const session = auth.session;
@@ -174,10 +129,7 @@ export async function DELETE(
     const { id } = await params;
     const shipmentId = parseInt(id);
 
-    console.log(`📦 Processing deletion for shipment ID: ${shipmentId}`);
-
     if (isNaN(shipmentId)) {
-      console.log("❌ Invalid shipment ID provided");
       return NextResponse.json(
         { error: "Invalid shipment ID" },
         { status: 400 }
@@ -209,24 +161,18 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    console.log(`👤 User found: ${user.email}, Status: ${user.status}`);
-
     // Verify the password
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
-      console.log("❌ Password verification failed");
       return NextResponse.json(
         { error: "Incorrect password" },
         { status: 401 }
       );
     }
 
-    console.log("✅ Password verified successfully");
-
     // For shipments, require 2FA verification
     if (!verificationCode) {
-      console.log("❌ Verification code missing");
       return NextResponse.json(
         { error: "Verification code is required for shipment deletion" },
         { status: 400 }
@@ -235,19 +181,13 @@ export async function DELETE(
 
     // Verify the 2FA code
     if (user.status.startsWith("PENDING_2FA_")) {
-      console.log("🔐 Processing 2FA verification");
       const statusParts = user.status.split("_");
       const storedCode = statusParts[2];
       const timestamp = parseInt(statusParts[3]);
       const currentTime = Date.now();
 
-      console.log(
-        `🔐 Stored code: ${storedCode}, Timestamp: ${timestamp}, Current time: ${currentTime}`
-      );
-
       // Check if code has expired (10 minutes)
       if (currentTime - timestamp > 10 * 60 * 1000) {
-        console.log("⏰ Verification code expired");
         // Reset user status and return error
         await prisma.user.update({
           where: { id: user.id },
@@ -261,25 +201,17 @@ export async function DELETE(
 
       // Verify the code
       if (verificationCode !== storedCode) {
-        console.log(
-          `❌ Verification code mismatch. Expected: ${storedCode}, Received: ${verificationCode}`
-        );
         return NextResponse.json(
           { error: "Invalid verification code" },
           { status: 401 }
         );
       }
 
-      console.log("✅ 2FA verification successful");
-
       // NOTE: We intentionally do NOT reset user status to ACTIVE here.
       // During bulk delete, multiple requests share the same 2FA code.
       // The code will naturally expire after 10 minutes, and login/session
       // handlers already allow PENDING_2FA_ status.
     } else {
-      console.log(
-        `❌ No pending verification found. User status: ${user.status}`
-      );
       return NextResponse.json(
         {
           error:
@@ -288,8 +220,6 @@ export async function DELETE(
         { status: 400 }
       );
     }
-
-    console.log("🔍 Starting to retrieve shipment and related data...");
 
     // Check if shipment exists and get related invoices
     const shipment = await prisma.shipment.findFirst({
@@ -300,18 +230,11 @@ export async function DELETE(
     });
 
     if (!shipment) {
-      console.log(`❌ Shipment ${shipmentId} not found in database`);
       return NextResponse.json(
         { error: "Shipment not found" },
         { status: 404 }
       );
     }
-
-    console.log(
-      `📦 Shipment found: ${
-        shipment.trackingId || "No tracking ID"
-      }, Invoice: ${shipment.invoiceNumber || "No invoice number"}`
-    );
 
     // Pre-compute non-null values for use across multiple where clauses
     const trackingId = shipment.trackingId ?? "";
@@ -322,7 +245,6 @@ export async function DELETE(
       : "";
 
     // Find related invoices
-    console.log("🔍 Searching for related invoices...");
     const invoiceOr: any[] = [{ shipmentId: shipmentId }];
     if (trackingId) invoiceOr.push({ trackingNumber: trackingId });
     if (invoiceNumber) invoiceOr.push({ invoiceNumber: invoiceNumber });
@@ -335,22 +257,7 @@ export async function DELETE(
       },
     });
 
-    console.log(
-      `📄 Found ${relatedInvoices.length} related invoices for shipment ${shipmentId}`
-    );
-
-    if (relatedInvoices.length > 0) {
-      relatedInvoices.forEach((invoice, index) => {
-        console.log(
-          `  📄 Invoice ${index + 1}: ${invoice.invoiceNumber}, Status: ${
-            invoice.status
-          }, Amount: ${invoice.totalAmount}, Profile: ${invoice.profile}`
-        );
-      });
-    }
-
     // Find related journal entries that were created for this shipment
-    console.log("🔍 Searching for related journal entries...");
     const allInvoiceNumbers = Array.from(
       new Set(
         [
@@ -381,7 +288,6 @@ export async function DELETE(
         })
       : [];
 
-    console.log("🔍 Searching for related customer transactions...");
     const customerInvoiceNumbers = Array.from(
       new Set(
         relatedInvoices
@@ -408,7 +314,6 @@ export async function DELETE(
         })
       : [];
 
-    console.log("🔍 Searching for related vendor transactions...");
     const vendorInvoiceNumbers = Array.from(
       new Set([
         ...relatedInvoices
@@ -613,32 +518,6 @@ export async function DELETE(
       },
       { timeout: 30000 }
     );
-    console.log(
-      `🎉 Shipment ${shipmentId} and ${relatedInvoices.length} related invoices deleted successfully`
-    );
-
-    console.log("🎉 Shipment deletion completed successfully!");
-    console.log(`📊 Final Summary:`);
-    console.log(`  - Deleted invoices: ${relatedInvoices.length}`);
-    console.log(`  - Deleted journal entries: ${relatedJournalEntries.length}`);
-    console.log(
-      `  - Deleted customer transactions: ${unpaidCustomerTransactions.length}`
-    );
-    console.log(
-      `  - Deleted vendor transactions: ${unpaidVendorTransactions.length}`
-    );
-    console.log(
-      `  - Customer balances recalculated: ${customerBalancesRecalculated}`
-    );
-    console.log(
-      `  - Vendor balances recalculated: ${vendorBalancesRecalculated}`
-    );
-    console.log(`  - Customer refunds processed: ${customerRefundsProcessed}`);
-    console.log(
-      `  - Vendor adjustments processed: ${vendorAdjustmentsProcessed}`
-    );
-    console.log(`  - Total refund amount: ${totalRefundAmount}`);
-    console.log(`  - Total adjustment amount: ${totalAdjustmentAmount}`);
 
     return NextResponse.json({
       success: true,

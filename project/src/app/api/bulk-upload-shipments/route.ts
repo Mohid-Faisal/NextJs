@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import { parseWorkbook, getFirstWorksheet, sheetToMatrix } from "@/lib/excel";
 import { prisma } from "@/lib/prisma";
 import { 
   generateInvoiceNumber, 
@@ -10,13 +10,13 @@ import {
   getCountryNameFromCode 
 } from "@/lib/utils";
 import { Country } from "country-state-city";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { checkShipmentLimit } from "@/lib/billing/usage";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "create_shipment");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -57,9 +57,9 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const workbook = XLSX.read(buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+    const workbook = await parseWorkbook(buffer);
+    const sheet = getFirstWorksheet(workbook);
+    const raw: any[][] = sheet ? sheetToMatrix(sheet) : [];
 
     // Find header row
     let headerRowIndex = 0;

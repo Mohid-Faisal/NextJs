@@ -7,13 +7,14 @@ import {
   normalizeNoteLineDescription,
   parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { creditNoteOrgFilter } from "@/lib/tenant/findOrgCreditNote";
 import { findOrgChartAccount, findOrgChartAccountByFilter } from "@/lib/tenant/findOrgChartAccount";
 import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 import { nextSequenceNumber } from "@/lib/sequences";
 import type { SessionPayload } from "@/lib/auth/session";
+import { parseListPaging } from "@/lib/money";
 
 async function getAccountIds(session: SessionPayload) {
   try {
@@ -61,21 +62,17 @@ async function getAccountIds(session: SessionPayload) {
 // GET /api/credit-notes - Get all credit notes with pagination and filtering
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = searchParams.get("limit") || "10";
+    const { page, take: pageSize, skip } = parseListPaging(searchParams, 10);
     const search = searchParams.get("search") || "";
 
     const customerId = searchParams.get("customerId") || "";
     const sortField = searchParams.get("sortField") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
-
-    const pageSize = limit === "all" ? undefined : parseInt(limit);
-    const skip = pageSize ? (page - 1) * pageSize : 0;
 
     // Build where clause
     const where: any = { ...creditNoteOrgFilter(session) };
@@ -192,7 +189,7 @@ export async function GET(request: NextRequest) {
 // POST /api/credit-notes - Create a new credit note
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 

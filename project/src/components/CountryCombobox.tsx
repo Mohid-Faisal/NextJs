@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Combobox } from "@headlessui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown } from "lucide-react";
@@ -20,9 +20,16 @@ export default function CountryCombobox({
   value: string | null;
   onChange: (val: string | null) => void;
 }) {
+  const [query, setQuery] = useState("");
   const parentRef = useRef<HTMLDivElement | null>(null);
 
-  const filteredCountries = countryList;
+  const filteredCountries = useMemo(() => {
+    return query === ""
+      ? countryList
+      : countryList.filter((c) =>
+          c.name.toLowerCase().includes(query.toLowerCase())
+        );
+  }, [query]);
 
   const rowVirtualizer = useVirtualizer({
     count: filteredCountries.length,
@@ -44,6 +51,16 @@ export default function CountryCombobox({
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </div>
         </Combobox.Button>
+
+        {/* Search input */}
+        <Combobox.Input
+          className="mt-1 w-full rounded-md border border-input bg-background px-4 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+          placeholder="Search countries..."
+          displayValue={() => query}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setQuery(e.target.value)
+          }
+        />
 
         {/* Dropdown options */}
         <Combobox.Options

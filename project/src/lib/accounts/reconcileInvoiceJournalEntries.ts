@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { SessionPayload } from "@/lib/auth/session";
 import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
+import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 
 /**
  * Reconciles General Ledger Journal Entries with active Invoices.
@@ -13,7 +14,8 @@ import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
  * 3. Any journal entry whose amount or date drifted from the invoice is updated.
  * 4. Any journal entry for a cancelled invoice is cleaned up.
  *
- * This function is fully idempotent and safe to run on page load.
+ * This function is idempotent. It must be triggered explicitly (admin
+ * reconcile job), never as a side effect of opening account books.
  */
 export async function reconcileInvoiceJournalEntries(
   session: SessionPayload,
@@ -136,23 +138,9 @@ export async function reconcileInvoiceJournalEntries(
       }
     }
 
-    // Determine next journal entry sequence counter
-    const lastJe = await prisma.journalEntry.findFirst({
-      where: { organizationId: orgId },
-      orderBy: { entryNumber: "desc" },
-      select: { entryNumber: true },
-    });
-    let seqCounter = 0;
-    if (lastJe && lastJe.entryNumber) {
-      const match = /(\d+)$/.exec(String(lastJe.entryNumber));
-      if (match) {
-        seqCounter = parseInt(match[1], 10) || 0;
-      }
-    }
-
     let createdCount = 0;
     let updatedCount = 0;
-    let removedCount = 0;
+    const removedCount = 0;
 
     for (const inv of invoices) {
       const invNum = (inv.invoiceNumber ?? "").trim();
@@ -162,19 +150,9 @@ export async function reconcileInvoiceJournalEntries(
       const isCancelled = inv.status === "Cancelled";
       const amount = Number(inv.totalAmount) || 0;
 
-      // 1. If invoice is cancelled and JE exists, remove the cancelled JE
+      // Cancelled invoices: leave historical JEs in place (do not hard-delete
+      // posted ledger rows from a page-load or background reconcile).
       if (isCancelled) {
-        if (existingJE) {
-          await prisma.$transaction(async (tx) => {
-            await tx.journalEntryLine.deleteMany({
-              where: { journalEntryId: existingJE.id },
-            });
-            await tx.journalEntry.delete({
-              where: { id: existingJE.id },
-            });
-          });
-          removedCount++;
-        }
         continue;
       }
 
@@ -190,76 +168,76 @@ export async function reconcileInvoiceJournalEntries(
 
       // 2. If no JE exists, create it
       if (!existingJE) {
-        seqCounter += 1;
-        const entryNumber = `JE-${String(seqCounter).padStart(4, "0")}`;
+        await prisma.$transaction(async (tx) => {
+          const entryNumber = await nextJournalEntryNumber(tx, orgId);
 
-        if (isCustomer) {
-          await prisma.journalEntry.create({
-            data: {
-              organizationId: orgId,
-              entryNumber,
-              date: entryDate,
-              description: `Customer invoice for shipment ${tracking}`,
-              reference: invNum,
-              totalDebit: amount,
-              totalCredit: amount,
-              isPosted: true,
-              postedAt: entryDate,
-              lines: {
-                create: [
-                  {
-                    accountId: arAccount.id,
-                    debitAmount: amount,
-                    creditAmount: 0,
-                    description: "Debit: Customer owes money",
-                    reference: invNum,
-                  },
-                  {
-                    accountId: revenueAccount.id,
-                    debitAmount: 0,
-                    creditAmount: amount,
-                    description: "Credit: Revenue earned",
-                    reference: invNum,
-                  },
-                ],
+          if (isCustomer) {
+            await tx.journalEntry.create({
+              data: {
+                organizationId: orgId,
+                entryNumber,
+                date: entryDate,
+                description: `Customer invoice for shipment ${tracking}`,
+                reference: invNum,
+                totalDebit: amount,
+                totalCredit: amount,
+                isPosted: true,
+                postedAt: entryDate,
+                lines: {
+                  create: [
+                    {
+                      accountId: arAccount.id,
+                      debitAmount: amount,
+                      creditAmount: 0,
+                      description: "Debit: Customer owes money",
+                      reference: invNum,
+                    },
+                    {
+                      accountId: revenueAccount.id,
+                      debitAmount: 0,
+                      creditAmount: amount,
+                      description: "Credit: Revenue earned",
+                      reference: invNum,
+                    },
+                  ],
+                },
               },
-            },
-          });
-          createdCount++;
-        } else if (isVendor) {
-          await prisma.journalEntry.create({
-            data: {
-              organizationId: orgId,
-              entryNumber,
-              date: entryDate,
-              description: `Vendor invoice for shipment ${tracking}`,
-              reference: invNum,
-              totalDebit: amount,
-              totalCredit: amount,
-              isPosted: true,
-              postedAt: entryDate,
-              lines: {
-                create: [
-                  {
-                    accountId: expenseAccount.id,
-                    debitAmount: amount,
-                    creditAmount: 0,
-                    description: "Debit: Expense incurred",
-                    reference: invNum,
-                  },
-                  {
-                    accountId: apAccount.id,
-                    debitAmount: 0,
-                    creditAmount: amount,
-                    description: "Credit: Accounts payable increased",
-                    reference: invNum,
-                  },
-                ],
+            });
+          } else if (isVendor) {
+            await tx.journalEntry.create({
+              data: {
+                organizationId: orgId,
+                entryNumber,
+                date: entryDate,
+                description: `Vendor invoice for shipment ${tracking}`,
+                reference: invNum,
+                totalDebit: amount,
+                totalCredit: amount,
+                isPosted: true,
+                postedAt: entryDate,
+                lines: {
+                  create: [
+                    {
+                      accountId: expenseAccount.id,
+                      debitAmount: amount,
+                      creditAmount: 0,
+                      description: "Debit: Expense incurred",
+                      reference: invNum,
+                    },
+                    {
+                      accountId: apAccount.id,
+                      debitAmount: 0,
+                      creditAmount: amount,
+                      description: "Credit: Accounts payable increased",
+                      reference: invNum,
+                    },
+                  ],
+                },
               },
-            },
-          });
-          createdCount++;
-        }
+            });
+          }
+        });
+        createdCount++;
       } else {
         // 3. If JE exists, check for amount, date, or line account discrepancies
         const amountDiff = Math.abs(Number(existingJE.totalDebit) - amount) > 0.009;
@@ -349,6 +327,6 @@ export async function reconcileInvoiceJournalEntries(
     return { created: createdCount, updated: updatedCount, removed: removedCount };
   } catch (err) {
     console.error("Failed to reconcile invoice journal entries:", err);
-    return { created: 0, updated: 0, removed: 0 };
+    throw err;
   }
 }

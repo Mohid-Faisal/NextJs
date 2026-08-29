@@ -14,6 +14,8 @@ import { prisma } from "@/lib/prisma";
 type PrismaLike = {
   orgSequence: {
     upsert: (args: any) => Promise<{ nextNumber: number }>;
+    findUnique: (args: any) => Promise<{ nextNumber: number } | null>;
+    create: (args: any) => Promise<{ nextNumber: number }>;
   };
   journalEntry: {
     findFirst: (args: any) => Promise<{ entryNumber: string } | null>;
@@ -59,7 +61,8 @@ export async function nextJournalEntryNumber(
   db: PrismaLike,
   organizationId: number
 ): Promise<string> {
-  const existing = await prisma.orgSequence.findUnique({
+  const seqDb = db.orgSequence ? db : (prisma as unknown as PrismaLike);
+  const existing = await seqDb.orgSequence.findUnique({
     where: { organizationId_key: { organizationId, key: "journal_entry" } },
     select: { nextNumber: true },
   });
@@ -76,8 +79,8 @@ export async function nextJournalEntryNumber(
       seed = Number.isFinite(parsed) ? parsed + 1 : 1;
     }
     try {
-      await prisma.orgSequence.create({
-        data: { organizationId, key: "journal_entry", nextNumber: seed },
+      await seqDb.orgSequence.create({
+        data: { organizationId, key: "journal_entry", nextNumber: seed + 1 },
       });
       return `JE-${String(seed).padStart(4, "0")}`;
     } catch {

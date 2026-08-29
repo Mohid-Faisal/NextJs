@@ -6,9 +6,10 @@ import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPay
 import { computeVendorLedgerVoucherDate } from "@/lib/accounts/vendorLedgerVoucherDate";
 import type { InvoiceFieldsForDebitVoucher } from "@/lib/accounts/invoiceDebitVoucherDate";
 import { isVendorDebitNoteReference } from "@/lib/noteFormats";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { debitNoteOrgFilter } from "@/lib/tenant/findOrgDebitNote";
+import { parseListPaging } from "@/lib/money";
 
 export async function GET(
   req: NextRequest,
@@ -25,7 +26,7 @@ export async function GET(
       );
     }
 
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "view_revenue");
     if (auth.error) return auth.error;
     const { session } = auth;
 
@@ -41,19 +42,14 @@ export async function GET(
 
     // Get query parameters
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limitParam = searchParams.get('limit') || '10';
-    const isAllLimit = limitParam === 'all';
-    const limit = isAllLimit ? undefined : parseInt(limitParam);
+    const { page, take: limit, skip } = parseListPaging(searchParams, 10);
+    const isAllLimit = false;
     const search = searchParams.get('search') || '';
     const fromDate = searchParams.get('fromDate');
     const toDate = searchParams.get('toDate');
     const sortField = searchParams.get('sortField') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const recalcBalances = searchParams.get('recalc') === 'true';
-
-    // Calculate skip for pagination
-    const skip = isAllLimit || !limit ? 0 : (page - 1) * limit;
 
     // Build where clause for filtering
     const whereClause: any = orgWhere(session, {
@@ -1300,7 +1296,7 @@ export async function POST(
       );
     }
 
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const { session } = auth;
 

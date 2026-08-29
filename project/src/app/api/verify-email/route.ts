@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendUserApprovalEmail } from "@/lib/email";
 import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
+import {
+  attachPlanSelectionCookie,
+  signPlanSelectionToken,
+} from "@/lib/auth/planSelectionToken";
 
 /**
  * SECURITY: 6-digit codes were previously verifiable with unlimited
@@ -91,10 +95,13 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({
+      const planSelectionToken = await signPlanSelectionToken(user.id);
+      const res = NextResponse.json({
         success: true,
         message: "Email verified successfully! Please select a plan to continue.",
+        planSelectionToken,
       });
+      return attachPlanSelectionCookie(res, planSelectionToken);
     }
 
     // Standard user (no workspace): request admin approval immediately.

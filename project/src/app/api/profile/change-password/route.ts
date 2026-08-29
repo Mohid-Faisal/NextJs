@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { sendPassword2FACodeEmail } from "@/lib/email";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
+import { randomInt } from "node:crypto";
 
 /**
  * SECURITY hardening vs. previous version:
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate 6-digit code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCode = randomInt(100000, 1000000).toString();
 
       // Store temporarily in user status
       const tempStatus = `PENDING_2FA_${verificationCode}_${Date.now()}`;

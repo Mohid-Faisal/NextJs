@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import { parseWorkbook, getFirstWorksheet, sheetToMatrix } from "@/lib/excel";
 import { prisma } from "@/lib/prisma";
 import { Country } from "country-state-city";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
@@ -39,14 +39,14 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const workbook = await parseWorkbook(buffer);
 
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "" });
+    const sheet = getFirstWorksheet(workbook);
+    const raw = sheet ? sheetToMatrix(sheet, { defval: "" }) : [];
 
-    // Use sheet range so we don't miss columns (e.g. Zone 7A, 7B) when first row has fewer cells
-    const range = sheet["!ref"] ? XLSX.utils.decode_range(sheet["!ref"]) : null;
-    const maxCol = range ? range.e.c + 1 : (raw[0]?.length ?? 0);
+    // Matrix rows have uniform width equal to the sheet's full column count,
+    // so columns like Zone 7A/7B are never missed even if row 0 is short
+    const maxCol = raw[0]?.length ?? 0;
 
     const headerRow = raw[0] ?? [];
     const parsedZones: {
@@ -58,12 +58,9 @@ export async function POST(req: NextRequest) {
     }[] = [];
     const allCountries = Country.getAllCountries();
 
-    // Helper to read cell (e.g. for merged cells or when row array is short)
-    const getCell = (r: number, c: number) => {
-      const cellRef = XLSX.utils.encode_cell({ r, c });
-      const cell = sheet[cellRef];
-      return cell?.v != null ? String(cell.v).trim() : (raw[r]?.[c] ?? "").toString().trim();
-    };
+    // Helper to read cell; merged cells already resolve to their master value in the matrix
+    const getCell = (r: number, c: number) =>
+      (raw[r]?.[c] ?? "").toString().trim();
 
     for (let col = 0; col < maxCol; col++) {
       // Read zone header from row 0; fallback to sheet cell in case of merged/short row

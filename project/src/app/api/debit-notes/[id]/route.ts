@@ -6,7 +6,7 @@ import {
   normalizeNoteLineDescription,
   parseDateInputAsLocalDate,
 } from "@/lib/noteFormats";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgDebitNote } from "@/lib/tenant/findOrgDebitNote";
 import { findOrgChartAccount } from "@/lib/tenant/findOrgChartAccount";
@@ -16,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -107,7 +107,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -317,7 +317,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 

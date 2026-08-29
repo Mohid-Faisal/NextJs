@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/utils";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
@@ -11,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -76,8 +75,8 @@ export async function PUT(
 ) {
   try {
     // SECURITY: invoice edits are accounting operations gated behind the
-    // revenue/accounting permission (also enforces plan restrictions).
-    const auth = await requirePermission(req, "view_revenue");
+    // billing management permission (also enforces plan restrictions).
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -319,7 +318,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 

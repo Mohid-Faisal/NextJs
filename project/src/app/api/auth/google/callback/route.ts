@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { resolveMembership, createOrganizationForSignup } from "@/lib/auth/membership";
 import { createSession } from "@/lib/auth/session";
 import { attachSessionCookie } from "@/lib/auth/cookies";
+import {
+  attachPlanSelectionCookie,
+  signPlanSelectionToken,
+} from "@/lib/auth/planSelectionToken";
 
 export async function GET(req: Request) {
   try {
@@ -155,9 +159,11 @@ export async function GET(req: Request) {
     // If it is a new Google signup, redirect to plan selection page in signup flow
     // Do NOT issue a JWT token — the user isn't approved yet.
     if (isNewUser && signupData) {
+      const planSelectionToken = await signPlanSelectionToken(user.id);
       response = NextResponse.redirect(
         new URL(`/auth/signup?step=plan&userId=${user.id}&orgId=${membership.organizationId}`, req.url)
       );
+      attachPlanSelectionCookie(response, planSelectionToken);
       response.cookies.delete("google_signup_data");
     } else {
       // Returning approved user — create a server-side session bound to the

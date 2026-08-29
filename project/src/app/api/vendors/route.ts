@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { Country } from "country-state-city";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import { parseListPaging } from "@/lib/money";
 
 export async function GET(req: Request) {
   const auth = await requirePermission(req, "view_vendors");
@@ -10,12 +11,7 @@ export async function GET(req: Request) {
   const session = auth.session;
 
   const { searchParams } = new URL(req.url);
-
-  const page = parseInt(searchParams.get("page") || "1");
-  const limitParam = searchParams.get("limit") || "10";
-  const isAll = limitParam === "all";
-  const limit = isAll ? undefined : parseInt(limitParam);
-  const skip = isAll ? 0 : (page - 1) * (limit || 10);
+  const { take: limit, skip } = parseListPaging(searchParams, 10);
 
   const status = searchParams.get("status") || undefined;
   const search = searchParams.get("search")?.trim() || "";
@@ -60,13 +56,9 @@ export async function GET(req: Request) {
   const findManyOptions: any = {
     where,
     orderBy: { [finalSortField]: finalSortOrder },
+    skip,
+    take: limit,
   };
-
-  // Only add skip and take if not fetching all
-  if (!isAll) {
-    findManyOptions.skip = skip;
-    findManyOptions.take = limit;
-  }
 
   const [vendors, total] = await Promise.all([
     prisma.vendors.findMany(findManyOptions),

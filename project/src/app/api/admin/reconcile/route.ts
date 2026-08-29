@@ -107,6 +107,51 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * POST /api/admin/reconcile
+ * Super-admin only. Runs the invoice↔journal-entry reconcile engine for one org.
+ * This is the supported trigger — it is no longer invoked on account-books page load.
+ */
+export async function POST(req: NextRequest) {
+  const auth = await requireSuperAdmin(req);
+  if (auth.error) return auth.error;
+
+  const body = await req.json().catch(() => ({}));
+  const organizationId = parseInt(String(body.organizationId ?? req.nextUrl.searchParams.get("organizationId") ?? ""), 10);
+  if (!Number.isFinite(organizationId)) {
+    return NextResponse.json(
+      { success: false, error: "organizationId is required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const { reconcileInvoiceJournalEntries } = await import(
+      "@/lib/accounts/reconcileInvoiceJournalEntries"
+    );
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true },
+    });
+    if (!org) {
+      return NextResponse.json(
+        { success: false, error: "Organization not found" },
+        { status: 404 }
+      );
+    }
+    const result = await reconcileInvoiceJournalEntries(
+      { organizationId } as Parameters<typeof reconcileInvoiceJournalEntries>[0]
+    );
+    return NextResponse.json({ success: true, organizationId, ...result });
+  } catch (error) {
+    console.error("Invoice JE reconciliation failed:", error);
+    return NextResponse.json(
+      { success: false, error: "Invoice journal reconciliation failed" },
+      { status: 500 }
+    );
+  }
+}
+
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }

@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { TablePagination } from "@/components/TablePagination";
 import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
 import { toDatetimeLocalValue } from "@/lib/noteFormats";
+import { useDebouncedValue } from "@/lib/DebounceSearch";
 
 const STATUSES = ["All", "Active", "Inactive"];
 
@@ -387,6 +388,7 @@ export default function CustomersPage() {
 
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
@@ -444,7 +446,7 @@ export default function CustomersPage() {
       const params = new URLSearchParams({
         page: String(page),
         limit: pageSize === 'all' ? 'all' : String(pageSize),
-        ...(searchTerm && { search: searchTerm }),
+        ...(debouncedSearchTerm && { search: debouncedSearchTerm }),
         sortField: sortField,
         sortOrder: sortOrder,
         ...(activeTab === "withBalance" ? { onlyWithBalance: "true" } : {}),
@@ -474,7 +476,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetchCustomers();
-  }, [page, searchTerm, sortField, sortOrder, pageSize, activeTab]);
+  }, [page, debouncedSearchTerm, sortField, sortOrder, pageSize, activeTab]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

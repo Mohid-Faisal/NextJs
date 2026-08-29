@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import fs from 'fs';
 import path from 'path';
 import { Country } from 'country-state-city';
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
 import { resolvePublicLogoPath, safeRemoteLogoUrl } from "@/lib/logoUrl";
 
@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireApiSession(request);
+    const auth = await requirePermission(request, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 

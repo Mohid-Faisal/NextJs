@@ -72,5 +72,52 @@ test.describe("golden path", () => {
       await page.goto("/dashboard/add-shipment");
       await expect(page.locator("form").first()).toBeVisible({ timeout: 20_000 });
     });
+
+    test("API: login cookie can create a customer and list invoices/payments", async ({
+      request,
+    }) => {
+      const login = await request.post("/api/login", {
+        data: {
+          email: process.env.E2E_TEST_EMAIL,
+          password: process.env.E2E_TEST_PASSWORD,
+        },
+      });
+      expect(login.ok()).toBeTruthy();
+
+      const suffix = Date.now().toString(36);
+      const created = await request.post("/api/add-customers", {
+        multipart: {
+          form: JSON.stringify({
+            companyname: `E2E Customer ${suffix}`,
+            personname: "E2E Contact",
+            email: `e2e-${suffix}@example.com`,
+            phone: "03000000000",
+            country: "PK",
+            state: "Sindh",
+            city: "Karachi",
+            zip: "74000",
+            address: "E2E address",
+            activestatus: "Active",
+          }),
+        },
+      });
+      expect([200, 201]).toContain(created.status());
+      const createdBody = await created.json();
+      expect(createdBody.success !== false).toBeTruthy();
+
+      const customers = await request.get("/api/customers?limit=10&search=E2E Customer");
+      expect(customers.ok()).toBeTruthy();
+      const customersBody = await customers.json();
+      expect(Array.isArray(customersBody.customers)).toBeTruthy();
+
+      const invoices = await request.get("/api/accounts/invoices?limit=10");
+      expect(invoices.status()).not.toBe(500);
+
+      const payments = await request.get("/api/accounts/payments?limit=10");
+      expect(payments.status()).not.toBe(500);
+
+      const dashboard = await request.get("/api/dashboard");
+      expect(dashboard.ok()).toBeTruthy();
+    });
   });
 });

@@ -58,6 +58,7 @@ import DeleteDialog from "@/components/DeleteDialog";
 import { TablePagination } from "@/components/TablePagination";
 import { getTrackingUrl } from "@/lib/tracking-links";
 import { usePermissions } from "@/components/PermissionContext";
+import { useDebouncedValue } from "@/lib/DebounceSearch";
 import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
 
 const shipmentColumns: ColumnOption[] = [
@@ -135,6 +136,7 @@ export default function ShipmentsPage() {
   const [pageSize, setPageSize] = useState<number | 'all'>(10); // Default page size
 
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("All");
   const isFromDashboardRef = useRef(false);
   const [grandTotal, setGrandTotal] = useState(0);
@@ -339,7 +341,7 @@ export default function ShipmentsPage() {
         const params = new URLSearchParams({
           page: String(page),
           limit: pageSize === 'all' ? 'all' : String(pageSize),
-          ...(searchTerm && { search: searchTerm }),
+          ...(debouncedSearchTerm && { search: debouncedSearchTerm }),
           ...(deliveryStatusFilter !== "All" && { status: deliveryStatusFilter }),
           ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
           ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
@@ -371,7 +373,7 @@ export default function ShipmentsPage() {
     };
 
     fetchShipments();
-  }, [page, searchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate, typeParam, selectedBranch, refreshKey]);
+  }, [page, debouncedSearchTerm, deliveryStatusFilter, dateRange, sortField, sortOrder, pageSize, periodType, customStartDate, customEndDate, typeParam, selectedBranch, refreshKey]);
 
   useEffect(() => {
     setPage(1);

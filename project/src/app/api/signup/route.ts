@@ -5,6 +5,11 @@ import { sendVerificationEmail } from "@/lib/email";
 import { createOrganizationForSignup } from "@/lib/auth/membership";
 import { getCurrencyForCountry, fetchExchangeRates } from "@/lib/currency";
 import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
+import { randomInt } from "node:crypto";
+import {
+  attachPlanSelectionCookie,
+  signPlanSelectionToken,
+} from "@/lib/auth/planSelectionToken";
 
 function validatePassword(password: string): string | null {
   if (typeof password !== "string" || password.length < 8) {
@@ -53,7 +58,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationCode = randomInt(100000, 1000000).toString();
     const hashedPassword = await bcrypt.hash(password, 12);
     const verificationStatus = `PENDING_VERIFICATION_${verificationCode}_${Date.now() + 10 * 60 * 1000}`;
 
@@ -177,13 +182,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    const planSelectionToken = await signPlanSelectionToken(user.id);
+    const res = NextResponse.json({
       success: true,
       message:
         "Verification code sent to your email. Please check your inbox and enter the 6-digit code.",
       userId: user.id,
       organization,
+      planSelectionToken,
     });
+    return attachPlanSelectionCookie(res, planSelectionToken);
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json(

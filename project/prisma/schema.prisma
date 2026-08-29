@@ -77,7 +77,7 @@ model Plan {
   id                   Int            @id @default(autoincrement())
   code                 String         @unique
   name                 String
-  priceMonthlyUsd      Float
+  priceMonthlyUsd      Decimal   @db.Decimal(19, 4)
   maxUsers             Int
   maxShipmentsPerMonth Int
   features             Json
@@ -100,7 +100,7 @@ model Subscription {
 
 model Shipment {
   id                Int       @id @default(autoincrement())
-  organizationId    Int       @default(1)
+  organizationId    Int
   trackingId        String?
   invoiceNumber     String?
   referenceNumber   String
@@ -127,20 +127,20 @@ model Shipment {
   width             Float     @default(0)
   height            Float     @default(0)
   weightVol         Float     @default(0)
-  fixedCharge       Float     @default(0)
-  decValue          Float     @default(0)
-  price             Float     @default(0)
-  discount          Float     @default(0)
-  fuelSurcharge     Float     @default(0)
-  insurance         Float     @default(0)
-  customs           Float     @default(0)
-  tax               Float     @default(0)
-  declaredValue     Float     @default(0)
-  reissue           Float     @default(0)
+  fixedCharge       Decimal   @default(0) @db.Decimal(19, 4)
+  decValue          Decimal   @default(0) @db.Decimal(19, 4)
+  price             Decimal   @default(0) @db.Decimal(19, 4)
+  discount          Decimal   @default(0) @db.Decimal(19, 4)
+  fuelSurcharge     Decimal   @default(0) @db.Decimal(19, 4)
+  insurance         Decimal   @default(0) @db.Decimal(19, 4)
+  customs           Decimal   @default(0) @db.Decimal(19, 4)
+  tax               Decimal   @default(0) @db.Decimal(19, 4)
+  declaredValue     Decimal   @default(0) @db.Decimal(19, 4)
+  reissue           Decimal   @default(0) @db.Decimal(19, 4)
   profitPercentage  Float     @default(0)
-  cos               Float     @default(0)
-  totalCost         Float
-  subtotal          Float     @default(0)
+  cos               Decimal   @default(0) @db.Decimal(19, 4)
+  totalCost         Decimal   @db.Decimal(19, 4)
+  subtotal          Decimal   @default(0) @db.Decimal(19, 4)
   manualRate        Boolean   @default(false)
   totalPackages     Int       @default(0)
   totalWeight       Float     @default(0)
@@ -162,7 +162,7 @@ model Shipment {
 
 model Customers {
   id              Int       @id @default(autoincrement())
-  organizationId  Int       @default(1)
+  organizationId  Int
   CompanyName     String
   PersonName      String
   Email           String
@@ -178,8 +178,8 @@ model Customers {
   ActiveStatus    String
   FilePath        String
   createdAt       DateTime  @default(now())
-  currentBalance  Float     @default(0)
-  creditLimit     Float     @default(0)
+  currentBalance  Decimal   @default(0) @db.Decimal(19, 4)
+  creditLimit     Decimal   @default(0) @db.Decimal(19, 4)
   invoices        Invoice[]
   transactions    CustomerTransaction[]
   creditNotes     CreditNote[]
@@ -190,7 +190,7 @@ model Customers {
 
 model Vendors {
   id             Int       @id @default(autoincrement())
-  organizationId Int       @default(1)
+  organizationId Int
   CompanyName    String
   PersonName     String
   Email          String
@@ -201,8 +201,8 @@ model Vendors {
   Zip            String
   Address        String
   createdAt      DateTime  @default(now())
-  currentBalance Float     @default(0)
-  creditLimit    Float     @default(0)
+  currentBalance Decimal   @default(0) @db.Decimal(19, 4)
+  creditLimit    Decimal   @default(0) @db.Decimal(19, 4)
   invoices       Invoice[]
   transactions   VendorTransaction[]
   debitNotes     DebitNote[]
@@ -213,7 +213,7 @@ model Vendors {
 
 model Recipients {
   id                  Int       @id @default(autoincrement())
-  organizationId      Int       @default(1)
+  organizationId      Int
   CompanyName         String
   PersonName          String
   Email               String
@@ -233,7 +233,7 @@ model Recipients {
 
 model DeliveryTime {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   name           String
   createdAt      DateTime @default(now())
 
@@ -243,7 +243,7 @@ model DeliveryTime {
 
 model Agency {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   code           String
   name           String
   createdAt      DateTime @default(now())
@@ -254,7 +254,7 @@ model Agency {
 
 model Office {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   code           String
   name           String
   createdAt      DateTime @default(now())
@@ -265,7 +265,7 @@ model Office {
 
 model DeliveryStatus {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   name           String
   code           String?
   icon           String?
@@ -280,7 +280,7 @@ model DeliveryStatus {
 
 model ShippingMode {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   name           String
   createdAt      DateTime @default(now())
 
@@ -290,7 +290,7 @@ model ShippingMode {
 
 model PackagingType {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   name           String
   createdAt      DateTime @default(now())
 
@@ -300,7 +300,7 @@ model PackagingType {
 
 model ServiceMode {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   name           String
   code           String?
   mode           String?
@@ -314,7 +314,7 @@ model ServiceMode {
 
 model HsCode {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   code           String
   description    String
   category       String
@@ -327,7 +327,7 @@ model HsCode {
 
 model Zone {
   id             Int     @id @default(autoincrement())
-  organizationId Int     @default(1)
+  organizationId Int
   code           String
   country        String
   zone           String
@@ -340,7 +340,7 @@ model Zone {
 
 model ZoneUpload {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   service        String
   uploadedAt     DateTime @default(now())
 
@@ -350,7 +350,7 @@ model ZoneUpload {
 
 model RemoteArea {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   company        String
   country        String
   iataCode       String
@@ -366,7 +366,7 @@ model RemoteArea {
 
 model Rate {
   id             Int    @id @default(autoincrement())
-  organizationId Int    @default(1)
+  organizationId Int
   weight         Float
   vendor         String
   service        String
@@ -380,7 +380,7 @@ model Rate {
 
 model filename {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   filename       String
   vendor         String
   service        String
@@ -393,16 +393,16 @@ model filename {
 
 model CustomerTransaction {
   id              Int       @id @default(autoincrement())
-  organizationId  Int       @default(1)
+  organizationId  Int
   customerId      Int
   customer        Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
   type            String
-  amount          Float
+  amount          Decimal   @db.Decimal(19, 4)
   description     String
   reference       String?
   invoice         String?
-  previousBalance Float
-  newBalance      Float
+  previousBalance Decimal   @db.Decimal(19, 4)
+  newBalance      Decimal   @db.Decimal(19, 4)
   createdAt       DateTime  @default(now())
 
   @@index([customerId])
@@ -412,16 +412,16 @@ model CustomerTransaction {
 
 model VendorTransaction {
   id              Int     @id @default(autoincrement())
-  organizationId  Int     @default(1)
+  organizationId  Int
   vendorId        Int
   vendor          Vendors @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   type            String
-  amount          Float
+  amount          Decimal   @db.Decimal(19, 4)
   description     String
   reference       String?
   invoice         String?
-  previousBalance Float
-  newBalance      Float
+  previousBalance Decimal   @db.Decimal(19, 4)
+  newBalance      Decimal   @db.Decimal(19, 4)
   createdAt       DateTime @default(now())
 
   @@index([vendorId])
@@ -431,7 +431,7 @@ model VendorTransaction {
 
 model vendorservice {
   id             Int    @id @default(autoincrement())
-  organizationId Int    @default(1)
+  organizationId Int
   vendor         String
   service        String
 
@@ -463,11 +463,11 @@ enum PaymentMode {
 
 model Payment {
   id              Int             @id @default(autoincrement())
-  organizationId  Int             @default(1)
+  organizationId  Int
   transactionType TransactionType
   category        String
   date            DateTime
-  amount          Float
+  amount          Decimal         @db.Decimal(19, 4)
   fromPartyType   PartyType
   fromCustomerId  Int?
   fromCustomer    String
@@ -480,13 +480,35 @@ model Payment {
   description     String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  allocations     PaymentAllocation[]
 
   @@index([organizationId])
+  @@index([organizationId, invoice])
+  @@unique([organizationId, reference])
+}
+
+/// How a single Payment was applied across invoices. One Payment row stays
+/// the customer-facing record; these rows are the durable source of truth
+/// for per-invoice paid amounts (replaces the legacy "ALLOCATIONS:..."
+/// description-string encoding). Invoice status is derived from these rows
+/// plus legacy payments that have no allocation rows.
+model PaymentAllocation {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  paymentId      Int
+  payment        Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId      Int
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount         Decimal  @db.Decimal(19, 4)
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, invoiceId])
+  @@index([paymentId])
 }
 
 model Invoice {
   id              Int       @id @default(autoincrement())
-  organizationId  Int       @default(1)
+  organizationId  Int
   invoiceNumber   String
   invoiceDate     DateTime
   receiptNumber   String?
@@ -495,8 +517,8 @@ model Invoice {
   dayWeek         String?
   weight          Float
   profile         String
-  fscCharges      Float     @default(0)
-  discount        Float     @default(0)
+  fscCharges      Decimal   @default(0) @db.Decimal(19, 4)
+  discount        Decimal   @default(0) @db.Decimal(19, 4)
   lineItems       Json
   customerId      Int?
   customer        Customers? @relation(fields: [customerId], references: [id])
@@ -506,16 +528,20 @@ model Invoice {
   shipment        Shipment?  @relation(fields: [shipmentId], references: [id])
   disclaimer      String?
   status          String    @default("Unpaid")
-  totalAmount     Float
+  totalAmount     Decimal   @db.Decimal(19, 4)
   currency        String    @default("USD")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   debitNotes      DebitNote[]
   creditNotes     CreditNote[]
+  allocations     PaymentAllocation[]
 
   // SECURITY: unique per organization (see Shipment note above).
   @@unique([organizationId, invoiceNumber])
   @@index([organizationId])
+  @@index([customerId])
+  @@index([vendorId])
+  @@index([shipmentId])
 }
 
 model DebitNote {
@@ -526,7 +552,7 @@ model DebitNote {
   bill            Invoice? @relation(fields: [billId], references: [id])
   vendorId        Int?
   vendor          Vendors? @relation(fields: [vendorId], references: [id])
-  amount          Float
+  amount          Decimal  @db.Decimal(19, 4)
   date            DateTime
   description     String?
   currency        String   @default("USD")
@@ -544,7 +570,7 @@ model CreditNote {
   invoice          Invoice?  @relation(fields: [invoiceId], references: [id])
   customerId       Int
   customer         Customers @relation(fields: [customerId], references: [id])
-  amount           Float
+  amount           Decimal   @db.Decimal(19, 4)
   date             DateTime
   description      String?
   currency         String    @default("USD")
@@ -556,7 +582,7 @@ model CreditNote {
 
 model ChartOfAccount {
   id             Int                @id @default(autoincrement())
-  organizationId Int                @default(1)
+  organizationId Int
   code           String
   accountName    String
   category       String
@@ -575,13 +601,13 @@ model ChartOfAccount {
 
 model JournalEntry {
   id             Int                @id @default(autoincrement())
-  organizationId Int                @default(1)
+  organizationId Int
   entryNumber    String
   date           DateTime
   description    String
   reference      String?
-  totalDebit     Float
-  totalCredit    Float
+  totalDebit     Decimal            @db.Decimal(19, 4)
+  totalCredit    Decimal            @db.Decimal(19, 4)
   isPosted       Boolean            @default(false)
   postedAt       DateTime?
   createdAt      DateTime           @default(now())
@@ -598,21 +624,25 @@ model JournalEntryLine {
   journalEntryId Int
   journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   accountId      Int
-  account        ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  debitAmount    Float          @default(0)
-  creditAmount   Float          @default(0)
+  // SECURITY/INTEGRITY: Restrict (not Cascade) — deleting a Chart of Account
+  // must never silently erase historical General Ledger lines.
+  account        ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  debitAmount    Decimal        @default(0) @db.Decimal(19, 4)
+  creditAmount   Decimal        @default(0) @db.Decimal(19, 4)
   description    String?
   reference      String?
   createdAt      DateTime       @default(now())
 
   @@index([organizationId])
+  @@index([journalEntryId])
+  @@index([accountId])
 }
 
 model FixedCharge {
   id             Int      @id @default(autoincrement())
-  organizationId Int      @default(1)
+  organizationId Int
   weight         Float
-  fixedCharge    Float
+  fixedCharge    Decimal  @db.Decimal(19, 4)
   createdAt      DateTime @default(now())
 
   @@index([organizationId])
@@ -627,7 +657,7 @@ model PaymentProof {
   id             Int          @id @default(autoincrement())
   organizationId Int
   planId         Int
-  amount         Float
+  amount         Decimal      @db.Decimal(19, 4)
   currency       String       @default("PKR")
   method         String       // BANK_TRANSFER | EASYPAISA | JAZZCASH | CASH
   referenceId    String       // Transaction/Reference ID

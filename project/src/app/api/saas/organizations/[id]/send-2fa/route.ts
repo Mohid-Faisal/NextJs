@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { send2FACodeEmail } from "@/lib/email";
 import { requireSuperAdmin } from "@/lib/auth/requireSuperAdmin";
+import { randomInt } from "node:crypto";
 
 export async function POST(
   request: NextRequest,
@@ -53,7 +54,7 @@ export async function POST(
     }
 
     // Generate 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationCode = randomInt(100000, 1000000).toString();
     const tempStatus = `PENDING_2FA_${verificationCode}_${Date.now()}`;
     
     await prisma.user.update({

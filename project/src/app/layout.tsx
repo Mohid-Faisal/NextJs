@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import PublicLayout from "@/components/PublicLayout";
 import NextTopLoader from "nextjs-toploader";
 import TopLoaderFetch from "@/components/TopLoaderFetch";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   title: "Courier Express",
   description: "Fast, Reliable and Affordable Courier Services",
 };
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({
   children,

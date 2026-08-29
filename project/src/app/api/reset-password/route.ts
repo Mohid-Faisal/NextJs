@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import { sendPasswordResetCodeEmail } from "@/lib/email";
 import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
+import { randomInt } from "node:crypto";
 
 /**
  * Password reset — two-step, verification-code based.
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     if (user) {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = randomInt(100000, 1000000).toString();
       const status = `PENDING_PASSWORD_RESET_${code}_${Date.now() + CODE_TTL_MS}`;
       await prisma.user.update({
         where: { id: user.id },

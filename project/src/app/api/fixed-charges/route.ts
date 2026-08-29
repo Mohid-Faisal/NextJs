@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import { parseWorkbook, getFirstWorksheet, sheetToMatrix } from "@/lib/excel";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import type { SessionPayload } from "@/lib/auth/session";
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 // POST - Create new fixed charge entries or upload from Excel
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 // PUT - Update fixed charge entry
 export async function PUT(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -113,7 +113,7 @@ export async function PUT(req: NextRequest) {
 // DELETE - Delete fixed charge entry
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -183,9 +183,9 @@ async function handleExcelUpload(req: NextRequest, session: SessionPayload) {
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const workbook = XLSX.read(buffer, { type: "buffer" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const raw = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+  const workbook = await parseWorkbook(buffer);
+  const sheet = getFirstWorksheet(workbook);
+  const raw: any[][] = sheet ? sheetToMatrix(sheet) : [];
 
   console.log("📋 Raw Excel data:", raw.slice(0, 10));
 

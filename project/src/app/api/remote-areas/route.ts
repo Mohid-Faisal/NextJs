@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import type ExcelJS from "exceljs";
+import { parseWorkbook, parseCsvWorkbook, sheetToMatrix } from "@/lib/excel";
 import { CanvasFactory } from "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 import { Country } from "country-state-city";
@@ -300,7 +301,7 @@ type RemoteAreaEntry = {
  * Then we do the same for the next sheet and append.
  */
 function parseDhlStyleExcelSheets(
-  workbook: XLSX.WorkBook,
+  workbook: ExcelJS.Workbook,
   company: string,
   filename: string
 ): RemoteAreaEntry[] {
@@ -320,9 +321,8 @@ function parseDhlStyleExcelSheets(
     return COUNTRY_NAMES_UPPER.has(upper) && !NOT_COUNTRY_WORDS.has(upper);
   };
 
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    const raw = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+  for (const sheet of workbook.worksheets) {
+    const raw: any[][] = sheetToMatrix(sheet);
     if (!Array.isArray(raw) || raw.length === 0) continue;
 
     const rowCount = raw.length;
@@ -497,12 +497,13 @@ export async function POST(req: NextRequest) {
     if (isPdf) {
       parsedAreas = await parseDhlStylePdfText(buffer, company, filename);
     } else {
-      const workbook = XLSX.read(buffer, { type: "buffer" });
+      const workbook = isCsv
+        ? await parseCsvWorkbook(buffer)
+        : await parseWorkbook(buffer);
       let standardParsedCount = 0;
 
-      for (const sheetName of workbook.SheetNames) {
-        const sheet = workbook.Sheets[sheetName];
-        const raw = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+      for (const sheet of workbook.worksheets) {
+        const raw: any[][] = sheetToMatrix(sheet);
         if (!Array.isArray(raw) || raw.length === 0) continue;
 
         // Find header row (usually first row, but check first 10 rows and search any column for country/iata)

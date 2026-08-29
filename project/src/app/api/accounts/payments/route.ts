@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { parseListPaging } from "@/lib/money";
 
 // UI-to-enum mapping
 const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Adjustment: "ADJUSTMENT", Equity: "EQUITY", Return: "ADJUSTMENT" };
@@ -83,15 +84,12 @@ async function attachJournalEntriesToPayments(
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireApiSession(request);
+  const auth = await requirePermission(request, "view_revenue");
   if (auth.error) return auth.error;
   const session = auth.session;
 
   const url = new URL(request.url);
-
-  const page = Number(url.searchParams.get("page") || 1);
-  const limitParam = url.searchParams.get("limit") || "10";
-  const limit = limitParam === "all" ? undefined : Number(limitParam);
+  const { page, take: limit, skip } = parseListPaging(url.searchParams, 10);
   const type = url.searchParams.get("type") || "All";
   const mode = url.searchParams.get("mode") || "All";
   const searchRaw = url.searchParams.get("search") || "";
@@ -179,8 +177,8 @@ export async function GET(request: NextRequest) {
     payments = await db.payment.findMany({
       where,
       orderBy: { [finalSortField]: sortOrder },
-      skip: limit ? (page - 1) * limit : 0,
-      take: limit ?? undefined,
+      skip,
+      take: limit,
     });
 
     payments = await attachJournalEntriesToPayments(session, payments);
@@ -191,8 +189,8 @@ export async function GET(request: NextRequest) {
       payments = await db.payment.findMany({
         where,
         orderBy: { [finalSortField]: sortOrder },
-        skip: limit ? (page - 1) * limit : 0,
-        take: limit ?? undefined,
+        skip,
+        take: limit,
         select: {
           id: true,
           transactionType: true,
@@ -266,7 +264,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 

@@ -3,18 +3,20 @@ import { prisma } from "@/lib/prisma";
 import {
   addCustomerTransaction,
   addVendorTransaction,
+} from "@/lib/utils";
+import {
   calculateInvoicePaymentStatus,
   processPaymentWithAllocation,
-} from "@/lib/utils";
+} from "@/lib/accounts/invoicePayments";
 import { createJournalEntryForPaymentProcess } from "@/lib/accounts/createJournalEntryForPaymentProcess";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
 import { audit } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -123,18 +125,24 @@ export async function POST(req: NextRequest) {
       const result = await processPaymentWithAllocation(
         prisma,
         invoiceNumber,
-        paymentAmount,
+        paymentAmountNum,
         paymentType,
         paymentMethod || "CASH",
         reference,
         description,
         paymentDate,
-        debitAccountId,
-        creditAccountId,
+        debitAccount.id,
+        creditAccount.id,
         session.organizationId
       );
 
-      await createJournalEntryForPaymentProcess(result.payment, body, result.invoice, session.organizationId);
+      await audit(session, req, "payment.processed", "Payment", result.payment.id, {
+        invoiceNumber,
+        amount: paymentAmountNum,
+        paymentType,
+        reference,
+        allocation: true,
+      });
 
       return NextResponse.json({
         success: true,
@@ -147,112 +155,149 @@ export async function POST(req: NextRequest) {
 
     const invoice = invoiceCheck;
 
-    if (paymentType === "CUSTOMER_PAYMENT") {
-      if (!invoice.customerId) {
-        return NextResponse.json(
-          { error: "This invoice is not associated with a customer" },
-          { status: 400 }
-        );
-      }
+    const result = await prisma.$transaction(
+      async (tx) => {
+        if (paymentType === "CUSTOMER_PAYMENT") {
+          if (!invoice.customerId) {
+            throw new Error("This invoice is not associated with a customer");
+          }
 
-      const totalPaidSoFar = await prisma.payment.aggregate({
-        where: orgWhere(session, {
-          invoice: invoiceNumber,
-          transactionType: "INCOME",
-        }),
-        _sum: { amount: true },
-      });
+          const current = await calculateInvoicePaymentStatus(
+            tx,
+            invoiceNumber,
+            invoice.totalAmount,
+            session.organizationId,
+            invoice.id
+          );
+          const remainingAmount = Math.max(0, current.remainingAmount);
+          const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
+          const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
 
-      const alreadyPaid = totalPaidSoFar._sum.amount || 0;
-      const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
-      const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
-      const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
+          await addCustomerTransaction(
+            tx,
+            invoice.customerId,
+            "CREDIT",
+            amountForInvoice,
+            description || `Payment for invoice ${invoiceNumber}`,
+            reference,
+            invoiceNumber,
+            paymentDate,
+            session.organizationId
+          );
 
-      await addCustomerTransaction(
-        prisma,
-        invoice.customerId,
-        "CREDIT",
-        amountForInvoice,
-        description || `Payment for invoice ${invoiceNumber}`,
-        reference,
-        invoiceNumber,
-        paymentDate,
-        session.organizationId
-      );
+          if (overpaymentAmount > 0) {
+            await addCustomerTransaction(
+              tx,
+              invoice.customerId,
+              "CREDIT",
+              overpaymentAmount,
+              `Overpayment credit for invoice ${invoiceNumber}`,
+              `CREDIT-${invoiceNumber}`,
+              invoiceNumber,
+              paymentDate,
+              session.organizationId
+            );
+          }
+        } else if (paymentType === "VENDOR_PAYMENT") {
+          if (!invoice.vendorId) {
+            throw new Error("This invoice is not associated with a vendor");
+          }
 
-      if (overpaymentAmount > 0) {
-        await addCustomerTransaction(
-          prisma,
-          invoice.customerId,
-          "CREDIT",
-          overpaymentAmount,
-          `Overpayment credit for invoice ${invoiceNumber}`,
-          `CREDIT-${invoiceNumber}`,
+          await addVendorTransaction(
+            tx,
+            invoice.vendorId,
+            "CREDIT",
+            paymentAmountNum,
+            description || `Payment for invoice ${invoiceNumber}`,
+            reference,
+            invoiceNumber,
+            paymentDate,
+            session.organizationId
+          );
+        }
+
+        const payment = await tx.payment.create({
+          data: orgData(session, {
+            transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
+            category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
+            date: paymentDate ? new Date(paymentDate) : new Date(),
+            amount: paymentAmountNum,
+            fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
+            fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,
+            fromCustomer:
+              paymentType === "CUSTOMER_PAYMENT" ? invoice.customer?.CompanyName || "" : "",
+            toPartyType: paymentType === "CUSTOMER_PAYMENT" ? "US" : "VENDOR",
+            toVendorId: paymentType === "VENDOR_PAYMENT" ? invoice.vendorId : null,
+            toVendor: paymentType === "VENDOR_PAYMENT" ? invoice.vendor?.CompanyName || "" : "",
+            mode: paymentMethod || "CASH",
+            reference,
+            invoice: invoiceNumber,
+            description: description || `Payment for invoice ${invoiceNumber}`,
+          }),
+        });
+
+        const statusBefore = await calculateInvoicePaymentStatus(
+          tx,
           invoiceNumber,
-          paymentDate,
-          session.organizationId
+          invoice.totalAmount,
+          session.organizationId,
+          invoice.id
         );
-      }
-    } else if (paymentType === "VENDOR_PAYMENT") {
-      if (!invoice.vendorId) {
-        return NextResponse.json(
-          { error: "This invoice is not associated with a vendor" },
-          { status: 400 }
+        const applyAmount = Math.min(
+          paymentAmountNum,
+          Math.max(0, statusBefore.remainingAmount)
         );
-      }
+        if (applyAmount > 0) {
+          await tx.paymentAllocation.create({
+            data: {
+              organizationId: session.organizationId,
+              paymentId: payment.id,
+              invoiceId: invoice.id,
+              amount: applyAmount,
+            },
+          });
+        }
 
-      await addVendorTransaction(
-        prisma,
-        invoice.vendorId,
-        "CREDIT",
-        paymentAmountNum,
-        description || `Payment for invoice ${invoiceNumber}`,
-        reference,
-        invoiceNumber,
-        paymentDate,
-        session.organizationId
-      );
-    }
+        await createJournalEntryForPaymentProcess(
+          payment,
+          {
+            paymentAmount: paymentAmountNum,
+            paymentType,
+            description,
+            paymentDate,
+            debitAccountId: debitAccount.id,
+            creditAccountId: creditAccount.id,
+            reference,
+          },
+          invoice,
+          session.organizationId,
+          tx
+        );
 
-    const payment = await prisma.payment.create({
-      data: orgData(session, {
-        transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
-        category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
-        date: paymentDate ? new Date(paymentDate) : new Date(),
-        amount: paymentAmountNum,
-        fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
-        fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,
-        fromCustomer:
-          paymentType === "CUSTOMER_PAYMENT" ? invoice.customer?.CompanyName || "" : "",
-        toPartyType: paymentType === "CUSTOMER_PAYMENT" ? "US" : "VENDOR",
-        toVendorId: paymentType === "VENDOR_PAYMENT" ? invoice.vendorId : null,
-        toVendor: paymentType === "VENDOR_PAYMENT" ? invoice.vendor?.CompanyName || "" : "",
-        mode: paymentMethod || "CASH",
-        reference,
-        invoice: invoiceNumber,
-        description: description || `Payment for invoice ${invoiceNumber}`,
-      }),
-    });
+        const paymentStatus = await calculateInvoicePaymentStatus(
+          tx,
+          invoiceNumber,
+          invoice.totalAmount,
+          session.organizationId,
+          invoice.id
+        );
 
-    await createJournalEntryForPaymentProcess(payment, body, invoice, session.organizationId);
+        await tx.invoice.update({
+          where: {
+            organizationId_invoiceNumber: {
+              organizationId: session.organizationId,
+              invoiceNumber,
+            },
+          },
+          data: { status: paymentStatus.status },
+        });
 
-    const paymentStatus = await calculateInvoicePaymentStatus(
-      prisma,
-      invoiceNumber,
-      invoice.totalAmount
+        return { payment, paymentStatus };
+      },
+      { timeout: 30000, maxWait: 10000 }
     );
 
-    await prisma.invoice.update({
-      where: {
-        organizationId_invoiceNumber: {
-          organizationId: session.organizationId,
-          invoiceNumber,
-        },
-      },
-      data: { status: paymentStatus.status },
-    });
-
-    await audit(session, req, "payment.processed", "Payment", payment.id, {
+    await audit(session, req, "payment.processed", "Payment", result.payment.id, {
       invoiceNumber,
       amount: paymentAmountNum,
       paymentType,
@@ -262,13 +307,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "Payment processed successfully",
-      payment,
+      payment: result.payment,
       invoice: {
         invoiceNumber: invoice.invoiceNumber,
-        status: paymentStatus.status,
-        totalPaid: paymentStatus.totalPaid,
-        remainingAmount: paymentStatus.remainingAmount,
-        totalAmount: paymentStatus.totalAmount,
+        status: result.paymentStatus.status,
+        totalPaid: result.paymentStatus.totalPaid,
+        remainingAmount: result.paymentStatus.remainingAmount,
+        totalAmount: result.paymentStatus.totalAmount,
       },
     });
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { allocateExcessPayment } from "@/lib/utils";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { allocateExcessPayment } from "@/lib/accounts/invoicePayments";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
 
@@ -11,7 +11,7 @@ import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
  */
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -77,16 +77,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const allocationResult = await allocateExcessPayment(
-      prisma,
-      customerId ? parseInt(String(customerId), 10) : null,
-      vendorId ? parseInt(String(vendorId), 10) : null,
-      excessAmountNum,
-      originalInvoiceNumber,
-      paymentReference,
-      paymentType,
-      paymentDate,
-      session.organizationId
+    const allocationResult = await prisma.$transaction(
+      async (tx) =>
+        allocateExcessPayment(
+          tx,
+          customerId ? parseInt(String(customerId), 10) : null,
+          vendorId ? parseInt(String(vendorId), 10) : null,
+          excessAmountNum,
+          originalInvoiceNumber,
+          paymentReference,
+          paymentType,
+          paymentDate,
+          session.organizationId
+        ),
+      { timeout: 30000 }
     );
 
     return NextResponse.json({
@@ -109,7 +113,7 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 

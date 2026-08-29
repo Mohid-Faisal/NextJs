@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { Country } from "country-state-city";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import { parseListPaging } from "@/lib/money";
 
 export async function GET(req: Request) {
   const auth = await requirePermission(req, "view_customers");
@@ -10,12 +11,7 @@ export async function GET(req: Request) {
   const session = auth.session;
 
   const { searchParams } = new URL(req.url);
-
-  const page = parseInt(searchParams.get("page") || "1");
-  const limitParam = searchParams.get("limit") || "10";
-  const isAll = limitParam === "all";
-  const limit = isAll ? undefined : parseInt(limitParam);
-  const skip = isAll ? 0 : (page - 1) * (limit || 10);
+  const { take: limit, skip } = parseListPaging(searchParams, 10);
 
   const status = searchParams.get("status") || undefined;
   const search = searchParams.get("search")?.trim() || "";
@@ -62,13 +58,9 @@ export async function GET(req: Request) {
   const findManyOptions: any = {
     where,
     orderBy: { [finalSortField]: finalSortOrder },
+    skip,
+    take: limit,
   };
-
-  // Only add skip and take if not fetching all
-  if (!isAll) {
-    findManyOptions.skip = skip;
-    findManyOptions.take = limit;
-  }
 
   const [customers, total, grandTotal, withBalanceTotal, activeTotal, inactiveTotal] = await Promise.all([
     prisma.customers.findMany(findManyOptions),
@@ -79,17 +71,23 @@ export async function GET(req: Request) {
     prisma.customers.count({ where: { ...orgWhere(session), ActiveStatus: "Inactive" } }),
   ]);
 
-  // Get shipment information for each customer
-  const customersWithShipments = await Promise.all(
-    customers.map(async (customer) => {
-      // Get shipments where this customer is the sender
-      const shipments = await prisma.shipment.findMany({
+  // Get shipment information for each customer. Shipments relate to
+  // customers via senderName === CompanyName, so fetch all shipments for the
+  // page's customers in one query and bucket them per company name instead
+  // of running a findMany per customer.
+  const companyNames = customers
+    .map((customer) => customer.CompanyName)
+    .filter((name): name is string => typeof name === "string" && name.length > 0);
+
+  const allShipments = companyNames.length > 0
+    ? await prisma.shipment.findMany({
         where: orgWhere(session, {
-          senderName: customer.CompanyName,
+          senderName: { in: companyNames },
         }),
         select: {
           id: true,
           trackingId: true,
+          senderName: true,
           recipientName: true,
           destination: true,
           totalCost: true,
@@ -100,23 +98,37 @@ export async function GET(req: Request) {
         orderBy: {
           shipmentDate: 'desc'
         }
-      });
+      })
+    : [];
 
-      // Get unique recipients
-      const uniqueRecipients = [...new Set(shipments.map(s => s.recipientName))];
-      
-      // Calculate total shipment value
-      const totalShipmentValue = shipments.reduce((sum, shipment) => sum + shipment.totalCost, 0);
+  const shipmentsBySender = new Map<string, typeof allShipments>();
+  for (const shipment of allShipments) {
+    if (!shipment.senderName) continue;
+    const bucket = shipmentsBySender.get(shipment.senderName);
+    if (bucket) bucket.push(shipment);
+    else shipmentsBySender.set(shipment.senderName, [shipment]);
+  }
 
-      return {
-        ...customer,
-        shipmentCount: shipments.length,
-        uniqueRecipients: uniqueRecipients,
-        totalShipmentValue: totalShipmentValue,
-        recentShipments: shipments.slice(0, 5) // Get last 5 shipments
-      };
-    })
-  );
+  const customersWithShipments = customers.map((customer) => {
+    const shipments =
+      (customer.CompanyName && shipmentsBySender.get(customer.CompanyName)) || [];
+
+    // Get unique recipients
+    const uniqueRecipients = [...new Set(shipments.map(s => s.recipientName))];
+
+    // Calculate total shipment value
+    const totalShipmentValue = shipments.reduce((sum, shipment) => sum + shipment.totalCost, 0);
+
+    return {
+      ...customer,
+      shipmentCount: shipments.length,
+      uniqueRecipients: uniqueRecipients,
+      totalShipmentValue: totalShipmentValue,
+      recentShipments: shipments
+        .slice(0, 5)
+        .map(({ senderName: _senderName, ...rest }) => rest) // Get last 5 shipments (same shape as before)
+    };
+  });
 
   return NextResponse.json({
     customers: customersWithShipments,

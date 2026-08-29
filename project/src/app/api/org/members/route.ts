@@ -5,6 +5,7 @@ import { requireApiSession } from "@/lib/auth/requireApiSession";
 import bcrypt from "bcryptjs";
 import { sendEmail } from "@/lib/email";
 import { getOrgPlan, getOrgUsage } from "@/lib/billing/usage";
+import { randomInt } from "node:crypto";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
 const ASSIGNABLE_ROLES = ["OWNER", "ADMIN", "STAFF", "ACCOUNTANT"];
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
     if (!user) {
       isNewUser = true;
       // Generate a temporary human-readable password
-      tempPassword = "PSS-" + Math.floor(100000 + Math.random() * 900000).toString();
+      tempPassword = "PSS-" + randomInt(100000, 1000000).toString();
       const hashedPassword = await bcrypt.hash(tempPassword, 12);
       const username = email.split("@")[0];
 

@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { Country } from "country-state-city";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
+import { parseListPaging, money } from "@/lib/money";
+import { calculateInvoicePaymentStatus } from "@/lib/accounts/invoicePayments";
 import {
   createJournalEntryForTransaction,
   addCustomerTransaction,
@@ -11,13 +13,12 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = searchParams.get("limit");
+    const { page, take: pageSize, skip } = parseListPaging(searchParams, 10);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
     const profile = searchParams.get("profile") || "";
@@ -25,9 +26,6 @@ export async function GET(req: NextRequest) {
     const toDate = searchParams.get("toDate");
     const sortField = searchParams.get("sortField") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
-
-    const pageSize = limit === "all" ? undefined : parseInt(limit || "10");
-    const skip = pageSize ? (page - 1) * pageSize : 0;
 
     const shipmentId = searchParams.get("shipmentId");
     
@@ -184,7 +182,7 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    const totalAmount = totalAmountResult._sum.totalAmount || 0;
+    const totalAmount = money(totalAmountResult._sum.totalAmount);
 
     const statusCounts: Record<string, number> = {};
     let allStatusCount = 0;
@@ -195,104 +193,19 @@ export async function GET(req: NextRequest) {
       allStatusCount += count;
     }
 
-    console.log('Invoice API - Found invoices:', invoices.length);
-    console.log('Invoice API - Invoice profiles:', invoices.map(i => i.profile));
-
-    // Calculate remaining amount for each invoice
     const invoicesWithRemainingAmount = await Promise.all(
       invoices.map(async (invoice) => {
-        if (invoice.profile === "Customer") {
-          // Calculate total payments for this invoice (direct payments)
-          const totalPayments = await prisma.payment.aggregate({
-            where: orgWhere(session, {
-              invoice: invoice.invoiceNumber,
-              transactionType: "INCOME",
-            }),
-            _sum: {
-              amount: true
-            }
-          });
-
-          // Also check for allocations from other payments (stored in payment descriptions)
-          const allPayments = await prisma.payment.findMany({
-            where: orgWhere(session, {
-              transactionType: "INCOME",
-              description: { contains: "ALLOCATIONS:" },
-            }),
-            select: {
-              description: true
-            }
-          });
-
-          let allocatedAmount = 0;
-          for (const payment of allPayments) {
-            const allocMatch = payment.description?.match(/ALLOCATIONS:([^|]+)/);
-            if (allocMatch) {
-              const allocations = allocMatch[1].split('|');
-              for (const alloc of allocations) {
-                const [allocInvoice, allocAmount] = alloc.split(':');
-                if (allocInvoice === invoice.invoiceNumber) {
-                  allocatedAmount += parseFloat(allocAmount) || 0;
-                }
-              }
-            }
-          }
-
-          const directPayments = totalPayments._sum.amount || 0;
-          const totalPaid = directPayments + allocatedAmount;
-          const remainingAmount = Math.max(0, invoice.totalAmount - totalPaid);
-
-          return {
-            ...invoice,
-            remainingAmount
-          };
-        } else if (invoice.profile === "Vendor") {
-          // Calculate total payments for vendor invoice (direct payments)
-          const totalPayments = await prisma.payment.aggregate({
-            where: orgWhere(session, {
-              invoice: invoice.invoiceNumber,
-              transactionType: "EXPENSE",
-            }),
-            _sum: {
-              amount: true
-            }
-          });
-
-          // Also check for allocations from other payments (stored in payment descriptions)
-          const allPayments = await prisma.payment.findMany({
-            where: orgWhere(session, {
-              transactionType: "EXPENSE",
-              description: { contains: "ALLOCATIONS:" },
-            }),
-            select: {
-              description: true
-            }
-          });
-
-          let allocatedAmount = 0;
-          for (const payment of allPayments) {
-            const allocMatch = payment.description?.match(/ALLOCATIONS:([^|]+)/);
-            if (allocMatch) {
-              const allocations = allocMatch[1].split('|');
-              for (const alloc of allocations) {
-                const [allocInvoice, allocAmount] = alloc.split(':');
-                if (allocInvoice === invoice.invoiceNumber) {
-                  allocatedAmount += parseFloat(allocAmount) || 0;
-                }
-              }
-            }
-          }
-
-          const directPayments = totalPayments._sum.amount || 0;
-          const totalPaid = directPayments + allocatedAmount;
-          const remainingAmount = Math.max(0, invoice.totalAmount - totalPaid);
-
-          return {
-            ...invoice,
-            remainingAmount
-          };
-        }
-        return invoice;
+        const paymentStatus = await calculateInvoicePaymentStatus(
+          prisma,
+          invoice.invoiceNumber,
+          money(invoice.totalAmount),
+          session.organizationId,
+          invoice.id
+        );
+        return {
+          ...invoice,
+          remainingAmount: paymentStatus.remainingAmount,
+        };
       })
     );
 
@@ -316,7 +229,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    const auth = await requirePermission(req, "manage_billing");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -371,108 +284,105 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const invoice = await prisma.invoice.create({
-      data: orgData(session, {
-        invoiceNumber,
-        invoiceDate: new Date(invoiceDate),
-        receiptNumber,
-        trackingNumber,
-        destination,
-        dayWeek,
-        weight: parseFloat(weight),
-        profile,
-        fscCharges: parseFloat(fscCharges || 0),
-        discount: parseFloat(discount || 0),
-        lineItems,
-        customerId: parsedCustomerId,
-        vendorId: parsedVendorId,
-        shipmentId: parsedShipmentId,
-        disclaimer,
-        totalAmount: parseFloat(totalAmount),
-        currency,
-        status: status || "Unpaid",
-      }),
-      include: {
-        customer: true,
-        vendor: true,
-        shipment: true,
-      },
-    });
-
-    // For standalone invoices (not created via add-shipment/bulk-upload which post their own JEs),
-    // post customer/vendor transactions and General Ledger journal entries.
     const invAmount = parseFloat(totalAmount) || 0;
     const invDate = new Date(invoiceDate);
 
-    if (invAmount > 0) {
-      try {
-        if (parsedCustomerId || profile === "Customer") {
-          // If not linked to a shipment, record customer ledger debit
-          if (!parsedShipmentId && parsedCustomerId) {
-            await addCustomerTransaction(
-              prisma,
-              parsedCustomerId,
-              "DEBIT",
-              invAmount,
-              `Invoice ${invoiceNumber}${destination ? ` | ${destination}` : ""}`,
-              invoiceNumber,
-              invoiceNumber,
-              invDate,
-              session.organizationId
-            );
-          }
-          // Post revenue journal entry if none exists yet
-          const existingRevenueJE = await prisma.journalEntry.findFirst({
-            where: orgWhere(session, { reference: invoiceNumber }),
-          });
-          if (!existingRevenueJE) {
-            await createJournalEntryForTransaction(
-              prisma,
-              "CUSTOMER_DEBIT",
-              invAmount,
-              `Customer invoice ${invoiceNumber}${trackingNumber ? ` for shipment ${trackingNumber}` : ""}`,
-              invoiceNumber,
-              invoiceNumber,
-              invDate,
-              session.organizationId
-            );
-          }
-        } else if (parsedVendorId || profile === "Vendor") {
-          // If not linked to a shipment, record vendor ledger debit
-          if (!parsedShipmentId && parsedVendorId) {
-            await addVendorTransaction(
-              prisma,
-              parsedVendorId,
-              "DEBIT",
-              invAmount,
-              `Vendor bill ${invoiceNumber}${destination ? ` | ${destination}` : ""}`,
-              invoiceNumber,
-              invoiceNumber,
-              invDate,
-              session.organizationId
-            );
-          }
-          // Post vendor expense journal entry if none exists yet
-          const existingExpenseJE = await prisma.journalEntry.findFirst({
-            where: orgWhere(session, { reference: invoiceNumber }),
-          });
-          if (!existingExpenseJE) {
-            await createJournalEntryForTransaction(
-              prisma,
-              "VENDOR_DEBIT",
-              invAmount,
-              `Vendor bill ${invoiceNumber}${trackingNumber ? ` for shipment ${trackingNumber}` : ""}`,
-              invoiceNumber,
-              invoiceNumber,
-              invDate,
-              session.organizationId
-            );
+    const invoice = await prisma.$transaction(
+      async (tx) => {
+        const created = await tx.invoice.create({
+          data: orgData(session, {
+            invoiceNumber,
+            invoiceDate: new Date(invoiceDate),
+            receiptNumber,
+            trackingNumber,
+            destination,
+            dayWeek,
+            weight: parseFloat(weight),
+            profile,
+            fscCharges: parseFloat(fscCharges || 0),
+            discount: parseFloat(discount || 0),
+            lineItems,
+            customerId: parsedCustomerId,
+            vendorId: parsedVendorId,
+            shipmentId: parsedShipmentId,
+            disclaimer,
+            totalAmount: parseFloat(totalAmount),
+            currency,
+            status: status || "Unpaid",
+          }),
+          include: {
+            customer: true,
+            vendor: true,
+            shipment: true,
+          },
+        });
+
+        if (invAmount > 0) {
+          if (parsedCustomerId || profile === "Customer") {
+            if (!parsedShipmentId && parsedCustomerId) {
+              await addCustomerTransaction(
+                tx,
+                parsedCustomerId,
+                "DEBIT",
+                invAmount,
+                `Invoice ${invoiceNumber}${destination ? ` | ${destination}` : ""}`,
+                invoiceNumber,
+                invoiceNumber,
+                invDate,
+                session.organizationId
+              );
+            }
+            const existingRevenueJE = await tx.journalEntry.findFirst({
+              where: orgWhere(session, { reference: invoiceNumber }),
+            });
+            if (!existingRevenueJE) {
+              await createJournalEntryForTransaction(
+                tx,
+                "CUSTOMER_DEBIT",
+                invAmount,
+                `Customer invoice ${invoiceNumber}${trackingNumber ? ` for shipment ${trackingNumber}` : ""}`,
+                invoiceNumber,
+                invoiceNumber,
+                invDate,
+                session.organizationId
+              );
+            }
+          } else if (parsedVendorId || profile === "Vendor") {
+            if (!parsedShipmentId && parsedVendorId) {
+              await addVendorTransaction(
+                tx,
+                parsedVendorId,
+                "DEBIT",
+                invAmount,
+                `Vendor bill ${invoiceNumber}${destination ? ` | ${destination}` : ""}`,
+                invoiceNumber,
+                invoiceNumber,
+                invDate,
+                session.organizationId
+              );
+            }
+            const existingExpenseJE = await tx.journalEntry.findFirst({
+              where: orgWhere(session, { reference: invoiceNumber }),
+            });
+            if (!existingExpenseJE) {
+              await createJournalEntryForTransaction(
+                tx,
+                "VENDOR_DEBIT",
+                invAmount,
+                `Vendor bill ${invoiceNumber}${trackingNumber ? ` for shipment ${trackingNumber}` : ""}`,
+                invoiceNumber,
+                invoiceNumber,
+                invDate,
+                session.organizationId
+              );
+            }
           }
         }
-      } catch (accountingError) {
-        console.error("Error creating accounting entries for invoice:", accountingError);
-      }
-    }
+
+        return created;
+      },
+      { timeout: 30000 }
+    );
 
     return NextResponse.json(invoice);
   } catch (error) {
