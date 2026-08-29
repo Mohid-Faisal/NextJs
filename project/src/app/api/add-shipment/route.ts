@@ -456,7 +456,7 @@ export async function POST(req: NextRequest) {
             const shipment = await tx.shipment.create({
               data: orgData(session, {
                 trackingId,
-                referenceNumber: referenceNumber || null,
+                referenceNumber: referenceNumber ? referenceNumber.trim() : "",
                 invoiceNumber,
                 shipmentDate: shipmentDateObj,
                 agency,
