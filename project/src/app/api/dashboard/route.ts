@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCountryNameFromCode } from "@/lib/utils";
 import { computeMonthlyPartyNetsUsingVoucherDates } from "@/lib/accounts/dashboardVoucherBalances";
@@ -741,13 +741,58 @@ export async function GET(req: Request) {
       receivable: number;
       payable: number;
     }[] = monthSlices.map(({ targetDate }, i) => {
-      const { customerNet, vendorNet } = voucherMonthNets[i];
+      const net = voucherMonthNets[i] || { customerNet: 0, vendorNet: 0 };
+      const cNet = money(net.customerNet);
+      const vNet = money(net.vendorNet);
       return {
         month: `${monthNamesForAccounts[targetDate.getUTCMonth()]} ${targetDate.getUTCFullYear().toString().slice(-2)}`,
-        receivable: Math.abs(Math.min(customerNet, 0)),
-        payable: Math.max(vendorNet, 0),
+        receivable: Math.abs(Math.min(cNet, 0)),
+        payable: Math.max(vNet, 0),
       };
     });
+
+    // If all months returned 0 (e.g. no historical customerTransaction rows), fallback to Invoice aggregates
+    const allZero = monthlyAccountsData.every((d) => d.receivable === 0 && d.payable === 0);
+    if (allZero) {
+      const invoiceDataByMonth = await Promise.all(
+        monthSlices.map(async ({ targetDate, endExclusive }) => {
+          const [customerInv, vendorInv] = await Promise.all([
+            prisma.invoice.aggregate({
+              where: org({
+                customerId: { not: null },
+                status: { not: "Cancelled" },
+                createdAt: {
+                  gte: targetDate,
+                  lt: endExclusive,
+                },
+              }),
+              _sum: { totalAmount: true },
+            }),
+            prisma.invoice.aggregate({
+              where: org({
+                vendorId: { not: null },
+                status: { not: "Cancelled" },
+                createdAt: {
+                  gte: targetDate,
+                  lt: endExclusive,
+                },
+              }),
+              _sum: { totalAmount: true },
+            }),
+          ]);
+
+          return {
+            receivable: money(customerInv._sum.totalAmount),
+            payable: money(vendorInv._sum.totalAmount),
+          };
+        })
+      );
+
+      invoiceDataByMonth.forEach((invData, i) => {
+        monthlyAccountsData[i].receivable = invData.receivable;
+        monthlyAccountsData[i].payable = invData.payable;
+      });
+    }
     
     // Calculate percentage changes for metric cards
     const calculatePercentageChange = (current: number, previous: number): number => {
