@@ -595,6 +595,41 @@ export async function createJournalEntryForTransaction(
     const writeEntry = async (tx: any) => {
       const entryDate = date ? new Date(date) : new Date();
 
+      const existingEntry = reference && !reference.startsWith("Transaction-")
+        ? await tx.journalEntry.findFirst({
+            where: { ...orgFilter, reference },
+            include: { lines: true }
+          })
+        : null;
+
+      if (existingEntry) {
+        await tx.journalEntry.update({
+          where: { id: existingEntry.id },
+          data: {
+            date: entryDate,
+            description: description,
+            totalDebit: amount,
+            totalCredit: amount,
+            updatedAt: new Date()
+          }
+        });
+
+        for (const line of existingEntry.lines) {
+          if (line.debitAmount > 0) {
+            await tx.journalEntryLine.update({
+              where: { id: line.id },
+              data: { debitAmount: amount }
+            });
+          } else if (line.creditAmount > 0) {
+            await tx.journalEntryLine.update({
+              where: { id: line.id },
+              data: { creditAmount: amount }
+            });
+          }
+        }
+        return existingEntry;
+      }
+
       const entry = await tx.journalEntry.create({
         data: {
           ...orgFilter,
