@@ -91,8 +91,8 @@ export async function PUT(req: NextRequest) {
     const updatedCharge = await prisma.fixedCharge.update({
       where: { id: parseInt(id) },
       data: {
-        weight: weight ? parseFloat(weight) : undefined,
-        fixedCharge: fixedCharge ? parseFloat(fixedCharge) : undefined,
+        weight: weight !== undefined && weight !== null && weight !== "" ? parseFloat(weight) : undefined,
+        fixedCharge: fixedCharge !== undefined && fixedCharge !== null && fixedCharge !== "" ? parseFloat(fixedCharge) : undefined,
       },
     });
 
@@ -262,17 +262,27 @@ async function handleJsonData(req: NextRequest, session: SessionPayload) {
   const body = await req.json();
   const { weight, fixedCharge } = body;
 
-  if (!weight || !fixedCharge) {
+  if (weight === undefined || weight === null || weight === "" || fixedCharge === undefined || fixedCharge === null || fixedCharge === "") {
     return NextResponse.json(
       { success: false, message: "Weight and fixedCharge are required" },
       { status: 400 }
     );
   }
 
+  const numWeight = parseFloat(weight);
+  const numCharge = parseFloat(fixedCharge);
+
+  if (isNaN(numWeight) || isNaN(numCharge)) {
+    return NextResponse.json(
+      { success: false, message: "Weight and fixedCharge must be valid numbers" },
+      { status: 400 }
+    );
+  }
+
   const newCharge = await prisma.fixedCharge.create({
     data: orgData(session, {
-      weight: parseFloat(weight),
-      fixedCharge: parseFloat(fixedCharge),
+      weight: numWeight,
+      fixedCharge: numCharge,
     }),
   });
 

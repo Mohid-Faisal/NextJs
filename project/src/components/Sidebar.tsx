@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Users,
   Package,
@@ -16,8 +16,6 @@ import {
   DollarSign,
   ChevronDown,
   ChevronUp,
-  LogOut,
-  Edit3,
   User,
   Building2,
   Search,
@@ -27,24 +25,19 @@ import {
   Book,
   BookOpen,
   ClipboardList,
-  Zap,
   TrendingUp,
   Mail,
-  Receipt,
   Wallet,
-  TrendingDown,
   ArrowDownCircle,
   ArrowUpCircle,
   ShieldCheck,
   UserCheck,
   Crown,
-  Layers,
-  Landmark,
   Palette,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePermissions } from "@/components/PermissionContext";
-import { getClientSession, clearClientSessionCache } from "@/lib/clientSession";
+import { getClientSession } from "@/lib/clientSession";
 
 const links = [
   { href: "/dashboard/customers", label: "Customers", icon: User },
@@ -60,12 +53,10 @@ const adminLinks = [
 
 const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const [userName, setUserName] = useState("User");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [orgRole, setOrgRole] = useState<string | null>(null);
-  const { hasPermission, hasFeature, loading } = usePermissions();
+  const { hasPermission, hasFeature } = usePermissions();
   const [isHovered, setIsHovered] = useState(false);
   const [shipmentOpen, setShipmentOpen] = useState(
     pathname.startsWith("/dashboard/shipments") ||
@@ -87,9 +78,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   );
   const [reportsOpen, setReportsOpen] = useState(
     pathname.startsWith("/dashboard/reports") || pathname.startsWith("/dashboard/accounts/ledger")
-  );
-  const [saasOpen, setSaasOpen] = useState(
-    pathname.startsWith("/dashboard/saas") && !pathname.startsWith("/dashboard/saas/pending-approvals")
   );
 
   const isLinkActive = (href: string) => {
@@ -115,7 +103,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
     let cancelled = false;
     getClientSession().then((user) => {
       if (cancelled || !user) return;
-      setUserName(user.name || "User");
       setIsSuperAdmin(user.platformRole === "SUPER_ADMIN");
       setOrgRole(user.orgRole || null);
     });
@@ -123,17 +110,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       cancelled = true;
     };
   }, []);
-
-  const handleLogout = async () => {
-    // Session cookie is httpOnly — clear it server-side.
-    clearClientSessionCache();
-    try {
-      await fetch("/api/logout", { method: "POST" });
-    } catch {
-      // ignore network errors; redirect anyway
-    }
-    router.push("/auth/login");
-  };
 
   const handleMouseEnter = () => {
     if (!isOpen) {
@@ -160,15 +136,6 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
       label: "Rate Calculator",
       icon: DollarSign,
     },
-  ];
-  const subLinksSaaS = [
-    { href: "/dashboard/saas/organizations", label: "SaaS Dashboard", icon: Crown },
-    { href: "/dashboard/saas/manage-organizations", label: "Organizations", icon: Building2 },
-    { href: "/dashboard/saas/payment-proofs", label: "Payments", icon: Landmark },
-    { href: "/dashboard/saas/plans", label: "Plans", icon: Layers },
-    { href: "/dashboard/saas/wallets", label: "Wallets", icon: Wallet },
-    { href: "/dashboard/saas/subscriptions", label: "Subscriptions", icon: FileText },
-    { href: "/dashboard/saas/invoices", label: "Invoices", icon: Receipt },
   ];
   const subLinksSettings = [
     {
@@ -642,7 +609,7 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
                     className="pl-10 mt-2 space-y-1"
                   >
                     {subLinksAccounts
-                      .filter((sub) => hasPermission("manage_billing"))
+                      .filter(() => hasPermission("manage_billing"))
                       .map(({ href, label, icon: Icon }) => (
                         <Link
                           key={href}

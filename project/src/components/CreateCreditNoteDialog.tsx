@@ -55,7 +55,7 @@ export default function CreateCreditNoteDialog({
 }: CreateCreditNoteDialogProps) {
   const isEditMode = editId != null;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [_customers, setCustomers] = useState<Customer[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<string>("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("");

@@ -89,7 +89,7 @@ export async function createSession(
 }
 
 /** Backwards-compatible alias used by older call sites. */
-export function signSessionToken(payload: {
+export function signSessionToken(_payload: {
   userId: number;
   email: string;
   name: string;

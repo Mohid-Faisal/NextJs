@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { decodeToken, checkRemoteArea } from "@/lib/utils";
+import { checkRemoteArea } from "@/lib/utils";
 import bcrypt from "bcrypt";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgWhere } from "@/lib/tenant/prismaScope";
@@ -154,25 +154,6 @@ export async function DELETE(
     if (auth.error) return auth.error;
     const session = auth.session;
 
-    // Get the authorization header
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Authorization token required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = decodeToken(token);
-    
-    if (!decoded) {
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      );
-    }
-
     // Get the request body for password verification
     const body: { password: string } = await req.json();
     const { password } = body;
@@ -184,9 +165,9 @@ export async function DELETE(
       );
     }
 
-    // Get the current user
+    // Get the current user from authenticated session
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(decoded.id) },
+      where: { id: session.userId },
     });
 
     if (!user) {

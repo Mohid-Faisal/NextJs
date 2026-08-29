@@ -532,12 +532,10 @@ export async function POST(req: NextRequest) {
         }
 
         // Create customer invoice
-        const customerInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
-          method: 'POST',
-          headers: forwardHeaders,
-          body: JSON.stringify({
+        await prisma.invoice.create({
+          data: orgData(session, {
             invoiceNumber,
-            invoiceDate: shipmentData.shipmentDate.toISOString(),
+            invoiceDate: shipmentData.shipmentDate,
             trackingNumber: shipmentData.trackingId,
             destination: shipmentData.countryCode,
             weight: shipmentData.weight,
@@ -556,12 +554,10 @@ export async function POST(req: NextRequest) {
         });
 
         // Create vendor invoice
-        const vendorInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
-          method: 'POST',
-          headers: forwardHeaders,
-          body: JSON.stringify({
+        await prisma.invoice.create({
+          data: orgData(session, {
             invoiceNumber: vendorInvoiceNumber,
-            invoiceDate: shipmentData.shipmentDate.toISOString(),
+            invoiceDate: shipmentData.shipmentDate,
             trackingNumber: shipmentData.trackingId,
             destination: shipmentData.countryCode,
             weight: shipmentData.weight,

@@ -12,6 +12,7 @@ import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { creditNoteOrgFilter } from "@/lib/tenant/findOrgCreditNote";
 import { findOrgChartAccount, findOrgChartAccountByFilter } from "@/lib/tenant/findOrgChartAccount";
 import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
+import { nextSequenceNumber } from "@/lib/sequences";
 import type { SessionPayload } from "@/lib/auth/session";
 
 async function getAccountIds(session: SessionPayload) {
@@ -222,6 +223,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      return NextResponse.json(
+        { error: "Amount must be a positive number" },
+        { status: 400 }
+      );
+    }
+
     // Get account IDs for journal entries - use provided IDs or fall back to defaults
     let cashId: number, revenueId: number, expenseId: number;
     let useProvidedAccounts = false;
@@ -251,15 +260,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate credit note number (org-scoped)
-    const lastCreditNote = await prisma.creditNote.findFirst({
-      where: { customer: { organizationId: session.organizationId } },
-      orderBy: { id: "desc" },
-    });
-
-    const nextId = (lastCreditNote?.id || 0) + 1;
     const entryType: "CREDIT" | "DEBIT" = type === "DEBIT" ? "DEBIT" : "CREDIT";
-    const creditNoteNumber = formatAdjustmentReference(entryType, nextId);
+    const seqKey = entryType === "DEBIT" ? "debit_note" : "credit_note";
+    const nextSeq = await nextSequenceNumber(prisma, session.organizationId, seqKey);
+    const creditNoteNumber = formatAdjustmentReference(entryType, nextSeq);
 
     const nextEntryNumber = await nextJournalEntryNumber(prisma, session.organizationId);
 

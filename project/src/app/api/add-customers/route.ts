@@ -23,6 +23,14 @@ async function getNextCustomerId(): Promise<number> {
   }
 }
 
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf"];
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+function getFileExtension(name: string): string {
+  const idx = name.lastIndexOf(".");
+  return idx === -1 ? "" : name.slice(idx).toLowerCase();
+}
+
 export async function POST(req: NextRequest) {
   try {
     const auth = await requirePermission(req, "manage_customers");
@@ -44,6 +52,21 @@ export async function POST(req: NextRequest) {
 
     let fileUrl = "";
     if (file && file.size > 0) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        return NextResponse.json(
+          { success: false, message: "File too large (max 10MB)" },
+          { status: 400 }
+        );
+      }
+
+      const ext = getFileExtension(file.name || "");
+      if (ext && !ALLOWED_EXTENSIONS.includes(ext)) {
+        return NextResponse.json(
+          { success: false, message: `File type not allowed. Accepted: ${ALLOWED_EXTENSIONS.join(", ")}` },
+          { status: 400 }
+        );
+      }
+
       const storageUrl = process.env.NEXT_PUBLIC_CPANEL_STORAGE_URL;
       const secretKey = process.env.CPANEL_UPLOAD_SECRET_KEY;
 
@@ -86,24 +109,24 @@ export async function POST(req: NextRequest) {
       fileUrl = data.url;
     }
 
-    // Generate custom customer ID
+    // Generate custom customer ID or fallback
     const customId = await getNextCustomerId();
 
     const customerData = {
       id: customId,
       CompanyName: obj.companyname,
       PersonName: obj.personname,
-      Email: obj.email,
-      Phone: obj.phone,
-      DocumentType: obj.documentType,
-      DocumentNumber: obj.documentNumber,
-      DocumentExpiry: obj.documentExpiry,
+      Email: obj.email || "",
+      Phone: obj.phone || "",
+      DocumentType: obj.documentType || "",
+      DocumentNumber: obj.documentNumber || "",
+      DocumentExpiry: obj.documentExpiry || "",
       Country: obj.country,
-      State: obj.state,
-      City: obj.city,
-      Zip: obj.zip,
-      Address: obj.address,
-      ActiveStatus: obj.activestatus,
+      State: obj.state || "",
+      City: obj.city || "",
+      Zip: obj.zip || "",
+      Address: obj.address || "",
+      ActiveStatus: obj.activestatus || "Active",
       FilePath: fileUrl,
     };
 
@@ -139,9 +162,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newCustomer = await prisma.customers.create({
-      data: orgData(session, customerData),
-    });
+    let newCustomer;
+    try {
+      newCustomer = await prisma.customers.create({
+        data: orgData(session, customerData),
+      });
+    } catch (createErr: any) {
+      if (createErr?.code === "P2002") {
+        // ID collision: retry with auto-increment by omitting custom ID
+        const { id: _, ...autoIncrementData } = customerData;
+        newCustomer = await prisma.customers.create({
+          data: orgData(session, autoIncrementData),
+        });
+      } else {
+        throw createErr;
+      }
+    }
 
     return NextResponse.json({
       success: true,

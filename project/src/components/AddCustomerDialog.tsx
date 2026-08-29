@@ -13,7 +13,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -60,7 +59,6 @@ const AddCustomerDialog = ({
   const [registerAccount, setRegisterAccount] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedState, setSelectedState] = useState<string>("");
-  const [selectedCity, setSelectedCity] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [states, setStates] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
@@ -89,7 +87,6 @@ const AddCustomerDialog = ({
       });
       setSelectedCountry(customerToEdit.Country || "");
       setSelectedState(customerToEdit.State || "");
-      setSelectedCity(customerToEdit.City || "");
     }
   }, [isEditMode, customerToEdit]);
 
@@ -98,7 +95,6 @@ const AddCustomerDialog = ({
       const fetchedStates = State.getStatesOfCountry(selectedCountry);
       setStates(fetchedStates);
       setSelectedState("");
-      setSelectedCity("");
       setCities([]);
     }
   }, [selectedCountry]);
@@ -110,7 +106,6 @@ const AddCustomerDialog = ({
         selectedState
       );
       setCities(fetchedCities);
-      setSelectedCity("");
     }
   }, [selectedState, selectedCountry]);
 

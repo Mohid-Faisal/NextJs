@@ -4,10 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Menu, Bell, Maximize2, Minimize2, Search, Upload, Package,
+  Menu, Bell, Maximize2, Minimize2, Search, Package,
   User, Settings, LogOut
 } from "lucide-react";
-import { ThemeToggle } from "./theme-toggle";
 import BulkUploadModal from "./BulkUploadModal";
 import {
   DropdownMenu,

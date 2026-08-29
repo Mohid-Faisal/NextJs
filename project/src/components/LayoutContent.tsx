@@ -36,7 +36,6 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 
   // Plan feature check
   let isFeatureAllowed = true;
-  let requiredFeatureKey = "";
   if (
     pathname.startsWith("/dashboard/accounts") &&
     !pathname.startsWith("/dashboard/accounts/payments") &&
@@ -44,12 +43,10 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
     !pathname.startsWith("/dashboard/accounts/transactions/vendor")
   ) {
     isFeatureAllowed = hasFeature("accounts");
-    requiredFeatureKey = "accounts";
   } else {
     for (const [route, featureKey] of Object.entries(routeFeatures)) {
       if (pathname === route || pathname.startsWith(route + "/")) {
         isFeatureAllowed = hasFeature(featureKey);
-        requiredFeatureKey = featureKey;
         break;
       }
     }

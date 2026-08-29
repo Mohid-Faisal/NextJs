@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef } from "react";
+import { useRef } from "react";
 import { Combobox } from "@headlessui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown } from "lucide-react";
@@ -11,6 +11,8 @@ type CountryOption = {
   code: string;
 };
 
+const countryList = countries as CountryOption[];
+
 export default function CountryCombobox({
   value,
   onChange,
@@ -18,18 +20,9 @@ export default function CountryCombobox({
   value: string | null;
   onChange: (val: string | null) => void;
 }) {
-  const [query, setQuery] = useState("");
   const parentRef = useRef<HTMLDivElement | null>(null);
 
-  const countryList = countries as CountryOption[];
-
-  const filteredCountries = useMemo(() => {
-    return query === ""
-      ? countryList
-      : countryList.filter((c) =>
-          c.name.toLowerCase().includes(query.toLowerCase())
-        );
-  }, [query]);
+  const filteredCountries = countryList;
 
   const rowVirtualizer = useVirtualizer({
     count: filteredCountries.length,

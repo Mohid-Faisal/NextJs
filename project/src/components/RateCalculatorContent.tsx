@@ -39,13 +39,6 @@ function FlagIcon({ country, className }: { country: any; className?: string }) 
   );
 }
 
-const documentTypes = [
-  "Document",
-  "Non Document",
-  "FedEx Pak",
-  "Envelope"
-];
-
 function getLogoForService(service: string | undefined): string | null {
   if (!service) return null;
   const s = service.toUpperCase();
@@ -251,7 +244,7 @@ export default function RateCalculatorContent({ publicView = false }: RateCalcul
       } else {
         setResults(data);
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong while fetching rates.");
       setResults(null);
     } finally {

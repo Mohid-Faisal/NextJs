@@ -12,34 +12,45 @@ import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { debitNoteOrgFilter } from "@/lib/tenant/findOrgDebitNote";
 import { findOrgChartAccount, findOrgChartAccountByFilter } from "@/lib/tenant/findOrgChartAccount";
 import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
+import { nextSequenceNumber } from "@/lib/sequences";
 import type { SessionPayload } from "@/lib/auth/session";
 
 async function getAccountIds(session: SessionPayload) {
-  try {
-    const vendorExpenseAccount = await findOrgChartAccountByFilter(session, {
-      category: "Expense",
-      accountName: { contains: "Vendor"},
-    });
-
-    const cashAccount = await findOrgChartAccountByFilter(session, {
-      category: "Asset",
-      accountName: { contains: "Cash"},
-    });
-
-    const otherIncomeAccount = await findOrgChartAccountByFilter(session, {
-      category: "Revenue",
-      accountName: { contains: "Other Revenue"},
-    });
-
-    return {
-      vendorExpenseId: vendorExpenseAccount?.id || 1,
-      cashId: cashAccount?.id || 2,
-      otherIncomeId: otherIncomeAccount?.id || 5,
-    };
-  } catch (error) {
-    console.error("Error getting account IDs:", error);
-    return { vendorExpenseId: 1, cashId: 2, otherIncomeId: 5 };
+  let vendorExpenseAccount = await findOrgChartAccountByFilter(session, {
+    category: "Expense",
+    accountName: { contains: "Vendor"},
+  });
+  if (!vendorExpenseAccount) {
+    vendorExpenseAccount = await findOrgChartAccountByFilter(session, { category: "Expense" });
   }
+
+  let cashAccount = await findOrgChartAccountByFilter(session, {
+    category: "Asset",
+    accountName: { contains: "Cash"},
+  });
+  if (!cashAccount) {
+    cashAccount = await findOrgChartAccountByFilter(session, { category: "Asset" });
+  }
+
+  let otherIncomeAccount = await findOrgChartAccountByFilter(session, {
+    category: "Revenue",
+    accountName: { contains: "Other Revenue"},
+  });
+  if (!otherIncomeAccount) {
+    otherIncomeAccount = await findOrgChartAccountByFilter(session, { category: "Revenue" });
+  }
+
+  if (!vendorExpenseAccount || !cashAccount || !otherIncomeAccount) {
+    throw new Error(
+      "Required accounts not found. Please ensure at least one Expense, Asset (Cash), and Revenue account exist in your Chart of Accounts."
+    );
+  }
+
+  return {
+    vendorExpenseId: vendorExpenseAccount.id,
+    cashId: cashAccount.id,
+    otherIncomeId: otherIncomeAccount.id,
+  };
 }
 
 // GET /api/debit-notes - Get all debit notes with pagination and filtering
@@ -206,6 +217,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      return NextResponse.json(
+        { error: "Amount must be a positive number" },
+        { status: 400 }
+      );
+    }
+
     // Get account IDs for journal entries - use provided IDs or fall back to defaults
     let vendorExpenseId: number, cashId: number, otherIncomeId: number;
     let useProvidedAccounts = false;
@@ -224,21 +243,23 @@ export async function POST(request: NextRequest) {
       }
       useProvidedAccounts = true;
     } else {
-      const ids = await getAccountIds(session);
-      vendorExpenseId = ids.vendorExpenseId;
-      cashId = ids.cashId;
-      otherIncomeId = ids.otherIncomeId;
+      try {
+        const ids = await getAccountIds(session);
+        vendorExpenseId = ids.vendorExpenseId;
+        cashId = ids.cashId;
+        otherIncomeId = ids.otherIncomeId;
+      } catch (e: any) {
+        return NextResponse.json(
+          { error: e?.message || "Required accounts missing. Please configure Chart of Accounts." },
+          { status: 400 }
+        );
+      }
     }
 
-    // Generate debit note number (org-scoped)
-    const lastDebitNote = await prisma.debitNote.findFirst({
-      where: { vendor: { organizationId: session.organizationId } },
-      orderBy: { id: "desc" },
-    });
-
-    const nextId = (lastDebitNote?.id || 0) + 1;
     const entryType: "CREDIT" | "DEBIT" = type === "CREDIT" ? "CREDIT" : "DEBIT";
-    const debitNoteNumber = formatAdjustmentReference(entryType, nextId);
+    const seqKey = entryType === "CREDIT" ? "credit_note" : "debit_note";
+    const nextSeq = await nextSequenceNumber(prisma, session.organizationId, seqKey);
+    const debitNoteNumber = formatAdjustmentReference(entryType, nextSeq);
 
     const nextEntryNumber = await nextJournalEntryNumber(prisma, session.organizationId);
 

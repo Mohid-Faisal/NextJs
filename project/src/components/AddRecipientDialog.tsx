@@ -13,7 +13,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -41,7 +40,6 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
 
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [selectedState, setSelectedState] = useState<string>("");
-  const [selectedCity, setSelectedCity] = useState<string>("");
   const [states, setStates] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
 
@@ -52,7 +50,6 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
       const fetchedStates = State.getStatesOfCountry(selectedCountry);
       setStates(fetchedStates);
       setSelectedState("");
-      setSelectedCity("");
       setCities([]);
     }
   }, [selectedCountry]);
@@ -64,7 +61,6 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
         selectedState
       );
       setCities(fetchedCities);
-      setSelectedCity("");
     }
   }, [selectedState, selectedCountry]);
 
@@ -103,7 +99,6 @@ const AddRecipientDialog = ({ triggerLabel = "Add Recipient", onSuccess }: { tri
       });
       setSelectedCountry("");
       setSelectedState("");
-      setSelectedCity("");
       setStates([]);
       setCities([]);
       setOpen(false); // Close dialog after successful submission

@@ -11,7 +11,7 @@ function slugify(name: string): string {
 }
 
 async function uniqueSlug(base: string): Promise<string> {
-  let slug = slugify(base);
+  const slug = slugify(base);
   let suffix = 0;
 
   while (true) {

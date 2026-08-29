@@ -16,7 +16,7 @@ export function decodeToken(token: string) {
     // fell back to a publicly-known constant, enabling token forgery).
     const decoded = jwt.verify(token, getJwtSecretString());
     return decoded as { id: string; email: string; name: string };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -125,24 +125,19 @@ export async function addCustomerTransaction(
   date?: Date | string,
   organizationId?: number
 ) {
-  const customer = await prisma.customers.findUnique({
-    where: { id: customerId }
-  });
+  const delta = type === 'CREDIT' ? amount : -amount;
 
-  if (!customer) {
-    throw new Error('Customer not found');
-  }
-
-  const previousBalance = customer.currentBalance;
-  const newBalance = type === 'CREDIT' 
-    ? previousBalance + amount 
-    : previousBalance - amount;
-
-  // Update customer balance
-  await prisma.customers.update({
+  // Atomic balance update
+  const updatedCustomer = await prisma.customers.update({
     where: { id: customerId },
-    data: { currentBalance: newBalance }
+    data: {
+      currentBalance: { increment: delta },
+    },
+    select: { currentBalance: true },
   });
+
+  const newBalance = updatedCustomer.currentBalance;
+  const previousBalance = newBalance - delta;
 
   // Use provided date or default to current date
   const transactionDate = date ? new Date(date) : new Date();
@@ -177,28 +172,22 @@ export async function addVendorTransaction(
   date?: Date | string,
   organizationId?: number
 ) {
-  const vendor = await prisma.vendors.findUnique({
-    where: { id: vendorId }
-  });
-
-  if (!vendor) {
-    throw new Error('Vendor not found');
-  }
-
-  const previousBalance = vendor.currentBalance;
-  
   // For vendors: 
   // - DEBIT means we owe them money (increases their positive balance)
   // - CREDIT means we're paying them (decreases their positive balance)
-  const newBalance = type === 'DEBIT' 
-    ? previousBalance + amount  // We owe them more
-    : previousBalance - amount; // We're paying them
+  const delta = type === 'DEBIT' ? amount : -amount;
 
-  // Update vendor balance
-  await prisma.vendors.update({
+  // Atomic balance update
+  const updatedVendor = await prisma.vendors.update({
     where: { id: vendorId },
-    data: { currentBalance: newBalance }
+    data: {
+      currentBalance: { increment: delta },
+    },
+    select: { currentBalance: true },
   });
+
+  const newBalance = updatedVendor.currentBalance;
+  const previousBalance = newBalance - delta;
 
   // Use provided date or default to current date
   const transactionDate = date ? new Date(date) : new Date();
@@ -835,8 +824,7 @@ export async function processPaymentWithAllocation(
     const alreadyPaid = totalPaidSoFar._sum.amount || 0;
     const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
     
-    // Determine how much goes to the invoice and how much becomes excess
-    const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
+    // Determine excess payment amount
     const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
 
     // Ignore sub-cent float noise — tiny "overpay" used to trigger allocateExcessPayment
@@ -858,15 +846,7 @@ export async function processPaymentWithAllocation(
 
     // Create a single comprehensive customer transaction for the entire payment
     if (paymentAmountNum > 0) {
-      let transactionDescription = description || `Payment for invoice ${invoiceNumber}`;
-      
-      // Add allocation details to the description if there were allocations
-      // if (allocationResult && allocationResult.allocations.length > 0) {
-      //   const allocationDetails = allocationResult.allocations
-      //     .map(alloc => `invoice ${alloc.invoiceNumber} (${alloc.amount.toFixed(2)})`)
-      //     .join(', ');
-      //   transactionDescription += ` and excess allocation to ${allocationDetails}`;
-      // }
+      const transactionDescription = description || `Payment for invoice ${invoiceNumber}`;
 
       await addCustomerTransaction(
         prisma,
@@ -899,8 +879,7 @@ export async function processPaymentWithAllocation(
     const alreadyPaid = totalPaidSoFar._sum.amount || 0;
     const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
     
-    // Determine how much goes to the invoice and how much becomes excess
-    const amountForInvoice = Math.min(paymentAmountNum, remainingAmount);
+    // Determine excess payment amount
     const overpaymentAmount = Math.max(0, paymentAmountNum - remainingAmount);
 
     const OVERPAY_THRESHOLD = 0.01;
@@ -920,15 +899,7 @@ export async function processPaymentWithAllocation(
 
     // Create a single comprehensive vendor transaction for the entire payment
     if (paymentAmountNum > 0) {
-      let transactionDescription = description || `Payment for invoice ${invoiceNumber}`;
-      
-      // Add allocation details to the description if there were allocations
-      // if (allocationResult && allocationResult.allocations.length > 0) {
-      //   const allocationDetails = allocationResult.allocations
-      //     .map(alloc => `invoice ${alloc.invoiceNumber} (${alloc.amount.toFixed(2)})`)
-      //     .join(', ');
-      //   transactionDescription += ` and excess allocation to ${allocationDetails}`;
-      // }
+      const transactionDescription = description || `Payment for invoice ${invoiceNumber}`;
 
       await addVendorTransaction(
         prisma,

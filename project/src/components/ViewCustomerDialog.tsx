@@ -17,7 +17,6 @@ import {
   User,
   Globe,
   FileText,
-  Shield,
   Package,
   Users,
   DollarSign,

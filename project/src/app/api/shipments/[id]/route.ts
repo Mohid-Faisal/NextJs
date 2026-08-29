@@ -381,49 +381,6 @@ export async function DELETE(
         })
       : [];
 
-    // Delete related journal entries (lines first due to foreign key constraints)
-    if (relatedJournalEntries.length > 0) {
-      console.log(`🗑️ Deleting ${relatedJournalEntries.length} related journal entries...`);
-      
-      // Delete journal entry lines first
-      const journalEntryIds = relatedJournalEntries.map(entry => entry.id);
-      await prisma.journalEntryLine.deleteMany({
-        where: {
-          journalEntryId: { in: journalEntryIds }
-        }
-      });
-      
-      // Then delete the journal entries
-      await prisma.journalEntry.deleteMany({
-        where: {
-          id: { in: journalEntryIds }
-        }
-      });
-      
-      console.log(`✅ Successfully deleted ${relatedJournalEntries.length} journal entries and their lines`);
-    }
-
-    console.log(
-      `📊 Processed ${relatedJournalEntries.length} related journal entries for shipment ${shipmentId}`
-    );
-
-    if (relatedJournalEntries.length > 0) {
-      relatedJournalEntries.forEach((entry, index) => {
-        console.log(
-          `  📊 Journal Entry ${index + 1}: ${
-            entry.entryNumber
-          }, Description: ${entry.description}, Amount: ${entry.totalDebit}`
-        );
-      });
-    }
-
-    // Find related customer and vendor transactions.
-    // IMPORTANT: Match ONLY by exact invoice number / reference / tracking id.
-    // We must NEVER match on description substrings (`description contains ...`).
-    // Charge transactions store the tracking number inside their description
-    // (e.g. "Tracking: 000512287096 | Country: GB | ..."), and this query is not
-    // scoped to a single customer/vendor, so a `contains` match would also catch
-    // unrelated customers' ledger rows and delete them when a shipment is removed.
     console.log("🔍 Searching for related customer transactions...");
     const customerInvoiceNumbers = Array.from(
       new Set(
@@ -479,435 +436,8 @@ export async function DELETE(
         })
       : [];
 
-    console.log(
-      `💰 Found ${relatedCustomerTransactions.length} related customer transactions and ${relatedVendorTransactions.length} vendor transactions for shipment ${shipmentId}`
-    );
-
-    if (relatedCustomerTransactions.length > 0) {
-      relatedCustomerTransactions.forEach((transaction, index) => {
-        console.log(
-          `  💰 Customer Transaction ${index + 1}: Type: ${
-            transaction.type
-          }, Amount: ${transaction.amount}, Reference: ${transaction.reference}`
-        );
-      });
-    }
-
-    if (relatedVendorTransactions.length > 0) {
-      relatedVendorTransactions.forEach((transaction, index) => {
-        console.log(
-          `  💰 Vendor Transaction ${index + 1}: Type: ${
-            transaction.type
-          }, Amount: ${transaction.amount}, Reference: ${transaction.reference}`
-        );
-      });
-    }
-
-    // Handle financial transactions before deletion
-    // For paid invoices, we create refund transactions instead of deleting payments
-    console.log(
-      "💳 Starting financial transaction processing for paid invoices..."
-    );
-    let customerRefundsProcessed = 0;
-    let vendorAdjustmentsProcessed = 0;
-    let totalRefundAmount = 0;
-    let totalAdjustmentAmount = 0;
-
-    for (const invoice of relatedInvoices) {
-      // Only process invoices that are actually paid
-      if (invoice.status === "Paid" && invoice.totalAmount > 0) {
-        console.log(
-          `💳 Processing paid invoice ${invoice.invoiceNumber} for ${invoice.profile} - Amount: ${invoice.totalAmount}`
-        );
-
-        if (invoice.profile === "Customer" && invoice.customerId) {
-          // Customer invoice was paid - we need to create a refund transaction
-          // This moves money from our cash account to accounts payable (to refund customer)
-          console.log(
-            `💳 Processing customer refund for invoice ${invoice.invoiceNumber}`
-          );
-
-          try {
-            // Get current customer balance
-            console.log(
-              `🔍 Looking up customer ${invoice.customerId} for refund processing`
-            );
-            const customer = await prisma.customers.findFirst({
-              where: orgWhere(session, { id: invoice.customerId }),
-            });
-
-            if (!customer) {
-              console.error(
-                `❌ Customer ${invoice.customerId} not found for refund`
-              );
-              continue;
-            }
-
-            const previousBalance = customer.currentBalance || 0;
-            const newBalance = previousBalance + invoice.totalAmount; // Credit reduces balance
-
-            console.log(
-              `💰 Customer ${
-                customer.CompanyName || customer.id
-              }: Previous balance: ${previousBalance}, New balance: ${newBalance}, Refund amount: ${
-                invoice.totalAmount
-              }`
-            );
-
-            // 1. Add customer credit transaction (reduces what they owe us)
-            console.log(`📝 Creating customer credit transaction for refund`);
-            await prisma.customerTransaction.create({
-              data: orgData(session, {
-                customerId: invoice.customerId,
-                type: "CREDIT",
-                amount: invoice.totalAmount,
-                description: `Refund for deleted shipment ${shipment.trackingId}`,
-                reference: `REFUND-${invoice.invoiceNumber}`,
-                invoice: invoice.invoiceNumber,
-                previousBalance,
-                newBalance,
-                createdAt: new Date(),
-              }),
-            });
-
-            // 2. Update customer balance
-            console.log(
-              `💳 Updating customer balance from ${previousBalance} to ${newBalance}`
-            );
-            await prisma.customers.update({
-              where: { id: invoice.customerId },
-              data: { currentBalance: newBalance },
-            });
-
-            // 3. Create journal entry: Debit Logistics Revenue, Credit Cash
-            // This reduces our revenue and reduces our cash balance for the refund
-            // // Use the journal entries we already found earlier in the code
-            // console.log(
-            //   `🔍 Looking for original journal entry for invoice ${invoice.invoiceNumber} from already found entries`
-            // );
-            // const originalJournalEntry = relatedJournalEntries.find((entry) =>
-            //   entry.description?.includes(invoice.invoiceNumber)
-            // );
-
-            // let cashAccount = null;
-            // let logisticsRevenueAccount = null;
-
-            // if (originalJournalEntry && originalJournalEntry.lines.length > 0) {
-            //   console.log(
-            //     `📊 Found original journal entry: ${originalJournalEntry.entryNumber} with ${originalJournalEntry.lines.length} lines`
-            //   );
-
-            //   // Find the cash account from the original journal entry
-            //   const cashLine = originalJournalEntry.lines.find(
-            //     (line) =>
-            //       line.debitAmount > 0
-            //   );
-
-            //   if (cashLine) {
-            //     console.log(
-            //       `💰 Found cash account from original entry: Account ID ${cashLine.accountId}`
-            //     );
-            //     cashAccount = await prisma.chartOfAccount.findUnique({
-            //       where: { id: cashLine.accountId },
-            //     });
-            //     console.log(
-            //       `💰 Cash account details: ${cashAccount?.accountName}`
-            //     );
-            //   }
-
-            //   // Find the revenue account from the original journal entry
-            //   const revenueLine = originalJournalEntry.lines.find(
-            //     (line) =>
-            //       line.creditAmount > 0
-            //   );
-
-            //   if (revenueLine) {
-            //     console.log(
-            //       `📈 Found revenue account from original entry: Account ID ${revenueLine.accountId}`
-            //     );
-            //     logisticsRevenueAccount =
-            //       await prisma.chartOfAccount.findUnique({
-            //         where: { id: revenueLine.accountId },
-            //       });
-            //     console.log(
-            //       `📈 Revenue account details: ${logisticsRevenueAccount?.accountName}`
-            //     );
-            //   }
-            // }
-
-            // // Fallback to searching by name if we couldn't find from journal entries
-            // if (!cashAccount) {
-            //   console.log(`🔍 Fallback: Searching for cash account by name`);
-            //   cashAccount = await prisma.chartOfAccount.findFirst({
-            //     where: { accountName: { contains: "Cash" } },
-            //   });
-            // }
-
-            // if (!logisticsRevenueAccount) {
-            //   console.log(
-            //     `🔍 Fallback: Searching for logistics revenue account by name`
-            //   );
-            //   logisticsRevenueAccount = await prisma.chartOfAccount.findFirst({
-            //     where: {
-            //       accountName: { contains: "Logistics Services Revenue" },
-            //     },
-            //   });
-            // }
-
-            // if (cashAccount && logisticsRevenueAccount) {
-            //   const journalEntry = await prisma.journalEntry.create({
-            //     data: {
-            //       entryNumber: `REFUND-${invoice.invoiceNumber}`,
-            //       date: new Date(),
-            //       description: `Customer refund for deleted shipment ${shipment.trackingId}`,
-            //       reference: `REFUND-${invoice.invoiceNumber}`,
-            //       totalDebit: invoice.totalAmount,
-            //       totalCredit: invoice.totalAmount,
-            //       createdAt: new Date(),
-            //     },
-            //   });
-
-            //   // Create journal entry lines
-            //   await Promise.all([
-            //     // Debit Logistics Revenue (reduces our revenue)
-            //     prisma.journalEntryLine.create({
-            //       data: {
-            //         journalEntryId: journalEntry.id,
-            //         accountId: logisticsRevenueAccount.id,
-            //         debitAmount: invoice.totalAmount,
-            //         creditAmount: 0,
-            //         description: `Debit: Logistics Revenue reduced for refund`,
-            //         reference: `REFUND-${invoice.invoiceNumber}`,
-            //       },
-            //     }),
-            //     // Credit Cash (reduces our cash balance)
-            //     prisma.journalEntryLine.create({
-            //       data: {
-            //         journalEntryId: journalEntry.id,
-            //         accountId: cashAccount.id,
-            //         debitAmount: 0,
-            //         creditAmount: invoice.totalAmount,
-            //         description: `Credit: Cash reduced for customer refund`,
-            //         reference: `REFUND-${invoice.invoiceNumber}`,
-            //       },
-            //     }),
-            //   ]);
-            // } else {
-            //   console.error(
-            //     "Cash or Logistics Revenue account not found for journal entry"
-            //   );
-            // }
-
-            customerRefundsProcessed++;
-            totalRefundAmount += invoice.totalAmount;
-            console.log(
-              `Customer refund processed for ${invoice.totalAmount} - Balance updated from ${previousBalance} to ${newBalance}`
-            );
-          } catch (error) {
-            console.error(`Error processing customer refund:`, error);
-            // Continue with other invoices even if one fails
-          }
-        }
-
-        if (invoice.profile === "Vendor" && invoice.vendorId) {
-          // Vendor invoice was paid - we won't get money from vendor
-          // This creates a credit transaction to reduce what we owe them
-          console.log(
-            `Processing vendor payment adjustment for invoice ${invoice.invoiceNumber}`
-          );
-
-          try {
-            // Get current vendor balance
-            const vendor = await prisma.vendors.findFirst({
-              where: orgWhere(session, { id: invoice.vendorId }),
-            });
-
-            if (!vendor) {
-              console.error(
-                `Vendor ${invoice.vendorId} not found for payment adjustment`
-              );
-              continue;
-            }
-
-            const previousBalance = vendor.currentBalance || 0;
-            const newBalance = previousBalance - invoice.totalAmount; // Credit reduces balance (vendor owes us money)
-
-            // 1. Add vendor credit transaction (reduces what we owe them - they owe us money now)
-            await prisma.vendorTransaction.create({
-              data: orgData(session, {
-                vendorId: invoice.vendorId,
-                type: "CREDIT",
-                amount: invoice.totalAmount,
-                description: `Payment adjustment for deleted shipment ${shipment.trackingId}`,
-                reference: `ADJUST-${invoice.invoiceNumber}`,
-                invoice: invoice.invoiceNumber,
-                previousBalance,
-                newBalance,
-                createdAt: new Date(),
-              }),
-            });
-
-            // 2. Update vendor balance
-            await prisma.vendors.update({
-              where: { id: invoice.vendorId },
-              data: { currentBalance: newBalance },
-            });
-
-            // 3. Create journal entry: Debit Accounts Receivable, Credit Logistics Revenue
-            // This adds money to accounts receivable and reduces our revenue
-            // Use the journal entries we already found earlier in the code
-            // console.log(
-            //   `🔍 Looking for original journal entry for vendor invoice ${invoice.invoiceNumber} from already found entries`
-            // );
-            // const originalVendorJournalEntry = relatedJournalEntries.find(
-            //   (entry) => entry.description?.includes(invoice.invoiceNumber)
-            // );
-
-            // let accountsReceivableAccount = null;
-            // let vendorExpenseAccount = null;
-
-            // if (
-            //   originalVendorJournalEntry &&
-            //   originalVendorJournalEntry.lines.length > 0
-            // ) {
-            //   console.log(
-            //     `📊 Found original vendor journal entry: ${originalVendorJournalEntry.entryNumber} with ${originalVendorJournalEntry.lines.length} lines`
-            //   );
-
-            //   // Find the accounts used for payment from the original journal entry
-            //   const arLine = originalVendorJournalEntry.lines.find(
-            //     (line) =>
-            //       line.creditAmount > 0
-            //   );
-
-            //   if (arLine) {
-            //     console.log(
-            //       `📋 Found accounts receivable account from original entry: Account ID ${arLine.accountId}`
-            //     );
-            //     accountsReceivableAccount =
-            //       await prisma.chartOfAccount.findUnique({
-            //         where: { id: arLine.accountId },
-            //       });
-            //     console.log(
-            //       `📋 AR account details: ${accountsReceivableAccount?.accountName}`
-            //     );
-            //   }
-
-            //   // Find the expense account from the original journal entry
-            //   const expenseLine = originalVendorJournalEntry.lines.find(
-            //     (line) =>
-            //       line.debitAmount > 0
-            //   );
-
-            //   if (expenseLine) {
-            //     console.log(
-            //       `💸 Found vendor expense account from original entry: Account ID ${expenseLine.accountId}`
-            //     );
-            //     vendorExpenseAccount = await prisma.chartOfAccount.findUnique({
-            //       where: { id: expenseLine.accountId },
-            //     });
-            //     console.log(
-            //       `💸 Expense account details: ${vendorExpenseAccount?.accountName}`
-            //     );
-            //   }
-            // }
-
-            // // Fallback to searching by name if we couldn't find from journal entries
-            // if (!accountsReceivableAccount) {
-            //   console.log(
-            //     `🔍 Fallback: Searching for accounts receivable account by name`
-            //   );
-            //   accountsReceivableAccount = await prisma.chartOfAccount.findFirst(
-            //     {
-            //       where: { accountName: { contains: "Cash" } },
-            //     }
-            //   );
-            // }
-
-            // if (!vendorExpenseAccount) {
-            //   console.log(
-            //     `🔍 Fallback: Searching for vendor expense account by name`
-            //   );
-            //   vendorExpenseAccount = await prisma.chartOfAccount.findFirst({
-            //     where: { accountName: { contains: "Vendor Expense" } },
-            //   });
-            // }
-
-            // if (accountsReceivableAccount && vendorExpenseAccount) {
-            //   const journalEntry = await prisma.journalEntry.create({
-            //     data: {
-            //       entryNumber: `ADJUST-${invoice.invoiceNumber}`,
-            //       date: new Date(),
-            //       description: `Vendor payment adjustment for deleted shipment ${shipment.trackingId}`,
-            //       reference: `ADJUST-${invoice.invoiceNumber}`,
-            //       totalDebit: invoice.totalAmount,
-            //       totalCredit: invoice.totalAmount,
-            //       createdAt: new Date(),
-            //     },
-            //   });
-
-            //   // Create journal entry lines
-            //   await Promise.all([
-            //     // Debit Accounts Receivable (vendor owes us money now)
-            //     prisma.journalEntryLine.create({
-            //       data: {
-            //         journalEntryId: journalEntry.id,
-            //         accountId: accountsReceivableAccount.id,
-            //         debitAmount: invoice.totalAmount,
-            //         creditAmount: 0,
-            //         description: `Debit: Accounts Receivable increased`,
-            //         reference: `ADJUST-${invoice.invoiceNumber}`,
-            //       },
-            //     }),
-            //     // Credit Logistics Revenue (reduces our revenue)
-            //     prisma.journalEntryLine.create({
-            //       data: {
-            //         journalEntryId: journalEntry.id,
-            //         accountId: vendorExpenseAccount.id,
-            //         debitAmount: 0,
-            //         creditAmount: invoice.totalAmount,
-            //         description: `Credit: Vendor Expense reduced for vendor adjustment`,
-            //         reference: `ADJUST-${invoice.invoiceNumber}`,
-            //       },
-            //     }),
-            //   ]);
-            // } else {
-            //   console.error(
-            //     "Accounts Receivable or Vendor Expense account not found for journal entry"
-            //   );
-            // }
-
-            vendorAdjustmentsProcessed++;
-            totalAdjustmentAmount += invoice.totalAmount;
-            console.log(
-              `Vendor payment adjustment processed for ${invoice.totalAmount} - Balance updated from ${previousBalance} to ${newBalance}`
-            );
-          } catch (error) {
-            console.error(`Error processing vendor payment adjustment:`, error);
-            // Continue with other invoices even if one fails
-          }
-        }
-      } else {
-        console.log(
-          `Skipping invoice ${invoice.invoiceNumber} - Status: ${invoice.status}, Amount: ${invoice.totalAmount}`
-        );
-      }
-    }
-
-    console.log(
-      `Financial processing summary: ${customerRefundsProcessed} customer refunds (${totalRefundAmount}), ${vendorAdjustmentsProcessed} vendor adjustments (${totalAdjustmentAmount})`
-    );
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Track balance recalculations
-    let customerBalancesRecalculated = 0;
-    let vendorBalancesRecalculated = 0;
-
-    // Delete related customer transactions ONLY for unpaid invoices
-    // For paid invoices, we've already processed the financial adjustments
     const unpaidCustomerTransactions = relatedCustomerTransactions.filter(
       (t) => {
-        // Normalize references like "CREDIT-618615" / "REFUND-618615" back to the
-        // underlying invoice number so the paid-status check resolves correctly.
         const normalizedRef = t.reference
           ? t.reference.replace(/^(CREDIT|REFUND)-/, "")
           : null;
@@ -921,68 +451,6 @@ export async function DELETE(
       }
     );
 
-    if (unpaidCustomerTransactions.length > 0) {
-      console.log(
-        `Deleting ${unpaidCustomerTransactions.length} unpaid customer transactions`
-      );
-      await prisma.customerTransaction.deleteMany({
-        where: {
-          id: { in: unpaidCustomerTransactions.map((t) => t.id) },
-        },
-      });
-
-      // Recalculate customer balances after deletion
-      console.log(
-        "Recalculating customer balances after unpaid transaction deletion..."
-      );
-      const affectedCustomers = new Set(
-        unpaidCustomerTransactions.map((t) => t.customerId)
-      );
-
-      for (const customerId of affectedCustomers) {
-        try {
-          // Get all remaining transactions for this customer
-          const remainingTransactions =
-            await prisma.customerTransaction.findMany({
-              where: orgWhere(session, { customerId }),
-              orderBy: { createdAt: "asc" },
-            });
-
-          // Calculate new balance based on remaining transactions
-          let newBalance = 0;
-          for (const transaction of remainingTransactions) {
-            if (transaction.type === "DEBIT") {
-              newBalance -= transaction.amount;
-            } else if (transaction.type === "CREDIT") {
-              newBalance += transaction.amount;
-            }
-          }
-
-          // Update customer balance
-          await prisma.customers.update({
-            where: { id: customerId },
-            data: { currentBalance: newBalance },
-          });
-
-          customerBalancesRecalculated++;
-          console.log(
-            `Customer ${customerId} balance recalculated to: ${newBalance}`
-          );
-        } catch (error) {
-          console.error(
-            `Error recalculating balance for customer ${customerId}:`,
-            error
-          );
-        }
-      }
-    } else {
-      console.log(
-        "No unpaid customer transactions to delete - all invoices are paid"
-      );
-    }
-
-    // Delete related vendor transactions ONLY for unpaid invoices
-    // For paid invoices, we've already processed the financial adjustments
     const unpaidVendorTransactions = relatedVendorTransactions.filter((t) => {
       const normalizedRef = t.reference
         ? t.reference.replace(/^(CREDIT|REFUND)-/, "")
@@ -996,85 +464,155 @@ export async function DELETE(
       return !relatedInvoice || relatedInvoice.status !== "Paid";
     });
 
-    if (unpaidVendorTransactions.length > 0) {
-      console.log(
-        `Deleting ${unpaidVendorTransactions.length} unpaid vendor transactions`
-      );
-      await prisma.vendorTransaction.deleteMany({
-        where: {
-          id: { in: unpaidVendorTransactions.map((t) => t.id) },
-        },
-      });
+    let customerRefundsProcessed = 0;
+    let vendorAdjustmentsProcessed = 0;
+    let totalRefundAmount = 0;
+    let totalAdjustmentAmount = 0;
+    let customerBalancesRecalculated = 0;
+    let vendorBalancesRecalculated = 0;
 
-      // Recalculate vendor balances after deletion
-      console.log(
-        "Recalculating vendor balances after unpaid transaction deletion..."
-      );
-      const affectedVendors = new Set(
-        unpaidVendorTransactions.map((t) => t.vendorId)
-      );
+    // ATOMIC CASCADE DELETION: Execute all deletions, balance recalculations,
+    // and financial refund postings inside a single database transaction.
+    await prisma.$transaction(
+      async (tx) => {
+        // 1. Delete related journal entries (lines first)
+        if (relatedJournalEntries.length > 0) {
+          const journalEntryIds = relatedJournalEntries.map((entry) => entry.id);
+          await tx.journalEntryLine.deleteMany({
+            where: { journalEntryId: { in: journalEntryIds } },
+          });
+          await tx.journalEntry.deleteMany({
+            where: { id: { in: journalEntryIds } },
+          });
+        }
 
-      for (const vendorId of affectedVendors) {
-        try {
-          // Get all remaining transactions for this vendor
-          const remainingTransactions = await prisma.vendorTransaction.findMany(
-            {
-              where: orgWhere(session, { vendorId }),
-              orderBy: { createdAt: "asc" },
-            }
-          );
-
-          // Calculate new balance based on remaining transactions
-          let newBalance = 0;
-          for (const transaction of remainingTransactions) {
-            if (transaction.type === "DEBIT") {
-              newBalance += transaction.amount;
-            } else if (transaction.type === "CREDIT") {
-              newBalance -= transaction.amount;
+        // 2. Financial adjustments for paid invoices
+        for (const invoice of relatedInvoices) {
+          if (invoice.status === "Paid" && invoice.totalAmount > 0) {
+            if (invoice.profile === "Customer" && invoice.customerId) {
+              const customer = await tx.customers.findFirst({
+                where: orgWhere(session, { id: invoice.customerId }),
+              });
+              if (customer) {
+                const previousBalance = customer.currentBalance || 0;
+                const newBalance = previousBalance + invoice.totalAmount;
+                await tx.customerTransaction.create({
+                  data: orgData(session, {
+                    customerId: invoice.customerId,
+                    type: "CREDIT",
+                    amount: invoice.totalAmount,
+                    description: `Refund for deleted shipment ${shipment.trackingId}`,
+                    reference: `REFUND-${invoice.invoiceNumber}`,
+                    invoice: invoice.invoiceNumber,
+                    previousBalance,
+                    newBalance,
+                    createdAt: new Date(),
+                  }),
+                });
+                await tx.customers.update({
+                  where: { id: invoice.customerId },
+                  data: { currentBalance: newBalance },
+                });
+                customerRefundsProcessed++;
+                totalRefundAmount += invoice.totalAmount;
+              }
+            } else if (invoice.profile === "Vendor" && invoice.vendorId) {
+              const vendor = await tx.vendors.findFirst({
+                where: orgWhere(session, { id: invoice.vendorId }),
+              });
+              if (vendor) {
+                const previousBalance = vendor.currentBalance || 0;
+                const newBalance = previousBalance - invoice.totalAmount;
+                await tx.vendorTransaction.create({
+                  data: orgData(session, {
+                    vendorId: invoice.vendorId,
+                    type: "CREDIT",
+                    amount: invoice.totalAmount,
+                    description: `Payment adjustment for deleted shipment ${shipment.trackingId}`,
+                    reference: `ADJUST-${invoice.invoiceNumber}`,
+                    invoice: invoice.invoiceNumber,
+                    previousBalance,
+                    newBalance,
+                    createdAt: new Date(),
+                  }),
+                });
+                await tx.vendors.update({
+                  where: { id: invoice.vendorId },
+                  data: { currentBalance: newBalance },
+                });
+                vendorAdjustmentsProcessed++;
+                totalAdjustmentAmount += invoice.totalAmount;
+              }
             }
           }
-
-          // Update vendor balance
-          await prisma.vendors.update({
-            where: { id: vendorId },
-            data: { currentBalance: newBalance },
-          });
-
-          vendorBalancesRecalculated++;
-          console.log(
-            `Vendor ${vendorId} balance recalculated to: ${newBalance}`
-          );
-        } catch (error) {
-          console.error(
-            `Error recalculating balance for vendor ${vendorId}:`,
-            error
-          );
         }
-      }
-    } else {
-      console.log(
-        "No unpaid vendor transactions to delete - all invoices are paid"
-      );
-    }
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Delete related invoices first (due to foreign key constraints)
-    if (relatedInvoices.length > 0) {
-      console.log(`🗑️ Deleting ${relatedInvoices.length} related invoices...`);
-      await prisma.invoice.deleteMany({
-        where: orgWhere(session, { OR: invoiceOr }),
-      });
-      console.log(
-        `✅ Successfully deleted ${relatedInvoices.length} related invoices`
-      );
-    }
 
-    // Delete the shipment
-    console.log(`🗑️ Deleting shipment ${shipmentId}...`);
-    await prisma.shipment.delete({
-      where: { id: shipmentId },
-    });
-    console.log(`✅ Successfully deleted shipment ${shipmentId}`);
+        // 3. Delete unpaid customer transactions & recalculate customer balances
+        if (unpaidCustomerTransactions.length > 0) {
+          await tx.customerTransaction.deleteMany({
+            where: { id: { in: unpaidCustomerTransactions.map((t) => t.id) } },
+          });
+          const affectedCustomers = new Set(
+            unpaidCustomerTransactions.map((t) => t.customerId)
+          );
+          for (const customerId of affectedCustomers) {
+            const remainingTransactions = await tx.customerTransaction.findMany({
+              where: orgWhere(session, { customerId }),
+              orderBy: { createdAt: "asc" },
+            });
+            let newBalance = 0;
+            for (const transaction of remainingTransactions) {
+              if (transaction.type === "DEBIT") newBalance -= transaction.amount;
+              else if (transaction.type === "CREDIT") newBalance += transaction.amount;
+            }
+            await tx.customers.update({
+              where: { id: customerId },
+              data: { currentBalance: newBalance },
+            });
+            customerBalancesRecalculated++;
+          }
+        }
 
+        // 4. Delete unpaid vendor transactions & recalculate vendor balances
+        if (unpaidVendorTransactions.length > 0) {
+          await tx.vendorTransaction.deleteMany({
+            where: { id: { in: unpaidVendorTransactions.map((t) => t.id) } },
+          });
+          const affectedVendors = new Set(
+            unpaidVendorTransactions.map((t) => t.vendorId)
+          );
+          for (const vendorId of affectedVendors) {
+            const remainingTransactions = await tx.vendorTransaction.findMany({
+              where: orgWhere(session, { vendorId }),
+              orderBy: { createdAt: "asc" },
+            });
+            let newBalance = 0;
+            for (const transaction of remainingTransactions) {
+              if (transaction.type === "DEBIT") newBalance -= transaction.amount;
+              else if (transaction.type === "CREDIT") newBalance += transaction.amount;
+            }
+            await tx.vendors.update({
+              where: { id: vendorId },
+              data: { currentBalance: newBalance },
+            });
+            vendorBalancesRecalculated++;
+          }
+        }
+
+        // 5. Delete related invoices
+        if (relatedInvoices.length > 0) {
+          await tx.invoice.deleteMany({
+            where: orgWhere(session, { OR: invoiceOr }),
+          });
+        }
+
+        // 6. Delete shipment
+        await tx.shipment.delete({
+          where: { id: shipmentId },
+        });
+      },
+      { timeout: 30000 }
+    );
     console.log(
       `🎉 Shipment ${shipmentId} and ${relatedInvoices.length} related invoices deleted successfully`
     );

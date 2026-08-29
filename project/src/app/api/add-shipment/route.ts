@@ -569,12 +569,10 @@ export async function POST(req: NextRequest) {
         customerLineItems.push({ description: "Balance Applied", value: Math.round(-appliedBalance) });
       }
 
-      const customerInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
-        method: 'POST',
-        headers: forwardHeaders,
-        body: JSON.stringify({
+      customerInvoice = await prisma.invoice.create({
+        data: orgData(session, {
           invoiceNumber: invoiceNumber,
-          invoiceDate: shipmentDate ? new Date(shipmentDate).toISOString() : new Date().toISOString(),
+          invoiceDate: shipmentDate ? new Date(shipmentDate) : new Date(),
           trackingNumber: trackingId,
           destination: finalDestination,
           weight: parseFloat(totalWeight) || 0,
@@ -592,10 +590,6 @@ export async function POST(req: NextRequest) {
         })
       });
 
-      if (customerInvoiceResponse.ok) {
-        customerInvoice = await customerInvoiceResponse.json();
-      }
-
       // Update shipment invoiceStatus to match calculated status
       await prisma.shipment.update({
         where: { id: shipment.id },
@@ -605,7 +599,7 @@ export async function POST(req: NextRequest) {
       // ============================================================================
       // SECTION 6.5: VENDOR INVOICE CREATION
       // ============================================================================
-      // Create vendor invoice using the existing accounts API
+      // Create vendor invoice using direct DB write
       // Vendor invoice uses original price without profit
       // Use package descriptions from packages array instead of hardcoded "Vendor Service"
       const vendorLineItems: { description: string; value: number }[] = [];
@@ -647,12 +641,10 @@ export async function POST(req: NextRequest) {
       // Ensure vendor total cost is properly rounded
       const roundedVendorTotalCost = Math.round(vendorTotalCost);
 
-      const vendorInvoiceResponse = await fetch(`${req.nextUrl.origin}/api/accounts/invoices`, {
-        method: 'POST',
-        headers: forwardHeaders,
-        body: JSON.stringify({
+      vendorInvoice = await prisma.invoice.create({
+        data: orgData(session, {
           invoiceNumber: vendorInvoiceNumber,
-          invoiceDate: shipmentDate ? new Date(shipmentDate).toISOString() : new Date().toISOString(),
+          invoiceDate: shipmentDate ? new Date(shipmentDate) : new Date(),
           trackingNumber: trackingId,
           destination: finalDestination,
           weight: parseFloat(totalWeight) || 0,
@@ -669,10 +661,6 @@ export async function POST(req: NextRequest) {
           status: vendorCalculatedInvoiceStatus
         })
       });
-
-      if (vendorInvoiceResponse.ok) {
-        vendorInvoice = await vendorInvoiceResponse.json();
-      }
 
       console.log('Invoices created successfully:', {
         customerInvoice: customerInvoice?.invoiceNumber,

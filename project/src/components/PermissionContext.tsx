@@ -150,7 +150,7 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
                 if (typeof features === "string") {
                   try {
                     features = JSON.parse(features);
-                  } catch (e) {
+                  } catch {
                     features = {};
                   }
                 }

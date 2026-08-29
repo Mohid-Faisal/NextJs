@@ -4,6 +4,7 @@ import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgChartAccount } from "@/lib/tenant/findOrgChartAccount";
 import { findOrgJournalEntry } from "@/lib/tenant/findOrgJournalEntry";
+import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 
 export async function GET(request: NextRequest) {
   try {
@@ -149,18 +150,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const lastEntry = await prisma.journalEntry.findFirst({
-      where: orgWhere(session),
-      orderBy: { entryNumber: "desc" },
-    });
-
-    let entryNumber = "JE-0001";
-    if (lastEntry) {
-      const lastNumber = parseInt(lastEntry.entryNumber.split("-")[1], 10);
-      entryNumber = `JE-${String(lastNumber + 1).padStart(4, "0")}`;
-    }
-
     const journalEntry = await prisma.$transaction(async (tx) => {
+      const entryNumber = await nextJournalEntryNumber(tx, session.organizationId);
+
       const entry = await tx.journalEntry.create({
         data: orgData(session, {
           entryNumber,

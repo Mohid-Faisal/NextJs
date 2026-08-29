@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
+import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
 
 const CONTACT_RECIPIENT = process.env.CONTACT_EMAIL || "psswwe@gmail.com";
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const limit = rateLimit(`contact:${ip}`, 5, 60 * 60 * 1000);
+    if (!limit.allowed) return rateLimitResponse(limit);
+
     const body = await req.json();
     const { company, name, phone, email, service, message } = body;
 

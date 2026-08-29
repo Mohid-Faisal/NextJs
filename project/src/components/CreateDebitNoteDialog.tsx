@@ -54,7 +54,7 @@ export default function CreateDebitNoteDialog({
 }: CreateDebitNoteDialogProps) {
   const isEditMode = editId != null;
   const [bills, setBills] = useState<Bill[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [_vendors, setVendors] = useState<Vendor[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedBill, setSelectedBill] = useState<string>("");
   const [selectedVendor, setSelectedVendor] = useState<string>("");

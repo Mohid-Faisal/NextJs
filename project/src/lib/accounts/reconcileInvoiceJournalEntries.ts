@@ -137,7 +137,7 @@ export async function reconcileInvoiceJournalEntries(
     }
 
     // Determine next journal entry sequence counter
-    let lastJe = await prisma.journalEntry.findFirst({
+    const lastJe = await prisma.journalEntry.findFirst({
       where: { organizationId: orgId },
       orderBy: { entryNumber: "desc" },
       select: { entryNumber: true },

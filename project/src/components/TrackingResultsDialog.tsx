@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Calendar, CheckCircle2, ChevronDown, ChevronUp, Package, Printer, Search } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronDown, ChevronUp, Package, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getCountryNameFromCode } from "@/lib/utils";
@@ -228,34 +227,6 @@ function getHistoryByDateGroups(events: HistoryEvent[]) {
     .sort((a, b) => b.dateKey.localeCompare(a.dateKey));
 }
 
-function getDimensionsDisplay(s: Shipment): string {
-  const rootL = Number(s.length) || 0;
-  const rootW = Number(s.width) || 0;
-  const rootH = Number(s.height) || 0;
-  if (rootL > 0 || rootW > 0 || rootH > 0) return `${rootL} × ${rootW} × ${rootH} cm`;
-
-  let parsed: Array<{ length?: number | string; width?: number | string; height?: number | string }> = [];
-  if (s.packages != null) {
-    try {
-      const raw = typeof s.packages === "string" ? JSON.parse(s.packages) : s.packages;
-      parsed = Array.isArray(raw) ? raw : [];
-    } catch {
-      parsed = [];
-    }
-  }
-  if (parsed.length === 0) return "0 × 0 × 0";
-  let maxL = 0, maxW = 0, maxH = 0;
-  for (const pkg of parsed) {
-    const l = typeof pkg.length === "number" ? pkg.length : parseFloat(String(pkg.length || 0)) || 0;
-    const w = typeof pkg.width === "number" ? pkg.width : parseFloat(String(pkg.width || 0)) || 0;
-    const h = typeof pkg.height === "number" ? pkg.height : parseFloat(String(pkg.height || 0)) || 0;
-    if (l > maxL) maxL = l;
-    if (w > maxW) maxW = w;
-    if (h > maxH) maxH = h;
-  }
-  return maxL > 0 || maxW > 0 || maxH > 0 ? `${maxL} × ${maxW} × ${maxH} cm` : "0 × 0 × 0";
-}
-
 export default function TrackingResultsDialog(props: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -269,7 +240,7 @@ export default function TrackingResultsDialog(props: {
   const [bookingId, setBookingId] = useState(initialBookingId);
   const [shipment, setShipment] = useState<Shipment | null>(null);
   const [recipient, setRecipient] = useState<{ City?: string; Country?: string } | null>(null);
-  const [organization, setOrganization] = useState<{ id: number; name: string; logoUrl: string | null } | null>(null);
+  const [_organization, setOrganization] = useState<{ id: number; name: string; logoUrl: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(true);
