@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
         amount: true,
       },
     });
-    const totalAmount = sumResult._sum.amount ?? 0;
+    const totalAmount = Number(sumResult._sum.amount ?? 0);
 
     return NextResponse.json({
       creditNotes: withType,

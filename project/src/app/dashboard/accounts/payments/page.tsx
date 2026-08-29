@@ -332,8 +332,8 @@ export default function PaymentsPage() {
         }
         const json = await res.json();
         setPayments(Array.isArray(json?.payments) ? json.payments : []);
-        setTotal(typeof json?.total === "number" ? json.total : 0);
-        setTotalAmount(typeof json?.totalAmount === "number" ? json.totalAmount : 0);
+        setTotal(Number(json?.total || 0));
+        setTotalAmount(json?.totalAmount !== undefined && json?.totalAmount !== null ? Number(json.totalAmount) : 0);
         if (json?.counts) {
           setCounts(json.counts);
         }
@@ -649,8 +649,8 @@ export default function PaymentsPage() {
       if (res.ok) {
         const json = await res.json();
         setPayments(Array.isArray(json?.payments) ? json.payments : []);
-        setTotal(typeof json?.total === "number" ? json.total : 0);
-        setTotalAmount(typeof json?.totalAmount === "number" ? json.totalAmount : 0);
+        setTotal(Number(json?.total || 0));
+        setTotalAmount(json?.totalAmount !== undefined && json?.totalAmount !== null ? Number(json.totalAmount) : 0);
         if (json?.counts) {
           setCounts(json.counts);
         }

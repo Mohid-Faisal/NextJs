@@ -1163,48 +1163,48 @@ export default function CustomerTransactionsPage() {
         </div>
 
         {/* KPI tiles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-auto">
-
-          <div className="w-[150px] px-3 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-center">
-            <div className="text-xs text-blue-700 dark:text-blue-300">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 w-auto">
+          <div className="min-w-[130px] sm:min-w-[145px] px-3.5 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-center whitespace-nowrap">
+            <div className="text-xs text-blue-700 dark:text-blue-300 font-medium">
               Total Shipments
             </div>
-            <div className="text-lg font-bold mt-1 text-blue-900 dark:text-blue-100">
-              {metrics.totalShipments.toLocaleString()}
+            <div className="text-lg font-bold mt-1 text-blue-900 dark:text-blue-100 font-mono">
+              {Number(metrics?.totalShipments || 0).toLocaleString()}
             </div>
           </div>
 
-
-          <div className="w-[150px] px-3 py-3 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-center">
-            <div className="text-xs text-orange-700 dark:text-orange-300">
+          <div className="min-w-[130px] sm:min-w-[145px] px-3.5 py-3 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-center whitespace-nowrap">
+            <div className="text-xs text-orange-700 dark:text-orange-300 font-medium">
               Total Spent
             </div>
-            <div className="text-lg font-bold mt-1 text-orange-900 dark:text-orange-100">
-              {metrics.totalSpent.toLocaleString()}
+            <div className="text-lg font-bold mt-1 text-orange-900 dark:text-orange-100 font-mono">
+              {Math.round(Number(metrics?.totalSpent || 0)).toLocaleString()}
             </div>
           </div>
-          <div className="w-[150px] px-3 py-3 rounded-lg bg-red-50 dark:bg-red-950/40 text-center">
-            <div className="text-xs text-red-700 dark:text-red-300">
+
+          <div className="min-w-[130px] sm:min-w-[145px] px-3.5 py-3 rounded-lg bg-red-50 dark:bg-red-950/40 text-center whitespace-nowrap">
+            <div className="text-xs text-red-700 dark:text-red-300 font-medium">
               Gross Profit
             </div>
-            <div className="text-lg font-bold mt-1 text-red-900 dark:text-red-100">
-              {metrics.grossProfit.toLocaleString()}
+            <div className="text-lg font-bold mt-1 text-red-900 dark:text-red-100 font-mono">
+              {Math.round(Number(metrics?.grossProfit || 0)).toLocaleString()}
             </div>
           </div>
-          <div className="w-[150px] px-3 py-3 rounded-lg bg-green-50 dark:bg-green-950/40 text-center">
-            <div className="text-xs text-green-700 dark:text-green-300">
+
+          <div className="min-w-[130px] sm:min-w-[145px] px-3.5 py-3 rounded-lg bg-green-50 dark:bg-green-950/40 text-center whitespace-nowrap">
+            <div className="text-xs text-green-700 dark:text-green-300 font-medium">
               Current Balance
             </div>
             <div
-              className={`text-lg font-bold mt-1 ${
-                customer.currentBalance > 0
+              className={`text-lg font-bold mt-1 font-mono ${
+                Number(customer.currentBalance || 0) > 0
                   ? "text-green-900 dark:text-green-100"
-                  : customer.currentBalance < 0
+                  : Number(customer.currentBalance || 0) < 0
                   ? "text-green-700 dark:text-green-300"
                   : "text-gray-900 dark:text-gray-100"
               }`}
             >
-              {customer.currentBalance.toLocaleString()}
+              {Math.round(Number(customer.currentBalance || 0)).toLocaleString()}
             </div>
           </div>
         </div>

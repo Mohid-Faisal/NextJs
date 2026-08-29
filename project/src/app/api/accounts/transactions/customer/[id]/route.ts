@@ -446,12 +446,12 @@ export async function GET(
 
           const totalShipments = invoicesForMetrics.length;
           const totalSpent = invoicesForMetrics.reduce(
-            (sum, inv) => sum + (inv.totalAmount || 0),
+            (sum, inv) => sum + Number(inv.totalAmount || 0),
             0
           );
           const grossProfit = invoicesForMetrics.reduce(
             (sum, inv) =>
-              sum + ((inv.totalAmount || 0) - (inv.vendorInvoiceAmount || 0)),
+              sum + (Number(inv.totalAmount || 0) - Number(inv.vendorInvoiceAmount || 0)),
             0
           );
 
@@ -745,8 +745,8 @@ export async function GET(
           id: customer.id,
           CompanyName: customer.CompanyName,
           PersonName: customer.PersonName,
-          currentBalance: customer.currentBalance,
-          creditLimit: customer.creditLimit,
+          currentBalance: Number(customer.currentBalance || 0),
+          creditLimit: Number(customer.creditLimit || 0),
           Address: customer.Address,
           City: customer.City,
           Country: customer.Country,
@@ -1183,11 +1183,11 @@ export async function GET(
 
         const totalShipments = invoicesForMetrics.length;
         const totalSpent = invoicesForMetrics.reduce(
-          (sum, inv) => sum + (inv.totalAmount || 0),
+          (sum, inv) => sum + Number(inv.totalAmount || 0),
           0
         );
         const grossProfit = invoicesForMetrics.reduce(
-          (sum, inv) => sum + ((inv.totalAmount || 0) - (inv.vendorInvoiceAmount || 0)),
+          (sum, inv) => sum + (Number(inv.totalAmount || 0) - Number(inv.vendorInvoiceAmount || 0)),
           0
         );
 
@@ -1480,8 +1480,8 @@ export async function GET(
         id: customer.id,
         CompanyName: customer.CompanyName,
         PersonName: customer.PersonName,
-        currentBalance: customer.currentBalance,
-        creditLimit: customer.creditLimit,
+        currentBalance: Number(customer.currentBalance || 0),
+        creditLimit: Number(customer.creditLimit || 0),
         Address: customer.Address,
         City: customer.City,
         Country: customer.Country,

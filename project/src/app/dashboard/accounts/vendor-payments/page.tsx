@@ -224,7 +224,7 @@ export default function VendorPaymentsPage() {
     return sortOrder === "asc" ? "↑" : "↓";
   };
 
-  const totalAmount = Array.isArray(filteredPayments) ? filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0) : 0;
+  const totalAmount = Array.isArray(filteredPayments) ? filteredPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0) : 0;
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const exportToExcel = (data: any[], headers: string[], filename: string) => {

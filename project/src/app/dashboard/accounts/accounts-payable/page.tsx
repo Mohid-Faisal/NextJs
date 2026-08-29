@@ -107,7 +107,7 @@ export default function AccountsPayablePage() {
 
   // For accounts payable, negative balance means we owe them, so we sum the absolute values
   const totalPayable = Array.isArray(filteredVendors) 
-    ? Math.abs(filteredVendors.reduce((sum, v) => sum + (v.currentBalance || 0), 0))
+    ? Math.abs(filteredVendors.reduce((sum, v) => sum + Number(v.currentBalance || 0), 0))
     : 0;
 
   const exportToExcel = (data: any[], headers: string[], filename: string) => {

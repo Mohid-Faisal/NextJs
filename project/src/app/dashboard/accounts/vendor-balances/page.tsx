@@ -142,7 +142,7 @@ export default function VendorBalancesPage() {
     return sortOrder === "asc" ? "↑" : "↓";
   };
 
-  const totalBalance = Array.isArray(filteredVendors) ? filteredVendors.reduce((sum, v) => sum + (v.currentBalance || 0), 0) : 0;
+  const totalBalance = Array.isArray(filteredVendors) ? filteredVendors.reduce((sum, v) => sum + Number(v.currentBalance || 0), 0) : 0;
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const exportToExcel = (data: any[], headers: string[], filename: string) => {

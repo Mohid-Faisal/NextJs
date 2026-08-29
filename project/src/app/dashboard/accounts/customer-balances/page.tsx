@@ -141,7 +141,7 @@ export default function CustomerBalancesPage() {
     return sortOrder === "asc" ? "↑" : "↓";
   };
 
-  const totalBalance = Array.isArray(filteredCustomers) ? filteredCustomers.reduce((sum, c) => sum + (c.currentBalance || 0), 0) : 0;
+  const totalBalance = Array.isArray(filteredCustomers) ? filteredCustomers.reduce((sum, c) => sum + Number(c.currentBalance || 0), 0) : 0;
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const exportToExcel = (data: any[], headers: string[], filename: string) => {

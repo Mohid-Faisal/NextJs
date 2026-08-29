@@ -158,7 +158,7 @@ export async function GET(req: Request) {
       })
     ]);
 
-    const totalValue = sumResult._sum.totalCost || 0;
+    const totalValue = Number(sumResult._sum.totalCost || 0);
 
     return NextResponse.json({ shipments, total, grandTotal, bookedCount, inTransitCount, deliveredCount, cancelledCount, totalValue });
   } catch (error) {

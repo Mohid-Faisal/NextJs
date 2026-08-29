@@ -234,7 +234,7 @@ export async function GET(request: NextRequest) {
       amount: true,
     },
   });
-  const totalAmount = sumResult._sum.amount ?? 0;
+  const totalAmount = Number(sumResult._sum.amount ?? 0);
 
   // Compute counts for all tabs based on active search and date filters
   const countWhere = { ...where };

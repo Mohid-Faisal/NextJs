@@ -132,25 +132,28 @@ export async function GET(req: NextRequest) {
       }
     });
 
+    const cashIn = Number(cashInflow._sum.amount || 0);
+    const cashOut = Number(cashOutflow._sum.amount || 0);
+    const bankIn = Number(bankInflow._sum.amount || 0);
+    const bankOut = Number(bankOutflow._sum.amount || 0);
+
     const stats = {
       cash: {
-        inflow: cashInflow._sum.amount || 0,
-        outflow: cashOutflow._sum.amount || 0,
-        net: (cashInflow._sum.amount || 0) - (cashOutflow._sum.amount || 0)
+        inflow: cashIn,
+        outflow: cashOut,
+        net: cashIn - cashOut
       },
       bank: {
-        inflow: bankInflow._sum.amount || 0,
-        outflow: bankOutflow._sum.amount || 0,
-        net: (bankInflow._sum.amount || 0) - (bankOutflow._sum.amount || 0)
+        inflow: bankIn,
+        outflow: bankOut,
+        net: bankIn - bankOut
       },
       total: {
-        inflow: (cashInflow._sum.amount || 0) + (bankInflow._sum.amount || 0),
-        outflow: (cashOutflow._sum.amount || 0) + (bankOutflow._sum.amount || 0),
-        net: 0 // Will be calculated below
+        inflow: cashIn + bankIn,
+        outflow: cashOut + bankOut,
+        net: (cashIn + bankIn) - (cashOut + bankOut)
       }
     };
-
-    stats.total.net = stats.total.inflow - stats.total.outflow;
 
     return NextResponse.json({
       success: true,
