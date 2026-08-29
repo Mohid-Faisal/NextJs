@@ -12,6 +12,7 @@ import {
   type InvoiceFieldsForDebitVoucher,
 } from "@/lib/accounts/invoiceDebitVoucherDate";
 import { computeVendorLedgerVoucherDate } from "@/lib/accounts/vendorLedgerVoucherDate";
+import { money } from "@/lib/money";
 
 type LedgerTxn = {
   type: string;
@@ -108,13 +109,15 @@ function customerNetAsOf(sorted: WithVoucher[], endExclusive: Date): number {
   const S = sorted.find((t) => isStartingBalance(t));
   let running = 0;
   if (S) {
-    running = S.type === "DEBIT" ? -S.amount : S.amount;
+    const sAmt = money(S.amount);
+    running = S.type === "DEBIT" ? -sAmt : sAmt;
   }
   for (const t of sorted) {
     if (isStartingBalance(t)) continue;
     if (t.voucherDate >= endExclusive) continue;
+    const amt = money(t.amount);
     running =
-      t.type === "CREDIT" ? running + t.amount : running - t.amount;
+      t.type === "CREDIT" ? running + amt : running - amt;
   }
   return running;
 }
@@ -123,13 +126,15 @@ function vendorNetAsOf(sorted: WithVoucher[], endExclusive: Date): number {
   const S = sorted.find((t) => isStartingBalance(t));
   let running = 0;
   if (S) {
-    running = S.type === "DEBIT" ? S.amount : -S.amount;
+    const sAmt = money(S.amount);
+    running = S.type === "DEBIT" ? sAmt : -sAmt;
   }
   for (const t of sorted) {
     if (isStartingBalance(t)) continue;
     if (t.voucherDate >= endExclusive) continue;
+    const amt = money(t.amount);
     running =
-      t.type === "DEBIT" ? running + t.amount : running - t.amount;
+      t.type === "DEBIT" ? running + amt : running - amt;
   }
   return running;
 }
@@ -328,7 +333,7 @@ export async function computeMonthlyPartyNetsUsingVoucherDates(
     const row: PaymentRowForVoucherDate = {
       id: p.id,
       date: p.date,
-      amount: p.amount,
+      amount: money(p.amount),
       invoice: p.invoice,
       reference: p.reference,
     };
@@ -342,7 +347,7 @@ export async function computeMonthlyPartyNetsUsingVoucherDates(
     const row: PaymentRowForVoucherDate = {
       id: p.id,
       date: p.date,
-      amount: p.amount,
+      amount: money(p.amount),
       invoice: p.invoice,
       reference: p.reference,
     };
@@ -356,7 +361,7 @@ export async function computeMonthlyPartyNetsUsingVoucherDates(
     const list = customerByParty.get(row.customerId) ?? [];
     list.push({
       type: row.type,
-      amount: row.amount,
+      amount: money(row.amount),
       createdAt: row.createdAt,
       invoice: row.invoice,
       reference: row.reference,
@@ -369,7 +374,7 @@ export async function computeMonthlyPartyNetsUsingVoucherDates(
     const list = vendorByParty.get(row.vendorId) ?? [];
     list.push({
       type: row.type,
-      amount: row.amount,
+      amount: money(row.amount),
       createdAt: row.createdAt,
       invoice: row.invoice,
       reference: row.reference,

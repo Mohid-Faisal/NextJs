@@ -75,7 +75,7 @@ function getInitials(name: string | null | undefined): string {
 
 /** Compact Y-axis for large currency-style values (e.g. 80M, 1.2B). */
 function formatAccountsTrendAxis(value: number): string {
-  if (value === 0) return "0";
+  if (value === 0 || !Number.isFinite(value)) return "0";
   const abs = Math.abs(value);
   if (abs >= 1_000_000_000) {
     const n = value / 1_000_000_000;
