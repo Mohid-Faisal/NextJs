@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
@@ -170,18 +170,36 @@ export async function POST(request: NextRequest) {
 
           const cashOrBank = findCashOrBankAccount(accounts, payment.mode);
 
-          if (payment.transactionType === "EXPENSE") {
+          const isCustomerPayment =
+            payment.fromCustomerId != null ||
+            payment.category === "Customer Payment" ||
+            payment.fromPartyType === "CUSTOMER" ||
+            payment.transactionType === "INCOME";
+
+          const isVendorPayment =
+            payment.toVendorId != null ||
+            payment.category === "Vendor Payment" ||
+            payment.toPartyType === "VENDOR";
+
+          if (isCustomerPayment) {
+            debitAccount = cashOrBank;
+            creditAccount =
+              accounts.find((a) => a.accountName === "Accounts Receivable" || a.code === "1030") ||
+              accounts.find((a) => a.category === "Asset" && a.id !== cashOrBank?.id) ||
+              findCategoryAccount(accounts, payment.category, "Revenue");
+          } else if (isVendorPayment) {
+            debitAccount =
+              accounts.find((a) => a.accountName === "Accounts Payable" || a.code === "2010") ||
+              accounts.find((a) => a.category === "Liability") ||
+              findCategoryAccount(accounts, payment.category, "Expense");
+            creditAccount = cashOrBank;
+          } else if (payment.transactionType === "EXPENSE") {
             debitAccount =
               findCategoryAccount(accounts, payment.category, "Expense") ||
               accounts.find((a) => a.category === "Expense");
             creditAccount = cashOrBank;
-          } else if (payment.transactionType === "INCOME") {
-            debitAccount = cashOrBank;
-            creditAccount =
-              findCategoryAccount(accounts, payment.category, "Revenue") ||
-              accounts.find((a) => a.category === "Revenue");
           } else if (payment.transactionType === "TRANSFER") {
-            debitAccount = accounts.find((a) => a.category === "Asset");
+            debitAccount = accounts.find((a) => a.category === "Asset" && a.id !== cashOrBank?.id) || cashOrBank;
             creditAccount = cashOrBank;
           } else {
             debitAccount = accounts.find((a) => a.category === "Expense");
