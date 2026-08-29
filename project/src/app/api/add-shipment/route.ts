@@ -4,6 +4,7 @@ import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransact
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { checkShipmentLimit } from "@/lib/billing/usage";
+import { withUniqueRetry } from "@/lib/withUniqueRetry";
 
 /**
  * POST /api/add-shipment
@@ -326,15 +327,19 @@ export async function POST(req: NextRequest) {
     // ============================================================================
     // SECTION 6: SHIPMENT CREATION
     // ============================================================================
-    // Generate unique invoice number for this shipment
-    const invoiceNumber = await generateInvoiceNumber(prisma);
+    // Generate unique invoice number for this shipment (atomic, per-org)
+    let invoiceNumber = await generateInvoiceNumber(prisma, session.organizationId);
 
-    // Create shipment record in database with all fields
-    const shipment = await prisma.shipment.create({
-      data: orgData(session, {
-        trackingId,
-        referenceNumber: referenceNumber,
-        invoiceNumber,
+    // Create shipment record in database with all fields.
+    // withUniqueRetry: on a rare invoiceNumber collision (P2002), regenerate
+    // the number and try again instead of failing the request.
+    const shipment = await withUniqueRetry(
+      async () => {
+        const created = await prisma.shipment.create({
+          data: orgData(session, {
+            trackingId,
+            referenceNumber: referenceNumber,
+            invoiceNumber,
         shipmentDate: shipmentDate ? new Date(shipmentDate) : new Date(),
         agency,
         office,
@@ -379,7 +384,18 @@ export async function POST(req: NextRequest) {
         packageTotals: packageTotals ? JSON.stringify(packageTotals) : undefined,
         calculatedValues: calculatedValues ? JSON.stringify(calculatedValues) : undefined,
       }),
-    });
+        });
+
+        return created;
+      },
+      {
+        retries: 2,
+        onRetry: async () => {
+          console.warn("add-shipment: invoice number collision detected, regenerating");
+          invoiceNumber = await generateInvoiceNumber(prisma, session.organizationId);
+        },
+      }
+    );
     
     console.log('Shipment saved to database:', {
       id: shipment.id,

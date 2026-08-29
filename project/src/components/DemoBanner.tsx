@@ -1,31 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
 import Link from "next/link";
-import { Sparkles, Info, ChevronDown, ChevronUp, PackagePlus, Users, FileText, ArrowRight, ShieldCheck } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, PackagePlus, Users, ShieldCheck, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function DemoBanner() {
   const [isDemo, setIsDemo] = useState(false);
   const [expanded, setExpanded] = useState(true);
 
-  useEffect(() => {
-    try {
-      const token = Cookies.get("token");
-      if (token) {
-        const decoded: any = jwtDecode(token);
-        if (decoded?.email === "demo@psswe.com" || decoded?.orgSlug === "pss-demo") {
-          setIsDemo(true);
-        }
-      }
-    } catch {
-      setIsDemo(false);
-    }
-  }, []);
-
-  // Also check if org info matches from /api/org/current if needed
+  // Demo detection via the organization endpoint (session is httpOnly).
   useEffect(() => {
     fetch("/api/org/current")
       .then((res) => res.json())

@@ -251,8 +251,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate credit note number
+    // Generate credit note number (org-scoped)
     const lastCreditNote = await prisma.creditNote.findFirst({
+      where: { customer: { organizationId: session.organizationId } },
       orderBy: { id: "desc" },
     });
 
@@ -275,6 +276,7 @@ export async function POST(request: NextRequest) {
       // Create the credit note
       const creditNote = await tx.creditNote.create({
         data: {
+          organizationId: session.organizationId,
           creditNoteNumber,
           invoiceId: resolvedInvoiceId,
           customerId: parseInt(customerId),
@@ -343,6 +345,7 @@ export async function POST(request: NextRequest) {
       // Debit Account
       await tx.journalEntryLine.create({
         data: {
+          organizationId: session.organizationId,
           journalEntryId: journalEntry.id,
           accountId: debitAccId,
           debitAmount: parseFloat(amount),
@@ -355,6 +358,7 @@ export async function POST(request: NextRequest) {
       // Credit Account
       await tx.journalEntryLine.create({
         data: {
+          organizationId: session.organizationId,
           journalEntryId: journalEntry.id,
           accountId: creditAccId,
           debitAmount: 0,
@@ -394,6 +398,7 @@ export async function POST(request: NextRequest) {
       // Create the credit note
       const creditNote = await tx.creditNote.create({
         data: {
+          organizationId: session.organizationId,
           creditNoteNumber,
           invoiceId: resolvedInvoiceId,
           customerId: parseInt(customerId),
@@ -462,6 +467,7 @@ export async function POST(request: NextRequest) {
       // Debit Account
       await tx.journalEntryLine.create({
         data: {
+          organizationId: session.organizationId,
           journalEntryId: journalEntry.id,
           accountId: debitAccId,
           debitAmount: Math.abs(parseFloat(amount)),
@@ -474,6 +480,7 @@ export async function POST(request: NextRequest) {
       // Credit Account
       await tx.journalEntryLine.create({
         data: {
+          organizationId: session.organizationId,
           journalEntryId: journalEntry.id,
           accountId: creditAccId,
           debitAmount: 0,

@@ -15,6 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  fetchBranding,
+  saveBranding as persistBranding,
+  readCachedBranding,
+} from "@/lib/branding";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -82,25 +87,32 @@ export default function BrandingSettingsPage() {
   // Fix hydration mismatch for next-themes
   useEffect(() => {
     setMounted(true);
-    // Load local storage values if present
-    const color = localStorage.getItem("brand_accent_color") || "blue";
-    const disclaimer = localStorage.getItem("brand_invoice_disclaimer") || 
-      "Any discrepancy in invoice must be notified within 03 days of receipt of this invoice. You are requested to pay the invoice amount through cash payment or cross cheque with immediate effect.";
-    const email = localStorage.getItem("brand_support_email") || "info@psswwe.com";
-    const phone = localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333";
-    const address = localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore";
+    // Branding now lives in org-scoped DB settings; localStorage is only an
+    // instant cache. Seed from cache, then hydrate from the server.
+    const cached = readCachedBranding();
+    setAccentColor(cached.accentColor);
+    setInvoiceDisclaimer(cached.invoiceDisclaimer);
+    setInvoiceSupportEmail(cached.supportEmail);
+    setInvoiceSupportPhone(cached.supportPhone);
+    setInvoiceSupportAddress(cached.supportAddress);
+    setSavedAccentColor(cached.accentColor);
+    setSavedDisclaimer(cached.invoiceDisclaimer);
+    setSavedSupportEmail(cached.supportEmail);
+    setSavedSupportPhone(cached.supportPhone);
+    setSavedSupportAddress(cached.supportAddress);
 
-    setAccentColor(color);
-    setInvoiceDisclaimer(disclaimer);
-    setInvoiceSupportEmail(email);
-    setInvoiceSupportPhone(phone);
-    setInvoiceSupportAddress(address);
-
-    setSavedAccentColor(color);
-    setSavedDisclaimer(disclaimer);
-    setSavedSupportEmail(email);
-    setSavedSupportPhone(phone);
-    setSavedSupportAddress(address);
+    fetchBranding().then((b) => {
+      setAccentColor(b.accentColor);
+      setInvoiceDisclaimer(b.invoiceDisclaimer);
+      setInvoiceSupportEmail(b.supportEmail);
+      setInvoiceSupportPhone(b.supportPhone);
+      setInvoiceSupportAddress(b.supportAddress);
+      setSavedAccentColor(b.accentColor);
+      setSavedDisclaimer(b.invoiceDisclaimer);
+      setSavedSupportEmail(b.supportEmail);
+      setSavedSupportPhone(b.supportPhone);
+      setSavedSupportAddress(b.supportAddress);
+    });
   }, []);
 
   const isDemo = org?.slug === "pss-demo";
@@ -238,12 +250,18 @@ export default function BrandingSettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
 
-      // 2. Save custom branding in local storage
-      localStorage.setItem("brand_accent_color", accentColor);
-      localStorage.setItem("brand_invoice_disclaimer", invoiceDisclaimer);
-      localStorage.setItem("brand_support_email", invoiceSupportEmail);
-      localStorage.setItem("brand_support_phone", invoiceSupportPhone);
-      localStorage.setItem("brand_support_address", invoiceSupportAddress);
+      // 2. Save custom branding to org-scoped DB settings (server is the
+      // source of truth — every teammate/device now sees the same branding).
+      const brandingSaved = await persistBranding({
+        accentColor,
+        invoiceDisclaimer,
+        supportEmail: invoiceSupportEmail,
+        supportPhone: invoiceSupportPhone,
+        supportAddress: invoiceSupportAddress,
+      });
+      if (!brandingSaved) {
+        throw new Error("Could not save branding settings (admin permission required)");
+      }
 
       // 3. Update saved states for dirty calculation
       setSavedName(name);

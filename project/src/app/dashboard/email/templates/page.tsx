@@ -49,26 +49,14 @@ const EmailTemplatesPage = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("token="))
-          ?.split("=")[1];
+        // Session cookie is httpOnly — sent automatically with same-origin requests.
+        const response = await fetch("/api/email/templates");
 
-        if (token) {
-          const response = await fetch("/api/email/templates", {
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            setTemplates(data.data || []);
-          } else {
-            console.error("Failed to fetch templates:", response.status);
-          }
+        if (response.ok) {
+          const data = await response.json();
+          setTemplates(data.data || []);
         } else {
-          console.log("No authentication token found");
+          console.error("Failed to fetch templates:", response.status);
         }
       } catch (error) {
         console.error("Error fetching templates:", error);
@@ -143,47 +131,11 @@ const EmailTemplatesPage = () => {
     setIsLoading(true);
 
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-
-      // For demo purposes, create template locally if no token
-      if (!token) {
-        try {
-          console.log("Creating template locally, templates:", templates);
-          const maxId = templates.length > 0 ? Math.max(...templates.map(t => t.id)) : 0;
-          console.log("Max ID:", maxId);
-          
-          const newTemplate = {
-            id: maxId + 1,
-            name: formData.name.trim(),
-            subject: formData.subject.trim(),
-            body: formData.body.trim(),
-            category: formData.category.trim(),
-            createdAt: new Date().toISOString(),
-            usageCount: 0
-          };
-          
-          console.log("New template:", newTemplate);
-          setTemplates([...templates, newTemplate]);
-          toast.success("Template created successfully (demo mode)");
-          setShowCreateForm(false);
-          resetForm();
-        } catch (error) {
-          console.error("Error creating template locally:", error);
-          toast.error("Failed to create template");
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-
+      // Session cookie is httpOnly — sent automatically with same-origin requests.
       const response = await fetch("/api/email/templates", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(formData)
       });
@@ -223,21 +175,11 @@ const EmailTemplatesPage = () => {
     setIsLoading(true);
 
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-
-      if (!token) {
-        toast.error("Authentication required");
-        return;
-      }
-
+      // Session cookie is httpOnly — sent automatically with same-origin requests.
       const response = await fetch(`/api/email/templates`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           id: editingTemplate.id,
@@ -267,21 +209,9 @@ const EmailTemplatesPage = () => {
     if (!confirm("Are you sure you want to delete this template?")) return;
 
     try {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-
-      if (!token) {
-        toast.error("Authentication required");
-        return;
-      }
-
+      // Session cookie is httpOnly — sent automatically with same-origin requests.
       const response = await fetch(`/api/email/templates?id=${templateId}`, {
         method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
       });
 
       if (response.ok) {

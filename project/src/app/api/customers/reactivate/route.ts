@@ -1,40 +1,59 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/auth/requirePermission";
+import { orgWhere } from "@/lib/tenant/prismaScope";
 
-export async function POST(req: Request) {
+/**
+ * POST — reactivate a customer (must belong to the caller's organization).
+ * GET — list inactive customers within the caller's organization.
+ *
+ * SECURITY: both handlers previously had NO authentication and operated
+ * across all tenants (cross-tenant PII dump + cross-tenant write).
+ */
+
+const reactivateSchema = z.object({
+  customerId: z.coerce.number().int().positive(),
+});
+
+export async function POST(req: NextRequest) {
+  const auth = await requirePermission(req, "manage_customers");
+  if (auth.error) return auth.error;
+  const session = auth.session;
+
+  const raw = await req.json().catch(() => null);
+  const parsed = reactivateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, message: parsed.error.issues[0]?.message ?? "Invalid input" },
+      { status: 400 }
+    );
+  }
+  const customerId = parsed.data.customerId;
+
   try {
-    const { customerId } = await req.json();
-    
-    if (!customerId) {
-      return NextResponse.json(
-        { success: false, message: "Customer ID is required" },
-        { status: 400 }
-      );
-    }
-    
-    // Check if customer exists
-    const customer = await prisma.customers.findUnique({
-      where: { id: customerId },
+    // Tenant-scoped lookup — cannot reactivate another org's customer.
+    const customer = await prisma.customers.findFirst({
+      where: orgWhere(session, { id: customerId }),
       select: { id: true, CompanyName: true, ActiveStatus: true }
     });
-    
+
     if (!customer) {
       return NextResponse.json(
         { success: false, message: "Customer not found" },
         { status: 404 }
       );
     }
-    
+
     if (customer.ActiveStatus === "Active") {
       return NextResponse.json(
         { success: false, message: "Customer is already active" },
         { status: 400 }
       );
     }
-    
-    // Update customer status to active
+
     const updatedCustomer = await prisma.customers.update({
-      where: { id: customerId },
+      where: { id: customer.id },
       data: { ActiveStatus: "Active" },
       select: {
         id: true,
@@ -44,20 +63,17 @@ export async function POST(req: Request) {
         ActiveStatus: true
       }
     });
-    
-    console.log(`✅ Reactivated customer: ${updatedCustomer.CompanyName}`);
-    
+
     return NextResponse.json({
       success: true,
       message: `Customer ${updatedCustomer.CompanyName} has been reactivated`,
       customer: updatedCustomer
     });
-    
   } catch (error) {
-    console.error("❌ Error reactivating customer:", error);
+    console.error("Error reactivating customer:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: "Failed to reactivate customer",
         error: error instanceof Error ? error.message : "Unknown error"
       },
@@ -66,13 +82,14 @@ export async function POST(req: Request) {
   }
 }
 
-// GET endpoint to list inactive customers
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const auth = await requirePermission(req, "view_customers");
+    if (auth.error) return auth.error;
+    const session = auth.session;
+
     const inactiveCustomers = await prisma.customers.findMany({
-      where: {
-        ActiveStatus: "Inactive"
-      },
+      where: orgWhere(session, { ActiveStatus: "Inactive" }),
       select: {
         id: true,
         CompanyName: true,
@@ -100,7 +117,7 @@ export async function GET() {
         createdAt: 'desc'
       }
     });
-    
+
     const customerDetails = inactiveCustomers.map(customer => {
       const lastShipmentDate = customer.invoices[0]?.shipment?.shipmentDate;
       return {
@@ -112,19 +129,18 @@ export async function GET() {
         customerSince: customer.createdAt.toISOString().split('T')[0]
       };
     });
-    
+
     return NextResponse.json({
       success: true,
       message: `Found ${inactiveCustomers.length} inactive customers`,
       count: inactiveCustomers.length,
       customers: customerDetails
     });
-    
   } catch (error) {
-    console.error("❌ Error fetching inactive customers:", error);
+    console.error("Error fetching inactive customers:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: "Failed to fetch inactive customers",
         error: error instanceof Error ? error.message : "Unknown error"
       },

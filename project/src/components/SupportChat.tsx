@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
-
-interface DecodedToken {
-  name?: string;
-  email?: string;
-}
+import { getClientSession } from "@/lib/clientSession";
 
 declare global {
   interface Window {
@@ -36,18 +30,17 @@ export default function SupportChat() {
     // 3. Show chat widget once script loaded
     window.$crisp.push(["do", "chat:show"]);
 
-    // 4. Decode user details and fetch organization details
+    // 4. Resolve user details from the session endpoint and set Crisp data
     const configureUserData = async () => {
       try {
-        const token = Cookies.get("token");
-        if (!token) return;
+        const user = await getClientSession();
+        if (!user) return;
 
-        const decoded = jwtDecode<DecodedToken>(token);
-        if (decoded.email) {
-          window.$crisp.push(["set", "user:email", [decoded.email]]);
+        if (user.email) {
+          window.$crisp.push(["set", "user:email", [user.email]]);
         }
-        if (decoded.name) {
-          window.$crisp.push(["set", "user:nickname", [decoded.name]]);
+        if (user.name) {
+          window.$crisp.push(["set", "user:nickname", [user.name]]);
         }
 
         // Fetch organization name

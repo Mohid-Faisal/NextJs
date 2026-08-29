@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { createJournalEntryForTransaction } from "@/lib/utils";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
-
-// Helper function to decode JWT token
-function decodeToken(token: string) {
-  try {
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    return jwt.verify(token, secret) as { id: string; [key: string]: unknown };
-  } catch (error) {
-    return null;
-  }
-}
 
 export async function GET(
   request: NextRequest,
@@ -195,39 +184,16 @@ export async function DELETE(
       );
     }
 
-    // Get the authorization header
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("❌ Authorization header missing or invalid");
-      return NextResponse.json(
-        { error: "Authorization token required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = decodeToken(token);
-
-    if (!decoded) {
-      console.log("❌ Invalid JWT token");
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
-
-    console.log(`👤 User authenticated: ${decoded.id}`);
+    // SECURITY: identity now comes from the validated session instead of a
+    // raw Bearer token decode (works with httpOnly cookie sessions).
+    const decodedId = session.userId;
 
     // Get the request body for password and verification code
     const body: { password: string; verificationCode?: string } =
       await request.json();
     const { password, verificationCode } = body;
 
-    console.log(
-      `🔐 Password provided: ${password ? "Yes" : "No"}, Verification code: ${
-        verificationCode ? "Yes" : "No"
-      }`
-    );
-
     if (!password) {
-      console.log("❌ Password missing from request");
       return NextResponse.json(
         { error: "Password is required for deletion" },
         { status: 400 }
@@ -236,11 +202,10 @@ export async function DELETE(
 
     // Get the current user
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(decoded.id) },
+      where: { id: decodedId },
     });
 
     if (!user) {
-      console.log(`❌ User not found in database: ${decoded.id}`);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 

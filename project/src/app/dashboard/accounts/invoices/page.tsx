@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getCountryNameFromCode } from "@/lib/utils";
+import { readCachedBranding } from "@/lib/branding";
 import {
   Select,
   SelectContent,
@@ -835,10 +836,10 @@ export default function InvoicesPage() {
                             onClick={() => {
                               const shipmentId = (i.shipment as any)?.id;
                               if (shipmentId) {
-                                const email = localStorage.getItem("brand_support_email") || "info@psswwe.com";
-                                const phone = localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333";
-                                const address = localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore";
-                                const disclaimer = localStorage.getItem("brand_invoice_disclaimer") || "No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.";
+                                const email = readCachedBranding().supportEmail;
+                                const phone = readCachedBranding().supportPhone;
+                                const address = readCachedBranding().supportAddress;
+                                const disclaimer = readCachedBranding().invoiceDisclaimer;
                                 window.open(`/api/accounts/invoices/${shipmentId}/invoice?invID=${i.id}&support_email=${encodeURIComponent(email)}&support_phone=${encodeURIComponent(phone)}&support_address=${encodeURIComponent(address)}&disclaimer=${encodeURIComponent(disclaimer)}`, '_blank');
                               } else {
                                 alert('No shipment associated with this invoice');

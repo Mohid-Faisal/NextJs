@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+// Bundle diet: recharts loads on demand (see components/charts.tsx).
 import {
   BarChart,
   Bar,
@@ -51,7 +52,7 @@ import {
   PolarRadiusAxis,
   Radar,
   Legend,
-} from "recharts";
+} from "@/components/charts";
 import { Country } from "country-state-city";
 import { getCountryNameFromCode } from "@/lib/utils";
 import { getTrackingUrl } from "@/lib/tracking-links";
@@ -259,41 +260,20 @@ const DashboardPage = () => {
     // Set up user activity tracking
     const trackUserActivity = async () => {
       try {
-        console.log("🔄 Starting user activity tracking...");
-        
-        // Try to get token from cookies
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("token="))
-          ?.split("=")[1];
-        
-        console.log("🍪 Token from cookies:", token ? "Token found" : "No token found");
-        if (token) {
-          console.log("🔑 Token preview:", token.substring(0, 20) + "...");
-        }
+        // Session cookie is httpOnly — the server resolves identity itself.
+        const response = await fetch("/api/user-activity", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        });
 
-        if (token) {
-          console.log("📡 Sending activity update to /api/user-activity");
-          const response = await fetch("/api/user-activity", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ token }),
-          });
-          
-          console.log("📡 Activity update response status:", response.status);
-          if (response.ok) {
-            const result = await response.json();
-            console.log("✅ Activity update successful:", result);
-          } else {
-            console.log("❌ Activity update failed:", response.status, response.statusText);
-          }
-        } else {
-          console.log("⚠️ No token found, skipping activity update");
+        if (!response.ok) {
+          console.log("Activity update failed:", response.status);
         }
       } catch (error) {
-        console.error("❌ Error tracking user activity:", error);
+        console.error("Error tracking user activity:", error);
       }
     };
 
@@ -440,7 +420,7 @@ const DashboardPage = () => {
                     color: '#F9FAFB',
                     fontSize: '12px'
                   }}
-                  formatter={(value, name) => {
+                  formatter={(value: any, name: any) => {
                     const n = typeof value === "number" ? value : Number(value);
                     return [
                       `${data.currency} ${n.toLocaleString()}`,
@@ -630,12 +610,12 @@ const DashboardPage = () => {
                     color: '#F9FAFB',
                     fontSize: '12px'
                   }}
-                  formatter={(value, name) => [
+                  formatter={(value: any, name: any) => [
                     name === 'shipments' ? value : value.toLocaleString(),
                     name === 'shipments' ? 'Shipments' : name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'
                   ]}
-                  labelFormatter={(label) => label}
-                  content={({ active, payload, label }) => {
+                  labelFormatter={(label: any) => label}
+                  content={({ active, payload, label }: any) => {
                     if (active && payload && payload.length) {
                       const customer = data.topCustomers.find(c => c.customer === label);
                       const formattedDate = customer?.lastShipmentDate 
@@ -658,7 +638,7 @@ const DashboardPage = () => {
                           <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>
                             {label}
                           </div>
-                          {payload.map((entry, index) => (
+                          {payload.map((entry: any, index: number) => (
                             <div key={index} style={{ color: entry.color, margin: '4px 0' }}>
                               {entry.name === 'shipments' ? 'Shipments' : entry.name === 'totalSpent' ? 'Total Spent' : 'Avg Order Value'}: {entry.name === 'shipments' ? entry.value : entry.value.toLocaleString()}
                             </div>

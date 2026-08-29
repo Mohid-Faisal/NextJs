@@ -42,10 +42,9 @@ import {
   Landmark,
   Palette,
 } from "lucide-react";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePermissions } from "@/components/PermissionContext";
+import { getClientSession, clearClientSessionCache } from "@/lib/clientSession";
 
 const links = [
   { href: "/dashboard/customers", label: "Customers", icon: User },
@@ -58,13 +57,6 @@ const adminLinks = [
   { href: "/dashboard/roles-permissions", label: "Roles & Permissions", icon: ShieldCheck },
   { href: "/dashboard/settings/billing", label: "Plan & Billing", icon: CreditCard },
 ];
-
-interface DecodedToken {
-  name: string;
-  email?: string;
-  platformRole?: string | null;
-  orgRole?: string | null;
-}
 
 const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   const pathname = usePathname();
@@ -120,21 +112,26 @@ const Sidebar = ({ isOpen }: { isOpen: boolean }) => {
   };
 
   useEffect(() => {
-    const token = Cookies.get("token");
-    if (token) {
-      try {
-        const decoded = jwtDecode<DecodedToken>(token);
-        setUserName(decoded.name || "User");
-        setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
-        setOrgRole(decoded.orgRole || null);
-      } catch (err) {
-        console.error("Failed to decode token:", err);
-      }
-    }
+    let cancelled = false;
+    getClientSession().then((user) => {
+      if (cancelled || !user) return;
+      setUserName(user.name || "User");
+      setIsSuperAdmin(user.platformRole === "SUPER_ADMIN");
+      setOrgRole(user.orgRole || null);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleLogout = () => {
-    Cookies.remove("token");
+  const handleLogout = async () => {
+    // Session cookie is httpOnly — clear it server-side.
+    clearClientSessionCache();
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } catch {
+      // ignore network errors; redirect anyway
+    }
     router.push("/auth/login");
   };
 

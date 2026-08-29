@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { readCachedBranding } from '@/lib/branding';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,7 +70,7 @@ export default function EditInvoicePage() {
   const [disclaimer, setDisclaimer] = useState('Any discrepancy in invoice must be notified within 03 days of receipt of this invoice. You are requested to pay the invoice amount through cash payment or cross cheque in favor of PSS with immediate effect.');
   const [note, setNote] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem("brand_invoice_disclaimer") || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.';
+      return readCachedBranding().invoiceDisclaimer;
     }
     return 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.';
   });
@@ -255,7 +256,7 @@ export default function EditInvoicePage() {
         }
 
         // Set note if available
-        setNote(data.note || localStorage.getItem("brand_invoice_disclaimer") || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is notresponsible for any loss and damage goods.');
+        setNote(data.note || readCachedBranding().invoiceDisclaimer);
       } else {
         console.error('Failed to fetch invoice data');
       }
@@ -369,9 +370,9 @@ export default function EditInvoicePage() {
           calculatedValues: calculatedValues,
         }
       };
-      const supportEmail = localStorage.getItem("brand_support_email") || "info@psswwe.com";
-      const supportPhone = localStorage.getItem("brand_support_phone") || "+92 (21) 111-222-333";
-      const supportAddress = localStorage.getItem("brand_support_address") || "LG-44, Land Mark Plaza, 5-6 Jail Road, Lahore";
+        const supportEmail = readCachedBranding().supportEmail;
+        const supportPhone = readCachedBranding().supportPhone;
+        const supportAddress = readCachedBranding().supportAddress;
 
       // Open invoice with updated data for printing with print parameter
       const queryParams = new URLSearchParams({
@@ -381,7 +382,7 @@ export default function EditInvoicePage() {
         support_email: supportEmail,
         support_phone: supportPhone,
         support_address: supportAddress,
-        disclaimer: note || localStorage.getItem("brand_invoice_disclaimer") || 'No cash, Cash equivalent, Gold jewelary or Dangerous goods accepted. Insurance is compulsory from shipper side, PSS is not responsible for any loss and damage goods.'
+        disclaimer: note || readCachedBranding().invoiceDisclaimer
       });
       
       window.open(`/api/accounts/invoices/${shipmentId}/invoice?${queryParams.toString()}`, '_blank');

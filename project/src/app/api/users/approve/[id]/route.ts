@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { sendUserApprovedEmail } from '@/lib/email';
 import { requireSuperAdmin } from '@/lib/auth/requireSuperAdmin';
+import { audit } from '@/lib/audit';
 
 const prisma = new PrismaClient();
 
@@ -55,6 +56,10 @@ export async function POST(
         isApproved: true,
         createdAt: true,
       }
+    });
+
+    await audit(approver, request, "user.approved", "User", updatedUser.id, {
+      email: updatedUser.email,
     });
 
     // Send approval confirmation email to user

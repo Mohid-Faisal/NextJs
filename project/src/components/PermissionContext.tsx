@@ -1,8 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
+import { getClientSession } from "@/lib/clientSession";
 import { resolveRoleName, type RoleName } from "@/lib/auth/roles";
 
 interface PermissionContextType {
@@ -85,27 +84,24 @@ export const PermissionProvider = ({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const fetchPermissionsAndPlan = async () => {
       try {
-        const token = Cookies.get("token");
-        if (!token) {
+        // SECURITY: session JWT is httpOnly now — resolve role from the
+        // server-side session endpoint instead of decoding the token.
+        const user = await getClientSession();
+        if (!user) {
           setLoading(false);
           return;
         }
 
-        // 1. Decode token and resolve role
+        // 1. Resolve role from the authenticated session
         let resolvedRole = "Employee";
-        try {
-          const decoded = jwtDecode<any>(token);
-          const uOrgRole = decoded.orgRole || null;
-          const uPlatformRole = decoded.platformRole || null;
-          
-          setOrgRole(uOrgRole);
-          setPlatformRole(uPlatformRole);
+        const uOrgRole = user.orgRole || null;
+        const uPlatformRole = user.platformRole || null;
 
-          resolvedRole = resolveRoleName(uOrgRole, uPlatformRole);
-          setRole(resolvedRole as any);
-        } catch (tokenErr) {
-          console.error("Error decoding session token:", tokenErr);
-        }
+        setOrgRole(uOrgRole);
+        setPlatformRole(uPlatformRole);
+
+        resolvedRole = resolveRoleName(uOrgRole, uPlatformRole);
+        setRole(resolvedRole as any);
 
         // 2. Fetch permissions mapping
         try {

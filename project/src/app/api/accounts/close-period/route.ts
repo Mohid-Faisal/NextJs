@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
+import { audit } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireApiSession(req);
+    // SECURITY: posting closing entries is an accounting operation — requires
+    // the revenue/billing permission instead of any authenticated session.
+    const auth = await requirePermission(req, "view_revenue");
     if (auth.error) return auth.error;
     const session = auth.session;
 
@@ -230,6 +233,12 @@ export async function POST(req: NextRequest) {
       await Promise.all(entryLines);
 
       return entry;
+    });
+
+    await audit(session, req, "period.closed", "JournalEntry", closingEntry.id, {
+      periodStart: startDate,
+      periodEnd: endDate,
+      netIncome,
     });
 
     return NextResponse.json({

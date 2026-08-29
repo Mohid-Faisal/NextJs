@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken"
 import { Country, State } from "country-state-city"
 import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
 import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
+import { getJwtSecretString } from "@/lib/auth/jwtSecret";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -11,54 +12,78 @@ export function cn(...inputs: ClassValue[]) {
 
 export function decodeToken(token: string) {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
+    // SECURITY: fails closed when JWT_SECRET is not configured (previously
+    // fell back to a publicly-known constant, enabling token forgery).
+    const decoded = jwt.verify(token, getJwtSecretString());
     return decoded as { id: string; email: string; name: string };
   } catch (error) {
     return null;
   }
 }
 
-// Function to generate unique invoice numbers
-export async function generateInvoiceNumber(prisma: any): Promise<string> {
-  // Fetch recent shipments to find the highest numeric invoice number
-  const recentShipments = await prisma.shipment.findMany({
-    where: {
-      invoiceNumber: {
-        not: null,
-      },
-    },
-    orderBy: {
-      id: "desc",
-    },
-    take: 500,
-    select: {
-      invoiceNumber: true,
-    },
+/**
+ * Generate a unique, org-scoped invoice number.
+ *
+ * Backed by the atomic OrgSequence counter (see lib/sequences.ts) so two
+ * concurrent shipments can never receive the same number, and tenants cannot
+ * collide with each other (invoiceNumber is unique per organization).
+ *
+ * Legacy signature `generateInvoiceNumber(prisma)` still works: it falls back
+ * to a global sequence key for the platform org. New code should pass an
+ * explicit organizationId.
+ */
+export async function generateInvoiceNumber(
+  prismaClient: any,
+  organizationId?: number
+): Promise<string> {
+  const { nextSequenceNumber } = await import("@/lib/sequences");
+  const { prisma } = await import("@/lib/prisma");
+
+  const orgId = organizationId ?? 1;
+  const key = `invoice_number`;
+
+  // Seed the sequence above any existing numeric invoice numbers for this
+  // org (first use after migration only).
+  const existing = await prisma.orgSequence.findUnique({
+    where: { organizationId_key: { organizationId: orgId, key } },
+    select: { nextNumber: true },
   });
 
-  // Extract purely numeric invoice numbers (ignore strings like DEMO-1001 or 000NaN)
-  const numericValues = recentShipments
-    .map((s: { invoiceNumber: string | null }) => s.invoiceNumber)
-    .filter((inv: string | null): inv is string => !!inv && /^\d+$/.test(inv.trim()))
-    .map((inv: string) => parseInt(inv.trim(), 10))
-    .filter((num: number) => !isNaN(num));
+  if (!existing) {
+    const recentShipments = await prismaClient.shipment.findMany({
+      where: {
+        ...(organizationId != null ? { organizationId } : {}),
+        invoiceNumber: { not: null },
+      },
+      orderBy: { id: "desc" },
+      take: 500,
+      select: { invoiceNumber: true },
+    });
 
-  let nextNumber: number;
+    const numericValues = recentShipments
+      .map((s: { invoiceNumber: string | null }) => s.invoiceNumber)
+      .filter((inv: string | null): inv is string => !!inv && /^\d+$/.test(inv.trim()))
+      .map((inv: string) => parseInt(inv.trim(), 10))
+      .filter((num: number) => !isNaN(num));
 
-  if (numericValues.length > 0) {
-    const highestNumber = Math.max(...numericValues);
-    nextNumber = highestNumber + 5;
-  } else {
-    // Start from 600000 if no numeric shipments exist
-    nextNumber = 600000;
+    // Preserve legacy spacing (+5) and 600000 floor.
+    const seed =
+      numericValues.length > 0
+        ? Math.max(Math.max(...numericValues) + 5, 600000)
+        : 600000;
+
+    try {
+      await prisma.orgSequence.create({
+        data: { organizationId: orgId, key, nextNumber: seed + 1 },
+      });
+      return seed.toString().padStart(6, "0");
+    } catch {
+      // Lost a race to seed — fall through to the atomic increment.
+    }
   }
 
-  // Safety fallback if somehow nextNumber is NaN or invalid
-  if (isNaN(nextNumber) || nextNumber < 600000) {
-    nextNumber = 600000;
-  }
-
-  // Format as 6-digit string with leading zeros
+  const next = await nextSequenceNumber(prismaClient, orgId, key);
+  const nextNumber = Math.max(next, 600000);
   return nextNumber.toString().padStart(6, "0");
 }
 

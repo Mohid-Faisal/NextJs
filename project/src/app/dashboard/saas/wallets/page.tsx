@@ -1,5 +1,6 @@
 "use client";
 
+import { getClientSession } from "@/lib/clientSession";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Wallet, ShieldAlert, DollarSign, ArrowUpRight, ArrowDownRight, RefreshCw, ArrowLeft } from "lucide-react";
@@ -8,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
 
 type WalletRecord = {
   id: number;
@@ -21,10 +20,6 @@ type WalletRecord = {
   lastUpdated: string;
 };
 
-interface DecodedToken {
-  platformRole?: string | null;
-}
-
 export default function SaasWalletsPage() {
   const [wallets, setWallets] = useState<WalletRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,15 +28,9 @@ export default function SaasWalletsPage() {
 
   useEffect(() => {
     setMounted(true);
-    const token = Cookies.get("token");
-    if (token) {
-      try {
-        const decoded = jwtDecode<DecodedToken>(token);
-        setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
-      } catch (err) {
-        console.error("Token decoding failed:", err);
-      }
-    }
+    getClientSession().then((user) => {
+      setIsSuperAdmin(!!user && user.platformRole === "SUPER_ADMIN");
+    });
   }, []);
 
   const loadWallets = async () => {

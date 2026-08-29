@@ -420,8 +420,8 @@ export async function POST(req: NextRequest) {
           vendorMap.set(vendorKey, vendor);
         }
 
-        // Generate invoice number
-        const invoiceNumber = await generateInvoiceNumber(prisma);
+        // Generate invoice number (atomic, per-org)
+        const invoiceNumber = await generateInvoiceNumber(prisma, session.organizationId);
         const vendorInvoiceNumber = generateVendorInvoiceNumber(invoiceNumber);
 
         // Calculate pricing

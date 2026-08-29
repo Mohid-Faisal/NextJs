@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { requireCronSecret } from "@/lib/auth/cronAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -26,19 +27,9 @@ export async function GET(request: NextRequest) {
   try {
     console.log("🕐 Cron job: Starting subscription expiration check...");
 
-    // Verify this is a legitimate cron request (similar to check-inactive-customers)
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const requestAuth = request.headers.get("authorization") ?? "";
-      const isAuthorized =
-        requestAuth === `Bearer ${cronSecret}` || requestAuth === cronSecret;
-      if (!isAuthorized) {
-        return NextResponse.json(
-          { success: false, message: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-    }
+    // SECURITY: mandatory secret check — this job sends bulk emails.
+    const denied = requireCronSecret(request);
+    if (denied) return denied;
 
     // Define target range: exactly 3 days from now (in UTC)
     const targetStart = new Date();

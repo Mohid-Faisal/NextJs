@@ -4,15 +4,40 @@ import bcrypt from "bcryptjs";
 import { sendVerificationEmail } from "@/lib/email";
 import { createOrganizationForSignup } from "@/lib/auth/membership";
 import { getCurrencyForCountry, fetchExchangeRates } from "@/lib/currency";
+import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
+
+function validatePassword(password: string): string | null {
+  if (typeof password !== "string" || password.length < 8) {
+    return "Password must be at least 8 characters long.";
+  }
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return "Password must contain at least one letter and one number.";
+  }
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: rate limit signup to prevent scripted org/tenant spam.
+    const ip = getClientIp(request);
+    const limit = rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000);
+    if (!limit.allowed) return rateLimitResponse(limit);
+
     const body = await request.json();
     const { name, email, password, companyName, planCode, phone, address, paymentMethod, referenceId, receiptUrl } = body;
 
     if (!email?.trim() || !password) {
       return NextResponse.json(
         { success: false, message: "Email and password are required." },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: enforce password strength server-side (was client-only).
+    const passwordError = validatePassword(String(password));
+    if (passwordError) {
+      return NextResponse.json(
+        { success: false, message: passwordError },
         { status: 400 }
       );
     }

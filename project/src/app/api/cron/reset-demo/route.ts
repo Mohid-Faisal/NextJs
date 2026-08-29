@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resetDemoUserEntries } from "@/lib/auth/demoAccount";
+import { requireCronSecret } from "@/lib/auth/cronAuth";
 
 /**
  * GET /api/cron/reset-demo
  * Cleans up user-added entries in the demo account (older than 24 hours or forced),
  * preserving all default sample demo entries.
+ *
+ * SECURITY: destructive operation — requires the CRON_SECRET bearer token.
  */
 export async function GET(req: NextRequest) {
+  const denied = requireCronSecret(req);
+  if (denied) return denied;
+
   try {
     await resetDemoUserEntries();
     return NextResponse.json({

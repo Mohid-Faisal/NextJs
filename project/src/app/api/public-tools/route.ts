@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
+import { verifySessionToken } from "@/lib/auth/session";
 
 const SETTING_KEY = "public_tools_disabled";
 const ADMIN_EMAIL = "mohidfaisal321@gmail.com";
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 async function assertAdminCanChangeFlag(): Promise<boolean> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
     if (!token) return false;
-    const decoded = jwt.verify(token, JWT_SECRET) as { email?: string };
+    const decoded = verifySessionToken(token) as { email?: string } | null;
+    if (!decoded) return false;
     const email = (decoded.email || "").trim().toLowerCase();
     return email === ADMIN_EMAIL.toLowerCase();
   } catch {

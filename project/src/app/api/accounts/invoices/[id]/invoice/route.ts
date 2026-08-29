@@ -5,6 +5,7 @@ import path from 'path';
 import { Country } from 'country-state-city';
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
+import { resolvePublicLogoPath, safeRemoteLogoUrl } from "@/lib/logoUrl";
 
 export async function GET(
   request: NextRequest,
@@ -164,21 +165,25 @@ export async function GET(
 async function getLogoAsBase64(logoUrl?: string | null): Promise<string> {
   try {
     if (logoUrl) {
-      if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+      // SECURITY: SSRF/arbitrary-file-read protection (see lib/logoUrl.ts).
+      const remoteUrl = safeRemoteLogoUrl(logoUrl);
+      if (remoteUrl) {
         try {
-          const res = await fetch(logoUrl);
+          const res = await fetch(remoteUrl, { redirect: "error" });
           if (res.ok) {
-            const buffer = await res.arrayBuffer();
-            const base64 = Buffer.from(buffer).toString('base64');
-            const contentType = res.headers.get('content-type') || 'image/png';
-            return `data:${contentType};base64,${base64}`;
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.startsWith('image/')) {
+              const buffer = await res.arrayBuffer();
+              const base64 = Buffer.from(buffer).toString('base64');
+              return `data:${contentType};base64,${base64}`;
+            }
           }
         } catch (err) {
           console.error('Error fetching remote logo:', err);
         }
-      } else if (logoUrl.startsWith('/')) {
-        const customPath = path.join(process.cwd(), 'public', logoUrl);
-        if (fs.existsSync(customPath)) {
+      } else {
+        const customPath = resolvePublicLogoPath(logoUrl);
+        if (customPath && fs.existsSync(customPath)) {
           const logoBuffer = fs.readFileSync(customPath);
           const base64 = logoBuffer.toString('base64');
           const ext = path.extname(customPath).toLowerCase();

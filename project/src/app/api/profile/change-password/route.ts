@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { sendPassword2FACodeEmail } from "@/lib/email";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
+import { rateLimit, rateLimitResponse, getClientIp } from "@/lib/rateLimit";
 
-function decodeToken(token: string) {
-  try {
-    const secret = process.env.JWT_SECRET || "your-secret-key";
-    return jwt.verify(token, secret) as { id: string; [key: string]: unknown };
-  } catch (error) {
-    return null;
+/**
+ * SECURITY hardening vs. previous version:
+ *  - Identity comes from the validated session (httpOnly cookie or Bearer),
+ *    not a separately-required raw Bearer decode.
+ *  - 2FA code verification is rate limited per account (was unlimited →
+ *    6-digit code was brute-forceable within the 10-minute window).
+ *  - New password must satisfy minimum strength requirements.
+ */
+
+function validateNewPassword(password: string): string | null {
+  if (typeof password !== "string" || password.length < 8) {
+    return "Password must be at least 8 characters long.";
   }
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return "Password must contain at least one letter and one number.";
+  }
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -21,30 +31,12 @@ export async function POST(request: NextRequest) {
     if (auth.error) return auth.error;
     const session = auth.session;
 
-    // Get auth token from headers
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Authorization token required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = decodeToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     const { action, currentPassword, newPassword, code } = body;
 
     // Retrieve user from DB
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(decoded.id) },
+      where: { id: session.userId },
     });
 
     if (!user) {
@@ -63,8 +55,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Per-account throttle on code issuance.
+      const sendLimit = rateLimit(`pwchange-send:${user.id}`, 3, 10 * 60 * 1000);
+      if (!sendLimit.allowed) return rateLimitResponse(sendLimit);
+
       // Verify current password
-      const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+      const passwordMatch = await bcrypt.compare(String(currentPassword), user.password);
       if (!passwordMatch) {
         return NextResponse.json(
           { error: "Incorrect current password" },
@@ -110,6 +106,11 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const passwordError = validateNewPassword(String(newPassword));
+      if (passwordError) {
+        return NextResponse.json({ error: passwordError }, { status: 400 });
+      }
+
       // Check user status
       if (!user.status || !user.status.startsWith("PENDING_2FA_")) {
         return NextResponse.json(
@@ -118,12 +119,16 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Brute-force guard: max 6 code attempts per account.
+      const codeLimit = rateLimit(`pwchange-code:${user.id}`, 6, 10 * 60 * 1000);
+      if (!codeLimit.allowed) return rateLimitResponse(codeLimit);
+
       const parts = user.status.split("_");
       const savedCode = parts[2];
       const savedTime = parseInt(parts[3]);
 
       // Check code match
-      if (savedCode !== code) {
+      if (savedCode !== String(code).trim()) {
         return NextResponse.json(
           { error: "Invalid verification code" },
           { status: 400 }
@@ -144,7 +149,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Hash the new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
 
       // Update password & reset status to ACTIVE
       await prisma.user.update({

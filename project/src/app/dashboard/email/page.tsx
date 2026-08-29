@@ -44,19 +44,10 @@ const EmailPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get token from cookies
-        const token = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("token="))
-          ?.split("=")[1];
-
-        if (token) {
+        // Session cookie is httpOnly — sent automatically with same-origin requests.
+        if (true) {
           // Fetch users
-          const usersResponse = await fetch("/api/email/users", {
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
-          });
+          const usersResponse = await fetch("/api/email/users");
 
           if (usersResponse.ok) {
             const usersData = await usersResponse.json();
@@ -64,11 +55,7 @@ const EmailPage = () => {
           }
 
           // Fetch templates
-          const templatesResponse = await fetch("/api/email/templates", {
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
-          });
+          const templatesResponse = await fetch("/api/email/templates");
 
           if (templatesResponse.ok) {
             const templatesData = await templatesResponse.json();
@@ -188,16 +175,7 @@ const EmailPage = () => {
     setIsLoading(true);
 
     try {
-      // Get token from cookies
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("token="))
-        ?.split("=")[1];
-
-      if (!token) {
-        toast.error("Authentication required. Please log in again.");
-        return;
-      }
+      // Session cookie is httpOnly — sent automatically with same-origin requests.
 
       // Prepare recipients data
       const recipients = users
@@ -209,7 +187,6 @@ const EmailPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           recipients,

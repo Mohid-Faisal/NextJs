@@ -1,5 +1,6 @@
 "use client";
 
+import { getClientSession } from "@/lib/clientSession";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FileText, ShieldAlert, BadgePercent, Clock, Activity, RefreshCw, ArrowLeft, Info } from "lucide-react";
@@ -8,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import Cookies from "js-cookie";
-import { jwtDecode } from "jwt-decode";
 
 type SubscriptionRecord = {
   id: number;
@@ -22,10 +21,6 @@ type SubscriptionRecord = {
   isDemo?: boolean;
 };
 
-interface DecodedToken {
-  platformRole?: string | null;
-}
-
 export default function SaasSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,15 +29,9 @@ export default function SaasSubscriptionsPage() {
 
   useEffect(() => {
     setMounted(true);
-    const token = Cookies.get("token");
-    if (token) {
-      try {
-        const decoded = jwtDecode<DecodedToken>(token);
-        setIsSuperAdmin(decoded.platformRole === "SUPER_ADMIN");
-      } catch (err) {
-        console.error("Token decoding failed:", err);
-      }
-    }
+    getClientSession().then((user) => {
+      setIsSuperAdmin(!!user && user.platformRole === "SUPER_ADMIN");
+    });
   }, []);
 
   const loadSubscriptions = async () => {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
 import { fetchExchangeRates } from "@/lib/currency";
+import { audit } from "@/lib/audit";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"];
 
@@ -39,9 +40,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Invalid amount" }, { status: 400 });
     }
 
-    // Check if there is already a pending proof for this reference ID
+    // Check if there is already a pending proof for this reference ID.
+    // SECURITY: scope the uniqueness check to this organization — a global
+    // check let one tenant lock out another tenant's legitimate bank
+    // reference strings (reference-griefing).
+    const trimmedRef = String(referenceId).trim();
     const existing = await prisma.paymentProof.findFirst({
-      where: { referenceId: String(referenceId).trim() },
+      where: {
+        organizationId: session.organizationId,
+        referenceId: trimmedRef,
+      },
     });
     if (existing) {
       return NextResponse.json(
@@ -70,11 +78,18 @@ export async function POST(req: NextRequest) {
         amount: numericAmount,
         currency: currency,
         method: String(method).toUpperCase(),
-        referenceId: String(referenceId).trim(),
+        referenceId: trimmedRef,
         receiptUrl: receiptUrl ? String(receiptUrl).trim() : null,
         status: "pending",
         notes: billingCycle ? `Billing Cycle: ${String(billingCycle).toUpperCase()}` : null,
       },
+    });
+
+    await audit(session, req, "billing.payment_proof_submitted", "PaymentProof", proof.id, {
+      planCode,
+      amount: numericAmount,
+      method: proof.method,
+      referenceId: trimmedRef,
     });
 
     return NextResponse.json({ success: true, proof });

@@ -22,8 +22,28 @@ model User {
   createdAt    DateTime             @default(now())
   lastLoginAt  DateTime?
   memberships  OrganizationMember[]
+  sessions     AuthSession[]
   phone        String?
   address      String?
+}
+
+/// Server-side session registry — enables instant revocation ("log out all
+/// devices"), device listing, and ban propagation without waiting for JWT
+/// expiry. The JWT carries the session id (`sid`); getSession() requires a
+/// live, non-revoked row to match.
+model AuthSession {
+  id             String    @id @default(cuid())
+  userId         Int
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId Int?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+
+  @@index([userId])
 }
 
 model Organization {
@@ -82,7 +102,7 @@ model Shipment {
   id                Int       @id @default(autoincrement())
   organizationId    Int       @default(1)
   trackingId        String?
-  invoiceNumber     String?   @unique
+  invoiceNumber     String?
   referenceNumber   String
   agency            String?
   office            String?
@@ -133,6 +153,10 @@ model Shipment {
   invoices          Invoice[]
 
   @@unique([organizationId, trackingId])
+  // SECURITY: invoice numbers are unique per organization, not globally —
+  // a global unique let tenants probe each other's invoice numbers via
+  // duplicate-key errors and caused cross-tenant numbering collisions.
+  @@unique([organizationId, invoiceNumber])
   @@index([organizationId])
 }
 
@@ -463,7 +487,7 @@ model Payment {
 model Invoice {
   id              Int       @id @default(autoincrement())
   organizationId  Int       @default(1)
-  invoiceNumber   String    @unique
+  invoiceNumber   String
   invoiceDate     DateTime
   receiptNumber   String?
   trackingNumber  String?
@@ -489,11 +513,14 @@ model Invoice {
   debitNotes      DebitNote[]
   creditNotes     CreditNote[]
 
+  // SECURITY: unique per organization (see Shipment note above).
+  @@unique([organizationId, invoiceNumber])
   @@index([organizationId])
 }
 
 model DebitNote {
   id              Int      @id @default(autoincrement())
+  organizationId  Int?
   debitNoteNumber String   @unique
   billId          Int?
   bill            Invoice? @relation(fields: [billId], references: [id])
@@ -505,10 +532,13 @@ model DebitNote {
   currency        String   @default("USD")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([organizationId])
 }
 
 model CreditNote {
   id               Int       @id @default(autoincrement())
+  organizationId   Int?
   creditNoteNumber String    @unique
   invoiceId        Int?
   invoice          Invoice?  @relation(fields: [invoiceId], references: [id])
@@ -520,6 +550,8 @@ model CreditNote {
   currency         String    @default("USD")
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  @@index([organizationId])
 }
 
 model ChartOfAccount {
@@ -562,6 +594,7 @@ model JournalEntry {
 
 model JournalEntryLine {
   id             Int            @id @default(autoincrement())
+  organizationId Int?
   journalEntryId Int
   journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   accountId      Int
@@ -571,6 +604,8 @@ model JournalEntryLine {
   description    String?
   reference      String?
   createdAt      DateTime       @default(now())
+
+  @@index([organizationId])
 }
 
 model FixedCharge {
@@ -605,4 +640,35 @@ model PaymentProof {
   plan           Plan         @relation(fields: [planId], references: [id], onDelete: Restrict)
 
   @@index([organizationId])
+}
+
+/// Append-only audit trail for security-relevant actions. Rows are never
+/// updated or deleted by application code.
+model AuditLog {
+  id             BigInt   @id @default(autoincrement())
+  organizationId Int?
+  actorUserId    Int?
+  actorEmail     String?
+  action         String   // e.g. "login.success", "user.deactivate", "payment.process"
+  entityType     String?  // e.g. "User", "Invoice", "Shipment"
+  entityId       String?
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+}
+
+/// Atomic per-organization document counters (invoice numbers, JE numbers,
+/// etc.). Incremented inside transactions to prevent duplicates under
+/// concurrency — replaces MAX(id)+1 scans.
+model OrgSequence {
+  organizationId Int
+  key            String
+  nextNumber     Int      @default(1)
+
+  @@id([organizationId, key])
 }

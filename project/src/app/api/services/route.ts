@@ -1,24 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/api/withAuth";
 
-export async function GET(req: NextRequest) {
-  try {
-    const services = await prisma.serviceMode.findMany({
-      orderBy: {
-        name: 'asc'
-      }
-    });
+/**
+ * SECURITY: previously unauthenticated and returned service modes across
+ * ALL tenants. Now requires a session (via withAuth) and scopes to the
+ * caller's org.
+ */
+export const GET = withAuth(async ({ session }) => {
+  const services = await prisma.serviceMode.findMany({
+    where: { organizationId: session.organizationId },
+    orderBy: {
+      name: 'asc'
+    }
+  });
 
-    return NextResponse.json({
-      success: true,
-      data: services
-    });
-  } catch (error) {
-    console.error("❌ Error fetching services:", error);
-    return NextResponse.json({
-      success: false,
-      message: "Failed to fetch services",
-      error: (error as Error).message
-    }, { status: 500 });
-  }
-} 
+  return NextResponse.json({
+    success: true,
+    data: services
+  });
+});
