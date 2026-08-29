@@ -763,10 +763,33 @@ export async function POST(req: NextRequest) {
         calculatedValues: calculatedValues,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Add shipment error:", error);
+    if (error?.code === "P2002") {
+      const target = Array.isArray(error?.meta?.target)
+        ? error?.meta?.target.join(",")
+        : String(error?.meta?.target || "");
+      if (target.includes("trackingId")) {
+        return NextResponse.json(
+          { success: false, error: "Tracking ID already exists. Please enter a unique Tracking ID." },
+          { status: 409 }
+        );
+      }
+      if (target.includes("referenceNumber")) {
+        return NextResponse.json(
+          { success: false, error: "Reference Number already exists. Please enter a unique Reference Number." },
+          { status: 409 }
+        );
+      }
+      if (target.includes("invoiceNumber")) {
+        return NextResponse.json(
+          { success: false, error: "Invoice number collision detected. Please try submitting again." },
+          { status: 409 }
+        );
+      }
+    }
     return NextResponse.json(
-      { success: false, message: "Failed to add shipment." },
+      { success: false, error: error?.message || "Failed to add shipment." },
       { status: 500 }
     );
   }
