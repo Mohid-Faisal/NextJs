@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { getCountryNameFromCode } from "@/lib/utils";
 import { getTrackingUrl } from "@/lib/tracking-links";
 import { AnimatePresence, motion } from "framer-motion";
+import ShipmentTimeline from "@/components/ShipmentTimeline";
 
 type TrackingHistoryEntry = { status: string; timestamp: string; description?: string; location?: string };
 
@@ -398,6 +399,13 @@ export default function TrackingResultsDialog(props: {
             >
               {shipment ? (
                 <div className="space-y-4">
+                  {/* Modern Animated Journey Stepper */}
+                  <ShipmentTimeline
+                    currentStatus={shipment.trackingStatus || "Booked"}
+                    trackingNumber={shipment.trackingId || shipment.invoiceNumber}
+                    destination={destLabel}
+                  />
+
                   <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
                     <CardContent className="p-6 pt-1 pb-0">
                       <div className="mb-6">

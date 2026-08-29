@@ -30,6 +30,8 @@ import { ChevronDown, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Country, State } from "country-state-city";
 import { matchHsCode, type HsCodeItem } from "@/lib/matchHsCode";
+import VolumetricBox3D from "@/components/VolumetricBox3D";
+import { triggerConfetti } from "@/lib/confetti";
 
 // Add type for sender/recipient
 interface Party {
@@ -828,6 +830,7 @@ const AddShipmentPage = () => {
     console.log("Backend response:", data);
 
     if (res.ok && data.success) {
+      triggerConfetti();
       toast.success(
         isEditing
           ? "Shipment updated successfully!"
@@ -2085,6 +2088,16 @@ const AddShipmentPage = () => {
                 <span className="hidden sm:inline">+ Add Box or Packages</span>
                 <span className="sm:hidden">+ Add Package</span>
               </Button>
+
+              {/* Real-time 3D Package Visualizer */}
+              <div className="mt-4 pt-3 border-t border-border">
+                <VolumetricBox3D
+                  length={packages[0]?.length || 30}
+                  width={packages[0]?.width || 20}
+                  height={packages[0]?.height || 15}
+                  actualWeight={totals.weight || 1}
+                />
+              </div>
             </div>
         </CardContent>
       </Card>

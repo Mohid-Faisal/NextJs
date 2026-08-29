@@ -9,6 +9,7 @@ import {
   User, Settings, LogOut
 } from "lucide-react";
 import BulkUploadModal from "./BulkUploadModal";
+import CommandPalette from "./CommandPalette";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,19 @@ const Navbar = ({
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("");
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  // Global keyboard shortcut for Command Palette (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Check if fullscreen is supported
   const isFullscreenSupported = typeof document !== 'undefined' && 
@@ -249,7 +263,21 @@ const Navbar = ({
       </div>
 
       {/* Right section */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4 sm:gap-6">
+        {/* Quick Command Palette Trigger */}
+        <button
+          type="button"
+          onClick={() => setIsCommandPaletteOpen(true)}
+          className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/80 text-xs text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
+          title="Search or execute commands (Ctrl+K)"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span className="font-medium text-slate-600 dark:text-zinc-300">Quick Search...</span>
+          <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[10px] font-mono shadow-2xs">
+            ⌘K
+          </kbd>
+        </button>
+
         {/* Tracking Page */}
         <Link
           href="/tracking"
@@ -380,6 +408,12 @@ const Navbar = ({
       <BulkUploadModal
         isOpen={showBulkUpload}
         onClose={() => setShowBulkUpload(false)}
+      />
+
+      {/* Global Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
       />
     </header>
   );

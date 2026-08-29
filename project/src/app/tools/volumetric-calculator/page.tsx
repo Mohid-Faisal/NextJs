@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Package, ArrowRight, Scale, Ruler } from "lucide-react";
+import VolumetricBox3D from "@/components/VolumetricBox3D";
 
 function ToolsDisabledPage() {
   return (
@@ -211,6 +212,14 @@ export default function VolumetricCalculatorPage() {
                 exit={{ opacity: 0, y: -10 }}
                 className="mt-6 space-y-4"
               >
+                {/* 3D Box Visualizer */}
+                <VolumetricBox3D
+                  length={parseFloat(length) || 30}
+                  width={parseFloat(width) || 20}
+                  height={parseFloat(height) || 15}
+                  actualWeight={parseFloat(actualWeight) || 0}
+                />
+
                 {/* Result cards */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-2xl bg-white border border-slate-200 p-5 text-center">
