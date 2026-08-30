@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
+    const isAllLimit = searchParams.get('limit')?.toLowerCase() === 'all' || searchParams.get('limit')?.toLowerCase() === 'none';
     const { take: limit } = parseListPaging(searchParams, 1000);
 
     const whereClause: any = orgWhere(session);
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         date: 'desc',
       },
-      ...(limit && { take: limit }),
+      ...(isAllLimit ? {} : limit ? { take: limit } : {}),
     });
 
     const transformedEntries = journalEntries.flatMap(entry => 
