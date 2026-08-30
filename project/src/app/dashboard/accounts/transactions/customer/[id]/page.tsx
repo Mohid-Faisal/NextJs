@@ -533,6 +533,7 @@ export default function CustomerTransactionsPage() {
               table { 
                 border-collapse: collapse; 
                 width: 100%; 
+                table-layout: fixed;
                 margin: 0;
                 background-color: #fff;
                 border: 1px solid #ccc;
@@ -545,7 +546,7 @@ export default function CustomerTransactionsPage() {
                 background-color: #4a5568 !important;
                 color: white;
                 font-weight: 600;
-                padding: 10px 8px;
+                padding: 8px 6px;
                 text-align: left;
                 border: 1px solid #2d3748;
                 font-size: 11px;
@@ -555,12 +556,17 @@ export default function CustomerTransactionsPage() {
                 vertical-align: middle;
               }
               td { 
-                padding: 8px;
+                padding: 6px 6px;
                 text-align: left;
                 border: 1px solid #e2e8f0;
                 font-size: 11px;
                 color: #2d3748;
                 vertical-align: middle;
+                word-break: normal;
+                overflow-wrap: break-word;
+              }
+              td.desc-cell {
+                line-height: 1.35;
               }
               td:first-child {
                 white-space: nowrap;
@@ -576,10 +582,12 @@ export default function CustomerTransactionsPage() {
               }
               .amount-cell {
                 text-align: right;
+                white-space: nowrap;
               }
               .balance-cell {
                 text-align: right;
                 font-weight: 600;
+                white-space: nowrap;
               }
               .total-section {
                 margin-top: 25px;
@@ -597,7 +605,7 @@ export default function CustomerTransactionsPage() {
               @media print {
                 html, body { 
                   margin: 0; 
-                  padding: 0;
+                  padding: 0; 
                   height: 100%;
                 }
                 body {
@@ -643,7 +651,16 @@ export default function CustomerTransactionsPage() {
               ${customerInfo}
               
               <div class="table-responsive">
-                <table>
+                <table style="table-layout: fixed; width: 100%;">
+                  <colgroup>
+                    <col style="width: 10%;">
+                    <col style="width: 8%;">
+                    <col style="width: 44%;">
+                    <col style="width: 8%;">
+                    <col style="width: 10%;">
+                    <col style="width: 10%;">
+                    <col style="width: 10%;">
+                  </colgroup>
                   <thead>
                     <tr>
                       ${headers.map((header, index) => {
@@ -660,16 +677,17 @@ export default function CustomerTransactionsPage() {
                       const isDebit = header?.toLowerCase().includes('dr.');
                       const isCredit = header?.toLowerCase().includes('cr.');
                       const isBalance = header?.toLowerCase() === 'balance';
-                      const cellClass = isDebit || isCredit ? 'amount-cell' : isBalance ? 'balance-cell' : '';
+                      const isDesc = cellIndex === 2;
+                      const cellClass = isDebit || isCredit ? 'amount-cell' : isBalance ? 'balance-cell' : isDesc ? 'desc-cell' : '';
                       return `<td class="${cellClass}">${cell}</td>`;
                     }).join('')}</tr>`).join('')}
                   </tbody>
                   <tfoot>
                     <tr style="background-color: #e2e8f0; font-weight: 700;">
-                      <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalDebit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalCredit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(finalBalance ?? 0).toLocaleString()}</td>
+                      <td colspan="4" style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
+                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalDebit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalCredit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(finalBalance ?? 0).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -959,7 +977,6 @@ export default function CustomerTransactionsPage() {
       const debit = transaction.type === "DEBIT" ? Number(transaction.amount ?? 0).toLocaleString() : "-";
       const credit = transaction.type === "CREDIT" ? Number(transaction.amount ?? 0).toLocaleString() : "-";
       
-      // Adjustments: Description | Consignee | Tracking | Shipment Date
       let baseDescription = isCustomerCreditNoteReference(transaction.reference)
         ? formatAdjustmentLedgerDescription({
             description: transaction.description,
@@ -971,28 +988,36 @@ export default function CustomerTransactionsPage() {
           ? `Consignee: ${transaction.consigneeName} | ${transaction.description}`
           : transaction.description;
 
-      if (baseDescription) {
-        // Ensure space before the pipe after Country code:
-        // "Country: UA| Type" -> "Country: UA | Type"
-        baseDescription = baseDescription.replace(
-          /Country:\s*([^|<]+)\|/g,
-          "Country: $1 |"
-        );
-        // For print, put tracking on first line and rest on second:
-        // "... | Country: ..." -> "<br>Country: ..."
-        if (baseDescription.includes(" | Country:")) {
-          baseDescription = baseDescription.replace(
-            " | Country:",
-            "<br>Country:"
+      let descriptionForExport = baseDescription || "";
+      if (isPrint) {
+        if (descriptionForExport) {
+          // Ensure space before the pipe after Country code:
+          // "Country: UA| Type" -> "Country: UA | Type"
+          descriptionForExport = descriptionForExport.replace(
+            /Country:\s*([^|<]+)\|/g,
+            "Country: $1 |"
           );
+          // Keep Tracking label and tracking number strictly together
+          descriptionForExport = descriptionForExport.replace(
+            /Tracking:\s*([^\s|<]+)/g,
+            '<span style="white-space: nowrap;">Tracking: $1</span>'
+          );
+          // For print, put tracking on first line and rest on second:
+          // "... | Country: ..." -> "<br>Country: ..."
+          if (descriptionForExport.includes(" | Country:")) {
+            descriptionForExport = descriptionForExport.replace(
+              " | Country:",
+              "<br>Country:"
+            );
+          }
         }
-      }
 
-      // Make pipe characters bold in description
-      const descriptionWithBoldPipes = (baseDescription || "").replace(
-        /\|/g,
-        "<b>|</b>"
-      );
+        // Make pipe characters bold in description
+        descriptionForExport = descriptionForExport.replace(
+          /\|/g,
+          "<b>|</b>"
+        );
+      }
       
       // Format balance: show "-" if balance is 0, otherwise show inverted balance
       const balance = Number(transaction.newBalance ?? 0);
@@ -1001,7 +1026,7 @@ export default function CustomerTransactionsPage() {
       return [
         formattedDate,
         transaction.invoice || "-",
-        descriptionWithBoldPipes,
+        descriptionForExport,
         transaction.reference || "-",
         debit,
         credit,
@@ -1497,28 +1522,28 @@ export default function CustomerTransactionsPage() {
                       <td className="px-4 py-3 font-medium">
                         {transaction.type === "DEBIT" ? (
                           <span className="text-red-600 dark:text-red-400">
-                            {transaction.amount.toLocaleString()}
+                            {Number(transaction.amount || 0).toLocaleString()}
                           </span>
                         ) : "-"}
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {transaction.type === "CREDIT" ? (
                           <span className="text-green-600 dark:text-green-400">
-                            {transaction.amount.toLocaleString()}
+                            {Number(transaction.amount || 0).toLocaleString()}
                           </span>
                         ) : "-"}
                       </td>
                       <td className="px-4 py-3">
                         <span
                           className={
-                            transaction.newBalance > 0
+                            Number(transaction.newBalance || 0) > 0
                               ? "text-red-600 dark:text-red-400"
-                              : transaction.newBalance < 0
+                              : Number(transaction.newBalance || 0) < 0
                               ? "text-green-600 dark:text-green-400"
                               : "text-gray-600 dark:text-gray-400"
                           }
                         >
-                          {transaction.newBalance.toLocaleString()}
+                          {Number(transaction.newBalance || 0).toLocaleString()}
                         </span>
                       </td>
                     </tr>
