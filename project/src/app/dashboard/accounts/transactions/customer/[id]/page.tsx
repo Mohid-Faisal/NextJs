@@ -667,9 +667,9 @@ export default function CustomerTransactionsPage() {
                   <tfoot>
                     <tr style="background-color: #e2e8f0; font-weight: 700;">
                       <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(totalDebit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(totalCredit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(finalBalance ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalDebit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalCredit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(finalBalance ?? 0).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -910,7 +910,7 @@ export default function CustomerTransactionsPage() {
     }
   };
 
-  const getTransactionExportData = (transactions: Transaction[]) => {
+  const getTransactionExportData = (transactions: Transaction[], isPrint = false) => {
     const headers = ["Date", "Invoice", "Description", "Ref.", "Dr. (Rs.)", "Cr. (Rs.)", "Balance"];
     const data = transactions.map(transaction => {
       let voucherDateToUse: string;
@@ -940,7 +940,10 @@ export default function CustomerTransactionsPage() {
       
       let formattedDate: string;
       try {
-        formattedDate = format(parseISO(voucherDateToUse), "dd/MM/yy HH:mm");
+        const dateObj = parseISO(voucherDateToUse);
+        const datePart = format(dateObj, "dd/MM/yy");
+        const timePart = format(dateObj, "HH:mm");
+        formattedDate = isPrint ? `${datePart}<br>${timePart}` : `${datePart} ${timePart}`;
       } catch (e) {
         const date = new Date(voucherDateToUse);
         const day = String(date.getDate()).padStart(2, '0');
@@ -948,11 +951,13 @@ export default function CustomerTransactionsPage() {
         const year = String(date.getFullYear()).slice(-2);
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
-        formattedDate = `${day}/${month}/${year} ${hours}:${minutes}`;
+        const datePart = `${day}/${month}/${year}`;
+        const timePart = `${hours}:${minutes}`;
+        formattedDate = isPrint ? `${datePart}<br>${timePart}` : `${datePart} ${timePart}`;
       }
       
-      const debit = transaction.type === "DEBIT" ? (transaction.amount ?? 0).toLocaleString() : "-";
-      const credit = transaction.type === "CREDIT" ? (transaction.amount ?? 0).toLocaleString() : "-";
+      const debit = transaction.type === "DEBIT" ? Number(transaction.amount ?? 0).toLocaleString() : "-";
+      const credit = transaction.type === "CREDIT" ? Number(transaction.amount ?? 0).toLocaleString() : "-";
       
       // Adjustments: Description | Consignee | Tracking | Shipment Date
       let baseDescription = isCustomerCreditNoteReference(transaction.reference)
@@ -990,7 +995,7 @@ export default function CustomerTransactionsPage() {
       );
       
       // Format balance: show "-" if balance is 0, otherwise show inverted balance
-      const balance = transaction.newBalance ?? 0;
+      const balance = Number(transaction.newBalance ?? 0);
       const formattedBalance = balance === 0 ? "-" : (-balance).toLocaleString();
       
       return [
@@ -1007,7 +1012,7 @@ export default function CustomerTransactionsPage() {
   };
 
   const handleExportExcel = () => {
-    const { headers, data } = getTransactionExportData(sortedTransactions);
+    const { headers, data } = getTransactionExportData(sortedTransactions, false);
     exportToExcel(data, headers, 'customer_transactions');
   };
 
@@ -1070,21 +1075,21 @@ export default function CustomerTransactionsPage() {
     
     // Calculate starting balance (balance before the first transaction in the period)
     const startingBalance = sortedForExport.length > 0 
-      ? (sortedForExport[0].previousBalance ?? 0)
-      : (customer?.currentBalance ?? 0);
+      ? Number(sortedForExport[0].previousBalance ?? 0)
+      : Number(customer?.currentBalance ?? 0);
     
-    // Calculate totals
+    // Calculate totals with explicit Number conversion
     const totalDebit = sortedForExport
       .filter(t => t.type === "DEBIT")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalCredit = sortedForExport
       .filter(t => t.type === "CREDIT")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const finalBalance = sortedForExport.length > 0 
-      ? (sortedForExport[sortedForExport.length - 1].newBalance ?? 0)
-      : startingBalance;
+      ? -(Number(sortedForExport[sortedForExport.length - 1].newBalance ?? 0))
+      : -(Number(startingBalance ?? 0));
     
-    const { headers, data } = getTransactionExportData(sortedForExport);
+    const { headers, data } = getTransactionExportData(sortedForExport, true);
     await exportToPrint(data, headers, 'Customer Transactions Report', total, startingBalance, totalDebit, totalCredit, finalBalance);
   };
 
