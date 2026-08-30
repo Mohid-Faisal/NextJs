@@ -839,7 +839,7 @@ export async function updateJournalEntriesForInvoice(
   try {
     const updates = [];
     const effectiveCustomerId = newCustomerId || oldCustomerId;
-    if (effectiveCustomerId && newAmount > 0) {
+    if (effectiveCustomerId) {
       updates.push(
         updateCustomerJournalEntry(
           prisma,
@@ -854,7 +854,7 @@ export async function updateJournalEntriesForInvoice(
     }
 
     const effectiveVendorId = newVendorId || oldVendorId;
-    if (effectiveVendorId && newAmount > 0) {
+    if (effectiveVendorId) {
       updates.push(
         updateVendorJournalEntry(
           prisma,
@@ -902,27 +902,33 @@ export async function updateCustomerJournalEntry(
     });
 
     if (existingEntry) {
-      await prisma.journalEntry.update({
-        where: { id: existingEntry.id },
-        data: {
-          description: description,
-          totalDebit: newAmount,
-          totalCredit: newAmount,
-          updatedAt: new Date()
-        }
-      });
+      if (newAmount <= 0) {
+        await prisma.journalEntry.delete({
+          where: { id: existingEntry.id }
+        });
+      } else {
+        await prisma.journalEntry.update({
+          where: { id: existingEntry.id },
+          data: {
+            description: description,
+            totalDebit: newAmount,
+            totalCredit: newAmount,
+            updatedAt: new Date()
+          }
+        });
 
-      for (const line of existingEntry.lines) {
-        if (line.debitAmount >= 0 && line.description.includes('Debit')) {
-          await prisma.journalEntryLine.update({
-            where: { id: line.id },
-            data: { debitAmount: newAmount }
-          });
-        } else if (line.creditAmount >= 0 && line.description.includes('Credit')) {
-          await prisma.journalEntryLine.update({
-            where: { id: line.id },
-            data: { creditAmount: newAmount }
-          });
+        for (const line of existingEntry.lines) {
+          if (line.debitAmount > 0 || (line.description && line.description.includes('Debit'))) {
+            await prisma.journalEntryLine.update({
+              where: { id: line.id },
+              data: { debitAmount: newAmount }
+            });
+          } else if (line.creditAmount > 0 || (line.description && line.description.includes('Credit'))) {
+            await prisma.journalEntryLine.update({
+              where: { id: line.id },
+              data: { creditAmount: newAmount }
+            });
+          }
         }
       }
     } else if (newAmount > 0) {
@@ -973,27 +979,33 @@ export async function updateVendorJournalEntry(
     });
 
     if (existingEntry) {
-      await prisma.journalEntry.update({
-        where: { id: existingEntry.id },
-        data: {
-          description: description,
-          totalDebit: newAmount,
-          totalCredit: newAmount,
-          updatedAt: new Date()
-        }
-      });
+      if (newAmount <= 0) {
+        await prisma.journalEntry.delete({
+          where: { id: existingEntry.id }
+        });
+      } else {
+        await prisma.journalEntry.update({
+          where: { id: existingEntry.id },
+          data: {
+            description: description,
+            totalDebit: newAmount,
+            totalCredit: newAmount,
+            updatedAt: new Date()
+          }
+        });
 
-      for (const line of existingEntry.lines) {
-        if (line.debitAmount >= 0 && line.description.includes('Debit')) {
-          await prisma.journalEntryLine.update({
-            where: { id: line.id },
-            data: { debitAmount: newAmount }
-          });
-        } else if (line.creditAmount >= 0 && line.description.includes('Credit')) {
-          await prisma.journalEntryLine.update({
-            where: { id: line.id },
-            data: { creditAmount: newAmount }
-          });
+        for (const line of existingEntry.lines) {
+          if (line.debitAmount > 0 || (line.description && line.description.includes('Debit'))) {
+            await prisma.journalEntryLine.update({
+              where: { id: line.id },
+              data: { debitAmount: newAmount }
+            });
+          } else if (line.creditAmount > 0 || (line.description && line.description.includes('Credit'))) {
+            await prisma.journalEntryLine.update({
+              where: { id: line.id },
+              data: { creditAmount: newAmount }
+            });
+          }
         }
       }
     } else if (newAmount > 0) {
