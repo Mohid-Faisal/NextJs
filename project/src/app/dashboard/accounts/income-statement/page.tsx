@@ -138,7 +138,7 @@ export default function IncomeStatementPage() {
         periods = months3.map(month => ({
           label: format(month, 'MMM yyyy'),
           startDate: startOfMonth(month),
-          endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+          endDate: endOfMonth(month)
         }));
         break;
       case 'last6month':
@@ -147,19 +147,17 @@ export default function IncomeStatementPage() {
         periods = months6.map(month => ({
           label: format(month, 'MMM yyyy'),
           startDate: startOfMonth(month),
-          endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+          endDate: endOfMonth(month)
         }));
         break;
       case 'year':
         // Last 12 months from today
-        const twelveMonthsAgo = new Date(now);
-        twelveMonthsAgo.setMonth(now.getMonth() - 12);
-        startDate = new Date(twelveMonthsAgo.getFullYear(), twelveMonthsAgo.getMonth(), twelveMonthsAgo.getDate());
+        startDate = startOfMonth(subMonths(now, 11));
         const monthsYear = eachMonthOfInterval({ start: startDate, end: endDate });
         periods = monthsYear.map(month => ({
           label: format(month, 'MMM yyyy'),
           startDate: startOfMonth(month),
-          endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+          endDate: endOfMonth(month)
         }));
         break;
       case 'financialyear':
@@ -172,7 +170,7 @@ export default function IncomeStatementPage() {
         periods = monthsFY.map(month => ({
           label: format(month, 'MMM yyyy'),
           startDate: startOfMonth(month),
-          endDate: month.getTime() === endOfMonth(now).getTime() ? endDate : endOfMonth(month)
+          endDate: endOfMonth(month)
         }));
         break;
       case 'custom':
@@ -273,8 +271,8 @@ export default function IncomeStatementPage() {
     // toISOString().slice(0,10) would use UTC and can shift to the previous/next day.
     switch (periodType) {
       case 'year':
-        startDate = format(startOfYear(now), 'yyyy-MM-dd');
-        endDate = format(endOfYear(now), 'yyyy-MM-dd');
+        startDate = format(startOfMonth(subMonths(now, 11)), 'yyyy-MM-dd');
+        endDate = format(endOfMonth(now), 'yyyy-MM-dd');
         break;
       case 'month':
         // Current month only: 1st to last day of that month (e.g. 1 Jan - 31 Jan)
@@ -282,14 +280,12 @@ export default function IncomeStatementPage() {
         endDate = format(endOfMonth(now), 'yyyy-MM-dd');
         break;
       case 'last3month':
-        const threeMonthsAgo = subMonths(now, 3);
-        startDate = format(startOfMonth(threeMonthsAgo), 'yyyy-MM-dd');
-        endDate = format(now, 'yyyy-MM-dd');
+        startDate = format(startOfMonth(subMonths(now, 2)), 'yyyy-MM-dd');
+        endDate = format(endOfMonth(now), 'yyyy-MM-dd');
         break;
       case 'last6month':
-        const sixMonthsAgo = subMonths(now, 6);
-        startDate = format(startOfMonth(sixMonthsAgo), 'yyyy-MM-dd');
-        endDate = format(now, 'yyyy-MM-dd');
+        startDate = format(startOfMonth(subMonths(now, 5)), 'yyyy-MM-dd');
+        endDate = format(endOfMonth(now), 'yyyy-MM-dd');
         break;
       case 'financialyear':
         if (now.getMonth() >= 6) {
@@ -351,47 +347,61 @@ export default function IncomeStatementPage() {
     try {
       setLoading(true);
       const subPeriods = generateSubPeriods();
-      const periodsDataArray: PeriodData[] = [];
 
-      for (const period of subPeriods) {
-        // Format dates as YYYY-MM-DD without timezone conversion
-        const formatDateStr = (date: Date) => {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        };
-        const startDateStr = formatDateStr(period.startDate);
-        const endDateStr = formatDateStr(period.endDate);
-        
-        const response = await fetch(`/api/account-books?limit=all&dateFrom=${startDateStr}&dateTo=${endDateStr}`);
-        const data = await response.json();
-        
-        if (data.success && data.payments) {
-          const balances = calculateAccountBalances(data.payments);
-          const revenues = balances.filter(acc => acc.category === 'Revenue');
-          const expenses = balances.filter(acc => acc.category === 'Expense');
-          const vendorExpense = expenses.find(acc => acc.accountName === 'Vendor Expense');
-          const vendorExpenseAmount = vendorExpense ? vendorExpense.balance : 0;
-          
-          const totalRevenue = revenues.reduce((sum, acc) => sum + acc.balance, 0);
-          const totalExpenses = expenses.reduce((sum, acc) => sum + acc.balance, 0);
-          const grossProfit = totalRevenue - vendorExpenseAmount;
-          const netIncome = totalRevenue - totalExpenses;
+      // Format dates as YYYY-MM-DD without timezone conversion
+      const formatDateStr = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
 
-          periodsDataArray.push({
+      const periodsDataArray: PeriodData[] = await Promise.all(
+        subPeriods.map(async (period) => {
+          const startDateStr = formatDateStr(period.startDate);
+          const endDateStr = formatDateStr(period.endDate);
+
+          const response = await fetch(`/api/account-books?limit=all&dateFrom=${startDateStr}&dateTo=${endDateStr}`);
+          const data = await response.json();
+
+          if (data.success && data.payments) {
+            const balances = calculateAccountBalances(data.payments);
+            const revenues = balances.filter(acc => acc.category === 'Revenue');
+            const expenses = balances.filter(acc => acc.category === 'Expense');
+            const vendorExpense = expenses.find(acc => acc.accountName === 'Vendor Expense');
+            const vendorExpenseAmount = vendorExpense ? vendorExpense.balance : 0;
+
+            const totalRevenue = revenues.reduce((sum, acc) => sum + acc.balance, 0);
+            const totalExpenses = expenses.reduce((sum, acc) => sum + acc.balance, 0);
+            const grossProfit = totalRevenue - vendorExpenseAmount;
+            const netIncome = totalRevenue - totalExpenses;
+
+            return {
+              periodLabel: period.label,
+              startDate: startDateStr,
+              endDate: endDateStr,
+              revenues,
+              expenses,
+              totalRevenue,
+              totalExpenses,
+              grossProfit,
+              netIncome
+            };
+          }
+
+          return {
             periodLabel: period.label,
             startDate: startDateStr,
             endDate: endDateStr,
-            revenues,
-            expenses,
-            totalRevenue,
-            totalExpenses,
-            grossProfit,
-            netIncome
-          });
-        }
-      }
+            revenues: [],
+            expenses: [],
+            totalRevenue: 0,
+            totalExpenses: 0,
+            grossProfit: 0,
+            netIncome: 0
+          };
+        })
+      );
 
       setPeriodsData(periodsDataArray);
       
@@ -592,7 +602,7 @@ export default function IncomeStatementPage() {
     const endDate = new Date(incomeStatementData.period.endDate);
     
     if (periodType === 'year') {
-      return `for year ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+      return `for last 12 months ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
     } else if (periodType === 'month') {
       return `for month ended ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
     } else if (periodType === 'last3month') {
