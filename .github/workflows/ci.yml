@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
-        run: npx prisma generate
+        run: npm run db:generate
 
       - name: Unit tests (Vitest)
         run: npm test
