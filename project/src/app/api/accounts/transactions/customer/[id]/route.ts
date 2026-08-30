@@ -326,6 +326,55 @@ export async function GET(
         }
       );
 
+      // Sort all customer transactions chronologically (oldest -> newest) to compute exact running balance
+      const chronologicalAll = [...transactionsWithVoucherDatesList].sort((a, b) => {
+        const dateDiff = a.voucherDate.getTime() - b.voucherDate.getTime();
+        if (dateDiff !== 0) return dateDiff;
+        if (a.type === "DEBIT" && b.type === "CREDIT") return -1;
+        if (a.type === "CREDIT" && b.type === "DEBIT") return 1;
+        const timeDiff = a.createdAt.getTime() - b.createdAt.getTime();
+        if (timeDiff !== 0) return timeDiff;
+        if (a.invoice && b.invoice) {
+          const invA = parseInt(a.invoice, 10);
+          const invB = parseInt(b.invoice, 10);
+          if (!Number.isNaN(invA) && !Number.isNaN(invB)) {
+            return invA - invB;
+          }
+          return a.invoice.localeCompare(b.invoice);
+        }
+        return 0;
+      });
+
+      const startingBalanceTransaction = chronologicalAll.find(
+        (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
+      );
+
+      let runningBal = 0;
+      if (startingBalanceTransaction) {
+        runningBal = startingBalanceTransaction.type === 'DEBIT' 
+          ? -Number(startingBalanceTransaction.amount || 0)
+          : Number(startingBalanceTransaction.amount || 0);
+      }
+
+      const balanceByTxId = new Map<number, { previousBalance: number; newBalance: number }>();
+      if (startingBalanceTransaction) {
+        balanceByTxId.set(startingBalanceTransaction.id, {
+          previousBalance: 0,
+          newBalance: runningBal
+        });
+      }
+
+      for (const t of chronologicalAll) {
+        if (t.reference && t.reference.startsWith("STARTING-BALANCE")) continue;
+        const prev = runningBal;
+        const next = t.type === 'CREDIT' ? prev + Number(t.amount || 0) : prev - Number(t.amount || 0);
+        runningBal = next;
+        balanceByTxId.set(t.id, {
+          previousBalance: prev,
+          newBalance: next
+        });
+      }
+
       let filteredTransactionsList = transactionsWithVoucherDatesList;
       if (fromDate || toDate) {
         const fromDateObj = fromDate ? new Date(fromDate) : null;
@@ -727,8 +776,11 @@ export async function GET(
             }
           }
 
+          const computedBal = balanceByTxId.get(transaction.id);
           return {
             ...transaction,
+            previousBalance: computedBal !== undefined ? computedBal.previousBalance : transaction.previousBalance,
+            newBalance: computedBal !== undefined ? computedBal.newBalance : transaction.newBalance,
             invoice: resolvedInvoice,
             shipmentInfo,
             shipmentDate,
@@ -745,7 +797,7 @@ export async function GET(
           id: customer.id,
           CompanyName: customer.CompanyName,
           PersonName: customer.PersonName,
-          currentBalance: Number(customer.currentBalance || 0),
+          currentBalance: runningBal,
           creditLimit: Number(customer.creditLimit || 0),
           Address: customer.Address,
           City: customer.City,
