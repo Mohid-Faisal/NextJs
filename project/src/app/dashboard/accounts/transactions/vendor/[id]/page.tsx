@@ -408,18 +408,17 @@ export default function VendorTransactionsPage() {
         }
         return 'N/A';
       };
-
       const vendorInfo = vendor ? `
-        <div class="invoice-info">
-          <div class="invoice-col">
-            <address>
-              <strong>${vendor.CompanyName || 'Vendor Name'}</strong>${vendor.PersonName ? `<br>Attn: ${vendor.PersonName}` : ''}${(vendor as any).Address ? `<br>${(vendor as any).Address}` : ''}${(vendor as any).City || (vendor as any).Country ? `<br>${(vendor as any).City || ''}${(vendor as any).City && (vendor as any).Country ? ', ' : ''}${(vendor as any).Country || ''}` : ''}
+        <div class="invoice-info" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div class="invoice-col" style="flex: 1;">
+            <address style="font-style: normal; line-height: 1.25; margin: 0;">
+              <strong style="font-size: 15px; color: #333;">${vendor.CompanyName || 'Vendor Name'}</strong>${vendor.PersonName ? `<br>Attn: ${vendor.PersonName}` : ''}${(vendor as any).Address ? `<br>${(vendor as any).Address}` : ''}${(vendor as any).City || (vendor as any).Country ? `<br>${(vendor as any).City || ''}${(vendor as any).City && (vendor as any).Country ? ', ' : ''}${(vendor as any).Country || ''}` : ''}
             </address>
           </div>
-          <div class="invoice-col" style="text-align: right;">
-            <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;">${vendor.id || 'N/A'}</span></p>
-            <p style="margin-bottom: 0;"><b>Period: </b><span style="float: right;">${formatDateRange()}</span></p>
-            <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${Number(startingBalance ?? 0).toLocaleString()}</span></p>
+          <div class="invoice-col" style="text-align: right; font-size: 13px;">
+            <p style="margin: 0 0 2px 0;"><b>Account Id:</b> ${vendor.id || 'N/A'}</p>
+            <p style="margin: 0 0 2px 0;"><b>Period:</b> ${formatDateRange()}</p>
+            <p style="margin: 10px 0 0 0;"><b>Starting Balance:</b> ${Number(startingBalance ?? 0).toLocaleString()}</p>
           </div>
         </div>
       ` : '';
@@ -467,15 +466,11 @@ export default function VendorTransactionsPage() {
                 font-family: Arial, sans-serif; 
                 margin: 0;
                 padding: 0;
-                height: 100%;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
               }
               body {
-                display: flex;
-                flex-direction: column;
-                min-height: 100vh;
-                padding: 20px 10px;
+                padding: 10px 10px;
               }
               .header-section {
                 display: flex;
@@ -489,7 +484,7 @@ export default function VendorTransactionsPage() {
                 align-items: center;
               }
               .logo-section img {
-                width: 200px;
+                width: 180px;
                 height: auto;
                 max-width: 100%;
               }
@@ -497,54 +492,18 @@ export default function VendorTransactionsPage() {
                 text-align: right;
               }
               .report-title {
-                font-size: 20px;
+                font-size: 18px;
                 font-weight: bold;
                 color: #333;
-                margin-bottom: 10px;
+                margin-bottom: 6px;
               }
               .report-date {
                 color: #666;
-                font-size: 14px;
-              }
-              .invoice-info {
-                margin: 0;
-                display: flex;
-                justify-content: space-between;
-                border-bottom: none;
-              }
-              .invoice-col {
-                flex: 1;
-              }
-              .invoice-col address {
-                font-style: normal;
-                line-height: 1.2;
-                margin: 0;
-                padding: 0;
-              }
-              .invoice-col address strong {
-                font-size: 16px;
-                color: #333;
-                display: inline;
-                margin: 0;
-                padding: 0;
-              }
-              .invoice-col address br {
-                line-height: 1;
-                margin: 0;
-                padding: 0;
-              }
-              .invoice-col p {
-                margin: 5px 0;
-                font-size: 14px;
-                color: #666;
-              }
-              .invoice-col p b {
-                color: #333;
+                font-size: 12px;
               }
               .table-responsive {
                 width: 100%;
-                margin-top: 20px;
-                overflow-x: auto;
+                margin-top: 15px;
               }
               table { 
                 border-collapse: collapse; 
@@ -553,7 +512,6 @@ export default function VendorTransactionsPage() {
                 margin: 0;
                 background-color: #fff;
                 border: 1px solid #ccc;
-                border-top: none;
               }
               thead {
                 background-color: #4a5568 !important;
@@ -562,29 +520,29 @@ export default function VendorTransactionsPage() {
                 background-color: #4a5568 !important;
                 color: white;
                 font-weight: 600;
-                padding: 8px 6px;
+                padding: 6px 4px;
                 text-align: left;
                 border: 1px solid #2d3748;
-                font-size: 11px;
+                font-size: 10px;
                 text-transform: none;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.3px;
                 white-space: nowrap;
                 vertical-align: middle;
               }
               td { 
-                padding: 6px 6px;
+                padding: 5px 4px;
                 text-align: left;
                 border: 1px solid #e2e8f0;
-                font-size: 11px;
+                font-size: 9.5px;
                 color: #2d3748;
                 vertical-align: middle;
                 word-break: normal;
                 overflow-wrap: break-word;
               }
               td.desc-cell {
-                line-height: 1.35;
+                line-height: 1.3;
               }
-              td:first-child {
+              td.date-cell, td.inv-cell, td.ref-cell {
                 white-space: nowrap;
               }
               tbody tr {
@@ -605,41 +563,25 @@ export default function VendorTransactionsPage() {
                 font-weight: 600;
                 white-space: nowrap;
               }
-              .total-section {
-                margin-top: 25px;
-                padding: 12px 20px;
-                background-color: #e2e8f0;
-                text-align: right;
-                font-weight: 700;
-                font-size: 14px;
-                border: 1px solid #cbd5e0;
-                border-radius: 4px;
-              }
               .content-wrapper {
-                flex: 1;
+                width: 100%;
               }
               @media print {
                 html, body { 
                   margin: 0; 
                   padding: 0; 
-                  height: 100%;
                 }
                 body {
-                  display: flex;
-                  flex-direction: column;
-                  min-height: 100vh;
-                  padding: 15px 5px;
-                }
-                .content-wrapper {
-                  flex: 1;
+                  display: block;
+                  padding: 0;
                 }
                 .header-section { page-break-after: avoid; }
-                table { page-break-inside: auto; }
+                table { page-break-inside: auto; width: 100% !important; }
                 tr { page-break-inside: avoid; page-break-after: auto; }
                 thead { display: table-header-group; }
                 tfoot { display: table-footer-group; }
                 @page {
-                  margin: 0.5in 0.25in;
+                  margin: 0.35in 0.25in;
                   size: A4;
                 }
               }
@@ -649,7 +591,7 @@ export default function VendorTransactionsPage() {
             <div class="content-wrapper">
               <div class="header-section">
                 <div class="logo-section">
-                  ${logoBase64 ? `<img src="${logoBase64}" alt="PSS Logo" style="width: 200px; height: auto; max-width: 100%;">` : '<img src="/logo_final.png" alt="PSS Logo" onerror="this.style.display=\'none\'" style="width: 200px; height: auto; max-width: 100%;">'}
+                  ${logoBase64 ? `<img src="${logoBase64}" alt="PSS Logo" style="width: 180px; height: auto; max-width: 100%;">` : '<img src="/logo_final.png" alt="PSS Logo" onerror="this.style.display=\'none\'" style="width: 180px; height: auto; max-width: 100%;">'}
                 </div>
                 <div class="report-info">
                   <div class="report-title">${title}</div>
@@ -662,20 +604,20 @@ export default function VendorTransactionsPage() {
                   })()}</div>
                 </div>
               </div>
-              <hr style="border: none; border-top: 2px solid #ddd; margin: 16px 0;">
+              <hr style="border: none; border-top: 2px solid #ddd; margin: 12px 0;">
               
               ${vendorInfo}
               
               <div class="table-responsive">
                 <table style="table-layout: fixed; width: 100%;">
                   <colgroup>
-                    <col style="width: 10%;">
-                    <col style="width: 8%;">
-                    <col style="width: 44%;">
-                    <col style="width: 8%;">
-                    <col style="width: 10%;">
-                    <col style="width: 10%;">
-                    <col style="width: 10%;">
+                    <col style="width: 8.5%;">
+                    <col style="width: 7%;">
+                    <col style="width: 51.5%;">
+                    <col style="width: 9.5%;">
+                    <col style="width: 7.5%;">
+                    <col style="width: 7.5%;">
+                    <col style="width: 8.5%;">
                   </colgroup>
                   <thead>
                     <tr>
@@ -694,16 +636,19 @@ export default function VendorTransactionsPage() {
                       const isCredit = header?.toLowerCase().includes('cr.');
                       const isBalance = header?.toLowerCase() === 'balance';
                       const isDesc = cellIndex === 2;
-                      const cellClass = isDebit || isCredit ? 'amount-cell' : isBalance ? 'balance-cell' : isDesc ? 'desc-cell' : '';
+                      const isRef = cellIndex === 3;
+                      const isDate = cellIndex === 0;
+                      const isInv = cellIndex === 1;
+                      const cellClass = isDebit || isCredit ? 'amount-cell' : isBalance ? 'balance-cell' : isDesc ? 'desc-cell' : isRef ? 'ref-cell' : isDate ? 'date-cell' : isInv ? 'inv-cell' : '';
                       return `<td class="${cellClass}">${cell}</td>`;
                     }).join('')}</tr>`).join('')}
                   </tbody>
                   <tfoot>
                     <tr style="background-color: #e2e8f0; font-weight: 700;">
-                      <td colspan="4" style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
-                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalDebit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalCredit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(finalBalance ?? 0).toLocaleString()}</td>
+                      <td colspan="4" style="text-align: right; padding: 6px 4px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
+                      <td style="text-align: right; padding: 6px 4px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(totalDebit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 6px 4px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(totalCredit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 6px 4px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(finalBalance ?? 0).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -1012,10 +957,10 @@ export default function VendorTransactionsPage() {
             /Country:\s*([^|<]+)\|/g,
             "Country: $1 |"
           );
-          // Keep Tracking label and tracking number strictly together
+          // Keep Tracking label and tracking number strictly together with &nbsp;
           descriptionForExport = descriptionForExport.replace(
             /Tracking:\s*([^\s|<]+)/g,
-            '<span style="white-space: nowrap;">Tracking: $1</span>'
+            "Tracking:&nbsp;$1"
           );
           // For print, put tracking on first line and rest on second:
           // "... | Country: ..." -> "<br>Country: ..."
