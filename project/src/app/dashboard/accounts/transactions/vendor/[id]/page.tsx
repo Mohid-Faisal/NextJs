@@ -419,7 +419,7 @@ export default function VendorTransactionsPage() {
           <div class="invoice-col" style="text-align: right;">
             <p style="margin-bottom: 0;"><b>Account Id: </b><span style="float: right;">${vendor.id || 'N/A'}</span></p>
             <p style="margin-bottom: 0;"><b>Period: </b><span style="float: right;">${formatDateRange()}</span></p>
-            <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${(-(startingBalance ?? 0)).toLocaleString()}</span></p>
+            <p style="margin-top: 20px; margin-bottom: 0;"><b>Starting Balance: </b><span style="float: right;">${Number(startingBalance ?? 0).toLocaleString()}</span></p>
           </div>
         </div>
       ` : '';
@@ -682,9 +682,9 @@ export default function VendorTransactionsPage() {
                   <tfoot>
                     <tr style="background-color: #e2e8f0; font-weight: 700;">
                       <td colspan="4" style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(totalDebit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(totalCredit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${(finalBalance ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalDebit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(totalCredit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 10px 8px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle;">${Number(finalBalance ?? 0).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -925,18 +925,18 @@ export default function VendorTransactionsPage() {
     }
   };
 
-  const getTransactionExportData = (transactions: Transaction[]) => {
+  const getTransactionExportData = (transactions: Transaction[], isPrint = false) => {
     const headers = ["Date", "Invoice", "Description", "Ref.", "Dr. (Rs.)", "Cr. (Rs.)", "Balance"];
     const data = transactions.map(transaction => {
-      // Determine voucher date based on transaction type
       let voucherDateToUse: string;
+      
+      // Check if this is a credit/debit note transaction
+      const isDebitNote = isVendorDebitNoteReference(transaction.reference);
       
       if (transaction.ledgerVoucherDate) {
         voucherDateToUse = transaction.ledgerVoucherDate;
-      } else if (
-        isVendorDebitNoteReference(transaction.reference) &&
-        transaction.debitNoteDate
-      ) {
+      } else if (isDebitNote && transaction.debitNoteDate) {
+        // For credit/debit note transactions: use the date from the credit/debit note
         voucherDateToUse = transaction.debitNoteDate;
       } else {
         // Check if this is a shipment transaction (DEBIT with invoice) or payment transaction (CREDIT with invoice)
@@ -957,7 +957,10 @@ export default function VendorTransactionsPage() {
       
       let formattedDate: string;
       try {
-        formattedDate = format(parseISO(voucherDateToUse), "dd/MM/yy HH:mm");
+        const dateObj = parseISO(voucherDateToUse);
+        const datePart = format(dateObj, "dd/MM/yy");
+        const timePart = format(dateObj, "HH:mm");
+        formattedDate = isPrint ? `${datePart}<br>${timePart}` : `${datePart} ${timePart}`;
       } catch (e) {
         const date = new Date(voucherDateToUse);
         const day = String(date.getDate()).padStart(2, '0');
@@ -965,7 +968,9 @@ export default function VendorTransactionsPage() {
         const year = String(date.getFullYear()).slice(-2);
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
-        formattedDate = `${day}/${month}/${year} ${hours}:${minutes}`;
+        const datePart = `${day}/${month}/${year}`;
+        const timePart = `${hours}:${minutes}`;
+        formattedDate = isPrint ? `${datePart}<br>${timePart}` : `${datePart} ${timePart}`;
       }
       
       // Adjustments: Description | Consignee | Tracking | Shipment Date
@@ -1003,9 +1008,9 @@ export default function VendorTransactionsPage() {
         "<b>|</b>"
       );
       
-      // Format balance: show "-" if balance is 0, otherwise show inverted balance
-      const balance = transaction.newBalance ?? 0;
-      const formattedBalance = balance === 0 ? "-" : (-balance).toLocaleString();
+      // Format balance: show "-" if balance is 0, otherwise show balance
+      const balance = Number(transaction.newBalance ?? 0);
+      const formattedBalance = balance === 0 ? "-" : balance.toLocaleString();
       
       return [
         formattedDate,
@@ -1013,10 +1018,10 @@ export default function VendorTransactionsPage() {
         descriptionWithBoldPipes,
         transaction.reference || "N/A",
         transaction.type === "DEBIT"
-          ? (transaction.amount ?? 0).toLocaleString()
+          ? Number(transaction.amount ?? 0).toLocaleString()
           : "-",
         transaction.type === "CREDIT"
-          ? (transaction.amount ?? 0).toLocaleString()
+          ? Number(transaction.amount ?? 0).toLocaleString()
           : "-",
         formattedBalance
       ];
@@ -1025,7 +1030,7 @@ export default function VendorTransactionsPage() {
   };
 
   const handleExportExcel = () => {
-    const { headers, data } = getTransactionExportData(sortedTransactions);
+    const { headers, data } = getTransactionExportData(sortedTransactions, false);
     exportToExcel(data, headers, 'vendor_transactions');
   };
 
@@ -1089,21 +1094,21 @@ export default function VendorTransactionsPage() {
     
     // Calculate starting balance (balance before the first transaction in the period)
     const startingBalance = sortedForExport.length > 0 
-      ? (sortedForExport[0].previousBalance ?? 0)
-      : (vendor?.currentBalance ?? 0);
+      ? Number(sortedForExport[0].previousBalance ?? 0)
+      : Number(vendor?.currentBalance ?? 0);
     
-    // Calculate totals
+    // Calculate totals with explicit Number conversion
     const totalDebit = sortedForExport
       .filter(t => t.type === "DEBIT")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalCredit = sortedForExport
       .filter(t => t.type === "CREDIT")
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const finalBalance = sortedForExport.length > 0 
-      ? (sortedForExport[sortedForExport.length - 1].newBalance ?? 0)
-      : startingBalance;
+      ? Number(sortedForExport[sortedForExport.length - 1].newBalance ?? 0)
+      : Number(startingBalance ?? 0);
     
-    const { headers, data } = getTransactionExportData(sortedForExport);
+    const { headers, data } = getTransactionExportData(sortedForExport, true);
     await exportToPrint(data, headers, 'Vendor Transactions Report', total, startingBalance, totalDebit, totalCredit, finalBalance);
   };
 
