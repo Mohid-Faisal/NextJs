@@ -49,6 +49,7 @@ type PeriodData = {
   revenues: AccountBalance[];
   expenses: AccountBalance[];
   totalRevenue: number;
+  costOfService: number;
   totalExpenses: number;
   grossProfit: number;
   netIncome: number;
@@ -58,6 +59,7 @@ type IncomeStatementData = {
   revenues: AccountBalance[];
   expenses: AccountBalance[];
   totalRevenue: number;
+  costOfService: number;
   totalExpenses: number;
   grossProfit: number;
   netIncome: number;
@@ -76,6 +78,7 @@ export default function IncomeStatementPage() {
     revenues: [],
     expenses: [],
     totalRevenue: 0,
+    costOfService: 0,
     totalExpenses: 0,
     grossProfit: 0,
     netIncome: 0,
@@ -384,6 +387,7 @@ export default function IncomeStatementPage() {
               revenues,
               expenses,
               totalRevenue,
+              costOfService: vendorExpenseAmount,
               totalExpenses,
               grossProfit,
               netIncome
@@ -397,6 +401,7 @@ export default function IncomeStatementPage() {
             revenues: [],
             expenses: [],
             totalRevenue: 0,
+            costOfService: 0,
             totalExpenses: 0,
             grossProfit: 0,
             netIncome: 0
@@ -408,6 +413,7 @@ export default function IncomeStatementPage() {
       
       // Calculate totals across all periods
       const totalRevenue = periodsDataArray.reduce((sum, p) => sum + p.totalRevenue, 0);
+      const totalCostOfService = periodsDataArray.reduce((sum, p) => sum + p.costOfService, 0);
       const totalExpenses = periodsDataArray.reduce((sum, p) => sum + p.totalExpenses, 0);
       const grossProfit = periodsDataArray.reduce((sum, p) => sum + p.grossProfit, 0);
       const netIncome = periodsDataArray.reduce((sum, p) => sum + p.netIncome, 0);
@@ -422,6 +428,7 @@ export default function IncomeStatementPage() {
         revenues: allRevenues,
         expenses: allExpenses,
         totalRevenue,
+        costOfService: totalCostOfService,
         totalExpenses,
         grossProfit,
         netIncome,
@@ -542,6 +549,7 @@ export default function IncomeStatementPage() {
       revenues,
       expenses,
       totalRevenue,
+      costOfService: vendorExpenseAmount,
       totalExpenses,
       grossProfit,
       netIncome
@@ -988,11 +996,17 @@ export default function IncomeStatementPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 lg:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-6">
               <div className="text-center">
                 <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Revenue</div>
                 <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">
                   {formatCurrency(incomeStatementData.totalRevenue)}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Cost of Service</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
+                  {formatCurrency(incomeStatementData.costOfService || 0)}
                 </div>
               </div>
               <div className="text-center">
