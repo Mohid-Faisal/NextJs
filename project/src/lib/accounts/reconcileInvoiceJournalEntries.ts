@@ -140,7 +140,7 @@ export async function reconcileInvoiceJournalEntries(
 
     let createdCount = 0;
     let updatedCount = 0;
-    const removedCount = 0;
+    let removedCount = 0;
 
     for (const inv of invoices) {
       const invNum = (inv.invoiceNumber ?? "").trim();
@@ -316,6 +316,75 @@ export async function reconcileInvoiceJournalEntries(
           updatedCount++;
         }
       }
+    }
+
+    // 4. Two-way reconciliation: Clean up orphaned Revenue / Vendor Expense JEs whose invoices were deleted
+    const jeWhere: any = {
+      organizationId: orgId,
+      lines: {
+        some: {
+          accountId: { in: [revenueAccount.id, expenseAccount.id] },
+        },
+      },
+    };
+
+    if (dateFrom || dateTo) {
+      const fromD = dateFrom ? new Date(dateFrom) : undefined;
+      const toD = dateTo ? new Date(dateTo) : undefined;
+      if (fromD && toD) {
+        jeWhere.date = { gte: fromD, lte: toD };
+      } else if (fromD) {
+        jeWhere.date = { gte: fromD };
+      } else if (toD) {
+        jeWhere.date = { lte: toD };
+      }
+    }
+
+    const candidateJEs = await prisma.journalEntry.findMany({
+      where: jeWhere,
+      select: {
+        id: true,
+        reference: true,
+      },
+    });
+
+    const existingInvoices = await prisma.invoice.findMany({
+      where: {
+        organizationId: orgId,
+      },
+      select: { invoiceNumber: true },
+    });
+
+    const existingInvoiceSet = new Set(
+      existingInvoices
+        .map((i) => i.invoiceNumber?.trim())
+        .filter((n): n is string => Boolean(n))
+    );
+
+    const orphanedJEIds: number[] = [];
+    for (const cje of candidateJEs) {
+      const ref = (cje.reference ?? "").trim();
+      if (!ref) continue;
+      const baseRef = ref.replace(/^V-/, "");
+
+      // Only clean up references matching invoice patterns (e.g. 618420 or V-618420)
+      if (/^(V-)?\d{4,8}$/.test(ref)) {
+        if (!existingInvoiceSet.has(ref) && !existingInvoiceSet.has(baseRef)) {
+          orphanedJEIds.push(cje.id);
+        }
+      }
+    }
+
+    if (orphanedJEIds.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        await tx.journalEntryLine.deleteMany({
+          where: { journalEntryId: { in: orphanedJEIds } },
+        });
+        await tx.journalEntry.deleteMany({
+          where: { id: { in: orphanedJEIds } },
+        });
+      });
+      removedCount += orphanedJEIds.length;
     }
 
     if (createdCount > 0 || updatedCount > 0 || removedCount > 0) {
