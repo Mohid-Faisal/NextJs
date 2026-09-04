@@ -295,8 +295,8 @@ export async function updateInvoiceBalance(
         where: { id: oldCustomerId }
       });
       if (oldCustomer) {
-        const previousBalance = oldCustomer.currentBalance;
-        const newBalance = previousBalance - oldAmount;
+        const previousBalance = Number(oldCustomer.currentBalance) || 0;
+        const newBalance = previousBalance + oldAmount; // Unassigning removes the debit, increasing balance
 
         await prisma.customers.update({
           where: { id: oldCustomerId },
@@ -325,8 +325,8 @@ export async function updateInvoiceBalance(
         where: { id: newCustomerId }
       });
       if (newCustomer) {
-        const previousBalance = newCustomer.currentBalance;
-        const newBalance = previousBalance + newAmount;
+        const previousBalance = Number(newCustomer.currentBalance) || 0;
+        const newBalance = previousBalance - newAmount; // Assigning adds the debit, decreasing balance
 
         await prisma.customers.update({
           where: { id: newCustomerId },
@@ -351,13 +351,12 @@ export async function updateInvoiceBalance(
     }
     customerUpdated = true;
   } else if (amountDifference !== 0 && invoice.customerId && invoice.customer) {
-    const previousBalance = invoice.customer.currentBalance;
-    const newBalance = previousBalance - amountDifference;
-
-    await prisma.customers.update({
+    const updatedCustomer = await prisma.customers.update({
       where: { id: invoice.customerId },
-      data: { currentBalance: newBalance }
+      data: { currentBalance: { increment: -amountDifference } },
+      select: { currentBalance: true }
     });
+    const currentBalanceNum = Number(updatedCustomer.currentBalance);
 
     const existingTransaction = await prisma.customerTransaction.findFirst({
       where: {
@@ -373,13 +372,15 @@ export async function updateInvoiceBalance(
     const transactionDate = invoice.shipment?.shipmentDate || new Date();
 
     if (existingTransaction) {
+      const prevBal = Number(existingTransaction.previousBalance) || 0;
+      const nextBal = prevBal - Math.abs(newAmount);
       await prisma.customerTransaction.update({
         where: { id: existingTransaction.id },
         data: {
           type: 'DEBIT',
           amount: Math.abs(newAmount),
-          previousBalance,
-          newBalance,
+          previousBalance: prevBal,
+          newBalance: nextBal,
           createdAt: transactionDate
         }
       });
@@ -392,8 +393,8 @@ export async function updateInvoiceBalance(
           description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
           reference: invoice.invoiceNumber,
           invoice: invoice.invoiceNumber,
-          previousBalance,
-          newBalance,
+          previousBalance: currentBalanceNum + amountDifference,
+          newBalance: currentBalanceNum,
           createdAt: transactionDate
         }
       });
