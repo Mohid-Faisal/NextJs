@@ -520,20 +520,20 @@ function generateInvoiceHTML(invoice: any, lineItems: any[], packages: any[], ca
                 ${String(invoice.disclaimer || 'Any discrepancy in invoice must be notified within 03 days of receipt of this invoice.You are requested to pay the invoice amount through cash payment or cross cheque in favor of "PSS" with immediate effect.').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
               </th>
               <th>Fsc Charges</th>
-              <td>PKR ${(shipment?.fuelSurcharge || invoice.fscCharges || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td>PKR ${(Number(invoice.fscCharges) || Number(shipment?.fuelSurcharge) || Number(calculatedValues?.fuelSurcharge) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
             
             <tr>
               <th class="">Discount</th>
-              <td>PKR ${(shipment?.discount || invoice.discount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td>PKR ${(Number(invoice.discount) || Number(shipment?.discount) || Number(calculatedValues?.discount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
             
             <tr>
               <th style="font-size: 20px;"> Total</th>
-              <td style="font-size: 20px;"><b>PKR ${vendor ? 
-                (invoice.totalAmount || calculatedValues.vendorPrice || shipment?.totalCost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) :
-                (invoice.totalAmount || calculatedValues.total || shipment?.totalCost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-              }</b></td>
+              <td style="font-size: 20px;"><b>PKR ${Number(vendor ? 
+                (invoice.totalAmount || calculatedValues.vendorPrice || shipment?.totalCost || 0) :
+                (invoice.totalAmount || calculatedValues.total || shipment?.totalCost || 0)
+              ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></td>
             </tr>
             
           </tfoot>

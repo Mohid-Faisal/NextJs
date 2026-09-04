@@ -142,9 +142,42 @@ export async function PUT(
           if (body.shipment.trackingId) shipmentUpdateData.trackingId = body.shipment.trackingId;
           if (body.shipment.destination) shipmentUpdateData.destination = body.shipment.destination;
           if (body.referenceNumber !== undefined) shipmentUpdateData.referenceNumber = body.referenceNumber;
-          if (body.discount !== undefined) shipmentUpdateData.discount = parseFloat(body.discount) || 0;
+          if (body.discount !== undefined || body.shipment.discount !== undefined) {
+            shipmentUpdateData.discount = parseFloat(body.discount ?? body.shipment.discount) || 0;
+          }
+          if (body.fscCharges !== undefined || body.shipment.fuelSurcharge !== undefined) {
+            shipmentUpdateData.fuelSurcharge = parseFloat(body.fscCharges ?? body.shipment.fuelSurcharge) || 0;
+          }
           if (body.shipment.packages !== undefined) shipmentUpdateData.packages = body.shipment.packages;
           if (body.shipment.calculatedValues !== undefined) shipmentUpdateData.calculatedValues = body.shipment.calculatedValues;
+        } else {
+          if (body.discount !== undefined) shipmentUpdateData.discount = parseFloat(body.discount) || 0;
+          if (body.fscCharges !== undefined) shipmentUpdateData.fuelSurcharge = parseFloat(body.fscCharges) || 0;
+        }
+
+        // Synchronize calculatedValues with FSC, discount, and totals
+        const existingCalc = shipmentUpdateData.calculatedValues || currentInvoice.shipment?.calculatedValues;
+        if (existingCalc) {
+          try {
+            const calc = typeof existingCalc === 'string' ? JSON.parse(existingCalc) : { ...existingCalc };
+            if (body.fscCharges !== undefined || body.shipment?.fuelSurcharge !== undefined) {
+              calc.fuelSurcharge = parseFloat(body.fscCharges ?? body.shipment?.fuelSurcharge) || 0;
+            }
+            if (body.discount !== undefined || body.shipment?.discount !== undefined) {
+              calc.discount = parseFloat(body.discount ?? body.shipment?.discount) || 0;
+            }
+            if (amountChanged) {
+              if (isVendor) {
+                calc.cos = newAmount;
+                calc.vendorPrice = newAmount;
+              } else {
+                calc.total = newAmount;
+              }
+            }
+            shipmentUpdateData.calculatedValues = calc;
+          } catch (e) {
+            console.error("Error updating calculatedValues for invoice edit:", e);
+          }
         }
 
         // Update pricing fields when invoice amount changes
@@ -152,19 +185,6 @@ export async function PUT(
           if (isVendor) {
             // Editing a Vendor invoice updates the shipment's Cost of Service (COS)
             shipmentUpdateData.cos = newAmount;
-
-            // Also synchronize calculatedValues if present
-            const existingCalc = shipmentUpdateData.calculatedValues || currentInvoice.shipment?.calculatedValues;
-            if (existingCalc) {
-              try {
-                const calc = typeof existingCalc === 'string' ? JSON.parse(existingCalc) : { ...existingCalc };
-                calc.cos = newAmount;
-                calc.vendorPrice = newAmount;
-                shipmentUpdateData.calculatedValues = calc;
-              } catch (e) {
-                console.error("Error updating calculatedValues for vendor invoice edit:", e);
-              }
-            }
           } else {
             // Editing a Customer invoice updates totalCost and price
             shipmentUpdateData.totalCost = newAmount;
