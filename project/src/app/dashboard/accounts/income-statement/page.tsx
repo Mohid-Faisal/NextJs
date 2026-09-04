@@ -290,10 +290,10 @@ export default function IncomeStatementPage() {
       case 'financialyear':
         if (now.getMonth() >= 6) {
           startDate = format(new Date(now.getFullYear(), 6, 1), 'yyyy-MM-dd');
-          endDate = format(now, 'yyyy-MM-dd');
+          endDate = format(endOfMonth(now), 'yyyy-MM-dd');
         } else {
           startDate = format(new Date(now.getFullYear() - 1, 6, 1), 'yyyy-MM-dd');
-          endDate = format(now, 'yyyy-MM-dd');
+          endDate = format(endOfMonth(now), 'yyyy-MM-dd');
         }
         break;
       case 'custom':
