@@ -454,269 +454,275 @@ export async function POST(req: NextRequest) {
           decValue: 0
         };
 
-        // Create shipment
-        const shipment = await prisma.shipment.create({
-          data: orgData(session, {
-            trackingId: shipmentData.trackingId,
-            invoiceNumber,
-            referenceNumber: shipmentData.referenceNumber || "", // Use reference from Excel or empty string
-            shipmentDate: shipmentData.shipmentDate,
-            agency: "PSS", // Default
-            office: "LHE", // Default
-            senderName: normalizedSenderName,
-            senderAddress: normalizedSenderName,
-            recipientName: normalizedReceiverName,
-            recipientAddress: normalizedReceiverName,
-            destination: shipmentData.countryCode,
-            deliveryStatus: shipmentData.status,
-            shippingMode: shipmentData.shippingMode,
-            packaging: shipmentData.type,
-            vendor: normalizedVendorName,
-            serviceMode: shipmentData.serviceMode,
-            amount: shipmentData.pcs,
-            packageDescription: shipmentData.description,
-            weight: shipmentData.weight,
-            weightVol: shipmentData.weight,
-            price: originalPrice,
-            cos: shipmentData.cos || 0, // Store Cost of Service
-            totalCost: customerTotalCost,
-            subtotal: originalPrice,
-            invoiceStatus: "Unpaid",
-            totalPackages: shipmentData.pcs,
-            totalWeight: shipmentData.weight,
-            totalWeightVol: shipmentData.weight,
-            manualRate: shipmentData.cos > 0,
-            packages: JSON.stringify(packagesArray),
-            packageTotals: JSON.stringify(packageTotalsObj),
-          })
-        });
+        // Process shipment, invoices, transactions, and journal entries atomically
+        await prisma.$transaction(
+          async (tx) => {
+            // Create shipment
+            const shipment = await tx.shipment.create({
+              data: orgData(session, {
+                trackingId: shipmentData.trackingId,
+                invoiceNumber,
+                referenceNumber: shipmentData.referenceNumber || "",
+                shipmentDate: shipmentData.shipmentDate,
+                agency: "PSS",
+                office: "LHE",
+                senderName: normalizedSenderName,
+                senderAddress: normalizedSenderName,
+                recipientName: normalizedReceiverName,
+                recipientAddress: normalizedReceiverName,
+                destination: shipmentData.countryCode,
+                deliveryStatus: shipmentData.status,
+                shippingMode: shipmentData.shippingMode,
+                packaging: shipmentData.type,
+                vendor: normalizedVendorName,
+                serviceMode: shipmentData.serviceMode,
+                amount: shipmentData.pcs,
+                packageDescription: shipmentData.description,
+                weight: shipmentData.weight,
+                weightVol: shipmentData.weight,
+                price: originalPrice,
+                cos: shipmentData.cos || 0,
+                totalCost: customerTotalCost,
+                subtotal: originalPrice,
+                invoiceStatus: "Unpaid",
+                totalPackages: shipmentData.pcs,
+                totalWeight: shipmentData.weight,
+                totalWeightVol: shipmentData.weight,
+                manualRate: shipmentData.cos > 0,
+                packages: JSON.stringify(packagesArray),
+                packageTotals: JSON.stringify(packageTotalsObj),
+              })
+            });
 
-        // Auto-add initial tracking status: Booked (shipment date - 2.5h) and Picked Up (shipment date), Lahore, Pakistan
-        const shipmentDateTime = shipment.shipmentDate ? new Date(shipment.shipmentDate) : new Date(shipment.createdAt);
-        const bookingDateTime = new Date(shipmentDateTime.getTime() - 2.5 * 60 * 60 * 1000);
-        const initialTrackingHistory = [
-          { status: "Booked", timestamp: bookingDateTime.toISOString(), location: "Lahore, Pakistan" },
-          { status: "Picked Up", timestamp: shipmentDateTime.toISOString(), location: "Lahore, Pakistan" },
-        ];
-        await prisma.shipment.update({
-          where: { id: shipment.id },
-          data: {
-            trackingStatusHistory: initialTrackingHistory as unknown as object,
-            trackingStatus: "Picked Up",
-          } as Record<string, unknown>,
-        });
+            // Auto-add initial tracking status
+            const shipmentDateTime = shipment.shipmentDate ? new Date(shipment.shipmentDate) : new Date(shipment.createdAt);
+            const bookingDateTime = new Date(shipmentDateTime.getTime() - 2.5 * 60 * 60 * 1000);
+            const initialTrackingHistory = [
+              { status: "Booked", timestamp: bookingDateTime.toISOString(), location: "Lahore, Pakistan" },
+              { status: "Picked Up", timestamp: shipmentDateTime.toISOString(), location: "Lahore, Pakistan" },
+            ];
+            await tx.shipment.update({
+              where: { id: shipment.id },
+              data: {
+                trackingStatusHistory: initialTrackingHistory as unknown as object,
+                trackingStatus: "Picked Up",
+              } as Record<string, unknown>,
+            });
 
-        // Get customer and vendor balances
-        const customerBalance = customer.currentBalance || 0;
-        const vendorBalance = vendor.currentBalance || 0;
+            // Get customer and vendor balances
+            const customerBalance = customer.currentBalance || 0;
+            const vendorBalance = vendor.currentBalance || 0;
 
-        // Calculate invoice status
-        let customerRemainingAmount = customerTotalCost;
-        let customerAppliedBalance = 0;
-        let customerInvoiceStatus = "Unpaid";
+            // Calculate invoice status
+            let customerRemainingAmount = customerTotalCost;
+            let customerAppliedBalance = 0;
+            let customerInvoiceStatus = "Unpaid";
 
-        if (customerBalance > 0) {
-          customerRemainingAmount = Math.max(0, customerTotalCost - customerBalance);
-          customerAppliedBalance = Math.min(customerBalance, customerTotalCost);
-          customerInvoiceStatus = customerRemainingAmount === 0 ? "Paid" : "Partial";
-        }
+            if (customerBalance > 0) {
+              customerRemainingAmount = Math.max(0, customerTotalCost - customerBalance);
+              customerAppliedBalance = Math.min(customerBalance, customerTotalCost);
+              customerInvoiceStatus = customerRemainingAmount === 0 ? "Paid" : "Partial";
+            }
 
-        let vendorRemainingAmount = vendorTotalCost;
-        let vendorAppliedBalance = 0;
-        let vendorInvoiceStatus = "Unpaid";
+            let vendorRemainingAmount = vendorTotalCost;
+            let vendorAppliedBalance = 0;
+            let vendorInvoiceStatus = "Unpaid";
 
-        if (vendorBalance < 0) {
-          vendorAppliedBalance = Math.min(Math.abs(vendorBalance), vendorTotalCost);
-          vendorRemainingAmount = Math.max(0, vendorTotalCost - vendorAppliedBalance);
-          vendorInvoiceStatus = vendorRemainingAmount === 0 ? "Paid" : "Partial";
-        }
+            if (vendorBalance > 0) {
+              vendorRemainingAmount = Math.max(0, vendorTotalCost - vendorBalance);
+              vendorAppliedBalance = Math.min(vendorBalance, vendorTotalCost);
+              vendorInvoiceStatus = vendorRemainingAmount === 0 ? "Paid" : "Partial";
+            }
 
-        // Create customer invoice
-        await prisma.invoice.create({
-          data: orgData(session, {
-            invoiceNumber,
-            invoiceDate: shipmentData.shipmentDate,
-            trackingNumber: shipmentData.trackingId,
-            destination: shipmentData.countryCode,
-            weight: shipmentData.weight,
-            profile: "Customer",
-            fscCharges: 0,
-            discount: 0,
-            lineItems: [{ description: shipmentData.description || "Shipping Service", value: Math.round(originalPrice) }],
-            customerId: customer.id,
-            vendorId: null,
-            shipmentId: shipment.id,
-            disclaimer: "Thank you for your business",
-            totalAmount: customerTotalCost,
-            currency: "PKR",
-            status: customerInvoiceStatus
-          })
-        });
+            // Create customer invoice
+            await tx.invoice.create({
+              data: orgData(session, {
+                invoiceNumber,
+                invoiceDate: shipmentData.shipmentDate,
+                trackingNumber: shipmentData.trackingId,
+                destination: shipmentData.countryCode,
+                weight: shipmentData.weight,
+                profile: "Customer",
+                fscCharges: 0,
+                discount: 0,
+                lineItems: [{ description: shipmentData.description || "Shipping Service", value: Math.round(originalPrice) }],
+                customerId: customer.id,
+                vendorId: null,
+                shipmentId: shipment.id,
+                disclaimer: "Thank you for your business",
+                totalAmount: customerTotalCost,
+                currency: "PKR",
+                status: customerInvoiceStatus
+              })
+            });
 
-        // Create vendor invoice
-        await prisma.invoice.create({
-          data: orgData(session, {
-            invoiceNumber: vendorInvoiceNumber,
-            invoiceDate: shipmentData.shipmentDate,
-            trackingNumber: shipmentData.trackingId,
-            destination: shipmentData.countryCode,
-            weight: shipmentData.weight,
-            profile: "Vendor",
-            fscCharges: 0,
-            discount: 0,
-            lineItems: [{ description: "Vendor Service", value: Math.round(vendorTotalCost) }],
-            customerId: null,
-            vendorId: vendor.id,
-            shipmentId: shipment.id,
-            disclaimer: "Vendor invoice",
-            totalAmount: vendorTotalCost,
-            currency: "PKR",
-            status: vendorInvoiceStatus
-          })
-        });
+            // Create vendor invoice
+            await tx.invoice.create({
+              data: orgData(session, {
+                invoiceNumber: vendorInvoiceNumber,
+                invoiceDate: shipmentData.shipmentDate,
+                trackingNumber: shipmentData.trackingId,
+                destination: shipmentData.countryCode,
+                weight: shipmentData.weight,
+                profile: "Vendor",
+                fscCharges: 0,
+                discount: 0,
+                lineItems: [{ description: "Vendor Service", value: Math.round(vendorTotalCost) }],
+                customerId: null,
+                vendorId: vendor.id,
+                shipmentId: shipment.id,
+                disclaimer: "Vendor invoice",
+                totalAmount: vendorTotalCost,
+                currency: "PKR",
+                status: vendorInvoiceStatus
+              })
+            });
 
-        // Ledger txs use remaining (after balance applied); GL posts full invoice totals.
-        if (customerRemainingAmount > 0) {
-          await addCustomerTransaction(
-            prisma,
-            customer.id,
-            'DEBIT',
-            customerRemainingAmount,
-            `Tracking: ${shipmentData.trackingId} | Country: ${shipmentData.countryCode} | Type: ${shipmentData.type} | Weight: ${shipmentData.weight}Kg`,
-            invoiceNumber,
-            invoiceNumber,
-            shipmentData.shipmentDate,
-            session.organizationId
-          );
-        }
-        if (customerTotalCost > 0) {
-          await createJournalEntryForTransaction(
-            prisma,
-            'CUSTOMER_DEBIT',
-            customerTotalCost,
-            `Customer invoice for shipment ${shipmentData.trackingId}`,
-            invoiceNumber,
-            invoiceNumber,
-            shipmentData.shipmentDate,
-            session.organizationId
-          );
-        }
+            // Ledger txs use remaining (after balance applied); GL posts full invoice totals.
+            if (customerRemainingAmount > 0) {
+              await addCustomerTransaction(
+                tx,
+                customer.id,
+                'DEBIT',
+                customerRemainingAmount,
+                `Tracking: ${shipmentData.trackingId} | Country: ${shipmentData.countryCode} | Type: ${shipmentData.type} | Weight: ${shipmentData.weight}Kg`,
+                invoiceNumber,
+                invoiceNumber,
+                shipmentData.shipmentDate,
+                session.organizationId
+              );
+            }
+            if (customerTotalCost > 0) {
+              await createJournalEntryForTransaction(
+                tx,
+                'CUSTOMER_DEBIT',
+                customerTotalCost,
+                `Customer invoice for shipment ${shipmentData.trackingId}`,
+                invoiceNumber,
+                invoiceNumber,
+                shipmentData.shipmentDate,
+                session.organizationId
+              );
+            }
 
-        if (vendorRemainingAmount > 0) {
-          await addVendorTransaction(
-            prisma,
-            vendor.id,
-            'DEBIT',
-            vendorRemainingAmount,
-            `Tracking: ${shipmentData.trackingId} | Country: ${shipmentData.countryCode} | Type: ${shipmentData.type} | Weight: ${shipmentData.weight}Kg`,
-            vendorInvoiceNumber,
-            vendorInvoiceNumber,
-            shipmentData.shipmentDate,
-            session.organizationId
-          );
-        }
-        if (vendorTotalCost > 0) {
-          await createJournalEntryForTransaction(
-            prisma,
-            'VENDOR_DEBIT',
-            vendorTotalCost,
-            `Vendor invoice for shipment ${shipmentData.trackingId}`,
-            vendorInvoiceNumber,
-            vendorInvoiceNumber,
-            shipmentData.shipmentDate,
-            session.organizationId
-          );
-        }
+            if (vendorRemainingAmount > 0) {
+              await addVendorTransaction(
+                tx,
+                vendor.id,
+                'DEBIT',
+                vendorRemainingAmount,
+                `Tracking: ${shipmentData.trackingId} | Country: ${shipmentData.countryCode} | Type: ${shipmentData.type} | Weight: ${shipmentData.weight}Kg`,
+                vendorInvoiceNumber,
+                vendorInvoiceNumber,
+                shipmentData.shipmentDate,
+                session.organizationId
+              );
+            }
+            if (vendorTotalCost > 0) {
+              await createJournalEntryForTransaction(
+                tx,
+                'VENDOR_DEBIT',
+                vendorTotalCost,
+                `Vendor invoice for shipment ${shipmentData.trackingId}`,
+                vendorInvoiceNumber,
+                vendorInvoiceNumber,
+                shipmentData.shipmentDate,
+                session.organizationId
+              );
+            }
 
-        // Handle balance application for customer
-        if (customerAppliedBalance > 0) {
-          await prisma.payment.create({
-            data: orgData(session, {
-              transactionType: "INCOME",
-              category: "Balance Applied",
-              date: shipmentData.shipmentDate,
-              amount: customerAppliedBalance,
-              fromPartyType: "CUSTOMER",
-              fromCustomerId: customer.id,
-              fromCustomer: normalizedSenderName,
-              toPartyType: "US",
-              toVendorId: null,
-              toVendor: "",
-              mode: "CASH",
-              reference: invoiceNumber,
-              invoice: invoiceNumber,
-              description: `Credit applied for invoice ${invoiceNumber}`
-            })
-          });
+            // Handle balance application for customer
+            if (customerAppliedBalance > 0) {
+              await tx.payment.create({
+                data: orgData(session, {
+                  transactionType: "INCOME",
+                  category: "Balance Applied",
+                  date: shipmentData.shipmentDate,
+                  amount: customerAppliedBalance,
+                  fromPartyType: "CUSTOMER",
+                  fromCustomerId: customer.id,
+                  fromCustomer: normalizedSenderName,
+                  toPartyType: "US",
+                  toVendorId: null,
+                  toVendor: "",
+                  mode: "CASH",
+                  reference: invoiceNumber,
+                  invoice: invoiceNumber,
+                  description: `Credit applied for invoice ${invoiceNumber}`
+                })
+              });
 
-          await addCustomerTransaction(
-            prisma,
-            customer.id,
-            'DEBIT',
-            customerAppliedBalance,
-            `Credit applied for invoice ${invoiceNumber}`,
-            `CREDIT-${invoiceNumber}`,
-            invoiceNumber,
-            shipmentData.shipmentDate,
-            session.organizationId
-          );
+              await addCustomerTransaction(
+                tx,
+                customer.id,
+                'DEBIT',
+                customerAppliedBalance,
+                `Credit applied for invoice ${invoiceNumber}`,
+                `CREDIT-${invoiceNumber}`,
+                invoiceNumber,
+                shipmentData.shipmentDate,
+                session.organizationId
+              );
 
-          await createJournalEntryForTransaction(
-            prisma,
-            'CUSTOMER_CREDIT',
-            customerAppliedBalance,
-            `Customer credit applied for invoice ${invoiceNumber}`,
-            `CREDIT-${invoiceNumber}`,
-            invoiceNumber,
-            shipmentData.shipmentDate,
-            session.organizationId
-          );
-        }
+              await createJournalEntryForTransaction(
+                tx,
+                'CUSTOMER_CREDIT',
+                customerAppliedBalance,
+                `Customer credit applied for invoice ${invoiceNumber}`,
+                `CREDIT-${invoiceNumber}`,
+                invoiceNumber,
+                shipmentData.shipmentDate,
+                session.organizationId
+              );
+            }
 
-        // Handle balance application for vendor
-        if (vendorAppliedBalance > 0) {
-          await prisma.payment.create({
-            data: orgData(session, {
-              transactionType: "EXPENSE",
-              category: "Balance Applied",
-              date: shipmentData.shipmentDate,
-              amount: vendorAppliedBalance,
-              fromPartyType: "US",
-              fromCustomerId: null,
-              fromCustomer: "",
-              toPartyType: "VENDOR",
-              toVendorId: vendor.id,
-              toVendor: normalizedVendorName,
-              mode: "CASH",
-              reference: vendorInvoiceNumber,
-              invoice: vendorInvoiceNumber,
-              description: `Credit applied for vendor invoice ${vendorInvoiceNumber}`
-            })
-          });
+            // Handle balance application for vendor
+            if (vendorAppliedBalance > 0) {
+              await tx.payment.create({
+                data: orgData(session, {
+                  transactionType: "EXPENSE",
+                  category: "Balance Applied",
+                  date: shipmentData.shipmentDate,
+                  amount: vendorAppliedBalance,
+                  fromPartyType: "US",
+                  fromCustomerId: null,
+                  fromCustomer: "",
+                  toPartyType: "VENDOR",
+                  toVendorId: vendor.id,
+                  toVendor: normalizedVendorName,
+                  mode: "CASH",
+                  reference: vendorInvoiceNumber,
+                  invoice: vendorInvoiceNumber,
+                  description: `Credit applied for vendor invoice ${vendorInvoiceNumber}`
+                })
+              });
 
-          await addVendorTransaction(
-            prisma,
-            vendor.id,
-            'CREDIT',
-            vendorAppliedBalance,
-            `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
-            `CREDIT-${vendorInvoiceNumber}`,
-            vendorInvoiceNumber,
-            shipmentData.shipmentDate,
-            session.organizationId
-          );
+              await addVendorTransaction(
+                tx,
+                vendor.id,
+                'CREDIT',
+                vendorAppliedBalance,
+                `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
+                `CREDIT-${vendorInvoiceNumber}`,
+                vendorInvoiceNumber,
+                shipmentData.shipmentDate,
+                session.organizationId
+              );
 
-          await createJournalEntryForTransaction(
-            prisma,
-            'VENDOR_CREDIT',
-            vendorAppliedBalance,
-            `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
-            `CREDIT-${vendorInvoiceNumber}`,
-            vendorInvoiceNumber,
-            shipmentData.shipmentDate,
-            session.organizationId
-          );
-        }
+              await createJournalEntryForTransaction(
+                tx,
+                'VENDOR_CREDIT',
+                vendorAppliedBalance,
+                `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
+                `CREDIT-${vendorInvoiceNumber}`,
+                vendorInvoiceNumber,
+                shipmentData.shipmentDate,
+                session.organizationId
+              );
+            }
+          },
+          { timeout: 30000 }
+        );
 
         results.success++;
       } catch (error: any) {
