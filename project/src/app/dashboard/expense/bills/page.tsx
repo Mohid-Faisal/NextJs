@@ -41,7 +41,7 @@ import DeleteDialog from "@/components/DeleteDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TablePagination } from "@/components/TablePagination";
 import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
 const billColumns: ColumnOption[] = [
   { id: "id", label: "ID" },
@@ -357,17 +357,7 @@ export default function ExpenseBillsPage() {
   const [periodType, setPeriodType] = useState<'month' | 'last3month' | 'last6month' | 'year' | 'financialyear' | 'custom'>('month');
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>(() => {
     const now = new Date();
-    const firstDayOfMonth = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      1
-    );
-    const tomorrow = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1
-    );
-    return { from: firstDayOfMonth, to: tomorrow };
+    return { from: startOfMonth(now), to: endOfMonth(now) };
   });
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -387,27 +377,24 @@ export default function ExpenseBillsPage() {
   const updatePeriodDates = () => {
     const now = new Date();
     let startDate: Date;
-    let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); // Tomorrow to include today
+    let endDate: Date;
 
     switch (periodType) {
       case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
         break;
       case 'last3month':
-        const threeMonthsAgo = new Date(now);
-        threeMonthsAgo.setMonth(now.getMonth() - 3);
-        startDate = new Date(threeMonthsAgo.getFullYear(), threeMonthsAgo.getMonth(), 1);
+        startDate = startOfMonth(subMonths(now, 2));
+        endDate = endOfMonth(now);
         break;
       case 'last6month':
-        const sixMonthsAgo = new Date(now);
-        sixMonthsAgo.setMonth(now.getMonth() - 6);
-        startDate = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth(), 1);
+        startDate = startOfMonth(subMonths(now, 5));
+        endDate = endOfMonth(now);
         break;
       case 'year':
-        // Last 12 months from today
-        const twelveMonthsAgo = new Date(now);
-        twelveMonthsAgo.setMonth(now.getMonth() - 12);
-        startDate = new Date(twelveMonthsAgo.getFullYear(), twelveMonthsAgo.getMonth(), twelveMonthsAgo.getDate());
+        startDate = startOfMonth(subMonths(now, 11));
+        endDate = endOfMonth(now);
         break;
       case 'financialyear':
         if (now.getMonth() >= 6) {
@@ -415,6 +402,7 @@ export default function ExpenseBillsPage() {
         } else {
           startDate = new Date(now.getFullYear() - 1, 6, 1); // July 1 of previous year
         }
+        endDate = endOfMonth(now);
         break;
       case 'custom':
         if (customStartDate && customEndDate) {
@@ -433,9 +421,8 @@ export default function ExpenseBillsPage() {
         }
         break;
       default:
-        const defaultThreeMonthsAgo = new Date(now);
-        defaultThreeMonthsAgo.setMonth(now.getMonth() - 3);
-        startDate = new Date(defaultThreeMonthsAgo.getFullYear(), defaultThreeMonthsAgo.getMonth(), 1);
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
     }
 
     setDateRange({ from: startDate, to: endDate });
@@ -458,8 +445,8 @@ export default function ExpenseBillsPage() {
           profile: "Vendor", // Only fetch vendor invoices
           ...(statusFilter !== "All" && { status: statusFilter }),
           ...(searchTerm && { search: searchTerm }),
-          ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
-          ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+          ...(dateRange?.from && { fromDate: format(dateRange.from, 'yyyy-MM-dd') }),
+          ...(dateRange?.to && { toDate: format(dateRange.to, 'yyyy-MM-dd') }),
           sortField: sortField,
           sortOrder: sortOrder,
           ...(selectedBranch !== "All" && { agency: selectedBranch }),
@@ -506,8 +493,8 @@ export default function ExpenseBillsPage() {
       profile: "Vendor", // Only fetch vendor invoices
       ...(statusFilter !== "All" && { status: statusFilter }),
       ...(searchTerm && { search: searchTerm }),
-      ...(dateRange?.from && { fromDate: dateRange.from.toISOString() }),
-      ...(dateRange?.to && { toDate: dateRange.to.toISOString() }),
+      ...(dateRange?.from && { fromDate: format(dateRange.from, 'yyyy-MM-dd') }),
+      ...(dateRange?.to && { toDate: format(dateRange.to, 'yyyy-MM-dd') }),
       sortField: sortField,
       sortOrder: sortOrder,
     });

@@ -127,10 +127,16 @@ export async function GET(req: NextRequest) {
     if (fromDate || toDate) {
       where.invoiceDate = {};
       if (fromDate) {
-        where.invoiceDate.gte = new Date(fromDate);
+        where.invoiceDate.gte =
+          typeof fromDate === "string" && fromDate.length === 10
+            ? new Date(fromDate + "T00:00:00.000Z")
+            : new Date(fromDate);
       }
       if (toDate) {
-        where.invoiceDate.lte = new Date(toDate);
+        where.invoiceDate.lte =
+          typeof toDate === "string" && toDate.length === 10
+            ? new Date(toDate + "T23:59:59.999Z")
+            : new Date(toDate);
       }
     }
 
