@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Table, Printer, FileText, Upload, RefreshCw } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, Table, Printer, FileText, Upload, RefreshCw, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, eachYearOfInterval, startOfYear, endOfYear, addMonths, subMonths, differenceInYears } from "date-fns";
 import { exportRowsToExcel, exportRowsToPDF, exportRowsToPrint } from "@/lib/exportReports";
@@ -86,6 +86,7 @@ export default function IncomeStatementPage() {
     }
   });
   const [loading, setLoading] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const [periodType, setPeriodType] = useState<'year' | 'month' | 'last3month' | 'last6month' | 'financialyear' | 'custom'>('month');
   const [periodsData, setPeriodsData] = useState<PeriodData[]>([]);
 
@@ -590,6 +591,35 @@ export default function IncomeStatementPage() {
     toast.success("Income statement PDF exported");
   };
 
+  const handleReconcile = async () => {
+    try {
+      setReconciling(true);
+      const res = await fetch("/api/accounts/reconcile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dateFrom: incomeStatementData.period.startDate,
+          dateTo: incomeStatementData.period.endDate,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || "Failed to reconcile ledger");
+      }
+      toast.success(data.message || "Ledger reconciled successfully");
+      if (shouldShowMultiColumn()) {
+        fetchMultiPeriodBalances();
+      } else {
+        fetchAccountBalances();
+      }
+    } catch (err: any) {
+      console.error("Reconcile error:", err);
+      toast.error(err.message || "Failed to reconcile ledger");
+    } finally {
+      setReconciling(false);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
@@ -794,7 +824,7 @@ export default function IncomeStatementPage() {
               </div>
             )}
             
-                         {/* Refresh + Export */}
+                         {/* Refresh + Reconcile + Export */}
              <div className="flex items-center gap-2">
                <Button
                  type="button"
@@ -810,6 +840,16 @@ export default function IncomeStatementPage() {
                >
                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                  Refresh
+               </Button>
+               <Button
+                 type="button"
+                 onClick={handleReconcile}
+                 disabled={loading || reconciling}
+                 title="Reconcile invoices and General Ledger journal entries"
+                 className="w-[120px] justify-center bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
+               >
+                 <CheckCircle2 className={`mr-2 h-4 w-4 text-emerald-600 ${reconciling ? "animate-spin" : ""}`} />
+                 {reconciling ? "Reconciling..." : "Reconcile"}
                </Button>
                <DropdownMenu>
                  <DropdownMenuTrigger asChild>

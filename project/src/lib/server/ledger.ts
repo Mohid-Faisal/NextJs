@@ -834,7 +834,8 @@ export async function updateJournalEntriesForInvoice(
   newVendorId: number | null,
   invoiceNumber: string,
   description: string,
-  organizationId?: number
+  organizationId?: number,
+  newDate?: Date
 ) {
   try {
     const updates = [];
@@ -848,7 +849,8 @@ export async function updateJournalEntriesForInvoice(
           newAmount,
           invoiceNumber,
           description,
-          organizationId
+          organizationId,
+          newDate
         )
       );
     }
@@ -863,7 +865,8 @@ export async function updateJournalEntriesForInvoice(
           newAmount,
           invoiceNumber,
           description,
-          organizationId
+          organizationId,
+          newDate
         )
       );
     }
@@ -889,7 +892,8 @@ export async function updateCustomerJournalEntry(
   newAmount: number,
   invoiceNumber: string,
   description: string,
-  organizationId?: number
+  organizationId?: number,
+  newDate?: Date
 ) {
   try {
     const orgFilter = organizationId != null ? { organizationId } : {};
@@ -907,14 +911,20 @@ export async function updateCustomerJournalEntry(
           where: { id: existingEntry.id }
         });
       } else {
+        const updateData: any = {
+          description: description,
+          totalDebit: newAmount,
+          totalCredit: newAmount,
+          updatedAt: new Date()
+        };
+        if (newDate) {
+          updateData.date = newDate;
+          updateData.postedAt = newDate;
+        }
+
         await prisma.journalEntry.update({
           where: { id: existingEntry.id },
-          data: {
-            description: description,
-            totalDebit: newAmount,
-            totalCredit: newAmount,
-            updatedAt: new Date()
-          }
+          data: updateData
         });
 
         for (const line of existingEntry.lines) {
@@ -930,6 +940,17 @@ export async function updateCustomerJournalEntry(
             });
           }
         }
+
+        if (newDate) {
+          await prisma.customerTransaction.updateMany({
+            where: {
+              ...(organizationId != null ? { organizationId } : {}),
+              reference: invoiceNumber,
+              type: "DEBIT"
+            },
+            data: { createdAt: newDate }
+          });
+        }
       }
     } else if (newAmount > 0) {
       const invoice = await prisma.invoice.findFirst({
@@ -939,7 +960,7 @@ export async function updateCustomerJournalEntry(
         include: { shipment: { select: { shipmentDate: true, trackingId: true } } },
       });
       const entryDate =
-        invoice?.shipment?.shipmentDate || invoice?.invoiceDate || new Date();
+        newDate || invoice?.shipment?.shipmentDate || invoice?.invoiceDate || new Date();
       const tracking =
         invoice?.shipment?.trackingId || invoice?.trackingNumber || invoiceNumber;
       await createJournalEntryForTransaction(
@@ -966,7 +987,8 @@ export async function updateVendorJournalEntry(
   newAmount: number,
   invoiceNumber: string,
   description: string,
-  organizationId?: number
+  organizationId?: number,
+  newDate?: Date
 ) {
   try {
     const orgFilter = organizationId != null ? { organizationId } : {};
@@ -984,14 +1006,20 @@ export async function updateVendorJournalEntry(
           where: { id: existingEntry.id }
         });
       } else {
+        const updateData: any = {
+          description: description,
+          totalDebit: newAmount,
+          totalCredit: newAmount,
+          updatedAt: new Date()
+        };
+        if (newDate) {
+          updateData.date = newDate;
+          updateData.postedAt = newDate;
+        }
+
         await prisma.journalEntry.update({
           where: { id: existingEntry.id },
-          data: {
-            description: description,
-            totalDebit: newAmount,
-            totalCredit: newAmount,
-            updatedAt: new Date()
-          }
+          data: updateData
         });
 
         for (const line of existingEntry.lines) {
@@ -1007,6 +1035,17 @@ export async function updateVendorJournalEntry(
             });
           }
         }
+
+        if (newDate) {
+          await prisma.vendorTransaction.updateMany({
+            where: {
+              ...(organizationId != null ? { organizationId } : {}),
+              reference: invoiceNumber,
+              type: "DEBIT"
+            },
+            data: { createdAt: newDate }
+          });
+        }
       }
     } else if (newAmount > 0) {
       const invoice = await prisma.invoice.findFirst({
@@ -1016,7 +1055,7 @@ export async function updateVendorJournalEntry(
         include: { shipment: { select: { shipmentDate: true, trackingId: true } } },
       });
       const entryDate =
-        invoice?.shipment?.shipmentDate || invoice?.invoiceDate || new Date();
+        newDate || invoice?.shipment?.shipmentDate || invoice?.invoiceDate || new Date();
       const tracking =
         invoice?.shipment?.trackingId || invoice?.trackingNumber || invoiceNumber;
       await createJournalEntryForTransaction(

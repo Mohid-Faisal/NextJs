@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
+import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/server/ledger";
 
 export async function GET(
   request: NextRequest,
@@ -99,85 +100,91 @@ export async function PUT(
     const newAmount = parseFloat(body.totalAmount) || 0;
     const amountChanged = oldAmount !== newAmount;
 
-    // Import utility functions
-    const { updateInvoiceBalance, updateJournalEntriesForInvoice } = await import('@/lib/server/ledger');
+    const newInvoiceDate = body.invoiceDate ? new Date(body.invoiceDate) : currentInvoice.invoiceDate;
+    const dateChanged = Boolean(
+      body.invoiceDate &&
+      currentInvoice.invoiceDate &&
+      new Date(body.invoiceDate).getTime() !== new Date(currentInvoice.invoiceDate).getTime()
+    );
+    const invoiceNumberChanged = Boolean(body.invoiceNumber && body.invoiceNumber !== currentInvoice.invoiceNumber);
+    const journalNeedsUpdate = amountChanged || dateChanged || invoiceNumberChanged;
 
-    // Update invoice
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        invoiceNumber: body.invoiceNumber || currentInvoice.invoiceNumber,
-        invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : currentInvoice.invoiceDate,
-        totalAmount: newAmount,
-        fscCharges: parseFloat(body.fscCharges) || 0,
-        discount: parseFloat(body.discount) || 0,
-        dayWeek: body.shipment?.dayWeek !== undefined 
-          ? (body.shipment.dayWeek === true || body.shipment.dayWeek === 'D' ? 'D' : 'W')
-          : currentInvoice.dayWeek,
-        lineItems: body.lineItems || currentInvoice.lineItems,
-        disclaimer: body.disclaimer || currentInvoice.disclaimer,
-      }
-    });
+    const updatedInvoice = await prisma.$transaction(async (tx) => {
+      // Update invoice
+      const invoice = await tx.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          invoiceNumber: body.invoiceNumber || currentInvoice.invoiceNumber,
+          invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : currentInvoice.invoiceDate,
+          totalAmount: newAmount,
+          fscCharges: parseFloat(body.fscCharges) || 0,
+          discount: parseFloat(body.discount) || 0,
+          dayWeek: body.shipment?.dayWeek !== undefined 
+            ? (body.shipment.dayWeek === true || body.shipment.dayWeek === 'D' ? 'D' : 'W')
+            : currentInvoice.dayWeek,
+          lineItems: body.lineItems || currentInvoice.lineItems,
+          disclaimer: body.disclaimer || currentInvoice.disclaimer,
+        }
+      });
 
-    // Update shipment if linked
-    const targetShipmentId = shipmentId || currentInvoice.shipmentId || currentInvoice.shipment?.id;
-    if (targetShipmentId) {
-      const isVendor = Boolean(
-        currentInvoice.vendorId || 
-        currentInvoice.vendor || 
-        currentInvoice.profile?.toLowerCase() === 'vendor'
-      );
+      // Update shipment if linked
+      const targetShipmentId = shipmentId || currentInvoice.shipmentId || currentInvoice.shipment?.id;
+      if (targetShipmentId) {
+        const isVendor = Boolean(
+          currentInvoice.vendorId || 
+          currentInvoice.vendor || 
+          currentInvoice.profile?.toLowerCase() === 'vendor'
+        );
 
-      const shipmentUpdateData: any = {};
+        const shipmentUpdateData: any = {};
 
-      if (body.shipment) {
-        if (body.shipment.trackingId) shipmentUpdateData.trackingId = body.shipment.trackingId;
-        if (body.shipment.destination) shipmentUpdateData.destination = body.shipment.destination;
-        if (body.referenceNumber !== undefined) shipmentUpdateData.referenceNumber = body.referenceNumber;
-        if (body.discount !== undefined) shipmentUpdateData.discount = parseFloat(body.discount) || 0;
-        if (body.shipment.packages !== undefined) shipmentUpdateData.packages = body.shipment.packages;
-        if (body.shipment.calculatedValues !== undefined) shipmentUpdateData.calculatedValues = body.shipment.calculatedValues;
-      }
+        if (body.shipment) {
+          if (body.shipment.trackingId) shipmentUpdateData.trackingId = body.shipment.trackingId;
+          if (body.shipment.destination) shipmentUpdateData.destination = body.shipment.destination;
+          if (body.referenceNumber !== undefined) shipmentUpdateData.referenceNumber = body.referenceNumber;
+          if (body.discount !== undefined) shipmentUpdateData.discount = parseFloat(body.discount) || 0;
+          if (body.shipment.packages !== undefined) shipmentUpdateData.packages = body.shipment.packages;
+          if (body.shipment.calculatedValues !== undefined) shipmentUpdateData.calculatedValues = body.shipment.calculatedValues;
+        }
 
-      // Update pricing fields when invoice amount changes
-      if (amountChanged) {
-        if (isVendor) {
-          // Editing a Vendor invoice updates the shipment's Cost of Service (COS)
-          shipmentUpdateData.cos = newAmount;
+        // Update pricing fields when invoice amount changes
+        if (amountChanged) {
+          if (isVendor) {
+            // Editing a Vendor invoice updates the shipment's Cost of Service (COS)
+            shipmentUpdateData.cos = newAmount;
 
-          // Also synchronize calculatedValues if present
-          const existingCalc = shipmentUpdateData.calculatedValues || currentInvoice.shipment?.calculatedValues;
-          if (existingCalc) {
-            try {
-              const calc = typeof existingCalc === 'string' ? JSON.parse(existingCalc) : { ...existingCalc };
-              calc.cos = newAmount;
-              calc.vendorPrice = newAmount;
-              shipmentUpdateData.calculatedValues = calc;
-            } catch (e) {
-              console.error("Error updating calculatedValues for vendor invoice edit:", e);
+            // Also synchronize calculatedValues if present
+            const existingCalc = shipmentUpdateData.calculatedValues || currentInvoice.shipment?.calculatedValues;
+            if (existingCalc) {
+              try {
+                const calc = typeof existingCalc === 'string' ? JSON.parse(existingCalc) : { ...existingCalc };
+                calc.cos = newAmount;
+                calc.vendorPrice = newAmount;
+                shipmentUpdateData.calculatedValues = calc;
+              } catch (e) {
+                console.error("Error updating calculatedValues for vendor invoice edit:", e);
+              }
             }
+          } else {
+            // Editing a Customer invoice updates totalCost and price
+            shipmentUpdateData.totalCost = newAmount;
+            shipmentUpdateData.price = newAmount;
           }
-        } else {
-          // Editing a Customer invoice updates totalCost and price
-          shipmentUpdateData.totalCost = newAmount;
-          shipmentUpdateData.price = newAmount;
+        }
+
+        if (Object.keys(shipmentUpdateData).length > 0) {
+          await tx.shipment.update({
+            where: { id: targetShipmentId },
+            data: shipmentUpdateData
+          });
+          console.log(`Updated shipment ${targetShipmentId} for ${isVendor ? `vendor invoice (cos=${newAmount})` : `customer invoice (totalCost=${newAmount})`}`);
         }
       }
 
-      if (Object.keys(shipmentUpdateData).length > 0) {
-        await prisma.shipment.update({
-          where: { id: targetShipmentId },
-          data: shipmentUpdateData
-        });
-        console.log(`Updated shipment ${targetShipmentId} for ${isVendor ? `vendor invoice (cos=${newAmount})` : `customer invoice (totalCost=${newAmount})`}`);
-      }
-    }
-
-    // Update customer/vendor balances and transactions if amount changed
-    if (amountChanged) {
-      try {
+      // Update customer/vendor balances and transactions if amount changed
+      if (amountChanged) {
         await updateInvoiceBalance(
-          prisma,
+          tx,
           invoiceId,
           oldAmount,
           newAmount,
@@ -186,11 +193,13 @@ export async function PUT(
           currentInvoice.vendorId,
           currentInvoice.vendorId
         );
+      }
 
-        // Update journal entries
-        const description = `Updated invoice: ${updatedInvoice.invoiceNumber} - ${body.shipment?.destination || currentInvoice.destination || 'N/A'}`;
+      // Update journal entries if amount changed, date changed, or invoice number changed
+      if (journalNeedsUpdate) {
+        const description = `Updated invoice: ${invoice.invoiceNumber} - ${body.shipment?.destination || currentInvoice.destination || 'N/A'}`;
         await updateJournalEntriesForInvoice(
-          prisma,
+          tx,
           invoiceId,
           oldAmount,
           newAmount,
@@ -198,15 +207,15 @@ export async function PUT(
           currentInvoice.customerId,
           currentInvoice.vendorId,
           currentInvoice.vendorId,
-          updatedInvoice.invoiceNumber,
+          invoice.invoiceNumber,
           description,
-          session.organizationId
+          session.organizationId,
+          newInvoiceDate ? new Date(newInvoiceDate) : undefined
         );
-      } catch (balanceError) {
-        console.error("Error updating balances and journal entries:", balanceError);
-        // Continue even if balance update fails
       }
-    }
+
+      return invoice;
+    }, { timeout: 30000 });
 
     console.log('Invoice updated successfully:', updatedInvoice.id);
 
