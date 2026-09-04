@@ -162,9 +162,12 @@ export default function EditInvoicePage() {
       if (response.ok) {
         const data = await response.json();
 
-        // Ensure referenceNumber is populated from shipment if available
+        // Ensure referenceNumber is populated from shipment if available and numeric fields are strictly parsed
         const mergedData: InvoiceData = {
           ...data,
+          fscCharges: parseFloat(data.fscCharges) || 0,
+          discount: parseFloat(data.discount) || 0,
+          totalAmount: parseFloat(data.totalAmount) || 0,
           referenceNumber:
             data.shipment?.referenceNumber ??
             data.referenceNumber ??
@@ -172,10 +175,11 @@ export default function EditInvoicePage() {
           shipment: data.shipment
             ? {
                 ...data.shipment,
+                fuelSurcharge: parseFloat(data.shipment.fuelSurcharge ?? data.fscCharges) || 0,
+                discount: parseFloat(data.shipment.discount ?? data.discount) || 0,
                 referenceNumber:
                   data.shipment.referenceNumber ??
                   data.referenceNumber ??
-                  data.shipment.referenceNumber ??
                   "",
               }
             : data.shipment,
@@ -276,15 +280,17 @@ export default function EditInvoicePage() {
       const shipmentId = invoiceData.shipment?.id || params.id;
 
       // Calculate total amount from line items, FSC charges, and discount
-      const lineItemsTotal = lineItems.reduce((sum, item) => sum + (item.value || 0), 0);
-      const fscCharges = invoiceData.fscCharges || 0;
-      const discount = invoiceData.discount || 0;
+      const lineItemsTotal = lineItems.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+      const fscCharges = Number(invoiceData.fscCharges) || 0;
+      const discount = Number(invoiceData.discount) || 0;
       const totalAmount = lineItemsTotal + fscCharges - discount;
 
       // Update calculatedValues with new total
       const updatedCalculatedValues = {
         ...calculatedValues,
         subtotal: lineItemsTotal,
+        fuelSurcharge: fscCharges,
+        discount: discount,
         total: totalAmount,
       };
 
@@ -297,7 +303,10 @@ export default function EditInvoicePage() {
         totalAmount: totalAmount,
         fscCharges: fscCharges,
         discount: discount,
-        lineItems: lineItems,
+        lineItems: lineItems.map(item => ({
+          ...item,
+          value: Number(item.value) || 0
+        })),
         disclaimer: disclaimer,
         note: note,
         shipment: {
@@ -305,6 +314,8 @@ export default function EditInvoicePage() {
           trackingId: invoiceData.shipment?.trackingId || '',
           destination: invoiceData.shipment?.destination || '',
           dayWeek: invoiceData.shipment?.dayWeek || false,
+          fuelSurcharge: fscCharges,
+          discount: discount,
           packages: packages,
           calculatedValues: updatedCalculatedValues,
         },
@@ -344,20 +355,25 @@ export default function EditInvoicePage() {
       const shipmentId = invoiceData.shipment?.id || params.id;
       
       // Use lineItems directly
-      const finalLineItems = lineItems.length > 0 ? lineItems : [{
+      const finalLineItems = lineItems.length > 0 ? lineItems.map(item => ({
+        ...item,
+        value: Number(item.value) || 0
+      })) : [{
         description: 'Service Item',
         value: 0
       }];
       
       // Calculate total amount
-      const lineItemsTotal = finalLineItems.reduce((sum, item) => sum + (item.value || 0), 0);
-      const fscCharges = invoiceData.fscCharges || 0;
-      const discount = invoiceData.discount || 0;
+      const lineItemsTotal = finalLineItems.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+      const fscCharges = Number(invoiceData.fscCharges) || 0;
+      const discount = Number(invoiceData.discount) || 0;
       const totalAmount = lineItemsTotal + fscCharges - discount;
       
       // Create the updated invoice data
       const updatedInvoiceData = {
         ...invoiceData,
+        fscCharges: fscCharges,
+        discount: discount,
         invoiceDate: invoiceData.invoiceDate || invoiceData.createdAt,
         lineItems: finalLineItems,
         totalAmount: totalAmount,
@@ -365,9 +381,17 @@ export default function EditInvoicePage() {
         note: note,
         shipment: {
           ...invoiceData.shipment,
+          fuelSurcharge: fscCharges,
+          discount: discount,
           referenceNumber: invoiceData.shipment?.referenceNumber || '',
           packages: packages,
-          calculatedValues: calculatedValues,
+          calculatedValues: {
+            ...calculatedValues,
+            subtotal: lineItemsTotal,
+            fuelSurcharge: fscCharges,
+            discount: discount,
+            total: totalAmount,
+          },
         }
       };
         const supportEmail = readCachedBranding().supportEmail;
@@ -809,7 +833,7 @@ export default function EditInvoicePage() {
                         ref={fscInputRef}
                         id="fscCharges"
                         type="text"
-                        value={invoiceData.fscCharges ? Number(invoiceData.fscCharges).toLocaleString() : '0'}
+                        value={Number(invoiceData.fscCharges) ? Number(invoiceData.fscCharges).toLocaleString() : '0'}
                         onChange={(e) => {
                           const numValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
                           setInvoiceData({...invoiceData, fscCharges: numValue});
@@ -833,7 +857,7 @@ export default function EditInvoicePage() {
                       <Input
                         id="discount"
                         type="text"
-                        value={invoiceData.discount ? Number(invoiceData.discount).toLocaleString() : '0'}
+                        value={Number(invoiceData.discount) ? Number(invoiceData.discount).toLocaleString() : '0'}
                         onChange={(e) => {
                           const numValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
                           setInvoiceData({...invoiceData, discount: numValue});
@@ -857,7 +881,11 @@ export default function EditInvoicePage() {
                       <Input
                         id="total"
                         type="text"
-                        value={(lineItems.reduce((sum, item) => sum + (item.value || 0), 0) + (invoiceData.fscCharges || 0) - (invoiceData.discount || 0)).toLocaleString()}
+                        value={(
+                          lineItems.reduce((sum, item) => sum + (Number(item.value) || 0), 0) +
+                          (Number(invoiceData.fscCharges) || 0) -
+                          (Number(invoiceData.discount) || 0)
+                        ).toLocaleString()}
                         readOnly
                         className="text-sm w-full text-right font-bold bg-gray-100"
                       />
