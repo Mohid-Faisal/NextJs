@@ -520,27 +520,27 @@ export default function VendorTransactionsPage() {
                 background-color: #4a5568 !important;
                 color: white;
                 font-weight: 600;
-                padding: 6px 4px;
+                padding: 6px 6px;
                 text-align: left;
                 border: 1px solid #2d3748;
-                font-size: 10px;
+                font-size: 11px;
                 text-transform: none;
-                letter-spacing: 0.3px;
+                letter-spacing: 0.5px;
                 white-space: nowrap;
                 vertical-align: middle;
               }
               td { 
-                padding: 5px 4px;
+                padding: 6px 6px;
                 text-align: left;
                 border: 1px solid #e2e8f0;
-                font-size: 9.5px;
+                font-size: 11px;
                 color: #2d3748;
                 vertical-align: middle;
                 word-break: normal;
                 overflow-wrap: break-word;
               }
               td.desc-cell {
-                line-height: 1.3;
+                line-height: 1.35;
               }
               td.date-cell, td.inv-cell, td.ref-cell {
                 white-space: nowrap;
@@ -645,10 +645,10 @@ export default function VendorTransactionsPage() {
                   </tbody>
                   <tfoot>
                     <tr style="background-color: #e2e8f0; font-weight: 700;">
-                      <td colspan="4" style="text-align: right; padding: 6px 4px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
-                      <td style="text-align: right; padding: 6px 4px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(totalDebit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 6px 4px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(totalCredit ?? 0).toLocaleString()}</td>
-                      <td style="text-align: right; padding: 6px 4px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(finalBalance ?? 0).toLocaleString()}</td>
+                      <td colspan="4" style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; vertical-align: middle;">Total:</td>
+                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(totalDebit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(totalCredit ?? 0).toLocaleString()}</td>
+                      <td style="text-align: right; padding: 8px 6px; border: 1px solid #cbd5e0; font-weight: 700; vertical-align: middle; white-space: nowrap;">${Number(finalBalance ?? 0).toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
