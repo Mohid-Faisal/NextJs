@@ -1018,7 +1018,7 @@ export default function IncomeStatementPage() {
               <div className="text-center">
                 <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Expenses</div>
                 <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
-                  {formatCurrency(incomeStatementData.totalExpenses)}
+                  {formatCurrency(incomeStatementData.totalExpenses - (incomeStatementData.costOfService || 0))}
                 </div>
               </div>
               <div className="text-center">
@@ -1053,7 +1053,7 @@ export default function IncomeStatementPage() {
                   <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expense Ratio</div>
                   <div className="text-base sm:text-lg font-bold">
                     {incomeStatementData.totalRevenue > 0 
-                      ? `${((incomeStatementData.totalExpenses / incomeStatementData.totalRevenue) * 100).toFixed(1)}%`
+                      ? `${(((incomeStatementData.totalExpenses - (incomeStatementData.costOfService || 0)) / incomeStatementData.totalRevenue) * 100).toFixed(1)}%`
                       : 'N/A'
                     }
                   </div>

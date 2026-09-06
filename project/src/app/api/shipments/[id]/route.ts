@@ -399,8 +399,8 @@ export async function DELETE(
                 where: orgWhere(session, { id: invoice.customerId }),
               });
               if (customer) {
-                const previousBalance = customer.currentBalance || 0;
-                const newBalance = previousBalance + invoice.totalAmount;
+                const previousBalance = Number(customer.currentBalance) || 0;
+                const newBalance = previousBalance + Number(invoice.totalAmount || 0);
                 await tx.customerTransaction.create({
                   data: orgData(session, {
                     customerId: invoice.customerId,
@@ -426,8 +426,8 @@ export async function DELETE(
                 where: orgWhere(session, { id: invoice.vendorId }),
               });
               if (vendor) {
-                const previousBalance = vendor.currentBalance || 0;
-                const newBalance = previousBalance - invoice.totalAmount;
+                const previousBalance = Number(vendor.currentBalance) || 0;
+                const newBalance = previousBalance - Number(invoice.totalAmount || 0);
                 await tx.vendorTransaction.create({
                   data: orgData(session, {
                     vendorId: invoice.vendorId,

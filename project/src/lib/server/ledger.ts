@@ -99,7 +99,7 @@ export async function addCustomerTransaction(
     select: { currentBalance: true },
   });
 
-  const newBalance = updatedCustomer.currentBalance;
+  const newBalance = Number(updatedCustomer.currentBalance);
   const previousBalance = newBalance - delta;
   const transactionDate = date ? new Date(date) : new Date();
 
@@ -142,7 +142,7 @@ export async function addVendorTransaction(
     select: { currentBalance: true },
   });
 
-  const newBalance = updatedVendor.currentBalance;
+  const newBalance = Number(updatedVendor.currentBalance);
   const previousBalance = newBalance - delta;
   const transactionDate = date ? new Date(date) : new Date();
 
@@ -296,7 +296,7 @@ export async function updateInvoiceBalance(
       });
       if (oldCustomer) {
         const previousBalance = Number(oldCustomer.currentBalance) || 0;
-        const newBalance = previousBalance + oldAmount; // Unassigning removes the debit, increasing balance
+        const newBalance = previousBalance + Number(oldAmount || 0); // Unassigning removes the debit, increasing balance
 
         await prisma.customers.update({
           where: { id: oldCustomerId },
@@ -326,7 +326,7 @@ export async function updateInvoiceBalance(
       });
       if (newCustomer) {
         const previousBalance = Number(newCustomer.currentBalance) || 0;
-        const newBalance = previousBalance - newAmount; // Assigning adds the debit, decreasing balance
+        const newBalance = previousBalance - Number(newAmount || 0); // Assigning adds the debit, decreasing balance
 
         await prisma.customers.update({
           where: { id: newCustomerId },
@@ -410,8 +410,8 @@ export async function updateInvoiceBalance(
         where: { id: oldVendorId }
       });
       if (oldVendor) {
-        const previousBalance = oldVendor.currentBalance;
-        const newBalance = previousBalance - oldAmount;
+        const previousBalance = Number(oldVendor.currentBalance) || 0;
+        const newBalance = previousBalance - Number(oldAmount || 0);
 
         await prisma.vendors.update({
           where: { id: oldVendorId },
@@ -437,8 +437,8 @@ export async function updateInvoiceBalance(
         where: { id: newVendorId }
       });
       if (newVendor) {
-        const previousBalance = newVendor.currentBalance;
-        const newBalance = previousBalance + newAmount;
+        const previousBalance = Number(newVendor.currentBalance) || 0;
+        const newBalance = previousBalance + Number(newAmount || 0);
 
         await prisma.vendors.update({
           where: { id: newVendorId },
@@ -461,7 +461,7 @@ export async function updateInvoiceBalance(
     vendorUpdated = true;
   } else if (amountDifference !== 0 && invoice.vendorId && invoice.vendor) {
     const previousBalance = Number(invoice.vendor.currentBalance) || 0;
-    const newBalance = previousBalance + amountDifference;
+    const newBalance = previousBalance + Number(amountDifference || 0);
 
     await prisma.vendors.update({
       where: { id: invoice.vendorId },
