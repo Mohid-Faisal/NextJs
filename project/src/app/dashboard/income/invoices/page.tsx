@@ -1143,15 +1143,6 @@ export default function IncomeInvoicesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                setInvoiceToEdit(i);
-                                setOpenEditDialog(true);
-                              }}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
                                 setInvoiceToDelete(i);
                                 setOpenDeleteDialog(true);
                               }}
