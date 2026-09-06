@@ -196,7 +196,7 @@ export async function runVendorBulkAutoPay(
   );
 
   let nextJENum = await getJournalEntryBase(prisma);
-  let runningVendorBalance = vendor.currentBalance;
+  let runningVendorBalance = Number(vendor.currentBalance || 0);
 
   log?.(
     `Vendor ${vendor.CompanyName} (id=${vendorId}); method=${config.paymentMethod}; description="${config.description}".`

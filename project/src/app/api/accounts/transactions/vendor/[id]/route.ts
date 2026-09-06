@@ -277,8 +277,8 @@ export async function GET(
       const chronologicalAll = [...transactionsWithVoucherDatesList].sort((a, b) => {
         const dateDiff = a.voucherDate.getTime() - b.voucherDate.getTime();
         if (dateDiff !== 0) return dateDiff;
-        if (a.type === "DEBIT" && b.type === "CREDIT") return -1;
-        if (a.type === "CREDIT" && b.type === "DEBIT") return 1;
+        if (a.type === "DEBIT" && b.type === "CREDIT") return 1;
+        if (a.type === "CREDIT" && b.type === "DEBIT") return -1;
         const timeDiff = a.createdAt.getTime() - b.createdAt.getTime();
         if (timeDiff !== 0) return timeDiff;
         if (a.invoice && b.invoice) {
@@ -851,8 +851,8 @@ export async function GET(
       // The starting balance transaction itself represents the initial balance
       // If it's DEBIT, we owe them (positive balance), if CREDIT, they owe us (negative balance)
       runningBalance = startingBalanceTransaction.type === 'DEBIT' 
-        ? startingBalanceTransaction.amount 
-        : -startingBalanceTransaction.amount;
+        ? Number(startingBalanceTransaction.amount || 0) 
+        : -Number(startingBalanceTransaction.amount || 0);
     }
 
     // Recalculate balances chronologically based on voucher date
@@ -860,11 +860,12 @@ export async function GET(
     const transactionsToUpdate = transactionsWithVoucherDates
       .filter((transaction) => !transaction.reference || !transaction.reference.startsWith("STARTING-BALANCE"))
       .map((transaction) => {
-        const previousBalance = runningBalance;
+        const previousBalance = Number(runningBalance) || 0;
+        const txAmount = Number(transaction.amount || 0);
         // For vendors: DEBIT increases balance (we owe them), CREDIT decreases (we pay them)
         const newBalance = transaction.type === 'DEBIT' 
-          ? previousBalance + transaction.amount 
-          : previousBalance - transaction.amount;
+          ? previousBalance + txAmount 
+          : previousBalance - txAmount;
         runningBalance = newBalance;
       
         return {
@@ -877,8 +878,8 @@ export async function GET(
     // Also update the starting balance transaction with its own balance values
     if (startingBalanceTransaction) {
       const startingBalance = startingBalanceTransaction.type === 'DEBIT' 
-        ? startingBalanceTransaction.amount 
-        : -startingBalanceTransaction.amount;
+        ? Number(startingBalanceTransaction.amount || 0) 
+        : -Number(startingBalanceTransaction.amount || 0);
       transactionsToUpdate.push({
         id: startingBalanceTransaction.id,
         previousBalance: 0,
@@ -886,15 +887,19 @@ export async function GET(
       });
     }
 
-    // Update all transactions with recalculated balances
-    await Promise.all(
-      transactionsToUpdate.map(({ id, previousBalance, newBalance }) =>
-        prisma.vendorTransaction.update({
-          where: { id },
-          data: { previousBalance, newBalance }
-        })
-      )
-    );
+    // Update all transactions with recalculated balances in chunks to prevent connection pool exhaustion
+    const CHUNK_SIZE = 20;
+    for (let i = 0; i < transactionsToUpdate.length; i += CHUNK_SIZE) {
+      const chunk = transactionsToUpdate.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(({ id, previousBalance, newBalance }) =>
+          prisma.vendorTransaction.update({
+            where: { id },
+            data: { previousBalance, newBalance }
+          })
+        )
+      );
+    }
 
     // Update vendor's currentBalance to match the final runningBalance after all transactions
     // Use runningBalance which already has the final calculated balance

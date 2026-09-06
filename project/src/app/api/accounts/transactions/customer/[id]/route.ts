@@ -1016,8 +1016,8 @@ export async function GET(
       // The starting balance transaction itself represents the initial balance
       // If it's DEBIT, customer owes (negative balance), if CREDIT, we owe (positive balance)
       runningBalance = startingBalanceTransaction.type === 'DEBIT' 
-        ? -startingBalanceTransaction.amount 
-        : startingBalanceTransaction.amount;
+        ? -Number(startingBalanceTransaction.amount || 0) 
+        : Number(startingBalanceTransaction.amount || 0);
     }
 
     // Recalculate balances chronologically based on voucher date
@@ -1025,11 +1025,12 @@ export async function GET(
     const transactionsToUpdate = transactionsWithVoucherDates
       .filter((transaction) => !transaction.reference || !transaction.reference.startsWith("STARTING-BALANCE"))
       .map((transaction) => {
-        const previousBalance = runningBalance;
+        const previousBalance = Number(runningBalance) || 0;
+        const txAmount = Number(transaction.amount || 0);
         // For customers: CREDIT increases balance (they pay us), DEBIT decreases (they owe us)
         const newBalance = transaction.type === 'CREDIT' 
-          ? previousBalance + transaction.amount 
-          : previousBalance - transaction.amount;
+          ? previousBalance + txAmount 
+          : previousBalance - txAmount;
         runningBalance = newBalance;
       
         return {
@@ -1042,8 +1043,8 @@ export async function GET(
     // Also update the starting balance transaction with its own balance values
     if (startingBalanceTransaction) {
       const startingBalance = startingBalanceTransaction.type === 'DEBIT' 
-        ? -startingBalanceTransaction.amount 
-        : startingBalanceTransaction.amount;
+        ? -Number(startingBalanceTransaction.amount || 0) 
+        : Number(startingBalanceTransaction.amount || 0);
       transactionsToUpdate.push({
         id: startingBalanceTransaction.id,
         previousBalance: 0,
@@ -1051,15 +1052,19 @@ export async function GET(
       });
     }
 
-    // Update all transactions with recalculated balances
-    await Promise.all(
-      transactionsToUpdate.map(({ id, previousBalance, newBalance }) =>
-        prisma.customerTransaction.update({
-          where: { id },
-          data: { previousBalance, newBalance }
-        })
-      )
-    );
+    // Update all transactions with recalculated balances in chunks to prevent connection pool exhaustion
+    const CHUNK_SIZE = 20;
+    for (let i = 0; i < transactionsToUpdate.length; i += CHUNK_SIZE) {
+      const chunk = transactionsToUpdate.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(({ id, previousBalance, newBalance }) =>
+          prisma.customerTransaction.update({
+            where: { id },
+            data: { previousBalance, newBalance }
+          })
+        )
+      );
+    }
 
     // Update customer's currentBalance to match the final runningBalance after all transactions
     // Use runningBalance which already has the final calculated balance

@@ -194,10 +194,11 @@ export default function VendorTransactionsPage() {
     const list = [...sortedTransactions].sort(compareVendorRecalcOrder);
     const m = new Map<number, number>();
     if (list.length === 0) return m;
-    let running = list[0].previousBalance;
+    let running = Number(list[0].previousBalance || 0);
     for (const tx of list) {
+      const amt = Number(tx.amount || 0);
       running =
-        tx.type === "DEBIT" ? running + tx.amount : running - tx.amount;
+        tx.type === "DEBIT" ? running + amt : running - amt;
       m.set(tx.id, running);
     }
     return m;
