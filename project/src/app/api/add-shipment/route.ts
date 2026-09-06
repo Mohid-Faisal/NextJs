@@ -369,12 +369,12 @@ export async function POST(req: NextRequest) {
         const packageWeight = Math.max(pkg.weight || 0, pkg.weightVol || 0);
         const packageProportion =
           totalWeightVal > 0 ? packageWeight / totalWeightVal : 1 / parsedPackages.length;
-        const packageValue = Math.round(originalPrice * packageProportion);
+        const packageValue = Math.round(vendorTotalCost * packageProportion);
         const description = pkg.packageDescription || "Vendor Service";
         vendorLineItems.push({ description, value: packageValue });
       });
     } else {
-      vendorLineItems.push({ description: "Vendor Service", value: Math.round(originalPrice) });
+      vendorLineItems.push({ description: "Vendor Service", value: Math.round(vendorTotalCost) });
     }
 
     // ============================================================================
