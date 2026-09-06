@@ -33,6 +33,7 @@ interface Shipment {
   vendor?: string;
   packaging?: string;
   amount?: number;
+  totalPackages?: number;
   packages?: unknown;
 }
 
@@ -211,22 +212,6 @@ function getTrackingHistory(s: Shipment): HistoryEvent[] {
     .slice(-5);
 }
 
-function getHistoryByDateGroups(events: HistoryEvent[]) {
-  const byDate = new Map<string, HistoryEvent[]>();
-  for (const e of events) {
-    const d = typeof e.date === "string" ? new Date(e.date) : e.date;
-    const key = format(d, "yyyy-MM-dd");
-    if (!byDate.has(key)) byDate.set(key, []);
-    byDate.get(key)!.push(e);
-  }
-  for (const arr of byDate.values()) {
-    arr.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }
-  return Array.from(byDate.entries())
-    .map(([k, evs]) => ({ dateKey: k, dateLabel: formatDateHeading(evs[0]!.date), events: evs }))
-    .sort((a, b) => b.dateKey.localeCompare(a.dateKey));
-}
-
 export default function TrackingResultsDialog(props: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -306,7 +291,19 @@ export default function TrackingResultsDialog(props: {
     ? `${recipient.City.toUpperCase()}, ${countryName}`
     : countryName;
   const originDisplay = "LAHORE, PAKISTAN";
-  const latestEvent = historyEvents.length > 0 ? [...historyEvents].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] : null;
+  const allEvents = useMemo(() => {
+    const listWithIndex = historyEvents.map((ev, index) => ({ ev, index }));
+    listWithIndex.sort((a, b) => {
+      const timeA = new Date(a.ev.date).getTime();
+      const timeB = new Date(b.ev.date).getTime();
+      if (!isNaN(timeA) && !isNaN(timeB) && timeB !== timeA) {
+        return timeB - timeA;
+      }
+      return b.index - a.index;
+    });
+    return listWithIndex.map((item) => item.ev);
+  }, [historyEvents]);
+  const latestEvent = allEvents[0] ?? null;
   const statusHeader = (() => {
     const title = latestEvent?.title ?? effectiveStatus;
     const isDelivered = (title || "").toLowerCase().includes("delivered");
@@ -318,7 +315,21 @@ export default function TrackingResultsDialog(props: {
     ? `${formatDateHeading(latestEvent.date)} at ${formatTimeWithTz(latestEvent.date)}, ${latestEvent.location?.toUpperCase() ?? ""}`.replace(/,\s*$/, "")
     : formatDateTime(shipment?.shipmentDate ?? shipment?.createdAt);
 
-  const slides = useMemo(() => getHistoryByDateGroups(historyEvents), [historyEvents]);
+  const pcsDisplay = (() => {
+    if (!shipment) return "—";
+    if (shipment.packages) {
+      try {
+        const pkgs = typeof shipment.packages === "string" ? JSON.parse(shipment.packages as string) : shipment.packages;
+        if (Array.isArray(pkgs) && pkgs.length > 0) {
+          const sum = pkgs.reduce((acc: number, p: any) => acc + (Number(p?.amount ?? p?.pieces ?? p?.quantity) || 1), 0);
+          if (sum > 0) return String(sum);
+        }
+      } catch {}
+    }
+    if (shipment.totalPackages != null && Number(shipment.totalPackages) > 0) return String(shipment.totalPackages);
+    if (shipment.amount != null && Number(shipment.amount) > 0) return String(shipment.amount);
+    return "1";
+  })();
 
   const content = (
     <>
@@ -496,7 +507,7 @@ export default function TrackingResultsDialog(props: {
                               </div>
                               <div>
                                 <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Pcs</dt>
-                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{shipment.amount != null && shipment.amount > 0 ? shipment.amount : "—"}</dd>
+                                <dd className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{pcsDisplay}</dd>
                               </div>
                               <div>
                                 <dt className="text-xs font-semibold text-gray-900 dark:text-white tracking-wide">Service Mode</dt>
@@ -544,7 +555,6 @@ export default function TrackingResultsDialog(props: {
                           <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-700">
                             <div className="pt-4 w-full overflow-x-auto">
                               {(() => {
-                                const allEvents = slides.flatMap((g) => g.events);
                                 return (
                                   <>
                                     {/* Event log header */}
@@ -573,10 +583,9 @@ export default function TrackingResultsDialog(props: {
                                             </div>
                                           </div>
                                           <div className="col-span-2 min-w-0">
-                                            {/* <p className={isDelivered ? "text-sm font-semibold text-green-600 dark:text-green-400" : "text-sm font-semibold text-gray-900 dark:text-white"}>
-                                              {event.title}
-                                            </p> */}
-                                            {event.detail ? <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{event.detail}</p> : null}
+                                            <p className={isDelivered ? "text-sm font-semibold text-green-600 dark:text-green-400" : "text-sm text-gray-900 dark:text-white"}>
+                                              {event.detail || event.title}
+                                            </p>
                                           </div>
                                           <div className="min-w-0">
                                             {event.location ? (
