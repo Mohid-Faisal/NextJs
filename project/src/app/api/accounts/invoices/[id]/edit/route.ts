@@ -96,9 +96,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    const oldAmount = currentInvoice.totalAmount;
+    const oldAmount = Number(currentInvoice.totalAmount) || 0;
     const newAmount = parseFloat(body.totalAmount) || 0;
-    const amountChanged = oldAmount !== newAmount;
+    const amountChanged = Math.abs(oldAmount - newAmount) > 0.0001;
 
     const newInvoiceDate = body.invoiceDate ? new Date(body.invoiceDate) : currentInvoice.invoiceDate;
     const dateChanged = Boolean(
@@ -128,7 +128,8 @@ export async function PUT(
       });
 
       // Update shipment if linked
-      const targetShipmentId = shipmentId || currentInvoice.shipmentId || currentInvoice.shipment?.id;
+      const parsedShipmentId = Number.isFinite(shipmentId) && shipmentId > 0 ? shipmentId : null;
+      const targetShipmentId = parsedShipmentId || currentInvoice.shipmentId || currentInvoice.shipment?.id || null;
       if (targetShipmentId) {
         const isVendor = Boolean(
           currentInvoice.vendorId || 
@@ -235,7 +236,7 @@ export async function PUT(
       }
 
       return invoice;
-    }, { timeout: 30000 });
+    }, { timeout: 60000, maxWait: 15000 });
 
     console.log('Invoice updated successfully:', updatedInvoice.id);
 

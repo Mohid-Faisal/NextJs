@@ -131,20 +131,6 @@ export default function EditInvoicePage() {
     };
   }, [invoiceData]);
 
-  // Update line items when calculatedValues change
-  useEffect(() => {
-    if (calculatedValues.total && lineItems.length > 0) {
-      const currentValue = Number(lineItems[0].value) || 0;
-      const calculatedTotal = Number(calculatedValues.total) || 0;
-      // Update if current value is 0 or missing, and calculated total exists
-      if (currentValue === 0 && calculatedTotal > 0) {
-        const updatedLineItems = [...lineItems];
-        updatedLineItems[0] = { ...updatedLineItems[0], value: calculatedTotal };
-        setLineItems(updatedLineItems);
-      }
-    }
-  }, [calculatedValues, lineItems.length]);
-
   const fetchInvoiceData = async () => {
     try {
       setLoading(true);
@@ -220,11 +206,11 @@ export default function EditInvoicePage() {
               item.description !== "Discount"
             )
             .map((item: any, index: number) => {
-              // If value is 0 or missing, try to use calculatedValues.total or totalAmount
               const itemValue = Number(item.value);
-              const finalValue = (itemValue && itemValue > 0) 
-                ? itemValue 
-                : (Number(parsedValues.total) || Number(data.totalAmount) || 0);
+              // Only fall back to total if this is the only line item and its value is 0 or missing
+              const finalValue = (data.lineItems.length === 1 && index === 0 && (!itemValue || itemValue <= 0))
+                ? (Number(parsedValues.total) || Number(data.totalAmount) || 0)
+                : (Number(item.value) || 0);
               return {
                 id: item.id || (index + 1).toString(),
                 description: item.description || '',
@@ -277,10 +263,11 @@ export default function EditInvoicePage() {
     setUpdating(true);
     try {
       const invID = invoiceData.id;
-      const shipmentId = invoiceData.shipment?.id || params.id;
+      const targetShipmentId = invoiceData.shipment?.id ?? (params.id && !isNaN(Number(params.id)) ? Number(params.id) : null);
+      const urlShipmentId = targetShipmentId || 0;
 
       // Calculate total amount from line items, FSC charges, and discount
-      const lineItemsTotal = lineItems.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+      const lineItemsTotal = lineItems.reduce((sum, item) => sum + (parseFloat(String(item.value).replace(/,/g, '')) || 0), 0);
       const fscCharges = Number(invoiceData.fscCharges) || 0;
       const discount = Number(invoiceData.discount) || 0;
       const totalAmount = lineItemsTotal + fscCharges - discount;
@@ -295,7 +282,7 @@ export default function EditInvoicePage() {
       };
 
       // Prepare update data
-      const updateData = {
+      const updateData: any = {
         invoiceNumber: invoiceData.invoiceNumber,
         invoiceDate: parseDateInputAsLocalDate(
           invoiceData.invoiceDate || invoiceData.createdAt
@@ -303,14 +290,19 @@ export default function EditInvoicePage() {
         totalAmount: totalAmount,
         fscCharges: fscCharges,
         discount: discount,
-        lineItems: lineItems.map(item => ({
-          ...item,
-          value: Number(item.value) || 0
+        lineItems: lineItems.map((item, idx) => ({
+          id: item.id || (idx + 1).toString(),
+          description: item.description || '',
+          value: parseFloat(String(item.value).replace(/,/g, '')) || 0
         })),
         disclaimer: disclaimer,
         note: note,
-        shipment: {
-          id: parseInt(shipmentId as string),
+        referenceNumber: invoiceData.referenceNumber || '',
+      };
+
+      if (targetShipmentId) {
+        updateData.shipment = {
+          id: targetShipmentId,
           trackingId: invoiceData.shipment?.trackingId || '',
           destination: invoiceData.shipment?.destination || '',
           dayWeek: invoiceData.shipment?.dayWeek || false,
@@ -318,12 +310,11 @@ export default function EditInvoicePage() {
           discount: discount,
           packages: packages,
           calculatedValues: updatedCalculatedValues,
-        },
-        referenceNumber: invoiceData.referenceNumber || '',
-      };
+        };
+      }
 
       // Call the update API
-      const response = await fetch(`/api/accounts/invoices/${shipmentId}/edit?invID=${invID}`, {
+      const response = await fetch(`/api/accounts/invoices/${urlShipmentId}/edit?invID=${invID}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -338,7 +329,10 @@ export default function EditInvoicePage() {
         // Refresh the invoice data to get the latest values
         await fetchInvoiceData();
       } else {
-        toast.error(`Error updating invoice: ${result.error || 'Unknown error'}`);
+        const errorMsg = result.details
+          ? `${result.error || 'Error'}: ${result.details}`
+          : (result.error || 'Failed to update invoice');
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Error updating invoice:', error);
@@ -352,12 +346,14 @@ export default function EditInvoicePage() {
   const handlePrint = () => {
     if (invoiceData) {
       const invID = invoiceData.id;
-      const shipmentId = invoiceData.shipment?.id || params.id;
+      const targetShipmentId = invoiceData.shipment?.id ?? (params.id && !isNaN(Number(params.id)) ? Number(params.id) : null);
+      const urlShipmentId = targetShipmentId || 0;
       
       // Use lineItems directly
-      const finalLineItems = lineItems.length > 0 ? lineItems.map(item => ({
-        ...item,
-        value: Number(item.value) || 0
+      const finalLineItems = lineItems.length > 0 ? lineItems.map((item, idx) => ({
+        id: item.id || (idx + 1).toString(),
+        description: item.description || '',
+        value: parseFloat(String(item.value).replace(/,/g, '')) || 0
       })) : [{
         description: 'Service Item',
         value: 0
@@ -409,7 +405,7 @@ export default function EditInvoicePage() {
         disclaimer: note || readCachedBranding().invoiceDisclaimer
       });
       
-      window.open(`/api/accounts/invoices/${shipmentId}/invoice?${queryParams.toString()}`, '_blank');
+      window.open(`/api/accounts/invoices/${urlShipmentId}/invoice?${queryParams.toString()}`, '_blank');
     }
   };
 
@@ -790,9 +786,15 @@ export default function EditInvoicePage() {
                     <Input
                       id={`value-${index}`}
                       type="text"
-                      value={item.value !== undefined && item.value !== null ? Number(item.value).toLocaleString() : '0'}
+                      value={item.value !== undefined && item.value !== null && item.value !== '' ? item.value : '0'}
                       onChange={(e) => {
-                        const numValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
+                        const raw = e.target.value.replace(/,/g, '');
+                        if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
+                          updateLineItem(index, 'value', raw);
+                        }
+                      }}
+                      onBlur={() => {
+                        const numValue = parseFloat(String(item.value).replace(/,/g, '')) || 0;
                         updateLineItem(index, 'value', numValue);
                       }}
                       className="text-sm w-full h-10 text-right"
@@ -882,7 +884,7 @@ export default function EditInvoicePage() {
                         id="total"
                         type="text"
                         value={(
-                          lineItems.reduce((sum, item) => sum + (Number(item.value) || 0), 0) +
+                          lineItems.reduce((sum, item) => sum + (parseFloat(String(item.value).replace(/,/g, '')) || 0), 0) +
                           (Number(invoiceData.fscCharges) || 0) -
                           (Number(invoiceData.discount) || 0)
                         ).toLocaleString()}
