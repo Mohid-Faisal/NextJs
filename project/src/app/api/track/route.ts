@@ -81,7 +81,9 @@ export async function GET(request: NextRequest) {
         deliveryTime: true,
         weight: true,
         totalWeight: true,
+        amount: true,
         totalPackages: true,
+        packages: true,
         packageDescription: true,
         recipientName: true,
       }
@@ -140,9 +142,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
+      // Calculate total pieces (Pcs)
+      let totalPieces = 0;
+      if (shipment.packages) {
+        try {
+          const pkgs = typeof shipment.packages === "string" ? JSON.parse(shipment.packages) : shipment.packages;
+          if (Array.isArray(pkgs)) {
+            totalPieces = pkgs.reduce((sum: number, p: any) => sum + (Number(p?.amount ?? p?.pieces ?? p?.quantity) || 1), 0);
+          }
+        } catch {}
+      }
+      if (!totalPieces || totalPieces <= 0) {
+        totalPieces = Number(shipment.totalPackages) || Number(shipment.amount) || 1;
+      }
+
       const res = NextResponse.json({
         success: true,
         shipment: {
+          id: shipment.id,
           trackingId: shipment.trackingId,
           invoiceNumber: shipment.invoiceNumber,
           destination: shipment.destination,
@@ -155,6 +172,9 @@ export async function GET(request: NextRequest) {
           shipmentDate: shipment.shipmentDate,
           deliveryTime: shipment.deliveryTime,
           totalWeight: shipment.totalWeight ?? shipment.weight,
+          amount: totalPieces,
+          totalPackages: totalPieces,
+          packages: shipment.packages,
           packageDescription: shipment.packageDescription,
         },
         recipient,
