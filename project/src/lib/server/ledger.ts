@@ -361,6 +361,7 @@ export async function updateInvoiceBalance(
     const existingTransaction = await prisma.customerTransaction.findFirst({
       where: {
         customerId: invoice.customerId,
+        type: 'DEBIT',
         OR: [
           { reference: invoice.invoiceNumber },
           { invoice: invoice.invoiceNumber },
@@ -459,7 +460,7 @@ export async function updateInvoiceBalance(
     }
     vendorUpdated = true;
   } else if (amountDifference !== 0 && invoice.vendorId && invoice.vendor) {
-    const previousBalance = invoice.vendor.currentBalance;
+    const previousBalance = Number(invoice.vendor.currentBalance) || 0;
     const newBalance = previousBalance + amountDifference;
 
     await prisma.vendors.update({
@@ -470,6 +471,7 @@ export async function updateInvoiceBalance(
     const existingTransaction = await prisma.vendorTransaction.findFirst({
       where: {
         vendorId: invoice.vendorId,
+        type: 'DEBIT',
         OR: [
           { reference: invoice.invoiceNumber },
           { invoice: invoice.invoiceNumber },
@@ -526,25 +528,6 @@ export async function createJournalEntryForTransaction(
   try {
     const orgFilter = organizationId != null ? { organizationId } : {};
 
-    if (organizationId != null) {
-      const existingCount = await prisma.chartOfAccount.count({
-        where: { organizationId }
-      });
-      if (existingCount === 0) {
-        try {
-          await prisma.chartOfAccount.createMany({
-            data: defaultAccounts.map((account) => ({
-              ...account,
-              organizationId,
-              isActive: true,
-            })),
-          });
-        } catch (err) {
-          console.error(`Failed to initialize default accounts for organization ${organizationId}:`, err);
-        }
-      }
-    }
-
     if (!Number.isFinite(amount) || amount <= 0) {
       console.warn(`Skipping ${type} journal entry for ${reference || invoice}: non-positive amount ${amount}`);
       return null;
@@ -567,31 +550,54 @@ export async function createJournalEntryForTransaction(
     const chartWhere = (extra: Record<string, unknown>) =>
       organizationId != null ? { organizationId, ...extra } : extra;
 
-    const cashAccount = await prisma.chartOfAccount.findFirst({
-      where: chartWhere({ accountName: "Cash" })
-    });
-
-    const accountsReceivable = await prisma.chartOfAccount.findFirst({
-      where: chartWhere({ accountName: "Accounts Receivable" })
-    });
-
-    const accountsPayable = await prisma.chartOfAccount.findFirst({
-      where: chartWhere({ accountName: "Accounts Payable" })
-    });
-
-    const revenueAccount = await prisma.chartOfAccount.findFirst({
+    let accounts = await prisma.chartOfAccount.findMany({
       where: chartWhere({
-        category: "Revenue",
-        accountName: "Logistics Services Revenue"
+        accountName: {
+          in: [
+            "Cash",
+            "Accounts Receivable",
+            "Accounts Payable",
+            "Logistics Services Revenue",
+            "Vendor Expense"
+          ]
+        }
       })
     });
 
-    const expenseAccount = await prisma.chartOfAccount.findFirst({
-      where: chartWhere({
-        category: "Expense",
-        accountName: "Vendor Expense"
-      })
-    });
+    if (accounts.length === 0 && organizationId != null) {
+      try {
+        await prisma.chartOfAccount.createMany({
+          data: defaultAccounts.map((account) => ({
+            ...account,
+            organizationId,
+            isActive: true,
+          })),
+        });
+        accounts = await prisma.chartOfAccount.findMany({
+          where: chartWhere({
+            accountName: {
+              in: [
+                "Cash",
+                "Accounts Receivable",
+                "Accounts Payable",
+                "Logistics Services Revenue",
+                "Vendor Expense"
+              ]
+            }
+          })
+        });
+      } catch (err) {
+        console.error(`Failed to initialize default accounts for organization ${organizationId}:`, err);
+      }
+    }
+
+    const cashAccount = accounts.find((a: any) => a.accountName === "Cash");
+    const accountsReceivable = accounts.find((a: any) => a.accountName === "Accounts Receivable");
+    const accountsPayable = accounts.find((a: any) => a.accountName === "Accounts Payable");
+    const revenueAccount = accounts.find((a: any) => a.accountName === "Logistics Services Revenue") ||
+      accounts.find((a: any) => a.category === "Revenue");
+    const expenseAccount = accounts.find((a: any) => a.accountName === "Vendor Expense") ||
+      accounts.find((a: any) => a.category === "Expense");
 
     const writeEntry = async (tx: any) => {
       const entryDate = date ? new Date(date) : new Date();
