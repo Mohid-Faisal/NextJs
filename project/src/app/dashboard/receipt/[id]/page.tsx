@@ -672,7 +672,7 @@ export default function ReceiptPage() {
   
   // Format sender address
   const senderName = invoice.customer?.PersonName || 'N/A';
-  const sendercompanyname = invoice.customer?.CompanyName || 'N/A';
+  const sendercompanyname = invoice.customer?.CompanyName || invoice.customer?.PersonName || 'N/A';
   // Always use the customer's saved address as the source of truth so the
   // waybill stays in sync with the customer record (and isn't broken by a
   // bad shipment-time snapshot like a stray "a").
@@ -689,20 +689,31 @@ export default function ReceiptPage() {
   // Format recipient (from invoice.recipient when available, else shipment)
   const r = invoice.recipient;
   const recipientName = r?.PersonName || shipment?.recipientName || 'N/A';
-  const recipientcompanyname = r?.CompanyName || 'N/A';
-  const recipientAddress = r?.Address ?? shipment?.recipientAddress ?? '';
+  const recipientcompanyname = r?.CompanyName || r?.PersonName || shipment?.recipientName || 'N/A';
+  const recipientAddress = (r?.Address || shipment?.recipientAddress || '').trim();
   const recipientCity = r?.City ?? '';
   const recipientState = r?.Country && r?.State
     ? getStateNameFromCode(String(r.State), r.Country)
     : (r?.State ?? '');
   const recipientZip = r?.Zip ?? '';
   const recipientPhone = r?.Phone ?? '';
-  const recipientCountry = r?.Country ? getCountryNameFromCode(r.Country) : (shipment?.destination ? getCountryNameFromCode(shipment.destination) : '');
+  const recipientCountry = r?.Country 
+    ? getCountryNameFromCode(r.Country) 
+    : (shipment?.destination ? getCountryNameFromCode(shipment.destination) : '');
   
-  // Format invoice date
-  const invoiceDate = invoice.invoiceDate 
-    ? format(new Date(invoice.invoiceDate), 'MMM dd, yyyy')
-    : format(new Date(), 'MMM dd, yyyy');
+  // Format invoice date safely
+  const safeFormatDate = (dateVal: any, formatPattern: string, fallbackPattern: string = formatPattern): string => {
+    try {
+      if (!dateVal) return format(new Date(), fallbackPattern);
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return format(new Date(), fallbackPattern);
+      return format(d, formatPattern);
+    } catch {
+      return format(new Date(), fallbackPattern);
+    }
+  };
+
+  const invoiceDate = safeFormatDate(invoice.invoiceDate, 'MMM dd, yyyy');
   
   // Get status
   const status = invoice.status || 'Unpaid';
@@ -736,20 +747,20 @@ export default function ReceiptPage() {
   if (parsedPackages.length > 0) {
     parsedPackages.forEach((pkg: Package) => {
       // Sum pieces
-      totalPieces += pkg.amount || 1;
+      totalPieces += Number(pkg.amount) || 1;
       
       // Sum actual weights (not max - we'll calculate charged weight separately)
-      totalWeight += pkg.weight || 0;
-      totalWeightVol += pkg.weightVol || 0;
+      totalWeight += Number(pkg.weight) || 0;
+      totalWeightVol += Number(pkg.weightVol) || 0;
       
       // Sum declared values
-      totalDecValue += pkg.decValue || 0;
+      totalDecValue += Number(pkg.decValue) || 0;
       
       // Track max dimensions - use package dimensions if available
       // Handle both number and string types
-      const pkgLength = typeof pkg.length === 'number' ? pkg.length : (typeof pkg.length === 'string' ? parseFloat(pkg.length) : 0);
-      const pkgWidth = typeof pkg.width === 'number' ? pkg.width : (typeof pkg.width === 'string' ? parseFloat(pkg.width) : 0);
-      const pkgHeight = typeof pkg.height === 'number' ? pkg.height : (typeof pkg.height === 'string' ? parseFloat(pkg.height) : 0);
+      const pkgLength = Number(pkg.length) || 0;
+      const pkgWidth = Number(pkg.width) || 0;
+      const pkgHeight = Number(pkg.height) || 0;
       
       if (pkgLength > 0 && pkgLength > maxLength) maxLength = pkgLength;
       if (pkgWidth > 0 && pkgWidth > maxWidth) maxWidth = pkgWidth;
@@ -763,9 +774,9 @@ export default function ReceiptPage() {
     
     // If no dimensions found in packages, try shipment-level data
     if (maxLength === 0 && maxWidth === 0 && maxHeight === 0) {
-      const shipLength = shipment?.length ? (typeof shipment.length === 'number' ? shipment.length : parseFloat(String(shipment.length))) : 0;
-      const shipWidth = shipment?.width ? (typeof shipment.width === 'number' ? shipment.width : parseFloat(String(shipment.width))) : 0;
-      const shipHeight = shipment?.height ? (typeof shipment.height === 'number' ? shipment.height : parseFloat(String(shipment.height))) : 0;
+      const shipLength = Number(shipment?.length) || 0;
+      const shipWidth = Number(shipment?.width) || 0;
+      const shipHeight = Number(shipment?.height) || 0;
       
       if (shipLength > 0) maxLength = shipLength;
       if (shipWidth > 0) maxWidth = shipWidth;
@@ -773,13 +784,13 @@ export default function ReceiptPage() {
     }
   } else {
     // Fallback to shipment-level data
-    totalPieces = shipment?.totalPackages || shipment?.amount || 1;
-    totalWeight = shipment?.totalWeight || shipment?.weight || invoice.weight || 0;
-    totalWeightVol = shipment?.totalWeightVol || shipment?.weightVol || 0;
-    totalDecValue = shipment?.decValue || 0;
-    const shipLength = shipment?.length ? (typeof shipment.length === 'number' ? shipment.length : parseFloat(String(shipment.length))) : 0;
-    const shipWidth = shipment?.width ? (typeof shipment.width === 'number' ? shipment.width : parseFloat(String(shipment.width))) : 0;
-    const shipHeight = shipment?.height ? (typeof shipment.height === 'number' ? shipment.height : parseFloat(String(shipment.height))) : 0;
+    totalPieces = Number(shipment?.totalPackages || shipment?.amount) || 1;
+    totalWeight = Number(shipment?.totalWeight ?? shipment?.weight ?? invoice.weight) || 0;
+    totalWeightVol = Number(shipment?.totalWeightVol ?? shipment?.weightVol) || 0;
+    totalDecValue = Number(shipment?.decValue) || 0;
+    const shipLength = Number(shipment?.length) || 0;
+    const shipWidth = Number(shipment?.width) || 0;
+    const shipHeight = Number(shipment?.height) || 0;
     
     maxLength = shipLength;
     maxWidth = shipWidth;
@@ -788,13 +799,13 @@ export default function ReceiptPage() {
 
   // Calculate charged weight (max of total weight and total volumetric weight)
   // This is the weight used for billing purposes
-  const chargedWeight = Math.max(totalWeight, totalWeightVol);
+  const chargedWeight = Math.max(Number(totalWeight) || 0, Number(totalWeightVol) || 0);
 
   // Format dimensions - use calculated max dimensions
   // Ensure we have valid numbers
-  const finalLength = maxLength > 0 ? maxLength : 0;
-  const finalWidth = maxWidth > 0 ? maxWidth : 0;
-  const finalHeight = maxHeight > 0 ? maxHeight : 0;
+  const finalLength = Number(maxLength) || 0;
+  const finalWidth = Number(maxWidth) || 0;
+  const finalHeight = Number(maxHeight) || 0;
   
   // Format dimensions - show actual values if available, otherwise show 0.00
   const dimensions = (finalLength > 0 || finalWidth > 0 || finalHeight > 0)
@@ -807,7 +818,7 @@ export default function ReceiptPage() {
     : [
         {
           description: 'Shipping Service',
-          value: invoice.totalAmount || 0
+          value: Number(invoice.totalAmount) || 0
         }
       ];
   
@@ -815,7 +826,7 @@ export default function ReceiptPage() {
   const serviceType = shipment?.serviceMode || shipment?.packaging || 'Standard';
   
   // Get packaging type for DOC/WPX label
-  const packagingType = shipment?.packaging?.toLowerCase() || '';
+  const packagingType = (shipment?.packaging || '').toLowerCase();
   const packagingLabel = packagingType.includes('document') || packagingType === 'doc' ? 'DOC' : 
                          packagingType.includes('wpx') || packagingType === 'wpx' ? 'WPX' : '';
   
@@ -840,12 +851,10 @@ export default function ReceiptPage() {
   // Get declared value (from packages decValue or shipment decValue or total amount)
   const declaredValue = totalDecValue > 0 
     ? totalDecValue 
-    : (shipment?.decValue || 0);
+    : (Number(shipment?.decValue) || 0);
   
   // Format date for timestamp
-  const timestampDate = invoice.invoiceDate 
-    ? format(new Date(invoice.invoiceDate), 'dd MMM yy HH:mm:ss')
-    : format(new Date(), 'dd MMM yy HH:mm:ss');
+  const timestampDate = safeFormatDate(invoice.invoiceDate, 'dd MMM yy HH:mm:ss');
 
   const orgName = org?.name || "PSS Worldwide Express";
 
@@ -1421,7 +1430,7 @@ export default function ReceiptPage() {
                   <div className="declared-label" style={{ lineHeight: '1.2' }}>DECLARED VALUE FOR</div>
                   <div className="declared-label" style={{ lineHeight: '1.2' }}>CUSTOMS AND CURRENCY</div>
                   <div className="declared-value" style={{ lineHeight: '1.2' }}>
-                    <strong>{declaredValue.toFixed(2)} USD.</strong>
+                    <strong>{Number(declaredValue || 0).toFixed(2)} USD.</strong>
                   </div>
               </div>
             </div>
@@ -1505,7 +1514,7 @@ export default function ReceiptPage() {
                     style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid black' }}
                   >
                     <span>WEIGHT</span>
-                    <strong>{totalWeight.toFixed(3)} KGS</strong>
+                    <strong>{Number(totalWeight || 0).toFixed(3)} KGS</strong>
               </div>
               
                   <div className="dimensions-label">
@@ -1518,7 +1527,7 @@ export default function ReceiptPage() {
                   <div className="charged-weight-block">
                     <div className="charged-weight-label">VOLUMETRIC / CHARGED WEIGHT</div>
                     <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}>
-                      <span>{chargedWeight.toFixed(2)}</span>
+                      <span>{Number(chargedWeight || 0).toFixed(2)}</span>
                       <span>KGS</span>
                     </div>
                   </div>
