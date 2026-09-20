@@ -465,10 +465,25 @@ export async function DELETE(
               where: orgWhere(session, { customerId }),
               orderBy: { createdAt: "asc" },
             });
+            const startingTx = remainingTransactions.find(
+              (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
+            );
             let newBalance = 0;
+            if (startingTx) {
+              newBalance =
+                startingTx.type === "DEBIT"
+                  ? -Number(startingTx.amount || 0)
+                  : Number(startingTx.amount || 0);
+            }
             for (const transaction of remainingTransactions) {
-              if (transaction.type === "DEBIT") newBalance -= transaction.amount;
-              else if (transaction.type === "CREDIT") newBalance += transaction.amount;
+              if (
+                transaction.reference &&
+                transaction.reference.startsWith("STARTING-BALANCE")
+              )
+                continue;
+              const amt = Number(transaction.amount || 0);
+              if (transaction.type === "DEBIT") newBalance -= amt;
+              else if (transaction.type === "CREDIT") newBalance += amt;
             }
             await tx.customers.update({
               where: { id: customerId },
@@ -491,10 +506,25 @@ export async function DELETE(
               where: orgWhere(session, { vendorId }),
               orderBy: { createdAt: "asc" },
             });
+            const startingTx = remainingTransactions.find(
+              (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
+            );
             let newBalance = 0;
+            if (startingTx) {
+              newBalance =
+                startingTx.type === "DEBIT"
+                  ? Number(startingTx.amount || 0)
+                  : -Number(startingTx.amount || 0);
+            }
             for (const transaction of remainingTransactions) {
-              if (transaction.type === "DEBIT") newBalance -= transaction.amount;
-              else if (transaction.type === "CREDIT") newBalance += transaction.amount;
+              if (
+                transaction.reference &&
+                transaction.reference.startsWith("STARTING-BALANCE")
+              )
+                continue;
+              const amt = Number(transaction.amount || 0);
+              if (transaction.type === "DEBIT") newBalance += amt;
+              else if (transaction.type === "CREDIT") newBalance -= amt;
             }
             await tx.vendors.update({
               where: { id: vendorId },
@@ -504,8 +534,18 @@ export async function DELETE(
           }
         }
 
-        // 5. Delete related invoices
+        // 5. Delete related invoices (including payment allocations, debit notes, and credit notes)
         if (relatedInvoices.length > 0) {
+          const invoiceIds = relatedInvoices.map((inv) => inv.id);
+          await tx.paymentAllocation.deleteMany({
+            where: { invoiceId: { in: invoiceIds } },
+          });
+          await tx.debitNote.deleteMany({
+            where: { billId: { in: invoiceIds } },
+          });
+          await tx.creditNote.deleteMany({
+            where: { invoiceId: { in: invoiceIds } },
+          });
           await tx.invoice.deleteMany({
             where: orgWhere(session, { OR: invoiceOr }),
           });
@@ -551,7 +591,7 @@ export async function DELETE(
       stack: error instanceof Error ? error.stack : "No stack trace",
     });
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error instanceof Error ? error.message : "Failed to delete shipment" },
       { status: 500 }
     );
   }

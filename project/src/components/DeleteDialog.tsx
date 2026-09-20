@@ -93,6 +93,7 @@ const DeleteDialog = ({
       const idsToDelete = isBulk ? entityIds : [entityId];
       let successCount = 0;
       let failCount = 0;
+      let lastErrorMessage = "";
 
       for (const id of idsToDelete) {
         try {
@@ -108,25 +109,36 @@ const DeleteDialog = ({
             successCount++;
           } else {
             failCount++;
+            try {
+              const data = await response.json();
+              if (data?.error) {
+                lastErrorMessage = data.error;
+              }
+            } catch {
+              // Ignore json parse error
+            }
           }
-        } catch {
+        } catch (fetchErr) {
           failCount++;
+          if (fetchErr instanceof Error) {
+            lastErrorMessage = fetchErr.message;
+          }
         }
       }
 
-      // Reset user 2FA status back to ACTIVE after all deletions
-      try {
-        await fetch("/api/auth/reset-2fa", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-      } catch {
-        // Non-critical, status will expire naturally
-      }
-
       if (successCount > 0) {
+        // Reset user 2FA status back to ACTIVE ONLY after successful deletion
+        try {
+          await fetch("/api/auth/reset-2fa", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        } catch {
+          // Non-critical, status will expire naturally
+        }
+
         toast.success(
           isBulk
             ? `${successCount} shipment(s) deleted successfully!${failCount > 0 ? ` (${failCount} failed)` : ""}`
@@ -138,7 +150,7 @@ const DeleteDialog = ({
         setVerificationCode("");
         setStep("password");
       } else {
-        toast.error("Failed to delete shipment(s)");
+        toast.error(lastErrorMessage || "Failed to delete shipment(s)");
       }
     } catch (error) {
       console.error("Verification error:", error);
@@ -162,6 +174,7 @@ const DeleteDialog = ({
       const idsToDelete = isBulk ? entityIds : [entityId];
       let successCount = 0;
       let failCount = 0;
+      let lastErrorMessage = "";
 
       for (const id of idsToDelete) {
         const apiUrl = entityType === "invoice" 
@@ -183,9 +196,20 @@ const DeleteDialog = ({
             successCount++;
           } else {
             failCount++;
+            try {
+              const data = await response.json();
+              if (data?.error) {
+                lastErrorMessage = data.error;
+              }
+            } catch {
+              // Ignore json parse error
+            }
           }
-        } catch {
+        } catch (fetchErr) {
           failCount++;
+          if (fetchErr instanceof Error) {
+            lastErrorMessage = fetchErr.message;
+          }
         }
       }
 
@@ -199,7 +223,7 @@ const DeleteDialog = ({
         onClose?.();
         setPassword("");
       } else {
-        toast.error(`Failed to delete ${entityType}(s)`);
+        toast.error(lastErrorMessage || `Failed to delete ${entityType}(s)`);
       }
     } catch (error) {
       console.error("Delete error:", error);
