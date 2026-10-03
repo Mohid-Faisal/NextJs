@@ -78,21 +78,39 @@ export async function reconcileInvoiceJournalEntries(
       const dateConditions: any[] = [];
       if (fromD && toD) {
         dateConditions.push(
-          { invoiceDate: { gte: fromD, lte: toD } },
-          { createdAt: { gte: fromD, lte: toD } },
-          { shipment: { shipmentDate: { gte: fromD, lte: toD } } }
+          { shipment: { shipmentDate: { gte: fromD, lte: toD } } },
+          {
+            shipment: null,
+            invoiceDate: { gte: fromD, lte: toD },
+          },
+          {
+            shipment: { shipmentDate: null },
+            invoiceDate: { gte: fromD, lte: toD },
+          }
         );
       } else if (fromD) {
         dateConditions.push(
-          { invoiceDate: { gte: fromD } },
-          { createdAt: { gte: fromD } },
-          { shipment: { shipmentDate: { gte: fromD } } }
+          { shipment: { shipmentDate: { gte: fromD } } },
+          {
+            shipment: null,
+            invoiceDate: { gte: fromD },
+          },
+          {
+            shipment: { shipmentDate: null },
+            invoiceDate: { gte: fromD },
+          }
         );
       } else if (toD) {
         dateConditions.push(
-          { invoiceDate: { lte: toD } },
-          { createdAt: { lte: toD } },
-          { shipment: { shipmentDate: { lte: toD } } }
+          { shipment: { shipmentDate: { lte: toD } } },
+          {
+            shipment: null,
+            invoiceDate: { lte: toD },
+          },
+          {
+            shipment: { shipmentDate: null },
+            invoiceDate: { lte: toD },
+          }
         );
       }
       if (dateConditions.length > 0) {

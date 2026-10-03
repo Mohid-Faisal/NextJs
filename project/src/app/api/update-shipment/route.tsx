@@ -24,23 +24,17 @@ async function updateJournalEntryForTransaction(
     const orgFilter = organizationId != null ? { organizationId } : {};
     console.log(`Searching for journal entry with reference: ${reference}, invoice: ${invoice}`);
     
-    let existingJournalEntry = await tx.journalEntry.findFirst({
-      where: {
-        ...orgFilter,
-        reference: reference
-      },
-      include: {
-        lines: true
-      }
-    });
-    
-    // If not found by reference, try by invoice number in description
-    if (!existingJournalEntry) {
-      console.log(`No journal entry found by reference ${reference}, trying by invoice number...`);
+    const cleanRef = typeof reference === "string" ? reference.trim() : "";
+    const cleanInvoice = typeof invoice === "string" ? invoice.trim() : "";
+    const isValidInvoice = cleanInvoice.length >= 3 && !/^[.\-_/ ]+$/.test(cleanInvoice);
+
+    let existingJournalEntry = null;
+
+    if (cleanRef) {
       existingJournalEntry = await tx.journalEntry.findFirst({
         where: {
           ...orgFilter,
-          description: { contains: invoice }
+          reference: cleanRef
         },
         include: {
           lines: true
@@ -48,43 +42,17 @@ async function updateJournalEntryForTransaction(
       });
     }
     
-    // If still not found, try by invoice number as reference
-    if (!existingJournalEntry) {
-      console.log(`No journal entry found by description, trying by invoice number as reference...`);
+    // If not found by reference, try by invoice number as reference or CREDIT-invoice
+    if (!existingJournalEntry && isValidInvoice) {
       existingJournalEntry = await tx.journalEntry.findFirst({
         where: {
           ...orgFilter,
-          reference: invoice
+          reference: { in: [cleanInvoice, `CREDIT-${cleanInvoice}`] }
         },
         include: {
           lines: true
         }
       });
-    }
-    
-    // If still not found, try broader search
-    if (!existingJournalEntry) {
-      console.log(`No journal entry found by any method, trying broader search...`);
-      const broaderSearch = await tx.journalEntry.findMany({
-        where: {
-          ...orgFilter,
-          OR: [
-            { description: { contains: invoice } },
-            { description: { contains: reference } }
-          ]
-        },
-        take: 5
-      });
-      console.log(`Broader search found ${broaderSearch.length} potential entries:`, broaderSearch.map((je: any) => ({ id: je.id, entryNumber: je.entryNumber, description: je.description, reference: je.reference })));
-      
-      // If we found entries in broader search, use the first one
-      if (broaderSearch.length > 0) {
-        existingJournalEntry = await tx.journalEntry.findFirst({
-          where: { id: broaderSearch[0].id },
-          include: { lines: true }
-        });
-        console.log(`Using broader search result: ${existingJournalEntry?.entryNumber}`);
-      }
     }
 
     if (existingJournalEntry) {
@@ -499,30 +467,29 @@ async function handleShipmentUpdate(req: Request) {
         if (!oldShipmentDate || newShipmentDate.getTime() !== oldShipmentDate.getTime()) {
           console.log(`Shipment date changed from ${oldShipmentDate} to ${newShipmentDate}, updating journal entry dates...`);
           
-          // Build search criteria for related journal entries
+          // Build search criteria for related journal entries using exact references
           const searchConditions: any[] = [];
           
-          // Search by tracking ID
-          if (effectiveTrackingId) {
-            searchConditions.push(
-              { reference: effectiveTrackingId },
-              { description: { contains: effectiveTrackingId } }
-            );
+          // Search by invoice numbers if invoices exist (exact reference and CREDIT-ref)
+          if (updatedShipment.invoices && updatedShipment.invoices.length > 0) {
+            const invoiceNumbers = updatedShipment.invoices
+              .map((inv) => String(inv.invoiceNumber || "").trim())
+              .filter(Boolean);
+            
+            if (invoiceNumbers.length > 0) {
+              const exactRefs = [
+                ...invoiceNumbers,
+                ...invoiceNumbers.map((num) => `CREDIT-${num}`),
+              ];
+              searchConditions.push({ reference: { in: exactRefs } });
+            }
           }
           
-          // Search by invoice numbers if invoices exist
-          if (updatedShipment.invoices && updatedShipment.invoices.length > 0) {
-            const invoiceNumbers = updatedShipment.invoices.map(inv => inv.invoiceNumber);
-            
-            // Search by invoice number as reference (using in operator)
-            if (invoiceNumbers.length > 0) {
-              searchConditions.push({ reference: { in: invoiceNumbers } });
-            }
-            
-            // Search by invoice number in description (one condition per invoice)
-            invoiceNumbers.forEach(invNum => {
-              searchConditions.push({ description: { contains: invNum } });
-            });
+          // Search by tracking ID only if it is a meaningful non-trivial tracking number
+          const cleanTracking = String(effectiveTrackingId || "").trim();
+          if (cleanTracking.length >= 4 && !/^[.\-_/ ]+$/.test(cleanTracking)) {
+            searchConditions.push({ reference: cleanTracking });
+            searchConditions.push({ description: { contains: `shipment ${cleanTracking}` } });
           }
           
           // Find all journal entries related to this shipment
