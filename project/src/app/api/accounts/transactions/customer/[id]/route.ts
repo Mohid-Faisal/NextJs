@@ -48,7 +48,7 @@ export async function GET(
     const toDate = searchParams.get('toDate');
     const sortField = searchParams.get('sortField') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const recalcBalances = searchParams.get('recalc') === 'true';
+    let recalcBalances = searchParams.get('recalc') === 'true';
 
     // Build where clause for filtering
     const whereClause: any = orgWhere(session, {
@@ -152,6 +152,79 @@ export async function GET(
         { error: "Customer not found" },
         { status: 404 }
       );
+    }
+
+    // Ensure all customer invoices have corresponding DEBIT transactions
+    const customerInvoices = await prisma.invoice.findMany({
+      where: orgWhere(session, {
+        customerId,
+        profile: "Customer",
+        status: { not: "Cancelled" },
+      }),
+      include: {
+        shipment: {
+          select: {
+            trackingId: true,
+            destination: true,
+            packaging: true,
+            weight: true,
+            totalWeight: true,
+            shipmentDate: true,
+          },
+        },
+      },
+    });
+
+    if (customerInvoices.length > 0) {
+      const invNumbers = customerInvoices.map((inv) => inv.invoiceNumber);
+      const existingDebitTxs = await prisma.customerTransaction.findMany({
+        where: orgWhere(session, {
+          customerId,
+          type: "DEBIT",
+          OR: [
+            { reference: { in: invNumbers } },
+            { invoice: { in: invNumbers } },
+          ],
+        }),
+        select: { reference: true, invoice: true },
+      });
+
+      const existingSet = new Set<string>();
+      for (const t of existingDebitTxs) {
+        if (t.reference) existingSet.add(t.reference);
+        if (t.invoice) existingSet.add(t.invoice);
+      }
+
+      const missingInvoices = customerInvoices.filter(
+        (inv) => !existingSet.has(inv.invoiceNumber) && Number(inv.totalAmount) > 0
+      );
+
+      if (missingInvoices.length > 0) {
+        for (const inv of missingInvoices) {
+          const tracking = inv.shipment?.trackingId || inv.trackingNumber || "N/A";
+          const country = inv.shipment?.destination || inv.destination || "N/A";
+          const pkg = inv.shipment?.packaging || "Wpx";
+          const wt = inv.shipment?.totalWeight || inv.shipment?.weight || 0;
+          const desc = `Tracking: ${tracking} | Country: ${country} | Type: ${pkg} | Weight: ${wt}Kg`;
+          const txDate = inv.shipment?.shipmentDate || inv.invoiceDate || inv.createdAt;
+
+          await prisma.customerTransaction.create({
+            data: {
+              organizationId: session.organizationId,
+              customerId,
+              type: "DEBIT",
+              amount: Number(inv.totalAmount),
+              description: desc,
+              reference: inv.invoiceNumber,
+              invoice: inv.invoiceNumber,
+              previousBalance: 0,
+              newBalance: -Number(inv.totalAmount),
+              createdAt: txDate,
+            },
+          });
+        }
+        recalcBalances = true;
+      }
     }
 
     // List path: use existing balances; always filter and sort by voucher date (not createdAt)

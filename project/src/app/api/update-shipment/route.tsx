@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import {
+  addCustomerTransaction,
   buildShipmentDebitTransactionLineDescription,
   createJournalEntryForTransaction,
   syncShipmentInvoiceDebitTransactionDescriptions,
@@ -401,6 +402,31 @@ async function handleShipmentUpdate(req: Request) {
         }
       }
 
+      // Resolve customerId when sender name changes or direct customerId is provided
+      let resolvedCustomerId: number | undefined = undefined;
+      const directCustId = body.customerId || body.selectedSender?.id;
+      if (directCustId) {
+        const cust = await tx.customers.findFirst({
+          where: orgWhere(session, { id: Number(directCustId) }),
+          select: { id: true },
+        });
+        if (cust) resolvedCustomerId = cust.id;
+      } else if (senderName !== undefined) {
+        const sName = String(senderName ?? "").trim();
+        if (sName) {
+          const cust = await tx.customers.findFirst({
+            where: orgWhere(session, {
+              OR: [
+                { CompanyName: sName },
+                { PersonName: sName },
+              ],
+            }),
+            select: { id: true },
+          });
+          if (cust) resolvedCustomerId = cust.id;
+        }
+      }
+
       // 1. Update the shipment (including reference # and CoS — previously dropped on edit)
       const updatedShipment = await tx.shipment.update({
         where: { id },
@@ -661,6 +687,10 @@ async function handleShipmentUpdate(req: Request) {
               ...(isVendorInvoice && resolvedVendorId != null
                 ? { vendorId: resolvedVendorId }
                 : {}),
+              // Move customer invoice when shipment sender changes
+              ...(!isVendorInvoice && resolvedCustomerId != null
+                ? { customerId: resolvedCustomerId }
+                : {}),
               updatedAt: new Date(),
             },
           });
@@ -683,6 +713,63 @@ async function handleShipmentUpdate(req: Request) {
               },
               data: { vendorId: resolvedVendorId },
             });
+          }
+
+          // Move customer DEBIT rows with the invoice when customer changes
+          if (
+            !isVendorInvoice &&
+            resolvedCustomerId != null &&
+            invoice.customerId &&
+            resolvedCustomerId !== invoice.customerId
+          ) {
+            await tx.customerTransaction.updateMany({
+              where: {
+                customerId: invoice.customerId,
+                type: "DEBIT",
+                OR: [
+                  { reference: invoice.invoiceNumber },
+                  { invoice: invoice.invoiceNumber },
+                ],
+              },
+              data: { customerId: resolvedCustomerId },
+            });
+          }
+
+          // Ensure customer DEBIT row exists for customer invoice
+          const effectiveCustomerId = (!isVendorInvoice && resolvedCustomerId != null)
+            ? resolvedCustomerId
+            : invoice.customerId;
+
+          if (!isVendorInvoice && effectiveCustomerId && finalInvoiceAmount > 0) {
+            const existingTx = await tx.customerTransaction.findFirst({
+              where: {
+                customerId: effectiveCustomerId,
+                type: "DEBIT",
+                OR: [
+                  { reference: invoice.invoiceNumber },
+                  { invoice: invoice.invoiceNumber },
+                ],
+              },
+            });
+            if (!existingTx) {
+              const lineDesc = buildShipmentDebitTransactionLineDescription(
+                effectiveTrackingId || invoice.trackingNumber || "N/A",
+                effectiveDestination || invoice.destination || "N/A",
+                packaging || "Wpx",
+                effectiveTotalWeight || invoice.weight || 0
+              );
+              await addCustomerTransaction(
+                tx,
+                effectiveCustomerId,
+                "DEBIT",
+                finalInvoiceAmount,
+                lineDesc,
+                invoice.invoiceNumber,
+                invoice.invoiceNumber,
+                shipmentDate ? new Date(shipmentDate) : existingShipment.shipmentDate || new Date(),
+                session.organizationId
+              );
+            }
           }
 
           // 3. Update customer/vendor balances and journal entries

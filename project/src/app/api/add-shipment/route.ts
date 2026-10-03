@@ -391,12 +391,25 @@ export async function POST(req: NextRequest) {
             // 7.1 Customer and Vendor Lookup
             let customerId: number | null = null;
             let customerBalance = 0;
-            if (finalSenderName) {
+            const directCustomerId = requestBody.customerId || requestBody.selectedSender?.id;
+            if (directCustomerId) {
               const customer = await tx.customers.findFirst({
-                where: orgWhere(session, { CompanyName: finalSenderName }),
+                where: orgWhere(session, { id: Number(directCustomerId) }),
               });
               customerId = customer?.id || null;
-              customerBalance = customer?.currentBalance || 0;
+              customerBalance = Number(customer?.currentBalance) || 0;
+            } else if (finalSenderName) {
+              const trimmedSender = String(finalSenderName).trim();
+              const customer = await tx.customers.findFirst({
+                where: orgWhere(session, {
+                  OR: [
+                    { CompanyName: trimmedSender },
+                    { PersonName: trimmedSender },
+                  ],
+                }),
+              });
+              customerId = customer?.id || null;
+              customerBalance = Number(customer?.currentBalance) || 0;
             }
 
             let vendorId: number | null = null;
