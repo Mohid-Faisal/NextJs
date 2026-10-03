@@ -158,19 +158,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if reference number already exists (only if provided)
-    if (referenceNumber && referenceNumber.trim() !== '') {
-      const existingReferenceNumber = await prisma.shipment.findFirst({
-        where: orgWhere(session, { referenceNumber }),
-      });
-      if (existingReferenceNumber) {
-        return NextResponse.json(
-          { error: "Reference Number already exists" },
-          { status: 400 }
-        );
-      }
-    }
-
     // ============================================================================
     // SECTION 3: DEBUG LOGGING
     // ============================================================================
@@ -785,12 +772,6 @@ export async function POST(req: NextRequest) {
       if (target.includes("trackingId")) {
         return NextResponse.json(
           { success: false, error: "Tracking ID already exists. Please enter a unique Tracking ID." },
-          { status: 409 }
-        );
-      }
-      if (target.includes("referenceNumber")) {
-        return NextResponse.json(
-          { success: false, error: "Reference Number already exists. Please enter a unique Reference Number." },
           { status: 409 }
         );
       }

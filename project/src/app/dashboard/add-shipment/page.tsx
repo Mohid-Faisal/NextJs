@@ -35,6 +35,7 @@ import { matchHsCode, type HsCodeItem } from "@/lib/matchHsCode";
 interface Party {
   id: number;
   Company: string;
+  PersonName?: string;
   Address: string;
   Country: string;
   State: string;
@@ -50,7 +51,14 @@ function partyOptionLabel(party: Party) {
   const loc = [party.City, countryObj?.name || party.Country]
     .filter(Boolean)
     .join(", ");
-  return `${party.Company}${loc ? ` (${loc})` : ""}`;
+  const hasDistinctNames =
+    party.Company &&
+    party.PersonName &&
+    party.Company.toLowerCase().trim() !== party.PersonName.toLowerCase().trim();
+  const nameLabel = hasDistinctNames
+    ? `${party.Company} (${party.PersonName})`
+    : party.Company || party.PersonName || "";
+  return `${nameLabel}${loc ? ` — ${loc}` : ""}`;
 }
 
 /**
@@ -104,6 +112,14 @@ function PartyCombobox({
     }
   }, [open, searchRef]);
 
+  const selectedDisplay = selected
+    ? selected.Company &&
+      selected.PersonName &&
+      selected.Company.toLowerCase().trim() !== selected.PersonName.toLowerCase().trim()
+      ? `${selected.Company} (${selected.PersonName})`
+      : selected.Company || selected.PersonName
+    : placeholder;
+
   return (
     <div ref={rootRef} className="relative w-full">
       <button
@@ -114,12 +130,12 @@ function PartyCombobox({
       >
         <span
           className={
-            selected?.Company
+            selected?.Company || selected?.PersonName
               ? "truncate text-left text-foreground"
               : "truncate text-left text-muted-foreground"
           }
         >
-          {selected?.Company || placeholder}
+          {selectedDisplay}
         </span>
         <ChevronDown className="size-4 shrink-0 opacity-50" />
       </button>
@@ -1046,6 +1062,7 @@ const AddShipmentPage = () => {
             return {
               id: row.id,
               Company: row.CompanyName || row.PersonName || fallbackName,
+              PersonName: row.PersonName || undefined,
               Address: row.Address || fallbackAddress || "",
               Country: row.Country || fallbackCountry || "",
               State: row.State || "",
@@ -1173,18 +1190,20 @@ const AddShipmentPage = () => {
             const exactSender =
               senderData.find(
                 (sender: Party) =>
-                  sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim() &&
+                  (sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim() ||
+                    (sender.PersonName && sender.PersonName.toLowerCase().trim() === s.senderName.toLowerCase().trim())) &&
                   (sender.Address?.toLowerCase().trim() === s.senderAddress?.toLowerCase().trim() ||
                     !s.senderAddress)
               ) ||
               senderData.find(
                 (sender: Party) =>
-                  sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim()
+                  sender.Company.toLowerCase().trim() === s.senderName.toLowerCase().trim() ||
+                  (sender.PersonName && sender.PersonName.toLowerCase().trim() === s.senderName.toLowerCase().trim())
               ) ||
               senderData[0];
             if (exactSender) {
               setSelectedSender(exactSender);
-              setSenderQuery(exactSender.Company);
+              setSenderQuery(exactSender.Company || exactSender.PersonName || "");
               setSenderResults(senderData);
             }
           }
@@ -1200,8 +1219,11 @@ const AddShipmentPage = () => {
             const exactRecipient =
               recipientData.find(
                 (recipient: Party) =>
-                  recipient.Company.toLowerCase().trim() ===
-                    s.recipientName.toLowerCase().trim() &&
+                  (recipient.Company.toLowerCase().trim() ===
+                    s.recipientName.toLowerCase().trim() ||
+                    (recipient.PersonName &&
+                      recipient.PersonName.toLowerCase().trim() ===
+                        s.recipientName.toLowerCase().trim())) &&
                   (recipient.Country?.toLowerCase().trim() ===
                     s.destination?.toLowerCase().trim() ||
                     recipient.Address?.toLowerCase().trim() ===
@@ -1210,12 +1232,15 @@ const AddShipmentPage = () => {
               recipientData.find(
                 (recipient: Party) =>
                   recipient.Company.toLowerCase().trim() ===
-                  s.recipientName.toLowerCase().trim()
+                    s.recipientName.toLowerCase().trim() ||
+                  (recipient.PersonName &&
+                    recipient.PersonName.toLowerCase().trim() ===
+                      s.recipientName.toLowerCase().trim())
               ) ||
               recipientData[0];
             if (exactRecipient) {
               setSelectedRecipient(exactRecipient);
-              setRecipientQuery(exactRecipient.Company);
+              setRecipientQuery(exactRecipient.Company || exactRecipient.PersonName || "");
               setRecipientResults(recipientData);
             }
           }
@@ -1501,10 +1526,11 @@ const AddShipmentPage = () => {
                         searchPlaceholder="Search sender..."
                         onSelect={(sender) => {
                           setSelectedSender(sender);
-                          setSenderQuery(sender.Company);
+                          const chosenName = sender.Company || sender.PersonName || "";
+                          setSenderQuery(chosenName);
                           setForm((prev) => ({
                             ...prev,
-                            senderName: sender.Company,
+                            senderName: chosenName,
                             senderAddress: sender.Address,
                           }));
                         }}
@@ -1659,10 +1685,11 @@ const AddShipmentPage = () => {
                         searchPlaceholder="Search recipient..."
                         onSelect={(recipient) => {
                           setSelectedRecipient(recipient);
-                          setRecipientQuery(recipient.Company);
+                          const chosenName = recipient.Company || recipient.PersonName || "";
+                          setRecipientQuery(chosenName);
                           setForm((prev) => ({
                             ...prev,
-                            recipientName: recipient.Company,
+                            recipientName: chosenName,
                             recipientAddress: recipient.Address,
                           }));
                         }}

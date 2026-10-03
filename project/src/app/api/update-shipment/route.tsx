@@ -283,27 +283,6 @@ async function handleShipmentUpdate(req: Request) {
       return NextResponse.json({ success: false, message: "Shipment not found" }, { status: 404 });
     }
 
-    // Reference number uniqueness (exclude current shipment)
-    if (
-      referenceNumber !== undefined &&
-      String(referenceNumber).trim() !== "" &&
-      String(referenceNumber).trim() !== (existingShipment.referenceNumber ?? "")
-    ) {
-      const duplicateRef = await prisma.shipment.findFirst({
-        where: orgWhere(session, {
-          referenceNumber: String(referenceNumber).trim(),
-          NOT: { id },
-        }),
-        select: { id: true },
-      });
-      if (duplicateRef) {
-        return NextResponse.json(
-          { success: false, message: "Reference Number already exists" },
-          { status: 400 }
-        );
-      }
-    }
-
     // Use existing values if new values aren't provided
     const effectivePrice = price !== undefined ? parseFloat(price) : (existingShipment.price || 0);
     const effectiveFuelSurcharge = fuelSurcharge !== undefined ? parseFloat(fuelSurcharge) : (existingShipment.fuelSurcharge || 0);

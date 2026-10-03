@@ -12,15 +12,18 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("query");
 //   console.log(searchParams,query)
-  if (!query || query.length < 2) {
+  const trimmed = (query || "").trim();
+  if (!trimmed || trimmed.length < 2) {
     return NextResponse.json([]);
   }
 
   try {
     const recipients = await prisma.recipients.findMany({
       where: orgWhere(session, {
-        CompanyName: {
-          contains: query, },
+        OR: [
+          { CompanyName: { contains: trimmed } },
+          { PersonName: { contains: trimmed } },
+        ],
       }),
       take: 10,
       select: {
