@@ -24,12 +24,26 @@ async function netCustomerInvoicedReceivableForPeriod(
       organizationId,
       customerId: { not: null },
       status: { not: "Cancelled" },
-      createdAt: {
-        gte: rangeStart,
-        lt: rangeEndExclusive,
-      },
+      OR: [
+        {
+          shipment: {
+            shipmentDate: {
+              gte: rangeStart,
+              lt: rangeEndExclusive,
+            },
+          },
+        },
+        {
+          shipment: null,
+          invoiceDate: {
+            gte: rangeStart,
+            lt: rangeEndExclusive,
+          },
+        },
+      ],
     },
     select: {
+      id: true,
       invoiceNumber: true,
       totalAmount: true,
       status: true,
@@ -38,28 +52,64 @@ async function netCustomerInvoicedReceivableForPeriod(
 
   if (monthInvoices.length === 0) return 0;
 
-  // Batch payment sums for all Partial invoices in one grouped query instead
-  // of aggregating per invoice.
-  const partialInvoiceNumbers = monthInvoices
-    .filter((inv) => inv.status === "Partial" && inv.invoiceNumber)
-    .map((inv) => inv.invoiceNumber as string);
+  // Batch payment sums for all Partial invoices in grouped queries
+  const partialInvoices = monthInvoices.filter(
+    (inv) => inv.status === "Partial" && inv.invoiceNumber
+  );
+  const partialInvoiceNumbers = partialInvoices.map(
+    (inv) => inv.invoiceNumber as string
+  );
+  const partialInvoiceIds = partialInvoices.map((inv) => inv.id);
 
   const paidByInvoice = new Map<string, number>();
-  if (partialInvoiceNumbers.length > 0) {
-    const paymentSums = await prismaClient.payment.groupBy({
-      by: ["invoice"],
-      where: {
-        organizationId,
-        transactionType: "INCOME",
-        fromCustomerId: { not: null },
-        invoice: { in: partialInvoiceNumbers },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-    for (const row of paymentSums) {
-      if (row.invoice) paidByInvoice.set(row.invoice, money(row._sum.amount));
+  if (partialInvoices.length > 0) {
+    const [legacySums, allocSums] = await Promise.all([
+      prismaClient.payment.groupBy({
+        by: ["invoice"],
+        where: {
+          organizationId,
+          transactionType: "INCOME",
+          fromCustomerId: { not: null },
+          invoice: { in: partialInvoiceNumbers },
+          allocations: { none: {} },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      prismaClient.paymentAllocation.groupBy({
+        by: ["invoiceId"],
+        where: {
+          organizationId,
+          invoiceId: { in: partialInvoiceIds },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]);
+
+    const idToNumber = new Map(
+      partialInvoices.map((i) => [i.id, i.invoiceNumber as string])
+    );
+
+    for (const row of allocSums) {
+      const invNum = idToNumber.get(row.invoiceId);
+      if (invNum) {
+        paidByInvoice.set(
+          invNum,
+          (paidByInvoice.get(invNum) || 0) + money(row._sum.amount)
+        );
+      }
+    }
+
+    for (const row of legacySums) {
+      if (row.invoice) {
+        paidByInvoice.set(
+          row.invoice,
+          (paidByInvoice.get(row.invoice) || 0) + money(row._sum.amount)
+        );
+      }
     }
   }
 
@@ -99,6 +149,10 @@ export async function GET(req: Request) {
 
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
+    const curMonthStart = new Date(currentYear, currentMonth, 1);
+    const curMonthEnd = new Date(currentYear, currentMonth + 1, 1);
+    const prevMonthStart = new Date(currentYear, currentMonth - 1, 1);
+    const prevMonthEnd = new Date(currentYear, currentMonth, 1);
 
     // Batch independent counts / aggregates in parallel.
     // Active users: the former HTTP self-call to /api/user-activity tracked an
@@ -132,8 +186,8 @@ export async function GET(req: Request) {
       prisma.shipment.count({
         where: org({
           shipmentDate: {
-            gte: new Date(currentYear, currentMonth, 1),
-            lt: new Date(currentYear, currentMonth + 1, 1),
+            gte: curMonthStart,
+            lt: curMonthEnd,
           },
         }),
       }),
@@ -163,12 +217,23 @@ export async function GET(req: Request) {
           where: org({
             customerId: { not: null },
             status: { not: "Cancelled" },
-            shipment: {
-              shipmentDate: {
-                gte: startDate,
-                lt: endDate
-              }
-            }
+            OR: [
+              {
+                shipment: {
+                  shipmentDate: {
+                    gte: startDate,
+                    lt: endDate,
+                  },
+                },
+              },
+              {
+                shipment: null,
+                invoiceDate: {
+                  gte: startDate,
+                  lt: endDate,
+                },
+              },
+            ],
           }),
           _sum: {
             totalAmount: true
@@ -396,12 +461,23 @@ export async function GET(req: Request) {
             where: org({
               customerId: { not: null },
               status: { not: "Cancelled" },
-              shipment: {
-                shipmentDate: {
-                  gte: startDate,
-                  lt: endDate
-                }
-              }
+              OR: [
+                {
+                  shipment: {
+                    shipmentDate: {
+                      gte: startDate,
+                      lt: endDate,
+                    },
+                  },
+                },
+                {
+                  shipment: null,
+                  invoiceDate: {
+                    gte: startDate,
+                    lt: endDate,
+                  },
+                },
+              ],
             }),
             _sum: { totalAmount: true },
           }),
@@ -588,12 +664,6 @@ export async function GET(req: Request) {
       else customerSatisfaction = 2.5;
     }
     
-    // This month / last month: net invoiced receivable (new customer invoices minus payments this period toward those invoices)
-    const curMonthStart = new Date(currentYear, currentMonth, 1);
-    const curMonthEnd = new Date(currentYear, currentMonth + 1, 1);
-    const prevMonthStart = new Date(currentYear, currentMonth - 1, 1);
-    const prevMonthEnd = new Date(currentYear, currentMonth, 1);
-
     // Batch the independent month-over-month growth queries, accounts
     // payable/receivable aggregates, and period receivables in parallel.
     const [
@@ -608,17 +678,28 @@ export async function GET(req: Request) {
       currentMonthReceivableAmount,
       previousMonthReceivableAmount,
     ] = await Promise.all([
-      // Revenue growth (comparing current month with previous month using shipmentDate)
+      // Revenue growth (comparing current month with previous month using shipmentDate, or invoiceDate for non-shipment invoices)
       prisma.invoice.aggregate({
         where: org({
           customerId: { not: null },
           status: { not: "Cancelled" },
-          shipment: {
-            shipmentDate: {
-              gte: new Date(currentYear, currentMonth, 1),
-              lt: new Date(currentYear, currentMonth + 1, 1)
-            }
-          }
+          OR: [
+            {
+              shipment: {
+                shipmentDate: {
+                  gte: curMonthStart,
+                  lt: curMonthEnd,
+                },
+              },
+            },
+            {
+              shipment: null,
+              invoiceDate: {
+                gte: curMonthStart,
+                lt: curMonthEnd,
+              },
+            },
+          ],
         }),
         _sum: { totalAmount: true }
       }),
@@ -626,12 +707,23 @@ export async function GET(req: Request) {
         where: org({
           customerId: { not: null },
           status: { not: "Cancelled" },
-          shipment: {
-            shipmentDate: {
-              gte: new Date(currentYear, currentMonth - 1, 1),
-              lt: new Date(currentYear, currentMonth, 1)
-            }
-          }
+          OR: [
+            {
+              shipment: {
+                shipmentDate: {
+                  gte: prevMonthStart,
+                  lt: prevMonthEnd,
+                },
+              },
+            },
+            {
+              shipment: null,
+              invoiceDate: {
+                gte: prevMonthStart,
+                lt: prevMonthEnd,
+              },
+            },
+          ],
         }),
         _sum: { totalAmount: true }
       }),
@@ -639,16 +731,16 @@ export async function GET(req: Request) {
       prisma.shipment.count({
         where: org({
           shipmentDate: {
-            gte: new Date(currentYear, currentMonth, 1),
-            lt: new Date(currentYear, currentMonth + 1, 1)
+            gte: curMonthStart,
+            lt: curMonthEnd,
           }
         }),
       }),
       prisma.shipment.count({
         where: org({
           shipmentDate: {
-            gte: new Date(currentYear, currentMonth - 1, 1),
-            lt: new Date(currentYear, currentMonth, 1)
+            gte: prevMonthStart,
+            lt: prevMonthEnd,
           }
         }),
       }),
@@ -656,16 +748,16 @@ export async function GET(req: Request) {
       prisma.customers.count({
         where: org({
           createdAt: {
-            gte: new Date(currentYear, currentMonth, 1),
-            lt: new Date(currentYear, currentMonth + 1, 1)
+            gte: curMonthStart,
+            lt: curMonthEnd,
           }
         }),
       }),
       prisma.customers.count({
         where: org({
           createdAt: {
-            gte: new Date(currentYear, currentMonth - 1, 1),
-            lt: new Date(currentYear, currentMonth, 1)
+            gte: prevMonthStart,
+            lt: prevMonthEnd,
           }
         }),
       }),
@@ -761,10 +853,23 @@ export async function GET(req: Request) {
               where: org({
                 customerId: { not: null },
                 status: { not: "Cancelled" },
-                createdAt: {
-                  gte: targetDate,
-                  lt: endExclusive,
-                },
+                OR: [
+                  {
+                    shipment: {
+                      shipmentDate: {
+                        gte: targetDate,
+                        lt: endExclusive,
+                      },
+                    },
+                  },
+                  {
+                    shipment: null,
+                    invoiceDate: {
+                      gte: targetDate,
+                      lt: endExclusive,
+                    },
+                  },
+                ],
               }),
               _sum: { totalAmount: true },
             }),
@@ -772,10 +877,23 @@ export async function GET(req: Request) {
               where: org({
                 vendorId: { not: null },
                 status: { not: "Cancelled" },
-                createdAt: {
-                  gte: targetDate,
-                  lt: endExclusive,
-                },
+                OR: [
+                  {
+                    shipment: {
+                      shipmentDate: {
+                        gte: targetDate,
+                        lt: endExclusive,
+                      },
+                    },
+                  },
+                  {
+                    shipment: null,
+                    invoiceDate: {
+                      gte: targetDate,
+                      lt: endExclusive,
+                    },
+                  },
+                ],
               }),
               _sum: { totalAmount: true },
             }),
