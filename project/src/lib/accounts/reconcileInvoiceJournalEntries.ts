@@ -82,10 +82,6 @@ export async function reconcileInvoiceJournalEntries(
           {
             shipment: null,
             invoiceDate: { gte: fromD, lte: toD },
-          },
-          {
-            shipment: { shipmentDate: null },
-            invoiceDate: { gte: fromD, lte: toD },
           }
         );
       } else if (fromD) {
@@ -94,10 +90,6 @@ export async function reconcileInvoiceJournalEntries(
           {
             shipment: null,
             invoiceDate: { gte: fromD },
-          },
-          {
-            shipment: { shipmentDate: null },
-            invoiceDate: { gte: fromD },
           }
         );
       } else if (toD) {
@@ -105,10 +97,6 @@ export async function reconcileInvoiceJournalEntries(
           { shipment: { shipmentDate: { lte: toD } } },
           {
             shipment: null,
-            invoiceDate: { lte: toD },
-          },
-          {
-            shipment: { shipmentDate: null },
             invoiceDate: { lte: toD },
           }
         );
@@ -254,7 +242,7 @@ export async function reconcileInvoiceJournalEntries(
               },
             });
           }
-        });
+        }, { timeout: 20000, maxWait: 10000 });
         createdCount++;
       } else {
         // 3. If JE exists, check for amount, date, or line account discrepancies
@@ -330,7 +318,7 @@ export async function reconcileInvoiceJournalEntries(
                 ],
               });
             }
-          });
+          }, { timeout: 20000, maxWait: 10000 });
           updatedCount++;
         }
       }
@@ -401,7 +389,7 @@ export async function reconcileInvoiceJournalEntries(
         await tx.journalEntry.deleteMany({
           where: { id: { in: orphanedJEIds } },
         });
-      });
+      }, { timeout: 20000, maxWait: 10000 });
       removedCount += orphanedJEIds.length;
     }
 
