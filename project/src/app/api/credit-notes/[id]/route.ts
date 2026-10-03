@@ -243,6 +243,8 @@ export async function PUT(
           amount: newAmount,
           date: newDate,
           description: lineDesc,
+          transactionType: type === "DEBIT" ? "INCOME" : "EXPENSE",
+          category: type === "DEBIT" ? "Customer Adjustment" : "Customer Credit",
         },
       });
 

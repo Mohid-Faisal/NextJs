@@ -241,6 +241,8 @@ export async function PUT(
           amount: newAmount,
           date: newDate,
           description: lineDesc,
+          transactionType: type === "DEBIT" ? "EXPENSE" : "INCOME",
+          category: type === "DEBIT" ? "Vendor Payment" : "Vendor Credit",
         },
       });
 

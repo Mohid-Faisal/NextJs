@@ -234,18 +234,7 @@ export default function CreateCreditNoteDialog({
     if (isEditMode) return;
     if (accounts.length > 0) {
       if (entryType === "CREDIT") {
-        // CREDIT type: Debit Cash, Credit Logistics Revenue
-        const cashAccount = accounts.find(acc => 
-          acc.category === "Asset" && acc.accountName.toLowerCase().includes("cash")
-        );
-        const revenueAccount = accounts.find(acc => 
-          acc.category === "Revenue" && acc.accountName.toLowerCase().includes("logistic")
-        ) || accounts.find(acc => acc.category === "Revenue");
-        
-        if (cashAccount) setDebitAccountId(cashAccount.id.toString());
-        if (revenueAccount) setCreditAccountId(revenueAccount.id.toString());
-      } else {
-        // DEBIT type: Debit Misc Expense, Credit Cash
+        // CREDIT type (expense for us): Debit Misc Expense, Credit Cash
         const expenseAccount = accounts.find(acc => 
           acc.category === "Expense" && (
             acc.accountName.toLowerCase().includes("misc") ||
@@ -258,6 +247,17 @@ export default function CreateCreditNoteDialog({
         
         if (expenseAccount) setDebitAccountId(expenseAccount.id.toString());
         if (cashAccount) setCreditAccountId(cashAccount.id.toString());
+      } else {
+        // DEBIT type (revenue for us): Debit Cash, Credit Logistics Revenue
+        const cashAccount = accounts.find(acc => 
+          acc.category === "Asset" && acc.accountName.toLowerCase().includes("cash")
+        );
+        const revenueAccount = accounts.find(acc => 
+          acc.category === "Revenue" && acc.accountName.toLowerCase().includes("logistic")
+        ) || accounts.find(acc => acc.category === "Revenue");
+        
+        if (cashAccount) setDebitAccountId(cashAccount.id.toString());
+        if (revenueAccount) setCreditAccountId(revenueAccount.id.toString());
       }
     }
   }, [entryType, accounts, isEditMode]);

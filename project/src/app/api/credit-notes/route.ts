@@ -304,10 +304,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create payment record
+      // Create payment record (customer credit = expense for us)
       const payment = await tx.payment.create({
         data: orgData(session, {
-          transactionType: "INCOME",
+          transactionType: "EXPENSE",
           category: "Customer Credit",
           date: parseDateInputAsLocalDate(date),
           amount: parseFloat(amount),
@@ -340,8 +340,8 @@ export async function POST(request: NextRequest) {
 
       // Create journal entry lines
       // Use provided account IDs or defaults
-      const debitAccId = useProvidedAccounts ? parseInt(debitAccountId) : cashId;
-      const creditAccId = useProvidedAccounts ? parseInt(creditAccountId) : revenueId;
+      const debitAccId = useProvidedAccounts ? parseInt(debitAccountId) : expenseId;
+      const creditAccId = useProvidedAccounts ? parseInt(creditAccountId) : cashId;
       
       // Debit Account
       await tx.journalEntryLine.create({
@@ -426,11 +426,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create payment record
+      // Create payment record (customer debit = revenue for us)
       const payment = await tx.payment.create({
         data: orgData(session, {
-          transactionType: "EXPENSE",
-          category: "Customer Credit",
+          transactionType: "INCOME",
+          category: "Customer Adjustment",
           date: parseDateInputAsLocalDate(date),
           amount: Math.abs(parseFloat(amount)),
           fromPartyType: "CUSTOMER",
@@ -460,10 +460,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create journal entry lines for negative amount
+      // Create journal entry lines
       // Use provided account IDs or defaults
-      const debitAccId = useProvidedAccounts ? parseInt(debitAccountId) : expenseId;
-      const creditAccId = useProvidedAccounts ? parseInt(creditAccountId) : cashId;
+      const debitAccId = useProvidedAccounts ? parseInt(debitAccountId) : cashId;
+      const creditAccId = useProvidedAccounts ? parseInt(creditAccountId) : revenueId;
       
       // Debit Account
       await tx.journalEntryLine.create({

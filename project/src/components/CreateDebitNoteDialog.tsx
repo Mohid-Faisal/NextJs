@@ -232,8 +232,8 @@ export default function CreateDebitNoteDialog({
   useEffect(() => {
     if (isEditMode) return;
     if (accounts.length > 0) {
-      if (entryType === "CREDIT") {
-        // CREDIT type: Debit Vendor Expense, Credit Cash
+      if (entryType === "DEBIT") {
+        // DEBIT type (expense for us): Debit Vendor Expense, Credit Cash
         const vendorExpenseAccount = accounts.find(acc => 
           acc.category === "Expense" && acc.accountName.toLowerCase().includes("vendor")
         ) || accounts.find(acc => acc.category === "Expense");
@@ -244,7 +244,7 @@ export default function CreateDebitNoteDialog({
         if (vendorExpenseAccount) setDebitAccountId(vendorExpenseAccount.id.toString());
         if (cashAccount) setCreditAccountId(cashAccount.id.toString());
       } else {
-        // DEBIT type: Debit Cash, Credit Other Revenue
+        // CREDIT type (revenue for us): Debit Cash, Credit Other Revenue
         const cashAccount = accounts.find(acc => 
           acc.category === "Asset" && acc.accountName.toLowerCase().includes("cash")
         );
