@@ -118,6 +118,198 @@ export function generateVendorInvoiceNumber(customerInvoiceNumber: string): stri
   return vendorNumber.toString().padStart(6, "0");
 }
 
+export function normalizeZoneKey(raw: string | number | null | undefined): string {
+  if (raw == null) return "";
+  const str = String(raw).trim();
+  const m = str.match(/Zone\s*(\d+[A-Za-z]?)/i);
+  const stripped = m ? m[1] : str.replace(/^Zone\s*/i, "").trim() || str;
+  return stripped.replace(/^0+(\d)/, "$1").toUpperCase();
+}
+
+export function resolveDocTypeFromPackaging(packaging?: string | null): string {
+  const p = String(packaging || "").trim().toLowerCase();
+  if (p === "document" || p === "doc") return "Document";
+  if (p === "fedex pak" || p === "fedexpak") return "FedEx Pak";
+  if (p === "envelope") return "Envelope";
+  return "Non Document";
+}
+
+export async function lookupVendorRate(
+  prismaClient: any,
+  params: {
+    organizationId: number;
+    vendor?: string | null;
+    serviceMode?: string | null;
+    destination?: string | null;
+    packaging?: string | null;
+    weight?: number | string | null;
+  }
+): Promise<{
+  vendorPrice: number;
+  fixedCharge: number;
+  zone: string;
+  service: string;
+  vendor: string;
+  weight: number;
+} | null> {
+  try {
+    const orgId = params.organizationId;
+    const weightNumber = parseFloat(String(params.weight ?? 0));
+    const rawDest = String(params.destination ?? "").trim();
+    if (!orgId || !rawDest || isNaN(weightNumber) || weightNumber <= 0) {
+      return null;
+    }
+
+    const docType = resolveDocTypeFromPackaging(params.packaging);
+    const vendorName = String(params.vendor ?? "").trim();
+    const serviceName = String(params.serviceMode ?? "").trim();
+
+    const allCountries = Country.getAllCountries();
+    const matchedCountry = allCountries.find(
+      (c) =>
+        c.isoCode.toLowerCase() === rawDest.toLowerCase() ||
+        c.name.toLowerCase() === rawDest.toLowerCase()
+    );
+    const destIso = matchedCountry?.isoCode || rawDest;
+    const destName = matchedCountry?.name || rawDest;
+
+    const destOr: any[] = [
+      { code: { equals: destIso, mode: "insensitive" } },
+      { country: { equals: destName, mode: "insensitive" } },
+      { country: { contains: destName, mode: "insensitive" } },
+    ];
+    if (rawDest.length >= 2) {
+      destOr.push({ code: { contains: rawDest, mode: "insensitive" } });
+      destOr.push({ country: { contains: rawDest, mode: "insensitive" } });
+    }
+
+    const candidateServices = new Set<string>();
+    if (serviceName) {
+      candidateServices.add(serviceName.toLowerCase());
+    }
+    if (vendorName) {
+      const vsRows = await prismaClient.vendorservice.findMany({
+        where: {
+          organizationId: orgId,
+          vendor: { equals: vendorName, mode: "insensitive" },
+        },
+        select: { service: true },
+      });
+      for (const vs of vsRows) {
+        if (vs.service) candidateServices.add(vs.service.trim().toLowerCase());
+      }
+    }
+
+    const zoneRows = await prismaClient.zone.findMany({
+      where: {
+        organizationId: orgId,
+        OR: destOr,
+      },
+      select: { zone: true, country: true, code: true, service: true },
+    });
+
+    if (!zoneRows || zoneRows.length === 0) {
+      return null;
+    }
+
+    const matchingZones =
+      candidateServices.size > 0
+        ? zoneRows.filter((z: any) =>
+            candidateServices.has(String(z.service || "").trim().toLowerCase())
+          )
+        : zoneRows;
+    const activeZones = matchingZones.length > 0 ? matchingZones : zoneRows;
+
+    const targetZoneKeys = new Set<string>();
+    const zoneServicePairs = new Set<string>();
+    for (const z of activeZones) {
+      const zk = normalizeZoneKey(z.zone);
+      const zs = String(z.service || "").trim().toLowerCase();
+      if (zk) {
+        targetZoneKeys.add(zk);
+        if (zs) zoneServicePairs.add(`${zs}|${zk}`);
+      }
+    }
+
+    if (targetZoneKeys.size === 0) {
+      return null;
+    }
+
+    const rateWhere: any = {
+      organizationId: orgId,
+      docType: { equals: docType, mode: "insensitive" },
+      weight: { gte: weightNumber },
+    };
+    if (vendorName) {
+      rateWhere.vendor = { equals: vendorName, mode: "insensitive" };
+    }
+    if (serviceName) {
+      rateWhere.service = { equals: serviceName, mode: "insensitive" };
+    }
+
+    let rateRows = await prismaClient.rate.findMany({
+      where: rateWhere,
+      orderBy: [{ weight: "asc" }, { price: "asc" }],
+    });
+
+    if (rateRows.length === 0 && vendorName && serviceName) {
+      rateRows = await prismaClient.rate.findMany({
+        where: {
+          organizationId: orgId,
+          docType: { equals: docType, mode: "insensitive" },
+          weight: { gte: weightNumber },
+          vendor: { equals: vendorName, mode: "insensitive" },
+        },
+        orderBy: [{ weight: "asc" }, { price: "asc" }],
+      });
+    }
+
+    const matchedRates = rateRows.filter((r: any) => {
+      const rZone = normalizeZoneKey(r.zone);
+      const rService = String(r.service || "").trim().toLowerCase();
+      return (
+        zoneServicePairs.has(`${rService}|${rZone}`) ||
+        targetZoneKeys.has(rZone)
+      );
+    });
+
+    if (matchedRates.length === 0) {
+      return null;
+    }
+
+    const minMatchedWeight = matchedRates[0].weight;
+    const lowestBracketRates = matchedRates.filter(
+      (r: any) => Math.abs(Number(r.weight) - Number(minMatchedWeight)) < 1e-6
+    );
+    const bestRate = lowestBracketRates.reduce((best: any, curr: any) =>
+      curr.price < best.price ? curr : best
+    );
+
+    const fixedChargeRow = await prismaClient.fixedCharge.findFirst({
+      where: {
+        organizationId: orgId,
+        weight: { gte: weightNumber },
+      },
+      orderBy: { weight: "asc" },
+    });
+
+    return {
+      vendorPrice: Number(bestRate.price) || 0,
+      fixedCharge: Number(fixedChargeRow?.fixedCharge) || 0,
+      zone: normalizeZoneKey(bestRate.zone),
+      service: bestRate.service,
+      vendor: bestRate.vendor,
+      weight: Number(bestRate.weight) || weightNumber,
+    };
+  } catch (err) {
+    console.error("lookupVendorRate error:", err);
+    return null;
+  }
+}
+
+function __noop_marker__() {
+}
+
 export async function addCustomerTransaction(
   prisma: any,
   customerId: number,

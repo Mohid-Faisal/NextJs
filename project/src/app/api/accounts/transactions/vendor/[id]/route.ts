@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addVendorTransaction, createJournalEntryForTransaction } from "@/lib/server/ledger";
+import { addVendorTransaction, createJournalEntryForTransaction, lookupVendorRate } from "@/lib/server/ledger";
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
 import { computeVendorLedgerVoucherDate } from "@/lib/accounts/vendorLedgerVoucherDate";
@@ -210,7 +210,7 @@ export async function GET(
             ],
           }),
           orderBy: { id: "asc" },
-          select: { id: true, reference: true, invoice: true },
+          select: { id: true, reference: true, invoice: true, amount: true },
         });
 
         const existingSet = new Set<string>();
@@ -234,6 +234,180 @@ export async function GET(
             where: { id: { in: duplicateIds } },
           });
           recalcBalances = true;
+        }
+
+        // Clean up bogus prepayment application rows ("Balance applied for vendor invoice..." / CREDIT-{inv})
+        // while preserving their amounts as a recovery signal for zeroed vendor invoices
+        const bogusVendorCredits = await prisma.vendorTransaction.findMany({
+          where: orgWhere(session, {
+            vendorId,
+            type: "CREDIT",
+            OR: [
+              { reference: { startsWith: "CREDIT-" } },
+              { description: { startsWith: "Balance applied for vendor invoice" } },
+            ],
+          }),
+          select: { id: true, reference: true, invoice: true, amount: true },
+        });
+        const creditAppliedByInvNum = new Map<string, number>();
+        for (const bc of bogusVendorCredits) {
+          const refKey = bc.invoice || (bc.reference ? bc.reference.replace(/^CREDIT-/, "") : "");
+          const amt = Number(bc.amount) || 0;
+          if (refKey && amt > 0) {
+            creditAppliedByInvNum.set(refKey, Math.max(creditAppliedByInvNum.get(refKey) || 0, amt));
+          }
+        }
+        if (bogusVendorCredits.length > 0) {
+          await prisma.vendorTransaction.deleteMany({
+            where: { id: { in: bogusVendorCredits.map((b) => b.id) } },
+          });
+          const creditRefs = bogusVendorCredits
+            .map((b) => b.reference)
+            .filter((r): r is string => Boolean(r && r.startsWith("CREDIT-")));
+          if (creditRefs.length > 0) {
+            await prisma.journalEntry.deleteMany({
+              where: orgWhere(session, { reference: { in: creditRefs } }),
+            });
+          }
+          recalcBalances = true;
+        }
+
+        // Gather payment allocation amounts by invoiceId and by invoiceNumber (from ALLOCATIONS: string)
+        const vendorPayments = await prisma.payment.findMany({
+          where: orgWhere(session, { vendorId }),
+          select: {
+            description: true,
+            allocations: { select: { invoiceId: true, amount: true } },
+          },
+        });
+        const allocAmountByInvId = new Map<number, number>();
+        const allocAmountByInvNum = new Map<string, number>();
+        for (const vp of vendorPayments) {
+          for (const al of (vp as any).allocations || []) {
+            const amt = Number(al.amount) || 0;
+            if (amt > 0) {
+              allocAmountByInvId.set(al.invoiceId, (allocAmountByInvId.get(al.invoiceId) || 0) + amt);
+            }
+          }
+          if (vp.description && vp.description.includes("ALLOCATIONS:")) {
+            const allocPart = vp.description.split("ALLOCATIONS:")[1]?.split(/\s/)[0] || "";
+            for (const pair of allocPart.split("|")) {
+              const [invNum, amtStr] = pair.split(":");
+              const amt = parseFloat(amtStr || "0");
+              if (invNum && amt > 0) {
+                allocAmountByInvNum.set(invNum.trim(), Math.max(allocAmountByInvNum.get(invNum.trim()) || 0, Math.round(amt)));
+              }
+            }
+          }
+        }
+
+        // Fetch full shipment pricing fields for vendorInvoices that have shipmentId
+        const shipmentIds = vendorInvoices
+          .map((inv) => inv.shipmentId)
+          .filter((sid): sid is number => typeof sid === "number");
+        const fullShipments = shipmentIds.length > 0
+          ? await prisma.shipment.findMany({
+              where: { id: { in: shipmentIds } },
+              select: {
+                id: true,
+                vendor: true,
+                serviceMode: true,
+                destination: true,
+                packaging: true,
+                weight: true,
+                totalWeight: true,
+                price: true,
+                fixedCharge: true,
+                cos: true,
+                calculatedValues: true,
+              },
+            })
+          : [];
+        const fullShipmentMap = new Map(fullShipments.map((s) => [s.id, s]));
+
+        const keptDebitByInv = new Map<string, { id: number; amount: number }>();
+        for (const t of existingDebitTxs) {
+          if (duplicateIds.includes(t.id)) continue;
+          const k = t.invoice || t.reference;
+          if (k && !keptDebitByInv.has(k)) {
+            keptDebitByInv.set(k, { id: t.id, amount: Number(t.amount) || 0 });
+          }
+        }
+
+        // Heal vendor invoices and DEBIT transactions whose amount was zeroed out
+        for (const inv of vendorInvoices) {
+          const fullShip = inv.shipmentId ? fullShipmentMap.get(inv.shipmentId) : undefined;
+          let trueVendorAmount = Number(inv.totalAmount) || 0;
+
+          if (trueVendorAmount <= 0 && fullShip && Number(fullShip.cos) > 0) {
+            trueVendorAmount = Math.round(Number(fullShip.cos));
+          }
+          if (trueVendorAmount <= 0 && fullShip?.calculatedValues) {
+            try {
+              const calc =
+                typeof fullShip.calculatedValues === "string"
+                  ? JSON.parse(fullShip.calculatedValues)
+                  : (fullShip.calculatedValues as any);
+              const vp = Number(calc?.vendorPrice) || Number(calc?.cos) || 0;
+              if (vp > 0) trueVendorAmount = Math.round(vp);
+            } catch {
+              // ignore
+            }
+          }
+          if (trueVendorAmount <= 0) {
+            const fromAllocStr = allocAmountByInvNum.get(inv.invoiceNumber) || 0;
+            const fromAllocRow = allocAmountByInvId.get(inv.id) || 0;
+            const fromCreditRow = creditAppliedByInvNum.get(inv.invoiceNumber) || 0;
+            trueVendorAmount = Math.max(fromAllocStr, fromAllocRow, fromCreditRow);
+          }
+          if (trueVendorAmount <= 0 && Array.isArray(inv.lineItems)) {
+            const lineSum = (inv.lineItems as any[]).reduce((s, li) => {
+              const v = Number(li?.value) || 0;
+              return li?.description !== "Balance Applied" && v > 0 ? s + v : s;
+            }, 0);
+            if (lineSum > 0) trueVendorAmount = Math.round(lineSum);
+          }
+          if (trueVendorAmount <= 0 && fullShip) {
+            const rateMatch = await lookupVendorRate(prisma, {
+              organizationId: session.organizationId,
+              vendor: fullShip.vendor || vendor.CompanyName,
+              serviceMode: fullShip.serviceMode,
+              destination: fullShip.destination || inv.destination,
+              packaging: fullShip.packaging,
+              weight: Number(fullShip.totalWeight || fullShip.weight || inv.weight) || 0,
+            });
+            if (rateMatch && rateMatch.vendorPrice > 0) {
+              trueVendorAmount = Math.round(rateMatch.vendorPrice);
+            }
+          }
+          if (trueVendorAmount <= 0 && fullShip && Number(fullShip.price) > 0) {
+            const fallbackPrice = Math.round(Number(fullShip.price) - (Number(fullShip.fixedCharge) || 0));
+            if (fallbackPrice > 0) trueVendorAmount = fallbackPrice;
+          }
+
+          if (trueVendorAmount > 0) {
+            if ((Number(inv.totalAmount) || 0) <= 0) {
+              await prisma.invoice.update({
+                where: { id: inv.id },
+                data: { totalAmount: trueVendorAmount },
+              });
+              (inv as any).totalAmount = trueVendorAmount;
+            }
+            if (fullShip && (Number(fullShip.cos) || 0) <= 0) {
+              await prisma.shipment.update({
+                where: { id: fullShip.id },
+                data: { cos: trueVendorAmount },
+              });
+            }
+            const keptTx = keptDebitByInv.get(inv.invoiceNumber);
+            if (keptTx && Math.abs(keptTx.amount - trueVendorAmount) > 0.01) {
+              await prisma.vendorTransaction.update({
+                where: { id: keptTx.id },
+                data: { amount: trueVendorAmount },
+              });
+              recalcBalances = true;
+            }
+          }
         }
 
         const missingInvoices = vendorInvoices.filter(

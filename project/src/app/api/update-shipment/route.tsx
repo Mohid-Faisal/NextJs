@@ -11,6 +11,7 @@ import {
   syncShipmentInvoiceDebitTransactionDescriptions,
   updateInvoiceBalance,
   updateJournalEntriesForInvoice,
+  lookupVendorRate,
 } from "@/lib/server/ledger";
 
 // Function to update existing journal entries for transactions
@@ -346,11 +347,49 @@ async function handleShipmentUpdate(req: Request) {
       }
     }
 
-    const vendorTotalCost = effectiveManualRate
-      ? Math.round(effectiveCos)
+    const existingVendorInvoice = existingShipment.invoices?.find(
+      (inv) => inv.profile === "Vendor" || (!inv.profile && inv.vendorId && !inv.customerId)
+    );
+    const existingVendorInvAmount = Number(existingVendorInvoice?.totalAmount) || 0;
+    const existingShipmentCos = Number(existingShipment.cos) || 0;
+
+    let vendorTotalCost = effectiveManualRate
+      ? Math.round(
+          effectiveCos > 0
+            ? effectiveCos
+            : (parsedVendorPrice || existingShipmentCos || existingVendorInvAmount || 0)
+        )
+
+
       : parsedVendorPrice !== null && parsedVendorPrice > 0
         ? Math.round(parsedVendorPrice)
-        : Math.round(originalPrice - effectiveFixedCharge);
+        : Math.round(effectiveCos || existingShipmentCos || existingVendorInvAmount || 0);
+
+    if (vendorTotalCost <= 0) {
+      const effVendor = String((vendor !== undefined ? vendor : existingShipment.vendor) ?? "").trim();
+      const effService = String((serviceMode !== undefined ? serviceMode : existingShipment.serviceMode) ?? "").trim();
+      const effPkg = String((packaging !== undefined ? packaging : existingShipment.packaging) ?? "").trim();
+      if (effVendor && effectiveDestination && effectiveTotalWeight > 0) {
+        const rateMatch = await lookupVendorRate(prisma, {
+          organizationId: session.organizationId,
+          vendor: effVendor,
+          serviceMode: effService,
+          destination: effectiveDestination,
+          packaging: effPkg,
+          weight: effectiveTotalWeight,
+        });
+        if (rateMatch && rateMatch.vendorPrice > 0) {
+          vendorTotalCost = Math.round(rateMatch.vendorPrice);
+        }
+      }
+    }
+    if (vendorTotalCost <= 0 && originalPrice > 0) {
+      vendorTotalCost = Math.max(0, Math.round(originalPrice - effectiveFixedCharge));
+    }
+
+
+
+
 
     const customerPricingChanged =
       price !== undefined ||
@@ -484,7 +523,7 @@ async function handleShipmentUpdate(req: Request) {
           reissue: reissue !== undefined ? parseFloat(reissue) || 0 : undefined,
           profitPercentage: profitPercentage !== undefined ? parseFloat(profitPercentage) || 0 : undefined,
           ...(cos !== undefined
-            ? { cos: parseFloat(String(cos)) || 0 }
+            ? { cos: vendorTotalCost > 0 ? vendorTotalCost : (Number(existingShipment.cos) || 0) }
             : {}),
           totalCost: calculatedTotalCost,
           manualRate: manualRate !== undefined ? Boolean(manualRate) : undefined,
@@ -676,7 +715,12 @@ async function handleShipmentUpdate(req: Request) {
           // and only recalculate vendor invoice amount when vendor pricing fields changed.
           let invoiceAmount: number;
           if (isVendorInvoice) {
-            invoiceAmount = vendorPricingChanged ? vendorTotalCost : existingAmountNum;
+            invoiceAmount =
+              vendorPricingChanged && vendorTotalCost > 0
+                ? vendorTotalCost
+                : existingAmountNum > 0
+                  ? existingAmountNum
+                  : vendorTotalCost;
           } else {
             invoiceAmount = customerPricingChanged ? customerTotalCost : existingAmountNum;
           }
@@ -701,7 +745,7 @@ async function handleShipmentUpdate(req: Request) {
               trackingNumber: effectiveTrackingId !== undefined ? effectiveTrackingId : invoice.trackingNumber,
               destination: effectiveDestination !== undefined ? effectiveDestination : invoice.destination,
               weight: effectiveTotalWeight || Number(invoice.weight) || 0,
-              ...(shipmentDate ? { invoiceDate: new Date(shipmentDate) } : {}),
+              ...(shipmentDate ? { invoiceDate: parseDateInputAsLocalDate(shipmentDate) } : {}),
               lineItems: nextLineItems,
               totalAmount: finalInvoiceAmount,
               ...(!isVendorInvoice && customerPricingChanged
@@ -812,6 +856,22 @@ async function handleShipmentUpdate(req: Request) {
                 ],
               },
             });
+            if (existingVendorTx && Math.abs((Number(existingVendorTx.amount) || 0) - finalInvoiceAmount) > 0.0001 && Math.abs(oldInvoiceAmount - finalInvoiceAmount) <= 0.0001) {
+              const oldTxAmt = Number(existingVendorTx.amount) || 0;
+              const diff = finalInvoiceAmount - oldTxAmt;
+              const prevBal = Number(existingVendorTx.previousBalance) || 0;
+              await tx.vendorTransaction.update({
+                where: { id: existingVendorTx.id },
+                data: {
+                  amount: finalInvoiceAmount,
+                  newBalance: prevBal + finalInvoiceAmount,
+                },
+              });
+              await tx.vendors.update({
+                where: { id: effectiveVendorId },
+                data: { currentBalance: { increment: diff } },
+              });
+            }
             if (!existingVendorTx) {
               const lineDesc = buildShipmentDebitTransactionLineDescription(
                 effectiveTrackingId || invoice.trackingNumber || "N/A",

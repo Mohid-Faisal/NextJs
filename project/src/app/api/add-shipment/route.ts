@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransaction, addVendorTransaction, createJournalEntryForTransaction } from "@/lib/server/ledger";
+import { generateInvoiceNumber, generateVendorInvoiceNumber, addCustomerTransaction, addVendorTransaction, createJournalEntryForTransaction, lookupVendorRate } from "@/lib/server/ledger";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { checkShipmentLimit } from "@/lib/billing/usage";
@@ -290,9 +290,29 @@ export async function POST(req: NextRequest) {
     // Customer invoice uses the price with profit (from frontend)
     const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
     // Vendor invoice: use CoS (Cost of Service) if in manual mode, otherwise use vendorPrice
-    const vendorTotalCost = manualRate 
-      ? Math.round((parseFloat(cos) || 0))
-      : Math.round((parseFloat(vendorPrice) || 0));
+    const parsedCos = parseFloat(cos) || Number(calculatedValues?.cos) || 0;
+    const parsedVendorPrice = parseFloat(vendorPrice) || Number(calculatedValues?.vendorPrice) || 0;
+    let vendorTotalCost = manualRate
+      ? Math.round(parsedCos > 0 ? parsedCos : parsedVendorPrice)
+      : Math.round(parsedVendorPrice > 0 ? parsedVendorPrice : parsedCos);
+    if (vendorTotalCost <= 0 && vendor) {
+      const rateMatch = await lookupVendorRate(prisma, {
+        organizationId: session.organizationId,
+        vendor,
+        serviceMode,
+        destination: finalDestination,
+        packaging,
+        weight: parseFloat(totalWeight) || parseFloat(weight) || 0,
+      });
+      if (rateMatch && rateMatch.vendorPrice > 0) {
+        vendorTotalCost = Math.round(rateMatch.vendorPrice);
+      }
+    }
+    if (vendorTotalCost <= 0 && originalPrice > 0) {
+      vendorTotalCost = Math.max(0, Math.round(originalPrice - (parseFloat(fixedCharge) || 0)));
+    }
+
+
 
     // Get subtotal from calculated values or use original price
     const subtotal = calculatedValues?.subtotal ? Math.round((calculatedValues.subtotal)) : originalPrice;
@@ -495,7 +515,7 @@ export async function POST(req: NextRequest) {
                 declaredValue: parseFloat(declaredValue) || 0,
                 reissue: parseFloat(reissue) || 0,
                 profitPercentage: profitPercentageValue,
-                cos: parseFloat(cos) || 0,
+                cos: vendorTotalCost,
                 totalCost: customerTotalCost,
                 subtotal,
                 manualRate: Boolean(manualRate),

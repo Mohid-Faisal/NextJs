@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth/requireApiSession";
-import { orgWhere } from "@/lib/tenant/prismaScope";
+import { lookupVendorRate } from "@/lib/server/ledger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,25 +10,20 @@ export async function POST(req: NextRequest) {
     const session = auth.session;
 
     const body = await req.json();
-    const { weight, vendor, serviceMode, destination, fuelSurcharge = 0, discount = 0, packaging, profitPercentage} = body;
-
-    console.log('Rate calculation API received request:', {
+    const {
       weight,
       vendor,
       serviceMode,
       destination,
-      fuelSurcharge,
-      discount,
+      fuelSurcharge = 0,
+      discount = 0,
       packaging,
-      profitPercentage,
-      fullBody: body
-    });
+      profitPercentage = 0,
+    } = body;
 
     if (!weight) {
       return NextResponse.json(
-        {
-          error: "Weight is required.",
-        },
+        { error: "Weight is required." },
         { status: 400 }
       );
     }
@@ -36,282 +31,86 @@ export async function POST(req: NextRequest) {
     const weightNumber = parseFloat(weight);
     if (isNaN(weightNumber) || weightNumber <= 0) {
       return NextResponse.json(
-        {
-          error: "Weight must be a valid positive number.",
-        },
+        { error: "Weight must be a valid positive number." },
         { status: 400 }
       );
     }
 
-    // Validate required parameters
     if (!destination) {
       return NextResponse.json(
-        {
-          error: "Destination is required.",
-        },
+        { error: "Destination is required." },
         { status: 400 }
-      ); 
-    }
-
-    const finalDestination = destination;
-    let docType = "Non Document";
-    if (packaging === "Document" || packaging === "doc" || packaging === "Doc"){
-      docType = "Document";
-    }
-    else if (packaging === "Non Document" || packaging === "non document" || packaging === "Non Document" || packaging === "non doc" || packaging === "non-doc"|| packaging === "wpx"|| packaging === "Wpx"){
-      docType = "Non Document";
-    }
-    else if (packaging === "FedEx Pak" || packaging === "fedex pak"){
-      docType = "FedEx Pak";
-    }
-    else if (packaging === "Envelope" || packaging === "envelope"){
-      docType = "Envelope";
-    }
-
-    // Step 1: Find all zones for the destination country
-    const zoneInfos = await prisma.zone.findMany({
-      where: orgWhere(session, {
-        code: {
-          contains: finalDestination, },
-        service: serviceMode.toLowerCase(),
-      }),
-      select: {
-        zone: true,
-        country: true,
-        service: true,
-      },
-    });
-
-    console.log('Found zones for destination:', {
-      destination: finalDestination,
-      zoneCount: zoneInfos.length,
-      zones: zoneInfos
-    });
-
-    // If no zones found, return appropriate error
-    if (zoneInfos.length === 0) {
-      return NextResponse.json(
-        {
-          error: `No zones found for destination: ${finalDestination}. Please check the destination country name.`,
-        },
-        { status: 404 }
       );
     }
 
-    // Step 2: Extract unique zone numbers for this destination
-    const destinationZones = new Set();
-    zoneInfos.forEach((zoneInfo) => {
-      let zoneNumber: number;
-      if (typeof zoneInfo.zone === "string") {
-        const zoneMatch = zoneInfo.zone.match(/\d+/);
-        if (zoneMatch) {
-          zoneNumber = parseInt(zoneMatch[0]);
-        } else {
-          console.log(`⚠️ No numeric value found in zone: ${zoneInfo.zone}`);
-          return;
-        }
-      } else {
-        zoneNumber = parseInt(zoneInfo.zone);
-      }
-
-      if (!isNaN(zoneNumber)) {
-        destinationZones.add(zoneNumber);
-        (zoneInfo as any).zone = zoneNumber;
-      }
-    });
-
-    // Step 3: For each zone, find which services are available and get their rates
-    const allRates = [];
-    const bestRates = [];
-
-    console.log('Processing zones:', {
-      totalZones: destinationZones.size,
-      zones: Array.from(destinationZones),
+    const rateMatch = await lookupVendorRate(prisma, {
+      organizationId: session.organizationId,
+      vendor,
+      serviceMode,
+      destination,
+      packaging,
       weight: weightNumber,
-      docType: docType,
-      targetVendor: vendor,
-      targetService: serviceMode
     });
 
-    for (const zoneNumber of destinationZones) {
-      console.log(`Processing zone ${zoneNumber}...`);
-      
-      // Build the where clause for rates query
-      const rateWhereClause: any = orgWhere(session, {
-        zone: zoneNumber as number,
-        docType: docType,
-        weight: weightNumber,
-      });
-
-      // Filter by vendor if provided
-      if (vendor && vendor.trim() !== '') {
-        rateWhereClause.vendor = vendor;
-      }
-
-      // Filter by service if provided
-      if (serviceMode && serviceMode.trim() !== '') {
-        rateWhereClause.service = serviceMode;
-      }
-
-      console.log('Rate query where clause:', rateWhereClause);
-
-      // Find rates for this zone with the specified filters
-      const serviceRates = await prisma.rate.findMany({
-        where: rateWhereClause,
-        orderBy: {
-          weight: "asc",
-        },
-      });
-
-      console.log(`Zone ${zoneNumber} rates found:`, {
-        count: serviceRates.length,
-        rates: serviceRates.map(r => ({
-          vendor: r.vendor,
-          service: r.service,
-          weight: r.weight,
-          price: r.price
-        }))
-      });
-
-      if (serviceRates.length === 0) {
-        console.log(`No rates found for zone ${zoneNumber} with specified filters`);
-        continue;
-      }
-
-      // Find the best rate for this zone (lowest weight that covers the requested weight)
-      const bestServiceRate = serviceRates[0]; // Already sorted by weight
-
-      bestRates.push({
-        zone: zoneNumber,
-        country:
-          zoneInfos.find((z) => {
-            let zNum: number;
-            if (typeof z.zone === "string") {
-              const match = z.zone.match(/\d+/);
-              zNum = match ? parseInt(match[0]) : 0;
-            } else {
-              zNum = parseInt(z.zone);
-            }
-            return zNum === zoneNumber;
-          })?.country || "Unknown",
-        service: bestServiceRate.service,
-        bestRate: {
-          weight: bestServiceRate.weight,
-          price: bestServiceRate.price,
-          vendor: bestServiceRate.vendor,
-        },
-        allRates: serviceRates.map((rate) => ({
-          weight: rate.weight,
-          price: rate.price,
-          vendor: rate.vendor,
-        })),
-      });
-
-      allRates.push(...serviceRates);
-    }
-
-    console.log('All rates found:', {
-      count: allRates.length,
-      rates: allRates.map(r => ({
-        vendor: r.vendor,
-        service: r.service,
-        weight: r.weight,
-        price: r.price
-      }))
-    });
-
-    if (allRates.length === 0) {
-      let errorMessage = `No rates found for destination: ${finalDestination} and weight: ${weightNumber}kg`;
-      
-      if (vendor && vendor.trim() !== '') {
+    if (!rateMatch || rateMatch.vendorPrice <= 0) {
+      let errorMessage = `No rates found for destination: ${destination} and weight: ${weightNumber}kg`;
+      if (vendor && String(vendor).trim() !== "") {
         errorMessage += `, vendor: ${vendor}`;
       }
-      
-      if (serviceMode && serviceMode.trim() !== '') {
+      if (serviceMode && String(serviceMode).trim() !== "") {
         errorMessage += `, service: ${serviceMode}`;
       }
-      
-      return NextResponse.json(
-        {
-          error: errorMessage,
-        },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: errorMessage }, { status: 404 });
     }
 
-    // Find the fixed charge based on weight
-    const fixedCharge = await prisma.fixedCharge.findFirst({
-      where: orgWhere(session, {
-        weight: weightNumber,
-      }),
-    });
+    const originalPrice = rateMatch.vendorPrice;
+    const vendorPrice = rateMatch.vendorPrice;
+    const fixedChargeAmount = rateMatch.fixedCharge || 0;
+    const fuelSurchargeAmount = parseFloat(String(fuelSurcharge)) || 0;
+    const discountPercentage = parseFloat(String(discount)) || 0;
+    const profitPct = parseFloat(String(profitPercentage)) || 0;
 
-    if (!fixedCharge) {
-      return NextResponse.json(
-        {
-          error: `No fixed charge found for weight: ${weightNumber}kg`,
-        },
-        { status: 404 }
-      );
-    }
-
-    const fixedChargeAmount = fixedCharge.fixedCharge;
-
-    // Find the best overall rate from all rates (lowest price)
-    const bestOverallRate = allRates.reduce((best, current) => {
-      return current.price < best.price ? current : best;
-    });
-
-    // Calculate the total with fuel surcharge and percentage discount
-    const originalPrice = bestOverallRate.price;
-    const vendorPrice = bestOverallRate.price;
-    const fuelSurchargeAmount = parseFloat(fuelSurcharge) || 0;
-    const discountPercentage = parseFloat(discount) || 0;
-    
     // Calculate discount amount as percentage of original price
     const discountAmount = (originalPrice * discountPercentage) / 100;
-    const originalCost = originalPrice + fuelSurchargeAmount - discountAmount + fixedChargeAmount;
+    const originalCost =
+      originalPrice + fuelSurchargeAmount - discountAmount + fixedChargeAmount;
 
-    const profitPercentageAmount = (originalCost * profitPercentage) / 100;
+    const profitPercentageAmount = (originalCost * profitPct) / 100;
     const totalCost = originalCost + profitPercentageAmount;
 
     const result = {
       success: true,
       price: originalPrice,
-      weight: bestOverallRate.weight,
-      service: bestOverallRate.service,
-      vendor: bestOverallRate.vendor,
-      zone: bestOverallRate.zone,
+      weight: rateMatch.weight,
+      service: rateMatch.service,
+      vendor: rateMatch.vendor,
+      zone: rateMatch.zone,
       fuelSurcharge: fuelSurchargeAmount,
-      discountPercentage: discountPercentage,
-      discountAmount: discountAmount,
-      originalCost: originalCost,
-      profitPercentage: profitPercentage,
-      profitPercentageAmount: profitPercentageAmount,
-      totalCost: totalCost,
+      discountPercentage,
+      discountAmount,
+      originalCost,
+      profitPercentage: profitPct,
+      profitPercentageAmount,
+      totalCost,
       fixedCharge: fixedChargeAmount,
-      vendorPrice: vendorPrice,
+      vendorPrice,
       calculation: {
         originalPrice,
         fuelSurcharge: fuelSurchargeAmount,
-        discountPercentage: discountPercentage,
-        discountAmount: discountAmount,
+        discountPercentage,
+        discountAmount,
         totalCost,
         fixedCharge: fixedChargeAmount,
-        vendorPrice: vendorPrice,
+        vendorPrice,
       },
     };
-
-    console.log('Rate calculation result:', result);
 
     return NextResponse.json(result);
   } catch (error) {
     console.error("❌ Error calculating rate:", error);
     return NextResponse.json(
-      {
-        error: "Internal server error",
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-} 
+}

@@ -470,6 +470,7 @@ const AddShipmentPage = () => {
               price: ceilingFinalPrice.toString(),
               fixedCharge: fixedCharge.toString(),
               vendorPrice: vendorPrice.toString(),
+              cos: vendorPrice > 0 ? vendorPrice.toString() : prev.cos,
             }));
 
             // Store the backend-calculated values with ceiling profit applied
@@ -1037,7 +1038,18 @@ const AddShipmentPage = () => {
           declaredValue: s.declaredValue || 0,
           reissue: s.reissue || 0,
           profitPercentage: s.profitPercentage || "0",
-          cos: s.cos != null ? String(s.cos) : "0",
+          cos:
+            Number(s.cos) > 0
+              ? String(s.cos)
+              : Number(data.vendorInvoice?.totalAmount) > 0
+                ? String(data.vendorInvoice.totalAmount)
+                : "0",
+          vendorPrice:
+            Number(s.cos) > 0
+              ? String(s.cos)
+              : Number(data.vendorInvoice?.totalAmount) > 0
+                ? String(data.vendorInvoice.totalAmount)
+                : "0",
           manualRate: s.manualRate || false,
         };
 

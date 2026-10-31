@@ -28,9 +28,9 @@ export async function GET(
       where: orgWhere(session, { id: shipmentId }),
       include: {
         invoices: {
-          where: { profile: "Customer" },
-          include: { customer: true },
-          take: 1,
+          include: { customer: true, vendor: true },
+          orderBy: { id: "asc" },
+          take: 10,
         },
       },
     });
@@ -47,7 +47,19 @@ export async function GET(
     // shipment.recipientName can be either a company name OR a person name
     // depending on how the shipment was created. All lookups are independent,
     // so they run in parallel and results are picked in priority order.
-    let customer = shipment.invoices?.[0]?.customer ?? null;
+    const customerInvoice = shipment.invoices?.find((inv) => inv.profile === "Customer" || (!inv.profile && inv.customerId && !inv.vendorId));
+    const vendorInvoice = shipment.invoices?.find((inv) => inv.profile === "Vendor" || (!inv.profile && inv.vendorId && !inv.customerId));
+    const resolvedVendorCost =
+      Number(shipment.cos) > 0
+        ? Number(shipment.cos)
+        : Number(vendorInvoice?.totalAmount) > 0
+          ? Number(vendorInvoice?.totalAmount)
+          : 0;
+    const hydratedShipment = {
+      ...shipment,
+      cos: resolvedVendorCost,
+    };
+    let customer = customerInvoice?.customer ?? null;
     let recipient = null;
 
     const senderName =
@@ -104,7 +116,8 @@ export async function GET(
     }
 
     return NextResponse.json({
-      shipment,
+      shipment: hydratedShipment,
+      vendorInvoice,
       customer,
       recipient,
     });
