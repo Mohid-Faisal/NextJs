@@ -426,7 +426,7 @@ export async function POST(req: NextRequest) {
               const trimmedVendor = String(vendor).trim();
               const vendorRecord = await tx.vendors.findFirst({
                 where: orgWhere(session, {
-                  CompanyName: { equals: trimmedVendor, mode: "insensitive" },
+                  CompanyName: { equals: trimmedVendor },
                 }),
               });
               vendorId = vendorRecord?.id || null;

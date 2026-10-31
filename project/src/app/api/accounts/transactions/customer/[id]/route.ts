@@ -215,7 +215,7 @@ export async function GET(
           if (!resolvedVendorId && vInv.shipment?.vendor) {
             const matchedVendor = await prisma.vendors.findFirst({
               where: orgWhere(session, {
-                CompanyName: { equals: String(vInv.shipment.vendor).trim(), mode: "insensitive" },
+                CompanyName: { equals: String(vInv.shipment.vendor).trim() },
               }),
               select: { id: true },
             });

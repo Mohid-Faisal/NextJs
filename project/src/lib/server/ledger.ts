@@ -174,13 +174,13 @@ export async function lookupVendorRate(
     const destName = matchedCountry?.name || rawDest;
 
     const destOr: any[] = [
-      { code: { equals: destIso, mode: "insensitive" } },
-      { country: { equals: destName, mode: "insensitive" } },
-      { country: { contains: destName, mode: "insensitive" } },
+      { code: { equals: destIso } },
+      { country: { equals: destName } },
+      { country: { contains: destName } },
     ];
     if (rawDest.length >= 2) {
-      destOr.push({ code: { contains: rawDest, mode: "insensitive" } });
-      destOr.push({ country: { contains: rawDest, mode: "insensitive" } });
+      destOr.push({ code: { contains: rawDest } });
+      destOr.push({ country: { contains: rawDest } });
     }
 
     const candidateServices = new Set<string>();
@@ -191,7 +191,7 @@ export async function lookupVendorRate(
       const vsRows = await prismaClient.vendorservice.findMany({
         where: {
           organizationId: orgId,
-          vendor: { equals: vendorName, mode: "insensitive" },
+          vendor: { equals: vendorName },
         },
         select: { service: true },
       });
@@ -237,14 +237,14 @@ export async function lookupVendorRate(
 
     const rateWhere: any = {
       organizationId: orgId,
-      docType: { equals: docType, mode: "insensitive" },
+      docType: { equals: docType },
       weight: { gte: weightNumber },
     };
     if (vendorName) {
-      rateWhere.vendor = { equals: vendorName, mode: "insensitive" };
+      rateWhere.vendor = { equals: vendorName };
     }
     if (serviceName) {
-      rateWhere.service = { equals: serviceName, mode: "insensitive" };
+      rateWhere.service = { equals: serviceName };
     }
 
     let rateRows = await prismaClient.rate.findMany({
@@ -256,9 +256,9 @@ export async function lookupVendorRate(
       rateRows = await prismaClient.rate.findMany({
         where: {
           organizationId: orgId,
-          docType: { equals: docType, mode: "insensitive" },
+          docType: { equals: docType },
           weight: { gte: weightNumber },
-          vendor: { equals: vendorName, mode: "insensitive" },
+          vendor: { equals: vendorName },
         },
         orderBy: [{ weight: "asc" }, { price: "asc" }],
       });

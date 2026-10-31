@@ -451,7 +451,7 @@ async function handleShipmentUpdate(req: Request) {
       if (effectiveVendorName) {
         const vendorRecord = await tx.vendors.findFirst({
           where: orgWhere(session, {
-            CompanyName: { equals: effectiveVendorName, mode: "insensitive" },
+            CompanyName: { equals: effectiveVendorName },
           }),
           select: { id: true },
         });

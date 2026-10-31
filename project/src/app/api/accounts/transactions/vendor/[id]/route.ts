@@ -165,7 +165,7 @@ export async function GET(
             profile: "Vendor",
             status: { not: "Cancelled" },
             shipment: {
-              vendor: { equals: vendor.CompanyName.trim(), mode: "insensitive" },
+              vendor: { equals: vendor.CompanyName.trim() },
             },
           }),
           select: { id: true },
@@ -233,7 +233,7 @@ export async function GET(
           await prisma.vendorTransaction.deleteMany({
             where: { id: { in: duplicateIds } },
           });
-          recalcBalances = true;
+          // Fast list path already computes chronological runningBal and updates vendor.currentBalance
         }
 
         // Clean up bogus prepayment application rows ("Balance applied for vendor invoice..." / CREDIT-{inv})
@@ -269,12 +269,12 @@ export async function GET(
               where: orgWhere(session, { reference: { in: creditRefs } }),
             });
           }
-          recalcBalances = true;
+          // Fast list path already computes chronological runningBal and updates vendor.currentBalance
         }
 
         // Gather payment allocation amounts by invoiceId and by invoiceNumber (from ALLOCATIONS: string)
         const vendorPayments = await prisma.payment.findMany({
-          where: orgWhere(session, { vendorId }),
+          where: orgWhere(session, { toVendorId: vendorId }),
           select: {
             description: true,
             allocations: { select: { invoiceId: true, amount: true } },
@@ -405,7 +405,7 @@ export async function GET(
                 where: { id: keptTx.id },
                 data: { amount: trueVendorAmount },
               });
-              recalcBalances = true;
+              // Fast list path already computes chronological runningBal and updates vendor.currentBalance
             }
           }
         }
@@ -438,7 +438,7 @@ export async function GET(
               },
             });
           }
-          recalcBalances = true;
+          // Fast list path already computes chronological runningBal and updates vendor.currentBalance
         }
       }
     } catch (healErr) {
