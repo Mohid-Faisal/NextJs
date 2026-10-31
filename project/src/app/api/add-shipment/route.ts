@@ -402,11 +402,14 @@ export async function POST(req: NextRequest) {
             let vendorId: number | null = null;
             let vendorBalance = 0;
             if (vendor) {
+              const trimmedVendor = String(vendor).trim();
               const vendorRecord = await tx.vendors.findFirst({
-                where: orgWhere(session, { CompanyName: vendor }),
+                where: orgWhere(session, {
+                  CompanyName: { equals: trimmedVendor, mode: "insensitive" },
+                }),
               });
               vendorId = vendorRecord?.id || null;
-              vendorBalance = vendorRecord?.currentBalance || 0;
+              vendorBalance = Number(vendorRecord?.currentBalance) || 0;
             }
 
             // 7.2 Customer Balance Calculations
@@ -421,7 +424,7 @@ export async function POST(req: NextRequest) {
               appliedBalance = 0;
             }
 
-            if (remainingAmount === 0) {
+            if (remainingAmount === 0 && customerTotalCost > 0) {
               calculatedInvoiceStatus = "Paid";
             } else if (appliedBalance > 0) {
               calculatedInvoiceStatus = "Partial";
@@ -431,7 +434,7 @@ export async function POST(req: NextRequest) {
             let vendorAppliedBalance = 0;
             let vendorRemainingAmount = 0;
             let vendorCalculatedInvoiceStatus = "Unpaid";
-            if (vendorBalance > 0) {
+            if (vendorBalance >= 0) {
               vendorRemainingAmount = vendorTotalCost;
               vendorAppliedBalance = 0;
             } else {
@@ -439,7 +442,7 @@ export async function POST(req: NextRequest) {
               vendorRemainingAmount = Math.max(0, vendorTotalCost - vendorAppliedBalance);
             }
 
-            if (vendorRemainingAmount === 0) {
+            if (vendorRemainingAmount === 0 && vendorTotalCost > 0) {
               vendorCalculatedInvoiceStatus = "Paid";
             } else if (vendorAppliedBalance > 0) {
               vendorCalculatedInvoiceStatus = "Partial";
@@ -567,12 +570,17 @@ export async function POST(req: NextRequest) {
             });
 
             // 7.7 Record Customer Transactions & Journal Entries
-            if (customerId && remainingAmount >= 0) {
+            const customerDebitAmount =
+              Number(customerInvoice?.totalAmount) > 0
+                ? Number(customerInvoice.totalAmount)
+                : customerTotalCost;
+
+            if (customerId && customerDebitAmount >= 0) {
               await addCustomerTransaction(
                 tx,
                 customerId,
                 "DEBIT",
-                remainingAmount,
+                customerDebitAmount,
                 `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
                 invoiceNumber,
                 invoiceNumber,
@@ -581,16 +589,11 @@ export async function POST(req: NextRequest) {
               );
             }
 
-            const customerRevenueAmount =
-              (customerInvoice?.totalAmount > 0
-                ? customerInvoice.totalAmount
-                : null) ??
-              (customerTotalCost > 0 ? customerTotalCost : remainingAmount);
-            if (customerRevenueAmount > 0) {
+            if (customerDebitAmount > 0) {
               await createJournalEntryForTransaction(
                 tx,
                 "CUSTOMER_DEBIT",
-                customerRevenueAmount,
+                customerDebitAmount,
                 `Customer invoice for shipment ${trackingId}`,
                 invoiceNumber,
                 invoiceNumber,
@@ -599,37 +602,18 @@ export async function POST(req: NextRequest) {
               );
             }
 
-            if (appliedBalance > 0 && customerId) {
-              await addCustomerTransaction(
-                tx,
-                customerId,
-                "CREDIT",
-                appliedBalance,
-                `Balance applied for invoice ${invoiceNumber}`,
-                `CREDIT-${invoiceNumber}`,
-                invoiceNumber,
-                shipmentDateObj,
-                session.organizationId
-              );
-              await createJournalEntryForTransaction(
-                tx,
-                "CUSTOMER_CREDIT",
-                appliedBalance,
-                `Customer credit applied for invoice ${invoiceNumber}`,
-                `CREDIT-${invoiceNumber}`,
-                invoiceNumber,
-                shipmentDateObj,
-                session.organizationId
-              );
-            }
-
             // 7.8 Record Vendor Transactions & Journal Entries
-            if (vendorId && vendorRemainingAmount >= 0) {
+            const vendorDebitAmount =
+              Number(vendorInvoice?.totalAmount) > 0
+                ? Number(vendorInvoice.totalAmount)
+                : vendorTotalCost;
+
+            if (vendorId && vendorDebitAmount >= 0) {
               await addVendorTransaction(
                 tx,
                 vendorId,
                 "DEBIT",
-                vendorRemainingAmount,
+                vendorDebitAmount,
                 `Tracking: ${trackingId} | Country: ${finalDestination} | Type: ${packaging} | Weight: ${totalWeight}Kg`,
                 vendorInvoiceNumber,
                 vendorInvoiceNumber,
@@ -638,42 +622,13 @@ export async function POST(req: NextRequest) {
               );
             }
 
-            const vendorExpenseAmount =
-              (vendorInvoice?.totalAmount > 0
-                ? vendorInvoice.totalAmount
-                : null) ??
-              (vendorTotalCost > 0 ? vendorTotalCost : vendorRemainingAmount);
-            if (vendorExpenseAmount > 0) {
+            if (vendorDebitAmount > 0) {
               await createJournalEntryForTransaction(
                 tx,
                 "VENDOR_DEBIT",
-                vendorExpenseAmount,
+                vendorDebitAmount,
                 `Vendor invoice for shipment ${trackingId}`,
                 vendorInvoiceNumber,
-                vendorInvoiceNumber,
-                shipmentDateObj,
-                session.organizationId
-              );
-            }
-
-            if (vendorAppliedBalance > 0 && vendorId) {
-              await addVendorTransaction(
-                tx,
-                vendorId,
-                "CREDIT",
-                vendorAppliedBalance,
-                `Balance applied for vendor invoice ${vendorInvoiceNumber}`,
-                `CREDIT-${vendorInvoiceNumber}`,
-                vendorInvoiceNumber,
-                shipmentDateObj,
-                session.organizationId
-              );
-              await createJournalEntryForTransaction(
-                tx,
-                "VENDOR_CREDIT",
-                vendorAppliedBalance,
-                `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
-                `CREDIT-${vendorInvoiceNumber}`,
                 vendorInvoiceNumber,
                 shipmentDateObj,
                 session.organizationId

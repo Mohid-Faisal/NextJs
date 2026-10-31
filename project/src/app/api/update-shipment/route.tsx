@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import {
   addCustomerTransaction,
+  addVendorTransaction,
   buildShipmentDebitTransactionLineDescription,
   createJournalEntryForTransaction,
   syncShipmentInvoiceDebitTransactionDescriptions,
@@ -136,10 +137,10 @@ async function updateCustomerBalance(tx: any, customerId: number, oldAmount: num
       console.log(`Current customer ${customerId} balance: ${customer.currentBalance}`);
       
       // Calculate balance adjustment: remove old amount, add new amount
-      const balanceAdjustment = newAmount - oldAmount;
-      const newBalance = customer.currentBalance + balanceAdjustment;
+      const balanceAdjustment = (Number(newAmount) || 0) - (Number(oldAmount) || 0);
+      const newBalance = (Number(customer.currentBalance) || 0) - balanceAdjustment;
 
-      console.log(`Balance calculation: ${customer.currentBalance} + (${newAmount} - ${oldAmount}) = ${newBalance}`);
+      console.log(`Balance calculation: ${customer.currentBalance} - (${newAmount} - ${oldAmount}) = ${newBalance}`);
 
       // Update customer balance
       await tx.customers.update({
@@ -170,8 +171,8 @@ async function updateVendorBalance(tx: any, vendorId: number, oldAmount: number,
       console.log(`Current vendor ${vendorId} balance: ${vendor.currentBalance}`);
       
       // Calculate balance adjustment: remove old amount, add new amount
-      const balanceAdjustment = newAmount - oldAmount;
-      const newBalance = vendor.currentBalance + balanceAdjustment;
+      const balanceAdjustment = (Number(newAmount) || 0) - (Number(oldAmount) || 0);
+      const newBalance = (Number(vendor.currentBalance) || 0) + balanceAdjustment;
 
       console.log(`Balance calculation: ${vendor.currentBalance} + (${newAmount} - ${oldAmount}) = ${newBalance}`);
 
@@ -283,54 +284,91 @@ async function handleShipmentUpdate(req: Request) {
       return NextResponse.json({ success: false, message: "Shipment not found" }, { status: 404 });
     }
 
-    // Use existing values if new values aren't provided
-    const effectivePrice = price !== undefined ? parseFloat(price) : (existingShipment.price || 0);
-    const effectiveFuelSurcharge = fuelSurcharge !== undefined ? parseFloat(fuelSurcharge) : (existingShipment.fuelSurcharge || 0);
-    const effectiveDiscount = discount !== undefined ? parseFloat(discount) : (existingShipment.discount || 0);
-    const effectiveProfitPercentage = profitPercentage !== undefined ? parseFloat(profitPercentage) : (existingShipment.profitPercentage || 0);
-    const effectiveFixedCharge = fixedCharge !== undefined ? parseFloat(fixedCharge) : (existingShipment.fixedCharge || 0);
+    // Use existing values if new values aren't provided (coerce Prisma.Decimal to Number)
+    const existingPriceNum = Number(existingShipment.price) || 0;
+    const effectiveFuelSurcharge = fuelSurcharge !== undefined ? parseFloat(fuelSurcharge) : (Number(existingShipment.fuelSurcharge) || 0);
+    const effectiveDiscount = discount !== undefined ? parseFloat(discount) : (Number(existingShipment.discount) || 0);
+    const effectiveProfitPercentage = profitPercentage !== undefined ? parseFloat(profitPercentage) : (Number(existingShipment.profitPercentage) || 0);
+    const effectiveFixedCharge = fixedCharge !== undefined ? parseFloat(fixedCharge) : (Number(existingShipment.fixedCharge) || 0);
     const effectiveTrackingId = trackingId !== undefined ? trackingId : existingShipment.trackingId;
     const effectiveDestination = destination !== undefined ? destination : existingShipment.destination;
-    const effectiveTotalWeight = totalWeight !== undefined ? parseFloat(totalWeight) : (existingShipment.totalWeight || existingShipment.weight || 0);
+    const effectiveTotalWeight = totalWeight !== undefined ? parseFloat(totalWeight) : (Number(existingShipment.totalWeight) || Number(existingShipment.weight) || 0);
 
     // ============================================================================
     // SECTION: PRICING CALCULATIONS (Same logic as add-shipment)
     // ============================================================================
-    // Parse and calculate all pricing components using effective values
-    const priceWithProfit = Math.round((effectivePrice || 0));
-    const fuelSurchargeAmount = Math.round((effectiveFuelSurcharge || 0));
+    const fuelSurchargeAmount = Math.round(effectiveFuelSurcharge || 0);
     const discountPercentage = effectiveDiscount || 0;
     const profitPercentageValue = effectiveProfitPercentage || 0;
-    
-    // Calculate original price by removing profit from the price with profit
-    // This is needed because the frontend sends price with profit included
-    const originalPrice = profitPercentageValue > 0 ? Math.round((priceWithProfit / (1 + profitPercentageValue / 100)) * 100) / 100 : priceWithProfit;
-    
+
+    // Note: add-shipment stores `originalPrice` (without profit) in `shipment.price`,
+    // while the frontend sends `price` with profit included when `price !== undefined`.
+    const priceWithProfit =
+      price !== undefined
+        ? Math.round(parseFloat(price) || 0)
+        : Math.round(existingPriceNum * (1 + profitPercentageValue / 100));
+    const originalPrice =
+      price !== undefined
+        ? profitPercentageValue > 0
+          ? Math.round((priceWithProfit / (1 + profitPercentageValue / 100)) * 100) / 100
+          : priceWithProfit
+        : existingPriceNum;
+
     // Calculate discount amount as percentage of original price
-    const discountAmount = Math.round(((originalPrice * discountPercentage) / 100));
-    
+    const discountAmount = Math.round((originalPrice * discountPercentage) / 100);
+
     // Calculate profit amount as percentage of original price
-    const profitAmount = Math.round(((originalPrice * profitPercentageValue) / 100));
-    
-    // Calculate total costs for customer and vendor (same logic as add-shipment)
+    const profitAmount = Math.round((originalPrice * profitPercentageValue) / 100);
+
     // Customer invoice uses the price with profit (from frontend)
-    const customerTotalCost = Math.round((priceWithProfit + fuelSurchargeAmount - discountAmount));
-    // Vendor invoice: use CoS (Cost of Service) if in manual mode, otherwise use original price without fixed charge
-    const effectiveManualRate = manualRate !== undefined ? Boolean(manualRate) : (existingShipment.manualRate || false);
-    const effectiveCos = cos !== undefined ? (parseFloat(String(cos)) || 0) : (existingShipment.cos || 0);
-    const vendorTotalCost = effectiveManualRate 
+    const customerTotalCost = Math.round(priceWithProfit + fuelSurchargeAmount - discountAmount);
+
+    // Vendor invoice: use CoS (Cost of Service) if in manual mode, otherwise vendorPrice or originalPrice - fixedCharge
+    const effectiveManualRate = manualRate !== undefined ? Boolean(manualRate) : Boolean(existingShipment.manualRate);
+    const effectiveCos = cos !== undefined ? (parseFloat(String(cos)) || 0) : (Number(existingShipment.cos) || 0);
+    let parsedVendorPrice: number | null = null;
+    if (body.vendorPrice !== undefined) {
+      parsedVendorPrice = parseFloat(String(body.vendorPrice)) || 0;
+    } else if (calculatedValues && typeof calculatedValues === "object" && calculatedValues.vendorPrice !== undefined) {
+      parsedVendorPrice = parseFloat(String(calculatedValues.vendorPrice)) || 0;
+    } else if (existingShipment.calculatedValues) {
+      try {
+        const existingCalc =
+          typeof existingShipment.calculatedValues === "string"
+            ? JSON.parse(existingShipment.calculatedValues)
+            : (existingShipment.calculatedValues as any);
+        if (existingCalc?.vendorPrice !== undefined) {
+          parsedVendorPrice = parseFloat(String(existingCalc.vendorPrice)) || 0;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const vendorTotalCost = effectiveManualRate
       ? Math.round(effectiveCos)
-      : Math.round(originalPrice - effectiveFixedCharge);
-    
+      : parsedVendorPrice !== null && parsedVendorPrice > 0
+        ? Math.round(parsedVendorPrice)
+        : Math.round(originalPrice - effectiveFixedCharge);
+
+    const customerPricingChanged =
+      price !== undefined ||
+      fuelSurcharge !== undefined ||
+      discount !== undefined ||
+      profitPercentage !== undefined ||
+      totalCost !== undefined;
+    const vendorPricingChanged =
+      (effectiveManualRate && cos !== undefined) ||
+      (!effectiveManualRate && (body.vendorPrice !== undefined || price !== undefined));
+
     // For backward compatibility, also calculate the old format
     let calculatedTotalCost: number;
-    if (price !== undefined || fuelSurcharge !== undefined || discount !== undefined) {
-      calculatedTotalCost = customerTotalCost; // Use customer total for backward compatibility
+    if (price !== undefined || fuelSurcharge !== undefined || discount !== undefined || profitPercentage !== undefined) {
+      calculatedTotalCost = customerTotalCost;
     } else if (totalCost !== undefined) {
       calculatedTotalCost = parseFloat(totalCost) || 0;
     } else {
-      // Use existing totalCost if available
-      calculatedTotalCost = existingShipment.totalCost || 0;
+      calculatedTotalCost = Number(existingShipment.totalCost) || 0;
     }
     
     // Log pricing calculations for debugging
@@ -343,14 +381,14 @@ async function handleShipmentUpdate(req: Request) {
     console.log('CoS (Cost of Service):', cos);
     console.log('Manual rate:', effectiveManualRate);
     console.log('Customer total cost (with profit):', customerTotalCost);
-    console.log(`Vendor total cost (${effectiveManualRate ? 'CoS' : 'originalPrice - fixedCharge'}):`, vendorTotalCost);
+    console.log(`Vendor total cost (${effectiveManualRate ? 'CoS' : 'vendorPrice / originalPrice - fixedCharge'}):`, vendorTotalCost);
     console.log('=== END PRICING CALCULATIONS ===');
 
     const totalWeightChanged =
       totalWeight !== undefined &&
       Math.abs(
         parseFloat(String(totalWeight)) -
-          (existingShipment.totalWeight ?? existingShipment.weight ?? 0)
+          (Number(existingShipment.totalWeight ?? existingShipment.weight) || 0)
       ) > 1e-6;
     const packagingChanged =
       packaging !== undefined && packaging !== (existingShipment.packaging ?? "");
@@ -367,18 +405,17 @@ async function handleShipmentUpdate(req: Request) {
 
     // Use a transaction to ensure all updates happen together
     const result = await prisma.$transaction(async (tx) => {
-      // Resolve vendorId when vendor name changes (so bills move with the shipment)
-      // Only set when a matching vendor is found — never clear vendorId on a miss
+      // Resolve vendorId from incoming vendor or existingShipment.vendor so unlinked vendor bills also get linked
       let resolvedVendorId: number | undefined = undefined;
-      if (vendorChanged) {
-        const vendorName = String(vendor ?? "").trim();
-        if (vendorName) {
-          const vendorRecord = await tx.vendors.findFirst({
-            where: orgWhere(session, { CompanyName: vendorName }),
-            select: { id: true },
-          });
-          if (vendorRecord) resolvedVendorId = vendorRecord.id;
-        }
+      const effectiveVendorName = String((vendor !== undefined ? vendor : existingShipment.vendor) ?? "").trim();
+      if (effectiveVendorName) {
+        const vendorRecord = await tx.vendors.findFirst({
+          where: orgWhere(session, {
+            CompanyName: { equals: effectiveVendorName, mode: "insensitive" },
+          }),
+          select: { id: true },
+        });
+        if (vendorRecord) resolvedVendorId = vendorRecord.id;
       }
 
       // Resolve customerId when sender name changes or direct customerId is provided
@@ -434,17 +471,17 @@ async function handleShipmentUpdate(req: Request) {
           width: width ? parseFloat(width) : undefined,
           height: height ? parseFloat(height) : undefined,
           weightVol: weightVol ? parseFloat(weightVol) : undefined,
-          fixedCharge: fixedCharge ? parseFloat(fixedCharge) : undefined,
-          decValue: decValue ? parseFloat(decValue) : undefined,
-          price: price ? parseFloat(price) : undefined,
-          discount: discount ? parseFloat(discount) : undefined,
-          fuelSurcharge: fuelSurcharge ? parseFloat(fuelSurcharge) : undefined,
-          insurance: insurance ? parseFloat(insurance) : undefined,
-          customs: customs ? parseFloat(customs) : undefined,
-          tax: tax ? parseFloat(tax) : undefined,
-          declaredValue: declaredValue ? parseFloat(declaredValue) : undefined,
-          reissue: reissue ? parseFloat(reissue) : undefined,
-          profitPercentage: profitPercentage ? parseFloat(profitPercentage) : undefined,
+          fixedCharge: fixedCharge !== undefined ? parseFloat(fixedCharge) || 0 : undefined,
+          decValue: decValue !== undefined ? parseFloat(decValue) || 0 : undefined,
+          price: price !== undefined ? originalPrice : undefined,
+          discount: discount !== undefined ? parseFloat(discount) || 0 : undefined,
+          fuelSurcharge: fuelSurcharge !== undefined ? parseFloat(fuelSurcharge) || 0 : undefined,
+          insurance: insurance !== undefined ? parseFloat(insurance) || 0 : undefined,
+          customs: customs !== undefined ? parseFloat(customs) || 0 : undefined,
+          tax: tax !== undefined ? parseFloat(tax) || 0 : undefined,
+          declaredValue: declaredValue !== undefined ? parseFloat(declaredValue) || 0 : undefined,
+          reissue: reissue !== undefined ? parseFloat(reissue) || 0 : undefined,
+          profitPercentage: profitPercentage !== undefined ? parseFloat(profitPercentage) || 0 : undefined,
           ...(cos !== undefined
             ? { cos: parseFloat(String(cos)) || 0 }
             : {}),
@@ -528,13 +565,11 @@ async function handleShipmentUpdate(req: Request) {
       // 3. Update related invoices with shipment data
       // Also refresh when metadata changes (tracking, packaging, vendor, packages, etc.)
       const shouldUpdateInvoices =
-        price !== undefined ||
-        fuelSurcharge !== undefined ||
-        discount !== undefined ||
+        customerPricingChanged ||
+        vendorPricingChanged ||
         (trackingId !== undefined && trackingId !== existingShipment.trackingId) ||
         (destination !== undefined && destination !== existingShipment.destination) ||
         shipmentDate !== undefined ||
-        (effectiveManualRate && cos !== undefined) ||
         totalWeightChanged ||
         packagingChanged ||
         referenceChanged ||
@@ -544,14 +579,6 @@ async function handleShipmentUpdate(req: Request) {
         packagesChanged;
       
       if (updatedShipment.invoices && updatedShipment.invoices.length > 0 && shouldUpdateInvoices) {
-        // Rebuild line items from packages when packages or pricing change (same logic as add-shipment)
-        const rebuildLineItems =
-          packagesChanged ||
-          price !== undefined ||
-          fuelSurcharge !== undefined ||
-          discount !== undefined ||
-          (effectiveManualRate && cos !== undefined);
-
         const buildLineItems = (forVendor: boolean) => {
           const lineItems: { description: string; value: number }[] = [];
           let parsedPackages: any[] = [];
@@ -574,11 +601,7 @@ async function handleShipmentUpdate(req: Request) {
             }
           }
 
-          const baseAmount = forVendor
-            ? effectiveManualRate
-              ? vendorTotalCost
-              : Math.round(originalPrice - effectiveFixedCharge)
-            : originalPrice;
+          const baseAmount = forVendor ? vendorTotalCost : originalPrice;
 
           if (Array.isArray(parsedPackages) && parsedPackages.length > 0) {
             const tw = parsedPackages.reduce(
@@ -612,64 +635,88 @@ async function handleShipmentUpdate(req: Request) {
           return lineItems;
         };
 
-        const invoiceUpdates = updatedShipment.invoices.map(async (invoice) => {
-          // Update invoice with shipment data
-          // For vendor invoices, use vendor cost; for customer invoices, use customer total
-          const isVendorInvoice = invoice.vendorId && !invoice.customerId;
-          
-          // Use calculated amounts if pricing data was provided, or if CoS changed in manual mode, otherwise keep existing invoice totalAmount
-          let invoiceAmount: number;
-          if (price !== undefined || fuelSurcharge !== undefined || discount !== undefined || (effectiveManualRate && cos !== undefined)) {
-            invoiceAmount = isVendorInvoice ? vendorTotalCost : customerTotalCost;
-          } else {
-            // Keep existing invoice totalAmount if no pricing data provided
-            invoiceAmount = invoice.totalAmount || 0;
-          }
-          
-          console.log(`Updating invoice ${invoice.invoiceNumber}:`, {
-            isVendorInvoice,
-            vendorCost: vendorTotalCost,
-            customerTotal: customerTotalCost,
-            finalAmount: invoiceAmount,
-            trackingId: effectiveTrackingId,
-            destination: effectiveDestination,
-            usingExistingAmount: price === undefined && fuelSurcharge === undefined && discount === undefined
-          });
-          
-          // Ensure invoiceAmount is a valid number
-          const finalInvoiceAmount = typeof invoiceAmount === 'number' && !isNaN(invoiceAmount) ? invoiceAmount : (invoice.totalAmount || 0);
-          
-          // Store old amount before updating
-          const oldInvoiceAmount = invoice.totalAmount;
+        for (const invoice of updatedShipment.invoices) {
+          // CRITICAL: Check `invoice.profile === "Vendor"` FIRST so a vendor invoice with `vendorId: null`
+          // is NEVER misclassified as a customer invoice!
+          const isVendorInvoice =
+            invoice.profile === "Vendor" ||
+            (!invoice.profile && Boolean(invoice.vendorId && !invoice.customerId));
 
-          const nextLineItems = rebuildLineItems
-            ? buildLineItems(!!isVendorInvoice)
+          const existingAmountNum = Number(invoice.totalAmount) || 0;
+
+          // Self-heal if a previous edit mistakenly attached customerId to a Vendor invoice
+          if (isVendorInvoice && invoice.customerId != null) {
+            const bogusCustomerDebits = await tx.customerTransaction.findMany({
+              where: {
+                customerId: invoice.customerId,
+                type: "DEBIT",
+                OR: [
+                  { reference: invoice.invoiceNumber },
+                  { invoice: invoice.invoiceNumber },
+                ],
+              },
+            });
+            const bogusDebitSum = bogusCustomerDebits.reduce(
+              (sum, t) => sum + (Number(t.amount) || 0),
+              0
+            );
+            if (bogusCustomerDebits.length > 0) {
+              await tx.customerTransaction.deleteMany({
+                where: { id: { in: bogusCustomerDebits.map((t) => t.id) } },
+              });
+              await tx.customers.update({
+                where: { id: invoice.customerId },
+                data: { currentBalance: { increment: bogusDebitSum } },
+              });
+            }
+          }
+
+          // Only recalculate customer invoice amount when customer pricing fields changed,
+          // and only recalculate vendor invoice amount when vendor pricing fields changed.
+          let invoiceAmount: number;
+          if (isVendorInvoice) {
+            invoiceAmount = vendorPricingChanged ? vendorTotalCost : existingAmountNum;
+          } else {
+            invoiceAmount = customerPricingChanged ? customerTotalCost : existingAmountNum;
+          }
+
+          const finalInvoiceAmount =
+            typeof invoiceAmount === "number" && !isNaN(invoiceAmount)
+              ? invoiceAmount
+              : existingAmountNum;
+          const oldInvoiceAmount = existingAmountNum;
+
+          const rebuildThisInvoiceLineItems = isVendorInvoice
+            ? packagesChanged || vendorPricingChanged
+            : packagesChanged || customerPricingChanged;
+
+          const nextLineItems = rebuildThisInvoiceLineItems
+            ? buildLineItems(isVendorInvoice)
             : invoice.lineItems || [];
-          
-          // Update invoice with all relevant fields
-          const updatedInvoice = await tx.invoice.update({
+
+          await tx.invoice.update({
             where: { id: invoice.id },
             data: {
               trackingNumber: effectiveTrackingId !== undefined ? effectiveTrackingId : invoice.trackingNumber,
               destination: effectiveDestination !== undefined ? effectiveDestination : invoice.destination,
-              weight: effectiveTotalWeight || invoice.weight || 0,
-              // Update invoice date if shipment date was provided
+              weight: effectiveTotalWeight || Number(invoice.weight) || 0,
               ...(shipmentDate ? { invoiceDate: new Date(shipmentDate) } : {}),
               lineItems: nextLineItems,
               totalAmount: finalInvoiceAmount,
-              // Update FSC charges and discount if pricing data was provided
-              ...(price !== undefined || fuelSurcharge !== undefined || discount !== undefined ? {
-                fscCharges: fuelSurchargeAmount,
-                discount: discountAmount,
-              } : {}),
-              // Move vendor bill when shipment vendor changes
-              ...(isVendorInvoice && resolvedVendorId != null
-                ? { vendorId: resolvedVendorId }
+              ...(!isVendorInvoice && customerPricingChanged
+                ? {
+                    fscCharges: fuelSurchargeAmount,
+                    discount: discountAmount,
+                  }
                 : {}),
-              // Move customer invoice when shipment sender changes
-              ...(!isVendorInvoice && resolvedCustomerId != null
-                ? { customerId: resolvedCustomerId }
-                : {}),
+              ...(isVendorInvoice
+                ? {
+                    customerId: null,
+                    ...(resolvedVendorId != null ? { vendorId: resolvedVendorId } : {}),
+                  }
+                : {
+                    ...(resolvedCustomerId != null ? { customerId: resolvedCustomerId } : {}),
+                  }),
               updatedAt: new Date(),
             },
           });
@@ -681,17 +728,16 @@ async function handleShipmentUpdate(req: Request) {
             invoice.vendorId &&
             resolvedVendorId !== invoice.vendorId
           ) {
-            await tx.vendorTransaction.updateMany({
-              where: {
-                vendorId: invoice.vendorId,
-                type: "DEBIT",
-                OR: [
-                  { reference: invoice.invoiceNumber },
-                  { invoice: invoice.invoiceNumber },
-                ],
-              },
-              data: { vendorId: resolvedVendorId },
-            });
+            await updateInvoiceBalance(
+              tx,
+              invoice.id,
+              oldInvoiceAmount,
+              finalInvoiceAmount,
+              null,
+              null,
+              invoice.vendorId,
+              resolvedVendorId
+            );
           }
 
           // Move customer DEBIT rows with the invoice when customer changes
@@ -701,24 +747,26 @@ async function handleShipmentUpdate(req: Request) {
             invoice.customerId &&
             resolvedCustomerId !== invoice.customerId
           ) {
-            await tx.customerTransaction.updateMany({
-              where: {
-                customerId: invoice.customerId,
-                type: "DEBIT",
-                OR: [
-                  { reference: invoice.invoiceNumber },
-                  { invoice: invoice.invoiceNumber },
-                ],
-              },
-              data: { customerId: resolvedCustomerId },
-            });
+            await updateInvoiceBalance(
+              tx,
+              invoice.id,
+              oldInvoiceAmount,
+              finalInvoiceAmount,
+              invoice.customerId,
+              resolvedCustomerId,
+              null,
+              null
+            );
           }
 
-          // Ensure customer DEBIT row exists for customer invoice
-          const effectiveCustomerId = (!isVendorInvoice && resolvedCustomerId != null)
-            ? resolvedCustomerId
-            : invoice.customerId;
+          const effectiveCustomerId = !isVendorInvoice
+            ? (resolvedCustomerId ?? invoice.customerId)
+            : null;
+          const effectiveVendorId = isVendorInvoice
+            ? (resolvedVendorId ?? invoice.vendorId)
+            : null;
 
+          // Ensure customer DEBIT row exists for customer invoice
           if (!isVendorInvoice && effectiveCustomerId && finalInvoiceAmount > 0) {
             const existingTx = await tx.customerTransaction.findFirst({
               where: {
@@ -734,8 +782,8 @@ async function handleShipmentUpdate(req: Request) {
               const lineDesc = buildShipmentDebitTransactionLineDescription(
                 effectiveTrackingId || invoice.trackingNumber || "N/A",
                 effectiveDestination || invoice.destination || "N/A",
-                packaging || "Wpx",
-                effectiveTotalWeight || invoice.weight || 0
+                packaging || existingShipment.packaging || "Wpx",
+                effectiveTotalWeight || Number(invoice.weight) || 0
               );
               await addCustomerTransaction(
                 tx,
@@ -751,21 +799,60 @@ async function handleShipmentUpdate(req: Request) {
             }
           }
 
+          // Ensure vendor DEBIT row exists for vendor invoice when vendor is resolved
+          if (isVendorInvoice && effectiveVendorId && finalInvoiceAmount > 0) {
+            const existingVendorTx = await tx.vendorTransaction.findFirst({
+              where: {
+                vendorId: effectiveVendorId,
+                type: "DEBIT",
+                OR: [
+                  { reference: invoice.invoiceNumber },
+                  { invoice: invoice.invoiceNumber },
+                ],
+              },
+            });
+            if (!existingVendorTx) {
+              const lineDesc = buildShipmentDebitTransactionLineDescription(
+                effectiveTrackingId || invoice.trackingNumber || "N/A",
+                effectiveDestination || invoice.destination || "N/A",
+                packaging || existingShipment.packaging || "Wpx",
+                effectiveTotalWeight || Number(invoice.weight) || 0
+              );
+              await addVendorTransaction(
+                tx,
+                effectiveVendorId,
+                "DEBIT",
+                finalInvoiceAmount,
+                lineDesc,
+                invoice.invoiceNumber,
+                invoice.invoiceNumber,
+                shipmentDate ? new Date(shipmentDate) : existingShipment.shipmentDate || new Date(),
+                session.organizationId
+              );
+            }
+          }
+
           // 3. Update customer/vendor balances and journal entries
           try {
-            const description = `Updated invoice for shipment: ${effectiveTrackingId || invoice.trackingNumber || 'N/A'} - ${effectiveDestination || invoice.destination || 'N/A'}`;
-            
-            // If invoice amount actually changed, update party balance transactions
-            if (oldInvoiceAmount !== finalInvoiceAmount) {
+            const description = isVendorInvoice
+              ? `Vendor invoice for shipment ${effectiveTrackingId || invoice.trackingNumber || "N/A"}`
+              : `Customer invoice for shipment ${effectiveTrackingId || invoice.trackingNumber || "N/A"}`;
+
+            // If invoice amount actually changed (and party didn't already get reassigned above), update party balance transactions
+            const partyReassigned =
+              (isVendorInvoice && resolvedVendorId != null && invoice.vendorId && resolvedVendorId !== invoice.vendorId) ||
+              (!isVendorInvoice && resolvedCustomerId != null && invoice.customerId && resolvedCustomerId !== invoice.customerId);
+
+            if (!partyReassigned && Math.abs(oldInvoiceAmount - finalInvoiceAmount) > 0.0001) {
               await updateInvoiceBalance(
                 tx,
                 invoice.id,
                 oldInvoiceAmount,
                 finalInvoiceAmount,
-                invoice.customerId,
-                invoice.customerId,
-                invoice.vendorId,
-                invoice.vendorId
+                effectiveCustomerId,
+                effectiveCustomerId,
+                effectiveVendorId,
+                effectiveVendorId
               );
             }
 
@@ -776,27 +863,22 @@ async function handleShipmentUpdate(req: Request) {
                 invoice.id,
                 oldInvoiceAmount,
                 finalInvoiceAmount,
-                invoice.customerId,
-                invoice.customerId,
-                invoice.vendorId,
-                invoice.vendorId,
+                effectiveCustomerId,
+                effectiveCustomerId,
+                effectiveVendorId,
+                effectiveVendorId,
                 invoice.invoiceNumber,
                 description,
-                session.organizationId
+                session.organizationId,
+                shipmentDate ? new Date(shipmentDate) : undefined
               );
             }
-            
+
             console.log(`Successfully updated balances and journal entries for invoice ${invoice.invoiceNumber}`);
           } catch (balanceError) {
             console.error(`Error updating balances and journal entries for invoice ${invoice.invoiceNumber}:`, balanceError);
-            // Continue with the transaction even if balance/journal update fails
           }
-
-          return updatedInvoice;
-        });
-
-        // Wait for all invoice updates to complete
-        await Promise.all(invoiceUpdates);
+        }
         
         // Log journal entry update summary
         console.log(`=== BALANCE & JOURNAL ENTRY UPDATE SUMMARY ===`);

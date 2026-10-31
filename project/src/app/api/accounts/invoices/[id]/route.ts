@@ -109,8 +109,8 @@ export async function PUT(
       );
     }
 
-    const oldAmount = currentInvoice.totalAmount;
-    const newAmount = body.totalAmount !== undefined ? parseFloat(body.totalAmount) : oldAmount;
+    const oldAmount = Number(currentInvoice.totalAmount) || 0;
+    const newAmount = body.totalAmount !== undefined ? (parseFloat(body.totalAmount) || 0) : oldAmount;
     const oldCustomerId = currentInvoice.customerId;
     const newCustomerId = body.customerId !== undefined ? (body.customerId ? parseInt(body.customerId) : null) : oldCustomerId;
     const oldVendorId = currentInvoice.vendorId;
@@ -342,7 +342,7 @@ export async function DELETE(
     }
 
     const invNum = existing.invoiceNumber;
-    const invAmount = existing.totalAmount || 0;
+    const invAmount = Number(existing.totalAmount) || 0;
 
     await prisma.$transaction(async (tx) => {
       // 1. Delete matching journal entries (lines first)
@@ -364,57 +364,70 @@ export async function DELETE(
         }
       }
 
-      // 2. Delete customer ledger transactions and restore customer balance
+      // 2. Delete customer invoice DEBIT ledger transactions and recalculate customer balance
       if (existing.customerId && invNum) {
         const customerTxns = await tx.customerTransaction.findMany({
           where: orgWhere(session, {
             customerId: existing.customerId,
+            type: "DEBIT",
             OR: [{ reference: invNum }, { invoice: invNum }],
           }),
         });
         if (customerTxns.length > 0) {
+          const deletedDebitSum = customerTxns.reduce(
+            (s, t) => s + (Number(t.amount) || 0),
+            0
+          );
           await tx.customerTransaction.deleteMany({
             where: { id: { in: customerTxns.map((t) => t.id) } },
           });
-          // Restore customer balance (debit had decreased/made negative their balance)
           const cust = await tx.customers.findFirst({
             where: orgWhere(session, { id: existing.customerId }),
           });
           if (cust) {
             await tx.customers.update({
               where: { id: cust.id },
-              data: { currentBalance: cust.currentBalance + invAmount },
+              data: { currentBalance: (Number(cust.currentBalance) || 0) + (deletedDebitSum || invAmount) },
             });
           }
         }
       }
 
-      // 3. Delete vendor ledger transactions and restore vendor balance
+      // 3. Delete vendor invoice DEBIT ledger transactions and recalculate vendor balance
       if (existing.vendorId && invNum) {
         const vendorTxns = await tx.vendorTransaction.findMany({
           where: orgWhere(session, {
             vendorId: existing.vendorId,
+            type: "DEBIT",
             OR: [{ reference: invNum }, { invoice: invNum }],
           }),
         });
         if (vendorTxns.length > 0) {
+          const deletedVendorDebitSum = vendorTxns.reduce(
+            (s, t) => s + (Number(t.amount) || 0),
+            0
+          );
           await tx.vendorTransaction.deleteMany({
             where: { id: { in: vendorTxns.map((t) => t.id) } },
           });
-          // Restore vendor balance (debit had increased vendor payable)
           const ven = await tx.vendors.findFirst({
             where: orgWhere(session, { id: existing.vendorId }),
           });
           if (ven) {
             await tx.vendors.update({
               where: { id: ven.id },
-              data: { currentBalance: ven.currentBalance - invAmount },
+              data: { currentBalance: (Number(ven.currentBalance) || 0) - (deletedVendorDebitSum || invAmount) },
             });
           }
         }
       }
 
-      // 4. Delete the invoice
+      // 4. Delete any payment allocations referencing this invoice
+      await tx.paymentAllocation.deleteMany({
+        where: { invoiceId },
+      });
+
+      // 5. Delete the invoice
       await tx.invoice.delete({
         where: { id: invoiceId },
       });

@@ -43,18 +43,23 @@ export async function GET(req: NextRequest) {
 
     const customerDelta = new Map<number, number>();
     for (const row of customerAgg) {
-      const signed = row.type === "CREDIT" ? row._sum.amount ?? 0 : -(row._sum.amount ?? 0);
+      const amt = Number(row._sum.amount ?? 0);
+      const signed = row.type === "CREDIT" ? amt : -amt;
       customerDelta.set(row.customerId, (customerDelta.get(row.customerId) ?? 0) + signed);
     }
 
     const customerDrifts = customers
-      .map((c) => ({
-        id: c.id,
-        name: c.CompanyName,
-        storedBalance: c.currentBalance,
-        computedBalance: round2(customerDelta.get(c.id) ?? 0),
-        drift: round2(c.currentBalance - (customerDelta.get(c.id) ?? 0)),
-      }))
+      .map((c) => {
+        const stored = Number(c.currentBalance) || 0;
+        const computed = round2(customerDelta.get(c.id) ?? 0);
+        return {
+          id: c.id,
+          name: c.CompanyName,
+          storedBalance: stored,
+          computedBalance: computed,
+          drift: round2(stored - computed),
+        };
+      })
       .filter((d) => Math.abs(d.drift) > 0.01);
 
     // ---- Vendors -------------------------------------------------------
@@ -71,18 +76,23 @@ export async function GET(req: NextRequest) {
 
     const vendorDelta = new Map<number, number>();
     for (const row of vendorAgg) {
-      const signed = row.type === "DEBIT" ? row._sum.amount ?? 0 : -(row._sum.amount ?? 0);
+      const amt = Number(row._sum.amount ?? 0);
+      const signed = row.type === "DEBIT" ? amt : -amt;
       vendorDelta.set(row.vendorId, (vendorDelta.get(row.vendorId) ?? 0) + signed);
     }
 
     const vendorDrifts = vendors
-      .map((v) => ({
-        id: v.id,
-        name: v.CompanyName,
-        storedBalance: v.currentBalance,
-        computedBalance: round2(vendorDelta.get(v.id) ?? 0),
-        drift: round2(v.currentBalance - (vendorDelta.get(v.id) ?? 0)),
-      }))
+      .map((v) => {
+        const stored = Number(v.currentBalance) || 0;
+        const computed = round2(vendorDelta.get(v.id) ?? 0);
+        return {
+          id: v.id,
+          name: v.CompanyName,
+          storedBalance: stored,
+          computedBalance: computed,
+          drift: round2(stored - computed),
+        };
+      })
       .filter((d) => Math.abs(d.drift) > 0.01);
 
     return NextResponse.json({

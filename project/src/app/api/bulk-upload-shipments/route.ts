@@ -509,9 +509,13 @@ export async function POST(req: NextRequest) {
               } as Record<string, unknown>,
             });
 
-            // Get customer and vendor balances
-            const customerBalance = customer.currentBalance || 0;
-            const vendorBalance = vendor.currentBalance || 0;
+            // Fetch fresh customer and vendor balances inside transaction
+            const [freshCust, freshVend] = await Promise.all([
+              tx.customers.findUnique({ where: { id: customer.id }, select: { currentBalance: true } }),
+              tx.vendors.findUnique({ where: { id: vendor.id }, select: { currentBalance: true } }),
+            ]);
+            const customerBalance = Number(freshCust?.currentBalance ?? customer.currentBalance) || 0;
+            const vendorBalance = Number(freshVend?.currentBalance ?? vendor.currentBalance) || 0;
 
             // Calculate invoice status
             let customerRemainingAmount = customerTotalCost;
@@ -521,17 +525,25 @@ export async function POST(req: NextRequest) {
             if (customerBalance > 0) {
               customerRemainingAmount = Math.max(0, customerTotalCost - customerBalance);
               customerAppliedBalance = Math.min(customerBalance, customerTotalCost);
-              customerInvoiceStatus = customerRemainingAmount === 0 ? "Paid" : "Partial";
+              if (customerRemainingAmount === 0 && customerTotalCost > 0) {
+                customerInvoiceStatus = "Paid";
+              } else if (customerAppliedBalance > 0) {
+                customerInvoiceStatus = "Partial";
+              }
             }
 
             let vendorRemainingAmount = vendorTotalCost;
             let vendorAppliedBalance = 0;
             let vendorInvoiceStatus = "Unpaid";
 
-            if (vendorBalance > 0) {
-              vendorRemainingAmount = Math.max(0, vendorTotalCost - vendorBalance);
-              vendorAppliedBalance = Math.min(vendorBalance, vendorTotalCost);
-              vendorInvoiceStatus = vendorRemainingAmount === 0 ? "Paid" : "Partial";
+            if (vendorBalance < 0) {
+              vendorAppliedBalance = Math.min(Math.abs(vendorBalance), vendorTotalCost);
+              vendorRemainingAmount = Math.max(0, vendorTotalCost - vendorAppliedBalance);
+              if (vendorRemainingAmount === 0 && vendorTotalCost > 0) {
+                vendorInvoiceStatus = "Paid";
+              } else if (vendorAppliedBalance > 0) {
+                vendorInvoiceStatus = "Partial";
+              }
             }
 
             // Create customer invoice
@@ -578,21 +590,19 @@ export async function POST(req: NextRequest) {
               })
             });
 
-            // Ledger txs use remaining (after balance applied); GL posts full invoice totals.
-            if (customerRemainingAmount > 0) {
+            // Record full invoice DEBITs in party ledgers and general ledger
+            if (customerTotalCost > 0) {
               await addCustomerTransaction(
                 tx,
                 customer.id,
                 'DEBIT',
-                customerRemainingAmount,
+                customerTotalCost,
                 `Tracking: ${shipmentData.trackingId} | Country: ${shipmentData.countryCode} | Type: ${shipmentData.type} | Weight: ${shipmentData.weight}Kg`,
                 invoiceNumber,
                 invoiceNumber,
                 shipmentData.shipmentDate,
                 session.organizationId
               );
-            }
-            if (customerTotalCost > 0) {
               await createJournalEntryForTransaction(
                 tx,
                 'CUSTOMER_DEBIT',
@@ -605,116 +615,24 @@ export async function POST(req: NextRequest) {
               );
             }
 
-            if (vendorRemainingAmount > 0) {
+            if (vendorTotalCost > 0) {
               await addVendorTransaction(
                 tx,
                 vendor.id,
                 'DEBIT',
-                vendorRemainingAmount,
+                vendorTotalCost,
                 `Tracking: ${shipmentData.trackingId} | Country: ${shipmentData.countryCode} | Type: ${shipmentData.type} | Weight: ${shipmentData.weight}Kg`,
                 vendorInvoiceNumber,
                 vendorInvoiceNumber,
                 shipmentData.shipmentDate,
                 session.organizationId
               );
-            }
-            if (vendorTotalCost > 0) {
               await createJournalEntryForTransaction(
                 tx,
                 'VENDOR_DEBIT',
                 vendorTotalCost,
                 `Vendor invoice for shipment ${shipmentData.trackingId}`,
                 vendorInvoiceNumber,
-                vendorInvoiceNumber,
-                shipmentData.shipmentDate,
-                session.organizationId
-              );
-            }
-
-            // Handle balance application for customer
-            if (customerAppliedBalance > 0) {
-              await tx.payment.create({
-                data: orgData(session, {
-                  transactionType: "INCOME",
-                  category: "Balance Applied",
-                  date: shipmentData.shipmentDate,
-                  amount: customerAppliedBalance,
-                  fromPartyType: "CUSTOMER",
-                  fromCustomerId: customer.id,
-                  fromCustomer: normalizedSenderName,
-                  toPartyType: "US",
-                  toVendorId: null,
-                  toVendor: "",
-                  mode: "CASH",
-                  reference: invoiceNumber,
-                  invoice: invoiceNumber,
-                  description: `Credit applied for invoice ${invoiceNumber}`
-                })
-              });
-
-              await addCustomerTransaction(
-                tx,
-                customer.id,
-                'DEBIT',
-                customerAppliedBalance,
-                `Credit applied for invoice ${invoiceNumber}`,
-                `CREDIT-${invoiceNumber}`,
-                invoiceNumber,
-                shipmentData.shipmentDate,
-                session.organizationId
-              );
-
-              await createJournalEntryForTransaction(
-                tx,
-                'CUSTOMER_CREDIT',
-                customerAppliedBalance,
-                `Customer credit applied for invoice ${invoiceNumber}`,
-                `CREDIT-${invoiceNumber}`,
-                invoiceNumber,
-                shipmentData.shipmentDate,
-                session.organizationId
-              );
-            }
-
-            // Handle balance application for vendor
-            if (vendorAppliedBalance > 0) {
-              await tx.payment.create({
-                data: orgData(session, {
-                  transactionType: "EXPENSE",
-                  category: "Balance Applied",
-                  date: shipmentData.shipmentDate,
-                  amount: vendorAppliedBalance,
-                  fromPartyType: "US",
-                  fromCustomerId: null,
-                  fromCustomer: "",
-                  toPartyType: "VENDOR",
-                  toVendorId: vendor.id,
-                  toVendor: normalizedVendorName,
-                  mode: "CASH",
-                  reference: vendorInvoiceNumber,
-                  invoice: vendorInvoiceNumber,
-                  description: `Credit applied for vendor invoice ${vendorInvoiceNumber}`
-                })
-              });
-
-              await addVendorTransaction(
-                tx,
-                vendor.id,
-                'CREDIT',
-                vendorAppliedBalance,
-                `Credit applied for vendor invoice ${vendorInvoiceNumber}`,
-                `CREDIT-${vendorInvoiceNumber}`,
-                vendorInvoiceNumber,
-                shipmentData.shipmentDate,
-                session.organizationId
-              );
-
-              await createJournalEntryForTransaction(
-                tx,
-                'VENDOR_CREDIT',
-                vendorAppliedBalance,
-                `Vendor credit applied for invoice ${vendorInvoiceNumber}`,
-                `CREDIT-${vendorInvoiceNumber}`,
                 vendorInvoiceNumber,
                 shipmentData.shipmentDate,
                 session.organizationId

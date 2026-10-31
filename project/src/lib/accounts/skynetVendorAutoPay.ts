@@ -39,7 +39,7 @@ async function vendorExpensePaidTotalsByInvoice(
 
   for (const row of rows) {
     if (row.invoice != null && row.invoice !== "") {
-      map.set(row.invoice, row._sum.amount ?? 0);
+      map.set(row.invoice, Number(row._sum.amount ?? 0));
     }
   }
   return map;
@@ -216,7 +216,7 @@ export async function runVendorBulkAutoPay(
     const idx = i + 1;
 
     const paid = paidByInvoice.get(inv.invoiceNumber) ?? 0;
-    const remaining = Math.round(Math.max(0, inv.totalAmount - paid) * 100) / 100;
+    const remaining = Math.round(Math.max(0, (Number(inv.totalAmount) || 0) - paid) * 100) / 100;
     const EPS = 0.005;
 
     if (remaining <= EPS) {

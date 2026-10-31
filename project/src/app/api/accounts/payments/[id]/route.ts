@@ -91,7 +91,7 @@ export async function PUT(
     }
 
     // Store old values for comparison
-    const oldAmount = existingPayment.amount;
+    const oldAmount = Number(existingPayment.amount) || 0;
     const oldDate = existingPayment.date;
     const oldDescription = existingPayment.description;
     const oldReference = existingPayment.reference;
@@ -116,6 +116,11 @@ export async function PUT(
       }
     }
 
+    const nextRef =
+      body.reference && typeof body.reference === "string" && body.reference.trim() !== ""
+        ? body.reference.trim()
+        : null;
+
     // Update the payment
     const updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
@@ -129,96 +134,116 @@ export async function PUT(
         toPartyType: body.toPartyType,
         toVendorId: body.toVendorId,
         mode: body.paymentMethod,
-        reference: body.reference && typeof body.reference === "string" && body.reference.trim() !== "" ? body.reference.trim() : null,
+        reference: nextRef,
         description: body.description || null,
       },
     });
 
-    // Update customer/vendor transactions if payment is linked to an invoice
-    // IMPORTANT: Invoice/shipment lines use the same invoice# as reference with type DEBIT.
-    // Payments are type CREDIT. Without `type: 'CREDIT'`, findFirst could match the invoice DEBIT and corrupt it.
-    if (existingPayment.invoice) {
-      try {
-        const paymentReference = existingPayment.reference || `Payment-${paymentId}`;
-        const newDate = new Date(body.date);
-        const newAmountNum = Number(body.amount);
-        const amountDelta = newAmountNum - oldAmount;
+    // Update customer/vendor transactions for this payment (CREDIT rows only — never invoice DEBIT)
+    try {
+      const paymentReference = existingPayment.reference || `Payment-${paymentId}`;
+      const newDate = body.date ? new Date(body.date) : existingPayment.date;
+      const newAmountNum = Number(body.amount) || 0;
+      const amountDelta = newAmountNum - oldAmount;
 
-        // Customer paying us (INCOME): ledger line is CREDIT (not the shipment DEBIT)
-        if (existingPayment.fromCustomerId && existingPayment.transactionType === "INCOME") {
-          const customerTransaction = await prisma.customerTransaction.findFirst({
-            where: orgWhere(session, {
-              customerId: existingPayment.fromCustomerId,
-              invoice: existingPayment.invoice,
-              reference: paymentReference,
-              type: "CREDIT",
-            }),
-          });
+      // Customer paying us (INCOME): ledger line is CREDIT (not the shipment DEBIT)
+      if (existingPayment.fromCustomerId && existingPayment.transactionType === "INCOME") {
+        const customerTransaction = await prisma.customerTransaction.findFirst({
+          where: orgWhere(session, {
+            customerId: existingPayment.fromCustomerId,
+            ...(existingPayment.invoice ? { invoice: existingPayment.invoice } : {}),
+            reference: paymentReference,
+            type: "CREDIT",
+          }),
+        });
 
-          if (customerTransaction) {
-            if (amountDelta !== 0) {
-              const cust = await prisma.customers.findFirst({
-                where: orgWhere(session, { id: existingPayment.fromCustomerId }),
-              });
-              if (cust) {
-                await prisma.customers.update({
-                  where: { id: cust.id },
-                  data: { currentBalance: cust.currentBalance + amountDelta },
-                });
-              }
-            }
-            await prisma.customerTransaction.update({
-              where: { id: customerTransaction.id },
-              data: {
-                amount: newAmountNum,
-                description:
-                  body.description || `Payment for invoice ${existingPayment.invoice}`,
-                createdAt: newDate,
-              },
+        if (customerTransaction) {
+          if (Math.abs(amountDelta) > 0.0001) {
+            const cust = await prisma.customers.findFirst({
+              where: orgWhere(session, { id: existingPayment.fromCustomerId }),
             });
-            console.log(`Updated customer CREDIT transaction ${customerTransaction.id} for payment ${paymentId}`);
-          }
-        }
-
-        // We pay vendor (EXPENSE): payment line is CREDIT (not the shipment/vendor DEBIT)
-        if (existingPayment.toVendorId && existingPayment.transactionType === "EXPENSE") {
-          const vendorTransaction = await prisma.vendorTransaction.findFirst({
-            where: orgWhere(session, {
-              vendorId: existingPayment.toVendorId,
-              invoice: existingPayment.invoice,
-              reference: paymentReference,
-              type: "CREDIT",
-            }),
-          });
-
-          if (vendorTransaction) {
-            if (amountDelta !== 0) {
-              const ven = await prisma.vendors.findFirst({
-                where: orgWhere(session, { id: existingPayment.toVendorId }),
+            if (cust) {
+              await prisma.customers.update({
+                where: { id: cust.id },
+                data: { currentBalance: (Number(cust.currentBalance) || 0) + amountDelta },
               });
-              if (ven) {
-                await prisma.vendors.update({
-                  where: { id: ven.id },
-                  data: { currentBalance: ven.currentBalance - amountDelta },
-                });
-              }
             }
-            await prisma.vendorTransaction.update({
-              where: { id: vendorTransaction.id },
-              data: {
-                amount: newAmountNum,
-                description:
-                  body.description || `Payment for invoice ${existingPayment.invoice}`,
-                createdAt: newDate,
-              },
-            });
-            console.log(`Updated vendor CREDIT transaction ${vendorTransaction.id} for payment ${paymentId}`);
           }
+          await prisma.customerTransaction.update({
+            where: { id: customerTransaction.id },
+            data: {
+              amount: newAmountNum,
+              reference: nextRef || customerTransaction.reference,
+              description:
+                body.description ||
+                (existingPayment.invoice
+                  ? `Payment for invoice ${existingPayment.invoice}`
+                  : customerTransaction.description),
+              createdAt: newDate,
+            },
+          });
+          console.log(`Updated customer CREDIT transaction ${customerTransaction.id} for payment ${paymentId}`);
         }
-      } catch (transactionError) {
-        console.error("Error updating customer/vendor transactions:", transactionError);
-        // Don't fail the payment update if transaction update fails
       }
+
+      // We pay vendor (EXPENSE): payment line is CREDIT (not the shipment/vendor DEBIT)
+      if (existingPayment.toVendorId && existingPayment.transactionType === "EXPENSE") {
+        const vendorTransaction = await prisma.vendorTransaction.findFirst({
+          where: orgWhere(session, {
+            vendorId: existingPayment.toVendorId,
+            ...(existingPayment.invoice ? { invoice: existingPayment.invoice } : {}),
+            reference: paymentReference,
+            type: "CREDIT",
+          }),
+        });
+
+        if (vendorTransaction) {
+          if (Math.abs(amountDelta) > 0.0001) {
+            const ven = await prisma.vendors.findFirst({
+              where: orgWhere(session, { id: existingPayment.toVendorId }),
+            });
+            if (ven) {
+              await prisma.vendors.update({
+                where: { id: ven.id },
+                data: { currentBalance: (Number(ven.currentBalance) || 0) - amountDelta },
+              });
+            }
+          }
+          await prisma.vendorTransaction.update({
+            where: { id: vendorTransaction.id },
+            data: {
+              amount: newAmountNum,
+              reference: nextRef || vendorTransaction.reference,
+              description:
+                body.description ||
+                (existingPayment.invoice
+                  ? `Payment for invoice ${existingPayment.invoice}`
+                  : vendorTransaction.description),
+              createdAt: newDate,
+            },
+          });
+          console.log(`Updated vendor CREDIT transaction ${vendorTransaction.id} for payment ${paymentId}`);
+        }
+      }
+
+      if (existingPayment.invoice) {
+        const invoice = await findOrgInvoiceByNumber(session, existingPayment.invoice);
+        if (invoice) {
+          const paymentStatus = await calculateInvoicePaymentStatus(
+            prisma,
+            existingPayment.invoice,
+            Number(invoice.totalAmount) || 0,
+            session.organizationId,
+            invoice.id
+          );
+          await prisma.invoice.update({
+            where: { id: invoice.id },
+            data: { status: paymentStatus.status },
+          });
+        }
+      }
+    } catch (transactionError) {
+      console.error("Error updating customer/vendor transactions:", transactionError);
     }
 
     // If updateJournalEntry flag is true, update the corresponding journal entry
@@ -370,19 +395,31 @@ export async function DELETE(
       );
     }
 
+    // Find any invoice allocations associated with this payment before deleting
+    const existingAllocations = await prisma.paymentAllocation.findMany({
+      where: { paymentId: payment.id },
+      select: { invoiceId: true },
+    });
+    const allocatedInvoiceIds = Array.from(
+      new Set(existingAllocations.map((a) => a.invoiceId))
+    );
+
     // Delete customer/vendor transactions associated with this payment (CREDIT rows only — never invoice DEBIT)
+    // and adjust party currentBalance accordingly.
     try {
       if (payment.fromCustomerId && payment.transactionType === "INCOME") {
         const customerTransactions = await prisma.customerTransaction.findMany({
           where: orgWhere(session, {
             customerId: payment.fromCustomerId,
             reference: payment.reference || `Payment-${payment.id}`,
-            invoice: payment.invoice || undefined,
+            ...(payment.invoice ? { invoice: payment.invoice } : {}),
             type: "CREDIT",
           }),
         });
 
+        let totalDeletedCredit = 0;
         for (const transaction of customerTransactions) {
+          totalDeletedCredit += Number(transaction.amount) || 0;
           await prisma.customerTransaction.delete({
             where: { id: transaction.id },
           });
@@ -401,10 +438,23 @@ export async function DELETE(
           });
 
           for (const transaction of allocationTransactions) {
+            totalDeletedCredit += Number(transaction.amount) || 0;
             await prisma.customerTransaction.delete({
               where: { id: transaction.id }
             });
             console.log(`Deleted customer allocation transaction ${transaction.id}`);
+          }
+        }
+
+        if (totalDeletedCredit > 0) {
+          const cust = await prisma.customers.findFirst({
+            where: orgWhere(session, { id: payment.fromCustomerId }),
+          });
+          if (cust) {
+            await prisma.customers.update({
+              where: { id: cust.id },
+              data: { currentBalance: (Number(cust.currentBalance) || 0) - totalDeletedCredit },
+            });
           }
         }
       }
@@ -414,12 +464,14 @@ export async function DELETE(
           where: orgWhere(session, {
             vendorId: payment.toVendorId,
             reference: payment.reference || `Payment-${payment.id}`,
-            invoice: payment.invoice || undefined,
+            ...(payment.invoice ? { invoice: payment.invoice } : {}),
             type: "CREDIT",
           }),
         });
 
+        let totalDeletedVendorCredit = 0;
         for (const transaction of vendorTransactions) {
+          totalDeletedVendorCredit += Number(transaction.amount) || 0;
           await prisma.vendorTransaction.delete({
             where: { id: transaction.id },
           });
@@ -438,51 +490,31 @@ export async function DELETE(
           });
 
           for (const transaction of allocationTransactions) {
+            totalDeletedVendorCredit += Number(transaction.amount) || 0;
             await prisma.vendorTransaction.delete({
               where: { id: transaction.id }
             });
             console.log(`Deleted vendor allocation transaction ${transaction.id}`);
           }
         }
+
+        if (totalDeletedVendorCredit > 0) {
+          const ven = await prisma.vendors.findFirst({
+            where: orgWhere(session, { id: payment.toVendorId }),
+          });
+          if (ven) {
+            await prisma.vendors.update({
+              where: { id: ven.id },
+              data: { currentBalance: (Number(ven.currentBalance) || 0) + totalDeletedVendorCredit },
+            });
+          }
+        }
       }
     } catch (transactionError) {
       console.error("Error deleting customer/vendor transactions:", transactionError);
-      // Continue with deletion even if transaction deletion fails
     }
 
-    // Recalculate and update invoice status
-    if (payment.invoice) {
-      try {
-        const invoice = await findOrgInvoiceByNumber(session, payment.invoice);
-
-        if (invoice) {
-          const paymentStatus = await calculateInvoicePaymentStatus(
-            prisma,
-            payment.invoice,
-            invoice.totalAmount,
-            session.organizationId,
-            invoice.id
-          );
-
-          await prisma.invoice.update({
-            where: {
-              organizationId_invoiceNumber: {
-                organizationId: session.organizationId,
-                invoiceNumber: payment.invoice,
-              },
-            },
-            data: { status: paymentStatus.status }
-          });
-
-          console.log(`Updated invoice ${payment.invoice} status to ${paymentStatus.status}`);
-        }
-      } catch (invoiceError) {
-        console.error("Error updating invoice status:", invoiceError);
-        // Continue with deletion even if invoice update fails
-      }
-    }
-
-    // Delete linked journal entries + payment together, then sweep any leftover orphans
+    // Delete linked journal entries + payment allocations + payment together, then sweep any leftover orphans
     try {
       const journalEntries = await findJournalEntriesForPayment(session, {
         id: payment.id,
@@ -503,6 +535,10 @@ export async function DELETE(
             where: { id: { in: ids } },
           });
         }
+
+        await tx.paymentAllocation.deleteMany({
+          where: { paymentId },
+        });
 
         await tx.payment.delete({
           where: { id: paymentId },
@@ -526,6 +562,40 @@ export async function DELETE(
         },
         { status: 500 }
       );
+    }
+
+    // Recalculate and update invoice status AFTER payment & allocations have been deleted
+    try {
+      const invoicesToRefresh = new Map<number, { id: number; invoiceNumber: string; totalAmount: any; shipmentId: number | null }>();
+      if (payment.invoice) {
+        const inv = await findOrgInvoiceByNumber(session, payment.invoice);
+        if (inv) invoicesToRefresh.set(inv.id, inv as any);
+      }
+      if (allocatedInvoiceIds.length > 0) {
+        const allocInvs = await prisma.invoice.findMany({
+          where: orgWhere(session, { id: { in: allocatedInvoiceIds } }),
+          select: { id: true, invoiceNumber: true, totalAmount: true, shipmentId: true },
+        });
+        for (const inv of allocInvs) {
+          invoicesToRefresh.set(inv.id, inv);
+        }
+      }
+
+      for (const inv of invoicesToRefresh.values()) {
+        const paymentStatus = await calculateInvoicePaymentStatus(
+          prisma,
+          inv.invoiceNumber,
+          Number(inv.totalAmount) || 0,
+          session.organizationId,
+          inv.id
+        );
+        await prisma.invoice.update({
+          where: { id: inv.id },
+          data: { status: paymentStatus.status },
+        });
+      }
+    } catch (invoiceError) {
+      console.error("Error updating invoice status after payment delete:", invoiceError);
     }
 
     return NextResponse.json({ 
@@ -578,13 +648,96 @@ export async function PATCH(
       );
     }
 
+    const oldAmountNum = Number(existingPayment.amount) || 0;
+    const newAmountNum = parseFloat(body.amount) || 0;
+    const amountDelta = newAmountNum - oldAmountNum;
+
     // Update only the amount
     const updatedPayment = await prisma.payment.update({
       where: { id: paymentId },
       data: {
-        amount: parseFloat(body.amount),
+        amount: newAmountNum,
       },
     });
+
+    // Sync linked customer/vendor CREDIT transaction and party currentBalance
+    try {
+      const paymentReference = existingPayment.reference || `Payment-${existingPayment.id}`;
+      if (existingPayment.fromCustomerId && existingPayment.transactionType === "INCOME") {
+        const customerTransaction = await prisma.customerTransaction.findFirst({
+          where: orgWhere(session, {
+            customerId: existingPayment.fromCustomerId,
+            ...(existingPayment.invoice ? { invoice: existingPayment.invoice } : {}),
+            reference: paymentReference,
+            type: "CREDIT",
+          }),
+        });
+        if (customerTransaction) {
+          if (Math.abs(amountDelta) > 0.0001) {
+            const cust = await prisma.customers.findFirst({
+              where: orgWhere(session, { id: existingPayment.fromCustomerId }),
+            });
+            if (cust) {
+              await prisma.customers.update({
+                where: { id: cust.id },
+                data: { currentBalance: (Number(cust.currentBalance) || 0) + amountDelta },
+              });
+            }
+          }
+          await prisma.customerTransaction.update({
+            where: { id: customerTransaction.id },
+            data: { amount: newAmountNum },
+          });
+        }
+      }
+
+      if (existingPayment.toVendorId && existingPayment.transactionType === "EXPENSE") {
+        const vendorTransaction = await prisma.vendorTransaction.findFirst({
+          where: orgWhere(session, {
+            vendorId: existingPayment.toVendorId,
+            ...(existingPayment.invoice ? { invoice: existingPayment.invoice } : {}),
+            reference: paymentReference,
+            type: "CREDIT",
+          }),
+        });
+        if (vendorTransaction) {
+          if (Math.abs(amountDelta) > 0.0001) {
+            const ven = await prisma.vendors.findFirst({
+              where: orgWhere(session, { id: existingPayment.toVendorId }),
+            });
+            if (ven) {
+              await prisma.vendors.update({
+                where: { id: ven.id },
+                data: { currentBalance: (Number(ven.currentBalance) || 0) - amountDelta },
+              });
+            }
+          }
+          await prisma.vendorTransaction.update({
+            where: { id: vendorTransaction.id },
+            data: { amount: newAmountNum },
+          });
+        }
+      }
+
+      if (existingPayment.invoice) {
+        const inv = await findOrgInvoiceByNumber(session, existingPayment.invoice);
+        if (inv) {
+          const paymentStatus = await calculateInvoicePaymentStatus(
+            prisma,
+            existingPayment.invoice,
+            Number(inv.totalAmount) || 0,
+            session.organizationId,
+            inv.id
+          );
+          await prisma.invoice.update({
+            where: { id: inv.id },
+            data: { status: paymentStatus.status },
+          });
+        }
+      }
+    } catch (syncError) {
+      console.error("Error syncing ledger on PATCH payment:", syncError);
+    }
 
     // If updateJournalEntry flag is true, update the corresponding journal entry
     if (body.updateJournalEntry) {
@@ -593,9 +746,6 @@ export async function PATCH(
         console.log(`Payment reference: ${existingPayment.reference}`);
         console.log(`Payment ID: ${existingPayment.id}`);
         
-        // Find and update the journal entry
-        // Journal entries are linked to payments through the reference field
-        // The reference can be either the payment's reference or "Payment-{paymentId}"
         const journalEntry = await prisma.journalEntry.findFirst({
           where: orgWhere(session, {
             OR: [
@@ -609,17 +759,14 @@ export async function PATCH(
           console.log(`Found journal entry ${journalEntry.entryNumber} for payment ${existingPayment.id}`);
           console.log(`Journal entry reference: ${journalEntry.reference}`);
           
-          // Update the journal entry total amounts
           await prisma.journalEntry.update({
             where: { id: journalEntry.id },
             data: {
-              totalDebit: parseFloat(body.amount),
-              totalCredit: parseFloat(body.amount),
+              totalDebit: newAmountNum,
+              totalCredit: newAmountNum,
             },
           });
 
-          // Update the journal entry lines amounts
-          // We need to update the lines based on whether they are debit or credit lines
           const journalLines = await prisma.journalEntryLine.findMany({
             where: { journalEntryId: journalEntry.id },
           });
@@ -627,18 +774,16 @@ export async function PATCH(
           console.log(`Found ${journalLines.length} journal entry lines`);
 
           for (const line of journalLines) {
-            if (line.debitAmount > 0) {
-              // This is a debit line, update the debit amount
+            if (Number(line.debitAmount) > 0) {
               await prisma.journalEntryLine.update({
                 where: { id: line.id },
-                data: { debitAmount: parseFloat(body.amount) },
+                data: { debitAmount: newAmountNum },
               });
               console.log(`Updated debit line ${line.id} with amount ${body.amount}`);
-            } else if (line.creditAmount > 0) {
-              // This is a credit line, update the credit amount
+            } else if (Number(line.creditAmount) > 0) {
               await prisma.journalEntryLine.update({
                 where: { id: line.id },
-                data: { creditAmount: parseFloat(body.amount) },
+                data: { creditAmount: newAmountNum },
               });
               console.log(`Updated credit line ${line.id} with amount ${body.amount}`);
             }

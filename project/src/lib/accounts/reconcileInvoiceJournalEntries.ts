@@ -164,8 +164,43 @@ export async function reconcileInvoiceJournalEntries(
 
       if (amount <= 0) continue;
 
-      const isCustomer = inv.customerId != null || inv.profile === "Customer";
-      const isVendor = !isCustomer && (inv.vendorId != null || inv.profile === "Vendor");
+      // CRITICAL: Check `inv.profile === "Vendor"` FIRST so a vendor invoice that was
+      // mistakenly assigned `customerId` is never treated as a customer revenue invoice!
+      const isVendor =
+        inv.profile === "Vendor" ||
+        (inv.profile !== "Customer" && inv.vendorId != null && inv.customerId == null);
+      const isCustomer =
+        !isVendor && (inv.profile === "Customer" || inv.customerId != null);
+
+      // Self-heal if a Vendor invoice has customerId set
+      if (isVendor && inv.customerId != null) {
+        const hijackedCustomerId = inv.customerId;
+        await prisma.invoice.update({
+          where: { id: inv.id },
+          data: { customerId: null },
+        });
+        const bogusCustomerDebits = await prisma.customerTransaction.findMany({
+          where: {
+            organizationId: orgId,
+            customerId: hijackedCustomerId,
+            type: "DEBIT",
+            OR: [{ reference: invNum }, { invoice: invNum }],
+          },
+        });
+        if (bogusCustomerDebits.length > 0) {
+          const bogusSum = bogusCustomerDebits.reduce(
+            (s, t) => s + (Number(t.amount) || 0),
+            0
+          );
+          await prisma.customerTransaction.deleteMany({
+            where: { id: { in: bogusCustomerDebits.map((t) => t.id) } },
+          });
+          await prisma.customers.update({
+            where: { id: hijackedCustomerId },
+            data: { currentBalance: { increment: bogusSum } },
+          });
+        }
+      }
 
       const entryDate =
         inv.shipment?.shipmentDate || inv.invoiceDate || inv.createdAt || new Date();
@@ -251,10 +286,15 @@ export async function reconcileInvoiceJournalEntries(
         const targetDate = new Date(entryDate).toISOString().slice(0, 10);
         const dateDiff = existingDate !== targetDate;
 
-        const revOrExpLine = existingJE.lines.find(
-          (l) => l.accountId === revenueAccount.id || l.accountId === expenseAccount.id
+        const expectedAccountId = isCustomer ? revenueAccount.id : expenseAccount.id;
+        const expectedPartyAccountId = isCustomer ? arAccount.id : apAccount.id;
+        const hasExpectedRevOrExpLine = existingJE.lines.some(
+          (l) => l.accountId === expectedAccountId
         );
-        const missingExpectedLine = !revOrExpLine;
+        const hasExpectedPartyLine = existingJE.lines.some(
+          (l) => l.accountId === expectedPartyAccountId
+        );
+        const missingExpectedLine = !hasExpectedRevOrExpLine || !hasExpectedPartyLine;
 
         if (amountDiff || dateDiff || missingExpectedLine) {
           await prisma.$transaction(async (tx) => {

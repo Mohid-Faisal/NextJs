@@ -214,15 +214,16 @@ export async function PUT(
           where: orgWhere(session, { id: customerId }),
         });
         if (cust) {
+          const currentBalNum = Number(cust.currentBalance) || 0;
           if (txn?.type === "CREDIT") {
             await tx.customers.update({
               where: { id: customerId },
-              data: { currentBalance: cust.currentBalance + amountDelta },
+              data: { currentBalance: currentBalNum + amountDelta },
             });
           } else if (txn?.type === "DEBIT") {
             await tx.customers.update({
               where: { id: customerId },
-              data: { currentBalance: cust.currentBalance - amountDelta },
+              data: { currentBalance: currentBalNum - amountDelta },
             });
           }
         }
@@ -370,6 +371,26 @@ export async function DELETE(
       await tx.payment.deleteMany({
         where: orgWhere(session, { reference: creditNote.creditNoteNumber }),
       });
+
+      const linkedTxns = await tx.customerTransaction.findMany({
+        where: orgWhere(session, { reference: creditNote.creditNoteNumber }),
+      });
+
+      if (linkedTxns.length > 0 && creditNote.customerId) {
+        const netEffect = linkedTxns.reduce((sum, t) => {
+          const amt = Number(t.amount) || 0;
+          return sum + (t.type === "CREDIT" ? amt : -amt);
+        }, 0);
+        const cust = await tx.customers.findFirst({
+          where: orgWhere(session, { id: creditNote.customerId }),
+        });
+        if (cust) {
+          await tx.customers.update({
+            where: { id: cust.id },
+            data: { currentBalance: (Number(cust.currentBalance) || 0) - netEffect },
+          });
+        }
+      }
 
       await tx.customerTransaction.deleteMany({
         where: orgWhere(session, { reference: creditNote.creditNoteNumber }),

@@ -212,15 +212,16 @@ export async function PUT(
           where: orgWhere(session, { id: vendorId }),
         });
         if (ven) {
+          const currentBalNum = Number(ven.currentBalance) || 0;
           if (txn?.type === "DEBIT") {
             await tx.vendors.update({
               where: { id: vendorId },
-              data: { currentBalance: ven.currentBalance + amountDelta },
+              data: { currentBalance: currentBalNum + amountDelta },
             });
           } else if (txn?.type === "CREDIT") {
             await tx.vendors.update({
               where: { id: vendorId },
-              data: { currentBalance: ven.currentBalance - amountDelta },
+              data: { currentBalance: currentBalNum - amountDelta },
             });
           }
         }
@@ -362,6 +363,26 @@ export async function DELETE(
       await tx.payment.deleteMany({
         where: orgWhere(session, { reference: debitNote.debitNoteNumber }),
       });
+
+      const linkedTxns = await tx.vendorTransaction.findMany({
+        where: orgWhere(session, { reference: debitNote.debitNoteNumber }),
+      });
+
+      if (linkedTxns.length > 0 && debitNote.vendorId) {
+        const netEffect = linkedTxns.reduce((sum, t) => {
+          const amt = Number(t.amount) || 0;
+          return sum + (t.type === "DEBIT" ? amt : -amt);
+        }, 0);
+        const ven = await tx.vendors.findFirst({
+          where: orgWhere(session, { id: debitNote.vendorId }),
+        });
+        if (ven) {
+          await tx.vendors.update({
+            where: { id: ven.id },
+            data: { currentBalance: (Number(ven.currentBalance) || 0) - netEffect },
+          });
+        }
+      }
 
       await tx.vendorTransaction.deleteMany({
         where: orgWhere(session, { reference: debitNote.debitNoteNumber }),

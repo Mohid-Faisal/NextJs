@@ -26,6 +26,7 @@ export async function generateInvoiceNumber(
 
   const orgId = organizationId ?? 1;
   const key = `invoice_number`;
+  const orgScope = organizationId != null ? { organizationId } : {};
 
   const existing = await prisma.orgSequence.findUnique({
     where: { organizationId_key: { organizationId: orgId, key } },
@@ -33,18 +34,28 @@ export async function generateInvoiceNumber(
   });
 
   if (!existing) {
-    const recentShipments = await prismaClient.shipment.findMany({
-      where: {
-        ...(organizationId != null ? { organizationId } : {}),
-        invoiceNumber: { not: null },
-      },
-      orderBy: { id: "desc" },
-      take: 500,
-      select: { invoiceNumber: true },
-    });
+    const [recentShipments, recentInvoices] = await Promise.all([
+      prismaClient.shipment.findMany({
+        where: {
+          ...orgScope,
+          invoiceNumber: { not: null },
+        },
+        orderBy: { id: "desc" },
+        take: 500,
+        select: { invoiceNumber: true },
+      }),
+      prismaClient.invoice.findMany({
+        where: orgScope,
+        orderBy: { id: "desc" },
+        take: 500,
+        select: { invoiceNumber: true },
+      }),
+    ]);
 
-    const numericValues = recentShipments
-      .map((s: { invoiceNumber: string | null }) => s.invoiceNumber)
+    const numericValues = [
+      ...recentShipments.map((s: { invoiceNumber: string | null }) => s.invoiceNumber),
+      ...recentInvoices.map((inv: { invoiceNumber: string | null }) => inv.invoiceNumber),
+    ]
       .filter((inv: string | null): inv is string => !!inv && /^\d+$/.test(inv.trim()))
       .map((inv: string) => parseInt(inv.trim(), 10))
       .filter((num: number) => !isNaN(num));
@@ -64,9 +75,37 @@ export async function generateInvoiceNumber(
     }
   }
 
-  const next = await nextSequenceNumber(prismaClient, orgId, key);
-  const nextNumber = Math.max(next, 600000);
-  return nextNumber.toString().padStart(6, "0");
+  // Advance sequence until neither candidate nor its companion vendor invoice (+2) collides
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const next = await nextSequenceNumber(prismaClient, orgId, key);
+    const nextNumber = Math.max(next, 600000);
+    const candidate = nextNumber.toString().padStart(6, "0");
+    const vendorCompanion = generateVendorInvoiceNumber(candidate);
+
+    const [existingInv, existingShip] = await Promise.all([
+      prismaClient.invoice.findFirst({
+        where: {
+          ...orgScope,
+          invoiceNumber: { in: [candidate, vendorCompanion] },
+        },
+        select: { id: true },
+      }),
+      prismaClient.shipment.findFirst({
+        where: {
+          ...orgScope,
+          invoiceNumber: { in: [candidate, vendorCompanion] },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!existingInv && !existingShip) {
+      return candidate;
+    }
+  }
+
+  const fallback = await nextSequenceNumber(prismaClient, orgId, key);
+  return Math.max(fallback, 600000).toString().padStart(6, "0");
 }
 
 export function generateVendorInvoiceNumber(customerInvoiceNumber: string): string {
@@ -89,7 +128,8 @@ export async function addCustomerTransaction(
   date?: Date | string,
   organizationId?: number
 ) {
-  const delta = type === 'CREDIT' ? amount : -amount;
+  const amountNum = Number(amount) || 0;
+  const delta = type === 'CREDIT' ? amountNum : -amountNum;
 
   const updatedCustomer = await prisma.customers.update({
     where: { id: customerId },
@@ -107,10 +147,10 @@ export async function addCustomerTransaction(
     data: {
       customerId,
       type,
-      amount,
+      amount: amountNum,
       description,
-      reference,
-      invoice,
+      reference: reference ?? invoice ?? null,
+      invoice: invoice ?? null,
       previousBalance,
       newBalance,
       createdAt: transactionDate,
@@ -132,7 +172,8 @@ export async function addVendorTransaction(
   date?: Date | string,
   organizationId?: number
 ) {
-  const delta = type === 'DEBIT' ? amount : -amount;
+  const amountNum = Number(amount) || 0;
+  const delta = type === 'DEBIT' ? amountNum : -amountNum;
 
   const updatedVendor = await prisma.vendors.update({
     where: { id: vendorId },
@@ -150,10 +191,10 @@ export async function addVendorTransaction(
     data: {
       vendorId,
       type,
-      amount,
+      amount: amountNum,
       description,
-      reference,
-      invoice,
+      reference: reference ?? invoice ?? null,
+      invoice: invoice ?? null,
       previousBalance,
       newBalance,
       createdAt: transactionDate,
@@ -278,9 +319,16 @@ export async function updateInvoiceBalance(
     throw new Error('Invoice not found');
   }
 
-  const amountDifference = newAmount - oldAmount;
+  const oldAmountNum = Number(oldAmount) || 0;
+  const newAmountNum = Number(newAmount) || 0;
+  const amountDifference = newAmountNum - oldAmountNum;
   const customerChanged = oldCustomerId !== undefined && oldCustomerId !== newCustomerId;
   const vendorChanged = oldVendorId !== undefined && oldVendorId !== newVendorId;
+  const orgScope = invoice.organizationId != null ? { organizationId: invoice.organizationId } : {};
+  const isVendorProfile =
+    invoice.profile === "Vendor" ||
+    (!invoice.profile && Boolean((invoice.vendorId || newVendorId || oldVendorId) && !invoice.customerId));
+  const isCustomerProfile = !isVendorProfile;
   
   if (amountDifference === 0 && !customerChanged && !vendorChanged) {
     return { customerUpdated: false, vendorUpdated: false };
@@ -289,34 +337,53 @@ export async function updateInvoiceBalance(
   let customerUpdated = false;
   let vendorUpdated = false;
 
-  if (customerChanged) {
+  if (isCustomerProfile && customerChanged) {
     if (oldCustomerId) {
       const oldCustomer = await prisma.customers.findUnique({
         where: { id: oldCustomerId }
       });
       if (oldCustomer) {
         const previousBalance = Number(oldCustomer.currentBalance) || 0;
-        const newBalance = previousBalance + Number(oldAmount || 0); // Unassigning removes the debit, increasing balance
+        const newBalance = previousBalance + oldAmountNum; // Unassigning removes the debit, increasing balance
 
         await prisma.customers.update({
           where: { id: oldCustomerId },
           data: { currentBalance: newBalance }
         });
 
-        const transactionDate = invoice.shipment?.shipmentDate || new Date();
-        await prisma.customerTransaction.create({
-          data: {
+        const existingOldDebit = await prisma.customerTransaction.findFirst({
+          where: {
             customerId: oldCustomerId,
-            type: 'CREDIT',
-            amount: oldAmount,
-            description: `Invoice ${invoice.invoiceNumber} reassigned from customer`,
-            reference: invoice.invoiceNumber,
-            invoice: invoice.invoiceNumber,
-            previousBalance,
-            newBalance,
-            createdAt: transactionDate
+            type: 'DEBIT',
+            OR: [
+              { reference: invoice.invoiceNumber },
+              { invoice: invoice.invoiceNumber },
+              { reference: { startsWith: `Invoice: ${invoice.invoiceNumber}` } }
+            ]
           }
         });
+
+        if (existingOldDebit) {
+          await prisma.customerTransaction.delete({
+            where: { id: existingOldDebit.id }
+          });
+        } else {
+          const transactionDate = invoice.shipment?.shipmentDate || new Date();
+          await prisma.customerTransaction.create({
+            data: {
+              ...orgScope,
+              customerId: oldCustomerId,
+              type: 'CREDIT',
+              amount: oldAmountNum,
+              description: `Invoice ${invoice.invoiceNumber} reassigned from customer`,
+              reference: invoice.invoiceNumber,
+              invoice: invoice.invoiceNumber,
+              previousBalance,
+              newBalance,
+              createdAt: transactionDate
+            }
+          });
+        }
       }
     }
 
@@ -326,7 +393,7 @@ export async function updateInvoiceBalance(
       });
       if (newCustomer) {
         const previousBalance = Number(newCustomer.currentBalance) || 0;
-        const newBalance = previousBalance - Number(newAmount || 0); // Assigning adds the debit, decreasing balance
+        const newBalance = previousBalance - newAmountNum; // Assigning adds the debit, decreasing balance
 
         await prisma.customers.update({
           where: { id: newCustomerId },
@@ -336,9 +403,10 @@ export async function updateInvoiceBalance(
         const transactionDate = invoice.shipment?.shipmentDate || new Date();
         await prisma.customerTransaction.create({
           data: {
+            ...orgScope,
             customerId: newCustomerId,
             type: 'DEBIT',
-            amount: newAmount,
+            amount: newAmountNum,
             description: `Invoice ${invoice.invoiceNumber} assigned to customer`,
             reference: invoice.invoiceNumber,
             invoice: invoice.invoiceNumber,
@@ -350,7 +418,7 @@ export async function updateInvoiceBalance(
       }
     }
     customerUpdated = true;
-  } else if (amountDifference !== 0 && invoice.customerId && invoice.customer) {
+  } else if (isCustomerProfile && amountDifference !== 0 && invoice.customerId && invoice.customer) {
     const updatedCustomer = await prisma.customers.update({
       where: { id: invoice.customerId },
       data: { currentBalance: { increment: -amountDifference } },
@@ -374,12 +442,12 @@ export async function updateInvoiceBalance(
 
     if (existingTransaction) {
       const prevBal = Number(existingTransaction.previousBalance) || 0;
-      const nextBal = prevBal - Math.abs(newAmount);
+      const nextBal = prevBal - Math.abs(newAmountNum);
       await prisma.customerTransaction.update({
         where: { id: existingTransaction.id },
         data: {
           type: 'DEBIT',
-          amount: Math.abs(newAmount),
+          amount: Math.abs(newAmountNum),
           previousBalance: prevBal,
           newBalance: nextBal,
           createdAt: transactionDate
@@ -388,10 +456,11 @@ export async function updateInvoiceBalance(
     } else {
       await prisma.customerTransaction.create({
         data: {
+          ...orgScope,
           customerId: invoice.customerId,
           type: 'DEBIT',
-          amount: Math.abs(newAmount),
-          description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
+          amount: Math.abs(newAmountNum),
+          description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmountNum.toFixed(2)} to ${newAmountNum.toFixed(2)}`,
           reference: invoice.invoiceNumber,
           invoice: invoice.invoiceNumber,
           previousBalance: currentBalanceNum + amountDifference,
@@ -404,31 +473,51 @@ export async function updateInvoiceBalance(
     customerUpdated = true;
   }
 
-  if (vendorChanged) {
+  if (isVendorProfile && vendorChanged) {
     if (oldVendorId) {
       const oldVendor = await prisma.vendors.findUnique({
         where: { id: oldVendorId }
       });
       if (oldVendor) {
         const previousBalance = Number(oldVendor.currentBalance) || 0;
-        const newBalance = previousBalance - Number(oldAmount || 0);
+        const newBalance = previousBalance - oldAmountNum;
 
         await prisma.vendors.update({
           where: { id: oldVendorId },
           data: { currentBalance: newBalance }
         });
 
-        await prisma.vendorTransaction.create({
-          data: {
+        const existingOldVendorDebit = await prisma.vendorTransaction.findFirst({
+          where: {
             vendorId: oldVendorId,
-            type: 'CREDIT',
-            amount: oldAmount,
-            description: `Invoice ${invoice.invoiceNumber} reassigned from vendor`,
-            reference: `Invoice: ${invoice.invoiceNumber}`,
-            previousBalance,
-            newBalance
+            type: 'DEBIT',
+            OR: [
+              { reference: invoice.invoiceNumber },
+              { invoice: invoice.invoiceNumber },
+              { reference: { startsWith: `Invoice: ${invoice.invoiceNumber}` } }
+            ]
           }
         });
+
+        if (existingOldVendorDebit) {
+          await prisma.vendorTransaction.delete({
+            where: { id: existingOldVendorDebit.id }
+          });
+        } else {
+          await prisma.vendorTransaction.create({
+            data: {
+              ...orgScope,
+              vendorId: oldVendorId,
+              type: 'CREDIT',
+              amount: oldAmountNum,
+              description: `Invoice ${invoice.invoiceNumber} reassigned from vendor`,
+              reference: invoice.invoiceNumber,
+              invoice: invoice.invoiceNumber,
+              previousBalance,
+              newBalance
+            }
+          });
+        }
       }
     }
 
@@ -438,7 +527,7 @@ export async function updateInvoiceBalance(
       });
       if (newVendor) {
         const previousBalance = Number(newVendor.currentBalance) || 0;
-        const newBalance = previousBalance + Number(newAmount || 0);
+        const newBalance = previousBalance + newAmountNum;
 
         await prisma.vendors.update({
           where: { id: newVendorId },
@@ -447,11 +536,13 @@ export async function updateInvoiceBalance(
 
         await prisma.vendorTransaction.create({
           data: {
+            ...orgScope,
             vendorId: newVendorId,
             type: 'DEBIT',
-            amount: newAmount,
+            amount: newAmountNum,
             description: `Invoice ${invoice.invoiceNumber} assigned to vendor`,
-            reference: `Invoice: ${invoice.invoiceNumber}`,
+            reference: invoice.invoiceNumber,
+            invoice: invoice.invoiceNumber,
             previousBalance,
             newBalance
           }
@@ -459,14 +550,14 @@ export async function updateInvoiceBalance(
       }
     }
     vendorUpdated = true;
-  } else if (amountDifference !== 0 && invoice.vendorId && invoice.vendor) {
-    const previousBalance = Number(invoice.vendor.currentBalance) || 0;
-    const newBalance = previousBalance + Number(amountDifference || 0);
-
-    await prisma.vendors.update({
+  } else if (isVendorProfile && amountDifference !== 0 && invoice.vendorId && invoice.vendor) {
+    const updatedVendor = await prisma.vendors.update({
       where: { id: invoice.vendorId },
-      data: { currentBalance: newBalance }
+      data: { currentBalance: { increment: amountDifference } },
+      select: { currentBalance: true }
     });
+    const newBalance = Number(updatedVendor.currentBalance) || 0;
+    const previousBalance = newBalance - amountDifference;
 
     const existingTransaction = await prisma.vendorTransaction.findFirst({
       where: {
@@ -483,23 +574,26 @@ export async function updateInvoiceBalance(
     const transactionDate = invoice.shipment?.shipmentDate || new Date();
 
     if (existingTransaction) {
+      const prevBal = Number(existingTransaction.previousBalance) || 0;
+      const nextBal = prevBal + Math.abs(newAmountNum);
       await prisma.vendorTransaction.update({
         where: { id: existingTransaction.id },
         data: {
           type: 'DEBIT',
-          amount: Math.abs(newAmount),
-          previousBalance,
-          newBalance,
+          amount: Math.abs(newAmountNum),
+          previousBalance: prevBal,
+          newBalance: nextBal,
           createdAt: transactionDate
         }
       });
     } else {
       await prisma.vendorTransaction.create({
         data: {
+          ...orgScope,
           vendorId: invoice.vendorId,
           type: 'DEBIT',
-          amount: Math.abs(newAmount),
-          description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmount.toFixed(2)} to ${newAmount.toFixed(2)}`,
+          amount: Math.abs(newAmountNum),
+          description: `Invoice ${invoice.invoiceNumber} amount updated from ${oldAmountNum.toFixed(2)} to ${newAmountNum.toFixed(2)}`,
           reference: invoice.invoiceNumber,
           invoice: invoice.invoiceNumber,
           previousBalance,
@@ -845,15 +939,31 @@ export async function updateJournalEntriesForInvoice(
   newDate?: Date
 ) {
   try {
+    const oldAmountNum = Number(oldAmount) || 0;
+    const newAmountNum = Number(newAmount) || 0;
+    const invoiceRecord = invoiceId
+      ? await prisma.invoice.findUnique({
+          where: { id: invoiceId },
+          select: { profile: true, customerId: true, vendorId: true },
+        })
+      : null;
+
+    const isVendorProfile =
+      invoiceRecord?.profile === "Vendor" ||
+      (!invoiceRecord?.profile &&
+        Boolean((newVendorId || oldVendorId || invoiceRecord?.vendorId) && !(newCustomerId || oldCustomerId || invoiceRecord?.customerId)));
+
     const updates = [];
-    const effectiveCustomerId = newCustomerId || oldCustomerId;
-    if (effectiveCustomerId) {
+    const effectiveCustomerId = newCustomerId || oldCustomerId || invoiceRecord?.customerId || null;
+    const effectiveVendorId = newVendorId || oldVendorId || invoiceRecord?.vendorId || null;
+
+    if (!isVendorProfile && effectiveCustomerId) {
       updates.push(
         updateCustomerJournalEntry(
           prisma,
           effectiveCustomerId,
-          oldAmount,
-          newAmount,
+          oldAmountNum,
+          newAmountNum,
           invoiceNumber,
           description,
           organizationId,
@@ -862,14 +972,13 @@ export async function updateJournalEntriesForInvoice(
       );
     }
 
-    const effectiveVendorId = newVendorId || oldVendorId;
-    if (effectiveVendorId) {
+    if (isVendorProfile) {
       updates.push(
         updateVendorJournalEntry(
           prisma,
-          effectiveVendorId,
-          oldAmount,
-          newAmount,
+          effectiveVendorId ?? 0,
+          oldAmountNum,
+          newAmountNum,
           invoiceNumber,
           description,
           organizationId,
@@ -883,8 +992,8 @@ export async function updateJournalEntriesForInvoice(
     }
 
     return { 
-      customerUpdated: !!effectiveCustomerId,
-      vendorUpdated: !!effectiveVendorId
+      customerUpdated: !isVendorProfile && !!effectiveCustomerId,
+      vendorUpdated: isVendorProfile
     };
   } catch (error) {
     console.error(`Error updating journal entries for invoice ${invoiceNumber}:`, error);
@@ -903,25 +1012,34 @@ export async function updateCustomerJournalEntry(
   newDate?: Date
 ) {
   try {
+    const newAmountNum = Number(newAmount) || 0;
     const orgFilter = organizationId != null ? { organizationId } : {};
     const existingEntry = await prisma.journalEntry.findFirst({
       where: {
         ...orgFilter,
         reference: invoiceNumber,
       },
-      include: { lines: true }
+      include: { lines: { include: { account: { select: { code: true } } } } }
     });
 
-    if (existingEntry) {
-      if (newAmount <= 0) {
+    const hasWrongAccountTypes = existingEntry?.lines?.some(
+      (l: any) => l.account?.code === "2000" || l.account?.code === "5000"
+    );
+
+    if (existingEntry && hasWrongAccountTypes) {
+      await prisma.journalEntry.delete({ where: { id: existingEntry.id } });
+    }
+
+    if (existingEntry && !hasWrongAccountTypes) {
+      if (newAmountNum <= 0) {
         await prisma.journalEntry.delete({
           where: { id: existingEntry.id }
         });
       } else {
         const updateData: any = {
           description: description,
-          totalDebit: newAmount,
-          totalCredit: newAmount,
+          totalDebit: newAmountNum,
+          totalCredit: newAmountNum,
           updatedAt: new Date()
         };
         if (newDate) {
@@ -935,15 +1053,15 @@ export async function updateCustomerJournalEntry(
         });
 
         for (const line of existingEntry.lines) {
-          if (line.debitAmount > 0 || (line.description && line.description.includes('Debit'))) {
+          if (Number(line.debitAmount) > 0 || (line.description && line.description.includes('Debit'))) {
             await prisma.journalEntryLine.update({
               where: { id: line.id },
-              data: { debitAmount: newAmount }
+              data: { debitAmount: newAmountNum }
             });
-          } else if (line.creditAmount > 0 || (line.description && line.description.includes('Credit'))) {
+          } else if (Number(line.creditAmount) > 0 || (line.description && line.description.includes('Credit'))) {
             await prisma.journalEntryLine.update({
               where: { id: line.id },
-              data: { creditAmount: newAmount }
+              data: { creditAmount: newAmountNum }
             });
           }
         }
@@ -959,7 +1077,7 @@ export async function updateCustomerJournalEntry(
           });
         }
       }
-    } else if (newAmount > 0) {
+    } else if (newAmountNum > 0) {
       const invoice = await prisma.invoice.findFirst({
         where: organizationId != null
           ? { organizationId, invoiceNumber }
@@ -973,7 +1091,7 @@ export async function updateCustomerJournalEntry(
       await createJournalEntryForTransaction(
         prisma,
         "CUSTOMER_DEBIT",
-        newAmount,
+        newAmountNum,
         description || `Customer invoice for shipment ${tracking}`,
         invoiceNumber,
         invoiceNumber,
@@ -998,25 +1116,34 @@ export async function updateVendorJournalEntry(
   newDate?: Date
 ) {
   try {
+    const newAmountNum = Number(newAmount) || 0;
     const orgFilter = organizationId != null ? { organizationId } : {};
     const existingEntry = await prisma.journalEntry.findFirst({
       where: {
         ...orgFilter,
         reference: invoiceNumber,
       },
-      include: { lines: true }
+      include: { lines: { include: { account: { select: { code: true } } } } }
     });
 
-    if (existingEntry) {
-      if (newAmount <= 0) {
+    const hasWrongAccountTypes = existingEntry?.lines?.some(
+      (l: any) => l.account?.code === "1200" || l.account?.code === "4000"
+    );
+
+    if (existingEntry && hasWrongAccountTypes) {
+      await prisma.journalEntry.delete({ where: { id: existingEntry.id } });
+    }
+
+    if (existingEntry && !hasWrongAccountTypes) {
+      if (newAmountNum <= 0) {
         await prisma.journalEntry.delete({
           where: { id: existingEntry.id }
         });
       } else {
         const updateData: any = {
           description: description,
-          totalDebit: newAmount,
-          totalCredit: newAmount,
+          totalDebit: newAmountNum,
+          totalCredit: newAmountNum,
           updatedAt: new Date()
         };
         if (newDate) {
@@ -1030,15 +1157,15 @@ export async function updateVendorJournalEntry(
         });
 
         for (const line of existingEntry.lines) {
-          if (line.debitAmount > 0 || (line.description && line.description.includes('Debit'))) {
+          if (Number(line.debitAmount) > 0 || (line.description && line.description.includes('Debit'))) {
             await prisma.journalEntryLine.update({
               where: { id: line.id },
-              data: { debitAmount: newAmount }
+              data: { debitAmount: newAmountNum }
             });
-          } else if (line.creditAmount > 0 || (line.description && line.description.includes('Credit'))) {
+          } else if (Number(line.creditAmount) > 0 || (line.description && line.description.includes('Credit'))) {
             await prisma.journalEntryLine.update({
               where: { id: line.id },
-              data: { creditAmount: newAmount }
+              data: { creditAmount: newAmountNum }
             });
           }
         }
@@ -1054,7 +1181,7 @@ export async function updateVendorJournalEntry(
           });
         }
       }
-    } else if (newAmount > 0) {
+    } else if (newAmountNum > 0) {
       const invoice = await prisma.invoice.findFirst({
         where: organizationId != null
           ? { organizationId, invoiceNumber }
@@ -1068,7 +1195,7 @@ export async function updateVendorJournalEntry(
       await createJournalEntryForTransaction(
         prisma,
         "VENDOR_DEBIT",
-        newAmount,
+        newAmountNum,
         description || `Vendor invoice for shipment ${tracking}`,
         invoiceNumber,
         invoiceNumber,

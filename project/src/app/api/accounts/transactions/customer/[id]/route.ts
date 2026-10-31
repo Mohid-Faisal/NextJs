@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addCustomerTransaction, createJournalEntryForTransaction, generateVendorInvoiceNumber } from "@/lib/server/ledger";
+import {
+  addCustomerTransaction,
+  addVendorTransaction,
+  createJournalEntryForTransaction,
+  generateVendorInvoiceNumber,
+  updateVendorJournalEntry,
+} from "@/lib/server/ledger";
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
 import { debitVoucherDateFromInvoice } from "@/lib/accounts/invoiceDebitVoucherDate";
@@ -152,6 +158,208 @@ export async function GET(
         { error: "Customer not found" },
         { status: 404 }
       );
+    }
+
+    // Self-heal: clean up any Vendor invoices (`profile: "Vendor"`) that were mistakenly
+    // assigned `customerId` or given a `CustomerTransaction` DEBIT on this customer,
+    // and deduplicate any duplicate invoice DEBIT rows on this customer.
+    try {
+      const allCustomerDebitTxs = await prisma.customerTransaction.findMany({
+        where: orgWhere(session, {
+          customerId,
+          type: "DEBIT",
+        }),
+        orderBy: { id: "asc" },
+        select: { id: true, invoice: true, reference: true, amount: true },
+      });
+
+      const candidateInvNos = Array.from(
+        new Set(
+          allCustomerDebitTxs
+            .flatMap((t) => [t.invoice, t.reference])
+            .filter((v): v is string => !!v && !isCustomerCreditNoteReference(v) && !v.startsWith("STARTING-BALANCE"))
+        )
+      );
+
+      const [hijackedVendorInvoices, referencedVendorInvoices] = await Promise.all([
+        prisma.invoice.findMany({
+          where: orgWhere(session, {
+            customerId,
+            profile: "Vendor",
+          }),
+          include: { shipment: true },
+        }),
+        candidateInvNos.length > 0
+          ? prisma.invoice.findMany({
+              where: orgWhere(session, {
+                invoiceNumber: { in: candidateInvNos },
+                profile: "Vendor",
+              }),
+              include: { shipment: true },
+            })
+          : Promise.resolve([]),
+      ]);
+
+      const corruptedVendorInvsMap = new Map<number, (typeof hijackedVendorInvoices)[number]>();
+      for (const inv of [...hijackedVendorInvoices, ...referencedVendorInvoices]) {
+        corruptedVendorInvsMap.set(inv.id, inv);
+      }
+
+      if (corruptedVendorInvsMap.size > 0) {
+        const vendorInvNumbers: string[] = [];
+        for (const vInv of corruptedVendorInvsMap.values()) {
+          vendorInvNumbers.push(vInv.invoiceNumber);
+
+          // Resolve vendorId from shipment.vendor if missing
+          let resolvedVendorId = vInv.vendorId;
+          if (!resolvedVendorId && vInv.shipment?.vendor) {
+            const matchedVendor = await prisma.vendors.findFirst({
+              where: orgWhere(session, {
+                CompanyName: { equals: String(vInv.shipment.vendor).trim(), mode: "insensitive" },
+              }),
+              select: { id: true },
+            });
+            if (matchedVendor) resolvedVendorId = matchedVendor.id;
+          }
+
+          // Check if totalAmount was overwritten with customer totalCost during a buggy shipment edit
+          let correctedVendorAmount = Number(vInv.totalAmount) || 0;
+          if (vInv.shipment) {
+            const ship = vInv.shipment;
+            const shipTotalCost = Number(ship.totalCost) || 0;
+            let shipVendorCost = 0;
+            if (ship.manualRate && Number(ship.cos) > 0) {
+              shipVendorCost = Math.round(Number(ship.cos));
+            } else if (ship.calculatedValues) {
+              try {
+                const calc =
+                  typeof ship.calculatedValues === "string"
+                    ? JSON.parse(ship.calculatedValues)
+                    : (ship.calculatedValues as any);
+                if (calc?.vendorPrice && Number(calc.vendorPrice) > 0) {
+                  shipVendorCost = Math.round(Number(calc.vendorPrice));
+                }
+              } catch {
+                // ignore
+              }
+            }
+            if (
+              shipVendorCost === 0 &&
+              !ship.manualRate &&
+              Number(ship.price) > 0 &&
+              Number(ship.price) < shipTotalCost
+            ) {
+              shipVendorCost = Math.round(Number(ship.price) - (Number(ship.fixedCharge) || 0));
+            }
+            if (
+              shipVendorCost > 0 &&
+              Math.abs(correctedVendorAmount - shipTotalCost) < 0.01 &&
+              Math.abs(shipVendorCost - shipTotalCost) > 0.01
+            ) {
+              correctedVendorAmount = shipVendorCost;
+            }
+          }
+
+          await prisma.invoice.update({
+            where: { id: vInv.id },
+            data: {
+              customerId: null,
+              ...(resolvedVendorId ? { vendorId: resolvedVendorId } : {}),
+              totalAmount: correctedVendorAmount,
+            },
+          });
+
+          // Ensure vendor DEBIT transaction exists if vendorId is resolved
+          if (resolvedVendorId && correctedVendorAmount > 0) {
+            const existingVendorTx = await prisma.vendorTransaction.findFirst({
+              where: orgWhere(session, {
+                vendorId: resolvedVendorId,
+                type: "DEBIT",
+                OR: [
+                  { reference: vInv.invoiceNumber },
+                  { invoice: vInv.invoiceNumber },
+                ],
+              }),
+            });
+            if (!existingVendorTx) {
+              const tracking = vInv.shipment?.trackingId || vInv.trackingNumber || "N/A";
+              const country = vInv.shipment?.destination || vInv.destination || "N/A";
+              const pkg = vInv.shipment?.packaging || "Wpx";
+              const wt = Number(vInv.shipment?.totalWeight || vInv.shipment?.weight || vInv.weight) || 0;
+              const desc = `Tracking: ${tracking} | Country: ${country} | Type: ${pkg} | Weight: ${wt}Kg`;
+              await addVendorTransaction(
+                prisma,
+                resolvedVendorId,
+                "DEBIT",
+                correctedVendorAmount,
+                desc,
+                vInv.invoiceNumber,
+                vInv.invoiceNumber,
+                vInv.shipment?.shipmentDate || vInv.invoiceDate || vInv.createdAt,
+                session.organizationId
+              );
+            }
+          }
+
+          // Fix journal entry for this vendor invoice so it is VENDOR_DEBIT rather than CUSTOMER_DEBIT
+          const tracking = vInv.shipment?.trackingId || vInv.trackingNumber || vInv.invoiceNumber;
+          await updateVendorJournalEntry(
+            prisma,
+            resolvedVendorId ?? 0,
+            Number(vInv.totalAmount) || 0,
+            correctedVendorAmount,
+            vInv.invoiceNumber,
+            `Vendor invoice for shipment ${tracking}`,
+            session.organizationId,
+            vInv.shipment?.shipmentDate || vInv.invoiceDate || undefined
+          );
+        }
+
+        if (vendorInvNumbers.length > 0) {
+          await prisma.customerTransaction.deleteMany({
+            where: orgWhere(session, {
+              customerId,
+              type: "DEBIT",
+              OR: [
+                { invoice: { in: vendorInvNumbers } },
+                { reference: { in: vendorInvNumbers } },
+              ],
+            }),
+          });
+          recalcBalances = true;
+        }
+      }
+
+      // Deduplicate any duplicate DEBIT rows for the exact same customer invoice number
+      const remainingCustomerDebitTxs = await prisma.customerTransaction.findMany({
+        where: orgWhere(session, {
+          customerId,
+          type: "DEBIT",
+        }),
+        orderBy: { id: "asc" },
+        select: { id: true, invoice: true, reference: true },
+      });
+      const seenInvoiceDebits = new Set<string>();
+      const duplicateDebitIds: number[] = [];
+      for (const txRow of remainingCustomerDebitTxs) {
+        const key = txRow.invoice || txRow.reference;
+        if (!key || isCustomerCreditNoteReference(key) || key.startsWith("STARTING-BALANCE")) {
+          continue;
+        }
+        if (seenInvoiceDebits.has(key)) {
+          duplicateDebitIds.push(txRow.id);
+        } else {
+          seenInvoiceDebits.add(key);
+        }
+      }
+      if (duplicateDebitIds.length > 0) {
+        await prisma.customerTransaction.deleteMany({
+          where: { id: { in: duplicateDebitIds } },
+        });
+        recalcBalances = true;
+      }
+    } catch (healErr) {
+      console.error("Error in customer transaction self-heal:", healErr);
     }
 
     // Ensure all customer invoices have corresponding DEBIT transactions
@@ -522,43 +730,63 @@ export async function GET(
             where: {
               ...orgWhere(session),
               invoiceNumber: { in: shipmentInvoiceNumbers },
+              profile: "Customer",
               status: { not: "Cancelled" },
             },
             select: {
               invoiceNumber: true,
               totalAmount: true,
+              shipmentId: true,
             },
           });
 
           const vendorInvoiceNumbersForMetrics = invoicesForMetricsBase
             .map((inv) => generateVendorInvoiceNumber(inv.invoiceNumber))
             .filter((invNo, idx, arr) => arr.indexOf(invNo) === idx);
+          const shipmentIdsForMetrics = invoicesForMetricsBase
+            .map((inv) => inv.shipmentId)
+            .filter((sid): sid is number => sid != null);
 
           const vendorInvoicesForMetrics = await prisma.invoice.findMany({
             where: {
               ...orgWhere(session),
-              invoiceNumber: { in: vendorInvoiceNumbersForMetrics },
+              profile: "Vendor",
               status: { not: "Cancelled" },
+              OR: [
+                { invoiceNumber: { in: vendorInvoiceNumbersForMetrics } },
+                ...(shipmentIdsForMetrics.length > 0
+                  ? [{ shipmentId: { in: shipmentIdsForMetrics } }]
+                  : []),
+              ],
             },
             select: {
               invoiceNumber: true,
               totalAmount: true,
+              shipmentId: true,
             },
           });
 
           const vendorAmountByInvoiceNumber = new Map(
             vendorInvoicesForMetrics.map((inv) => [
               inv.invoiceNumber,
-              inv.totalAmount || 0,
+              Number(inv.totalAmount) || 0,
             ])
           );
+          const vendorAmountByShipmentId = new Map<number, number>();
+          for (const inv of vendorInvoicesForMetrics) {
+            if (inv.shipmentId != null) {
+              vendorAmountByShipmentId.set(inv.shipmentId, Number(inv.totalAmount) || 0);
+            }
+          }
 
           const invoicesForMetrics = invoicesForMetricsBase.map((inv) => {
             const vendorInvoiceNumber = generateVendorInvoiceNumber(
               inv.invoiceNumber
             );
             const vendorInvoiceAmount =
-              vendorAmountByInvoiceNumber.get(vendorInvoiceNumber) ?? 0;
+              (inv.shipmentId != null ? vendorAmountByShipmentId.get(inv.shipmentId) : undefined) ??
+              vendorAmountByInvoiceNumber.get(vendorInvoiceNumber) ??
+              0;
             return {
               ...inv,
               vendorInvoiceNumber,
@@ -864,6 +1092,14 @@ export async function GET(
           };
         }
       );
+
+      // Keep customer.currentBalance in sync with the computed ledger balance when viewing all transactions
+      if (!search && Math.abs((Number(customer.currentBalance) || 0) - runningBal) > 0.01) {
+        await prisma.customers.update({
+          where: { id: customerId },
+          data: { currentBalance: runningBal },
+        });
+      }
 
       return NextResponse.json({
         customer: {
@@ -1280,34 +1516,54 @@ export async function GET(
           where: {
             ...orgWhere(session),
             invoiceNumber: { in: shipmentInvoiceNumbers },
+            profile: "Customer",
             status: { not: "Cancelled" },
           },
           select: {
             invoiceNumber: true,
             totalAmount: true,
+            shipmentId: true,
           },
         });
 
         const vendorInvNos = invoicesForMetricsBase
           .map((inv) => generateVendorInvoiceNumber(inv.invoiceNumber))
           .filter((v, i, a) => a.indexOf(v) === i);
+        const shipmentIdsForMetrics = invoicesForMetricsBase
+          .map((inv) => inv.shipmentId)
+          .filter((sid): sid is number => sid != null);
 
         const vendorInvs = await prisma.invoice.findMany({
           where: {
             ...orgWhere(session),
-            invoiceNumber: { in: vendorInvNos },
+            profile: "Vendor",
             status: { not: "Cancelled" },
+            OR: [
+              { invoiceNumber: { in: vendorInvNos } },
+              ...(shipmentIdsForMetrics.length > 0
+                ? [{ shipmentId: { in: shipmentIdsForMetrics } }]
+                : []),
+            ],
           },
-          select: { invoiceNumber: true, totalAmount: true },
+          select: { invoiceNumber: true, totalAmount: true, shipmentId: true },
         });
 
         const vendorAmtMap = new Map(
-          vendorInvs.map((inv) => [inv.invoiceNumber, inv.totalAmount || 0])
+          vendorInvs.map((inv) => [inv.invoiceNumber, Number(inv.totalAmount) || 0])
         );
+        const vendorAmtByShipmentId = new Map<number, number>();
+        for (const inv of vendorInvs) {
+          if (inv.shipmentId != null) {
+            vendorAmtByShipmentId.set(inv.shipmentId, Number(inv.totalAmount) || 0);
+          }
+        }
 
         const invoicesForMetrics = invoicesForMetricsBase.map((inv) => {
           const vendorInvoiceNumber = generateVendorInvoiceNumber(inv.invoiceNumber);
-          const vendorInvoiceAmount = vendorAmtMap.get(vendorInvoiceNumber) ?? 0;
+          const vendorInvoiceAmount =
+            (inv.shipmentId != null ? vendorAmtByShipmentId.get(inv.shipmentId) : undefined) ??
+            vendorAmtMap.get(vendorInvoiceNumber) ??
+            0;
           return { ...inv, vendorInvoiceNumber, vendorInvoiceAmount };
         });
 

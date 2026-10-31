@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { allocateExcessPayment } from "@/lib/accounts/invoicePayments";
+import { allocateExcessPayment, calculateInvoicePaymentStatus } from "@/lib/accounts/invoicePayments";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
@@ -142,6 +142,7 @@ export async function GET(req: NextRequest) {
       const customerInvoices = await prisma.invoice.findMany({
         where: orgWhere(session, {
           customerId: parseInt(customerId, 10),
+          profile: "Customer",
           status: { in: ["Unpaid", "Partial"] },
         }),
         orderBy: { invoiceDate: "asc" },
@@ -149,20 +150,18 @@ export async function GET(req: NextRequest) {
       });
 
       for (const invoice of customerInvoices) {
-        const totalPaid = await prisma.payment.aggregate({
-          where: orgWhere(session, {
-            invoice: invoice.invoiceNumber,
-            transactionType: "INCOME",
-          }),
-          _sum: { amount: true },
-        });
-
-        const alreadyPaid = totalPaid._sum.amount || 0;
-        const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
+        const paymentStatus = await calculateInvoicePaymentStatus(
+          prisma,
+          invoice.invoiceNumber,
+          Number(invoice.totalAmount) || 0,
+          session.organizationId,
+          invoice.id
+        );
 
         outstandingInvoices.push({
           ...invoice,
-          remainingAmount,
+          totalAmount: Number(invoice.totalAmount) || 0,
+          remainingAmount: paymentStatus.remainingAmount,
         });
       }
     } else if (paymentType === "VENDOR_PAYMENT" && vendorId) {
@@ -176,6 +175,7 @@ export async function GET(req: NextRequest) {
       const vendorInvoices = await prisma.invoice.findMany({
         where: orgWhere(session, {
           vendorId: parseInt(vendorId, 10),
+          profile: "Vendor",
           status: { in: ["Unpaid", "Partial"] },
         }),
         orderBy: { invoiceDate: "asc" },
@@ -183,20 +183,18 @@ export async function GET(req: NextRequest) {
       });
 
       for (const invoice of vendorInvoices) {
-        const totalPaid = await prisma.payment.aggregate({
-          where: orgWhere(session, {
-            invoice: invoice.invoiceNumber,
-            transactionType: "EXPENSE",
-          }),
-          _sum: { amount: true },
-        });
-
-        const alreadyPaid = totalPaid._sum.amount || 0;
-        const remainingAmount = Math.max(0, invoice.totalAmount - alreadyPaid);
+        const paymentStatus = await calculateInvoicePaymentStatus(
+          prisma,
+          invoice.invoiceNumber,
+          Number(invoice.totalAmount) || 0,
+          session.organizationId,
+          invoice.id
+        );
 
         outstandingInvoices.push({
           ...invoice,
-          remainingAmount,
+          totalAmount: Number(invoice.totalAmount) || 0,
+          remainingAmount: paymentStatus.remainingAmount,
         });
       }
     }

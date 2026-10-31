@@ -49,7 +49,7 @@ export async function GET(
     const toDate = searchParams.get('toDate');
     const sortField = searchParams.get('sortField') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const recalcBalances = searchParams.get('recalc') === 'true';
+    let recalcBalances = searchParams.get('recalc') === 'true';
 
     // Build where clause for filtering
     const whereClause: any = orgWhere(session, {
@@ -153,6 +153,122 @@ export async function GET(
         { error: "Vendor not found" },
         { status: 404 }
       );
+    }
+
+    // Self-heal: link any unlinked Vendor invoices whose shipment.vendor matches this vendor,
+    // ensure all Vendor invoices have corresponding DEBIT transactions, and deduplicate DEBIT rows.
+    try {
+      if (vendor.CompanyName) {
+        const unlinkedVendorInvs = await prisma.invoice.findMany({
+          where: orgWhere(session, {
+            vendorId: null,
+            profile: "Vendor",
+            status: { not: "Cancelled" },
+            shipment: {
+              vendor: { equals: vendor.CompanyName.trim(), mode: "insensitive" },
+            },
+          }),
+          select: { id: true },
+        });
+        if (unlinkedVendorInvs.length > 0) {
+          await prisma.invoice.updateMany({
+            where: { id: { in: unlinkedVendorInvs.map((i) => i.id) } },
+            data: { vendorId, customerId: null },
+          });
+        }
+      }
+
+      const vendorInvoices = await prisma.invoice.findMany({
+        where: orgWhere(session, {
+          vendorId,
+          profile: "Vendor",
+          status: { not: "Cancelled" },
+        }),
+        include: {
+          shipment: {
+            select: {
+              trackingId: true,
+              destination: true,
+              packaging: true,
+              weight: true,
+              totalWeight: true,
+              shipmentDate: true,
+            },
+          },
+        },
+      });
+
+      if (vendorInvoices.length > 0) {
+        const invNumbers = vendorInvoices.map((inv) => inv.invoiceNumber);
+        const existingDebitTxs = await prisma.vendorTransaction.findMany({
+          where: orgWhere(session, {
+            vendorId,
+            type: "DEBIT",
+            OR: [
+              { reference: { in: invNumbers } },
+              { invoice: { in: invNumbers } },
+            ],
+          }),
+          orderBy: { id: "asc" },
+          select: { id: true, reference: true, invoice: true },
+        });
+
+        const existingSet = new Set<string>();
+        const duplicateIds: number[] = [];
+        for (const t of existingDebitTxs) {
+          const key = t.invoice || t.reference;
+          if (!key || isVendorDebitNoteReference(key) || key.startsWith("STARTING-BALANCE")) {
+            continue;
+          }
+          if (existingSet.has(key)) {
+            duplicateIds.push(t.id);
+          } else {
+            existingSet.add(key);
+          }
+          if (t.reference) existingSet.add(t.reference);
+          if (t.invoice) existingSet.add(t.invoice);
+        }
+
+        if (duplicateIds.length > 0) {
+          await prisma.vendorTransaction.deleteMany({
+            where: { id: { in: duplicateIds } },
+          });
+          recalcBalances = true;
+        }
+
+        const missingInvoices = vendorInvoices.filter(
+          (inv) => !existingSet.has(inv.invoiceNumber) && Number(inv.totalAmount) > 0
+        );
+
+        if (missingInvoices.length > 0) {
+          for (const inv of missingInvoices) {
+            const tracking = inv.shipment?.trackingId || inv.trackingNumber || "N/A";
+            const country = inv.shipment?.destination || inv.destination || "N/A";
+            const pkg = inv.shipment?.packaging || "Wpx";
+            const wt = Number(inv.shipment?.totalWeight || inv.shipment?.weight || inv.weight) || 0;
+            const desc = `Tracking: ${tracking} | Country: ${country} | Type: ${pkg} | Weight: ${wt}Kg`;
+            const txDate = inv.shipment?.shipmentDate || inv.invoiceDate || inv.createdAt;
+
+            await prisma.vendorTransaction.create({
+              data: {
+                organizationId: session.organizationId,
+                vendorId,
+                type: "DEBIT",
+                amount: Number(inv.totalAmount),
+                description: desc,
+                reference: inv.invoiceNumber,
+                invoice: inv.invoiceNumber,
+                previousBalance: 0,
+                newBalance: Number(inv.totalAmount),
+                createdAt: txDate,
+              },
+            });
+          }
+          recalcBalances = true;
+        }
+      }
+    } catch (healErr) {
+      console.error("Error in vendor transaction self-heal:", healErr);
     }
 
     // List path: use existing balances; always filter and sort by voucher date (not createdAt)
@@ -660,6 +776,14 @@ export async function GET(
           };
         }
       );
+
+      // Keep vendor.currentBalance in sync with the computed ledger balance when viewing all transactions
+      if (!search && Math.abs((Number(vendor.currentBalance) || 0) - runningBal) > 0.01) {
+        await prisma.vendors.update({
+          where: { id: vendorId },
+          data: { currentBalance: runningBal },
+        });
+      }
 
       return NextResponse.json({
         vendor: {
