@@ -4,6 +4,7 @@ import { allocateExcessPayment, calculateInvoicePaymentStatus } from "@/lib/acco
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 /**
  * POST /api/accounts/payments/allocate
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
           originalInvoiceNumber,
           paymentReference,
           paymentType,
-          paymentDate,
+          paymentDate ? parseDateInputAsLocalDate(paymentDate).toISOString() : undefined,
           session.organizationId
         ),
       { timeout: 30000 }

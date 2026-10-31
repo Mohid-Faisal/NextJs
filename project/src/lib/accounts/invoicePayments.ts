@@ -4,6 +4,7 @@ import {
   addVendorTransaction,
 } from "@/lib/server/ledger";
 import { money } from "@/lib/money";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 export type PlannedAllocation = {
   invoiceId: number;
@@ -366,7 +367,7 @@ export async function processPaymentWithAllocation(
             paymentType === "CUSTOMER_PAYMENT"
               ? "Customer Payment"
               : "Vendor Payment",
-          date: paymentDate ? new Date(paymentDate) : new Date(),
+          date: paymentDate ? parseDateInputAsLocalDate(paymentDate) : new Date(),
           amount: paymentAmountNum,
           fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
           fromCustomerId:

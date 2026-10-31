@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 import {
   addCustomerTransaction,
   addVendorTransaction,
@@ -451,7 +452,7 @@ async function handleShipmentUpdate(req: Request) {
           ...(referenceNumber !== undefined
             ? { referenceNumber: String(referenceNumber).trim() }
             : {}),
-          shipmentDate: shipmentDate ? new Date(shipmentDate) : undefined,
+          shipmentDate: shipmentDate ? parseDateInputAsLocalDate(shipmentDate) : undefined,
           agency,
           office,
           senderName,
@@ -502,7 +503,7 @@ async function handleShipmentUpdate(req: Request) {
 
       // 2. Update journal entry dates if shipment date changed
       if (shipmentDate) {
-        const newShipmentDate = new Date(shipmentDate);
+        const newShipmentDate = parseDateInputAsLocalDate(shipmentDate);
         const oldShipmentDate = existingShipment.shipmentDate;
         
         // Check if shipment date actually changed

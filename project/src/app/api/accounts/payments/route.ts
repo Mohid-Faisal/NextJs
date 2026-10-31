@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { parseListPaging } from "@/lib/money";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 // UI-to-enum mapping
 const typeMap: Record<string, any> = { Income: "INCOME", Expense: "EXPENSE", Transfer: "TRANSFER", Adjustment: "ADJUSTMENT", Equity: "EQUITY", Return: "ADJUSTMENT" };
@@ -316,7 +317,7 @@ export async function POST(req: NextRequest) {
     const data: any = {
       transactionType: typeMap[body.transactionType] ?? body.transactionType,
       category: body.category,
-      date: new Date(body.date),
+      date: parseDateInputAsLocalDate(body.date),
       amount: Number(body.amount),
       fromPartyType: fromPartyType,
       toPartyType: toPartyType,
@@ -379,7 +380,7 @@ export async function POST(req: NextRequest) {
       const fallbackData: any = {
         transactionType: typeMap[body.transactionType] ?? body.transactionType,
         category: body.category,
-        date: new Date(body.date),
+        date: parseDateInputAsLocalDate(body.date),
         amount: Number(body.amount),
         fromPartyType: fromPartyType,
         toPartyType: toPartyType,
@@ -422,7 +423,7 @@ async function createJournalEntryForPayment(payment: any, body: any, organizatio
 
     const journalEntry = await prisma.$transaction(async (tx) => {
       const journalEntryDate = body.date 
-        ? new Date(body.date) 
+        ? parseDateInputAsLocalDate(body.date) 
         : (payment.date ? new Date(payment.date) : new Date());
       
       // Always use Payment-{id} so delete can find this JE even when bank ref is shared (e.g. "Office")

@@ -13,6 +13,7 @@ import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
 import { audit } from "@/lib/audit";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 export async function POST(req: NextRequest) {
   try {
@@ -220,7 +221,7 @@ export async function POST(req: NextRequest) {
           data: orgData(session, {
             transactionType: paymentType === "CUSTOMER_PAYMENT" ? "INCOME" : "EXPENSE",
             category: paymentType === "CUSTOMER_PAYMENT" ? "Customer Payment" : "Vendor Payment",
-            date: paymentDate ? new Date(paymentDate) : new Date(),
+            date: paymentDate ? parseDateInputAsLocalDate(paymentDate) : new Date(),
             amount: paymentAmountNum,
             fromPartyType: paymentType === "CUSTOMER_PAYMENT" ? "CUSTOMER" : "US",
             fromCustomerId: paymentType === "CUSTOMER_PAYMENT" ? invoice.customerId : null,

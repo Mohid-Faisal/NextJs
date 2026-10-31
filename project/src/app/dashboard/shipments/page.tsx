@@ -60,6 +60,7 @@ import { getTrackingUrl } from "@/lib/tracking-links";
 import { usePermissions } from "@/components/PermissionContext";
 import { useDebouncedValue } from "@/lib/DebounceSearch";
 import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
+import { parseDateInputAsLocalDate, toDatetimeLocalValue } from "@/lib/noteFormats";
 
 const shipmentColumns: ColumnOption[] = [
   { id: "date", label: "Date" },
@@ -545,7 +546,7 @@ export default function ShipmentsPage() {
   const openUpdateTrackingDialog = (shipment: Shipment & { invoices: { id: number; status: string }[] }) => {
     setShipmentForTracking(shipment);
     setTrackingFormStatus("In Transit");
-    setTrackingFormTimestamp(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    setTrackingFormTimestamp(toDatetimeLocalValue(new Date()));
     setTrackingFormDescription("");
     setTrackingFormLocation("");
     setOpenTrackingDialog(true);
@@ -580,9 +581,9 @@ export default function ShipmentsPage() {
     setEditStatus(entry.status);
     try {
       const d = new Date(entry.timestamp);
-      setEditTimestamp(format(d, "yyyy-MM-dd'T'HH:mm"));
+      setEditTimestamp(toDatetimeLocalValue(d));
     } catch {
-      setEditTimestamp(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+      setEditTimestamp(toDatetimeLocalValue(new Date()));
     }
     setEditDescription(entry.description ?? "");
     setEditLocation(entry.location ?? "");
@@ -598,7 +599,7 @@ export default function ShipmentsPage() {
         body: JSON.stringify({
           index: editingIndex,
           status: editStatus,
-          timestamp: new Date(editTimestamp).toISOString(),
+          timestamp: parseDateInputAsLocalDate(editTimestamp).toISOString(),
           description: editDescription.trim(),
           location: editLocation.trim(),
         }),
@@ -646,7 +647,7 @@ export default function ShipmentsPage() {
     setEditingIndex(null);
     setDeletingIndex(null);
     setAddFormStatus("In Transit");
-    setAddFormTimestamp(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    setAddFormTimestamp(toDatetimeLocalValue(new Date()));
     setAddFormLocation("");
     setAddFormDescription("");
     setAddingNew(true);
@@ -661,7 +662,7 @@ export default function ShipmentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: addFormStatus,
-          timestamp: new Date(addFormTimestamp).toISOString(),
+          timestamp: parseDateInputAsLocalDate(addFormTimestamp).toISOString(),
           description: addFormDescription.trim(),
           location: addFormLocation.trim(),
         }),
@@ -685,7 +686,7 @@ export default function ShipmentsPage() {
     if (!shipmentForTracking) return;
     setIsSubmittingTracking(true);
     try {
-      const timestamp = new Date(trackingFormTimestamp).toISOString();
+      const timestamp = parseDateInputAsLocalDate(trackingFormTimestamp).toISOString();
       const res = await fetch(`/api/shipments/${shipmentForTracking.id}/tracking-status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

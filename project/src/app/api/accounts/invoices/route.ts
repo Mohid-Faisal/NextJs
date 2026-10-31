@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { parseListPaging, money } from "@/lib/money";
 import { calculateInvoicePaymentStatus } from "@/lib/accounts/invoicePayments";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 import {
   createJournalEntryForTransaction,
   addCustomerTransaction,
@@ -291,14 +292,14 @@ export async function POST(req: NextRequest) {
     }
 
     const invAmount = parseFloat(totalAmount) || 0;
-    const invDate = new Date(invoiceDate);
+    const invDate = parseDateInputAsLocalDate(invoiceDate);
 
     const invoice = await prisma.$transaction(
       async (tx) => {
         const created = await tx.invoice.create({
           data: orgData(session, {
             invoiceNumber,
-            invoiceDate: new Date(invoiceDate),
+            invoiceDate: invDate,
             receiptNumber,
             trackingNumber,
             destination,

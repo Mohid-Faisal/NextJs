@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgData, orgWhere } from "@/lib/tenant/prismaScope";
 import { checkShipmentLimit } from "@/lib/billing/usage";
 import { withUniqueRetry } from "@/lib/withUniqueRetry";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 /**
  * POST /api/add-shipment
@@ -449,7 +450,7 @@ export async function POST(req: NextRequest) {
             }
 
             // 7.4 Create Shipment Record
-            const shipmentDateObj = shipmentDate ? new Date(shipmentDate) : new Date();
+            const shipmentDateObj = shipmentDate ? parseDateInputAsLocalDate(shipmentDate) : new Date();
             const bookingDateTime = new Date(shipmentDateObj.getTime() - 2.5 * 60 * 60 * 1000);
             const initialTrackingHistory = [
               { status: "Booked", timestamp: bookingDateTime.toISOString(), location: "Lahore, Pakistan" },

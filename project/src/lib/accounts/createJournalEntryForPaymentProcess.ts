@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 /**
  * Creates a balanced journal entry for a payment processed via /api/accounts/payments/process.
@@ -24,9 +25,9 @@ export async function createJournalEntryForPaymentProcess(
   const entryNumber = await nextJournalEntryNumber(db, organizationId);
 
   const journalEntryDate = body.paymentDate
-    ? new Date(body.paymentDate)
+    ? parseDateInputAsLocalDate(body.paymentDate)
     : payment.date
-      ? new Date(payment.date)
+      ? parseDateInputAsLocalDate(payment.date)
       : new Date();
 
   const paymentKey = `Payment-${payment.id}`;

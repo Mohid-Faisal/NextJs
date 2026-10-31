@@ -30,6 +30,7 @@ import { ChevronDown, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Country, State } from "country-state-city";
 import { matchHsCode, type HsCodeItem } from "@/lib/matchHsCode";
+import { parseDateInputAsLocalDate, toDatetimeLocalValue } from "@/lib/noteFormats";
 
 // Add type for sender/recipient
 interface Party {
@@ -660,7 +661,7 @@ const AddShipmentPage = () => {
   const [offices, setOffices] = useState<Option[]>([]);
 
   const [form, setForm] = useState({
-    shipmentDate: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16), // Default to current date and time in local timezone
+    shipmentDate: toDatetimeLocalValue(new Date()), // Default to current date and time in Lahore timezone
     trackingId: "",
     referenceNumber: "", // Add reference number field
     invoiceNumber: "", // Add invoice number field
@@ -819,7 +820,7 @@ const AddShipmentPage = () => {
 
       // Additional metadata
       submissionTimestamp: new Date().toISOString(),
-      shipmentDate: new Date(form.shipmentDate).toISOString(), // Use selected shipment date
+      shipmentDate: parseDateInputAsLocalDate(form.shipmentDate).toISOString(), // Use selected shipment date in Lahore timezone
       totalPackages: packages.length,
       totalWeight: totals.weight,
       totalWeightVol: totals.weightVol,
@@ -856,7 +857,7 @@ const AddShipmentPage = () => {
       console.log("Shipment saved successfully with data:", data.receivedData);
       if (!isEditing) {
       setForm({
-          shipmentDate: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+          shipmentDate: toDatetimeLocalValue(new Date()),
         trackingId: "",
           invoiceNumber: "",
           referenceNumber: "",
@@ -1002,8 +1003,8 @@ const AddShipmentPage = () => {
 
         const completeFormData = {
           shipmentDate: s.shipmentDate
-            ? new Date(new Date(s.shipmentDate).getTime() - new Date(s.shipmentDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-            : new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+            ? toDatetimeLocalValue(s.shipmentDate)
+            : toDatetimeLocalValue(new Date()),
           trackingId: s.trackingId || "",
           invoiceNumber: s.invoiceNumber || "",
           referenceNumber: s.referenceNumber || "",

@@ -3,6 +3,7 @@ import { Country } from "country-state-city";
 import { defaultAccounts } from "@/lib/accounts/defaultAccounts";
 import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 import { getJwtSecretString } from "@/lib/auth/jwtSecret";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 export function decodeToken(token: string) {
   try {
@@ -141,7 +142,7 @@ export async function addCustomerTransaction(
 
   const newBalance = Number(updatedCustomer.currentBalance);
   const previousBalance = newBalance - delta;
-  const transactionDate = date ? new Date(date) : new Date();
+  const transactionDate = date ? parseDateInputAsLocalDate(date) : new Date();
 
   await prisma.customerTransaction.create({
     data: {
@@ -185,7 +186,7 @@ export async function addVendorTransaction(
 
   const newBalance = Number(updatedVendor.currentBalance);
   const previousBalance = newBalance - delta;
-  const transactionDate = date ? new Date(date) : new Date();
+  const transactionDate = date ? parseDateInputAsLocalDate(date) : new Date();
 
   await prisma.vendorTransaction.create({
     data: {
@@ -694,7 +695,7 @@ export async function createJournalEntryForTransaction(
       accounts.find((a: any) => a.category === "Expense");
 
     const writeEntry = async (tx: any) => {
-      const entryDate = date ? new Date(date) : new Date();
+      const entryDate = date ? parseDateInputAsLocalDate(date) : new Date();
 
       const existingEntry = reference && !reference.startsWith("Transaction-")
         ? await tx.journalEntry.findFirst({

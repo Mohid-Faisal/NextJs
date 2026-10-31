@@ -5,7 +5,7 @@ import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
 import { computeVendorLedgerVoucherDate } from "@/lib/accounts/vendorLedgerVoucherDate";
 import type { InvoiceFieldsForDebitVoucher } from "@/lib/accounts/invoiceDebitVoucherDate";
-import { isVendorDebitNoteReference } from "@/lib/noteFormats";
+import { isVendorDebitNoteReference, parseDateInputAsLocalDate } from "@/lib/noteFormats";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { debitNoteOrgFilter } from "@/lib/tenant/findOrgDebitNote";
@@ -1522,7 +1522,7 @@ export async function POST(
 
       if (existingStartingBalance) {
         // Use provided date or default to earliest date for starting balance
-        const transactionDate = date ? new Date(date) : new Date('1970-01-01');
+        const transactionDate = date ? parseDateInputAsLocalDate(date) : new Date('1970-01-01');
         
         // Find and delete existing journal entries for this starting balance
         // Use the existing transaction's reference to find matching journal entries
@@ -1597,7 +1597,7 @@ export async function POST(
       description,
       reference,
       undefined,
-      date ? new Date(date) : undefined,
+      date ? parseDateInputAsLocalDate(date) : undefined,
       session.organizationId
     );
 
@@ -1613,7 +1613,7 @@ export async function POST(
 
       if (createdTransaction) {
         // Use provided date or default to earliest date for starting balance
-        const transactionDate = date ? new Date(date) : new Date('1970-01-01');
+        const transactionDate = date ? parseDateInputAsLocalDate(date) : new Date('1970-01-01');
         
         await prisma.vendorTransaction.update({
           where: { id: createdTransaction.id },
@@ -1644,7 +1644,7 @@ export async function POST(
     // Create journal entry for vendor transaction (skip for starting balance as it's handled above)
     if (!isStartingBalance) {
       const transactionType = type === 'CREDIT' ? 'VENDOR_CREDIT' : 'VENDOR_DEBIT';
-      const transactionDate = date ? new Date(date) : undefined;
+      const transactionDate = date ? parseDateInputAsLocalDate(date) : undefined;
       await createJournalEntryForTransaction(
         prisma,
         transactionType,

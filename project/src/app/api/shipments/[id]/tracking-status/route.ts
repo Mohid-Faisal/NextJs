@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 const TRACKING_STATUSES = ["Booked", "Picked Up", "In Transit", "Arrived at Destination", "Out for Delivery", "Delivered"] as const;
 
@@ -104,7 +105,7 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: "Shipment not found" }, { status: 404 });
     }
 
-    const occurredAt = timestamp ? new Date(timestamp) : new Date();
+    const occurredAt = timestamp ? parseDateInputAsLocalDate(timestamp) : new Date();
     if (isNaN(occurredAt.getTime())) {
       return NextResponse.json({ success: false, error: "Invalid timestamp" }, { status: 400 });
     }
@@ -184,7 +185,7 @@ export async function PUT(
     if (index >= existing.length) {
       return NextResponse.json({ success: false, error: "Index out of range" }, { status: 400 });
     }
-    const occurredAt = timestamp ? new Date(timestamp) : new Date(existing[index].timestamp);
+    const occurredAt = timestamp ? parseDateInputAsLocalDate(timestamp) : new Date(existing[index].timestamp);
     if (isNaN(occurredAt.getTime())) {
       return NextResponse.json({ success: false, error: "Invalid timestamp" }, { status: 400 });
     }

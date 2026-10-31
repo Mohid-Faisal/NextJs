@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { TablePagination } from "@/components/TablePagination";
 import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
 import { toast } from "sonner";
-import { toDatetimeLocalValue } from "@/lib/noteFormats";
+import { parseDateInputAsLocalDate, toDatetimeLocalValue } from "@/lib/noteFormats";
 
 const STATUSES = ["All", "Active", "Inactive"];
 const SORT_OPTIONS = ["Newest", "Oldest"];
@@ -824,7 +824,7 @@ export default function VendorsPage() {
                             amount: Math.abs(balanceValue),
                             description: "Starting Balance Adjustment",
                             reference: `STARTING-BALANCE-${Date.now()}`,
-                            date: startingBalanceDate,
+                            date: parseDateInputAsLocalDate(startingBalanceDate).toISOString(),
                           }),
                         }
                       );

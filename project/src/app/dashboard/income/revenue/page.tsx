@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TablePagination } from "@/components/TablePagination";
+import { parseDateInputAsLocalDate, toDatetimeLocalValue } from "@/lib/noteFormats";
 
 type Invoice = {
   id: number;
@@ -49,7 +50,7 @@ type Invoice = {
 };
 const toLocalISOString = (d: Date | string) => {
   const dateObj = typeof d === 'string' ? new Date(d) : d;
-  return new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  return toDatetimeLocalValue(dateObj);
 };
 
 type ChartOfAccount = {
@@ -373,7 +374,7 @@ export default function IncomeRevenuePage() {
           paymentMethod: formData.paymentMethod,
           reference: formData.reference,
           description: formData.description,
-          paymentDate: formData.paymentDate,
+          paymentDate: parseDateInputAsLocalDate(formData.paymentDate).toISOString(),
           // Chart of accounts
           debitAccountId,
           creditAccountId,

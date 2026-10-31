@@ -4,6 +4,7 @@ import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/serv
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 export async function GET(
   req: NextRequest,
@@ -164,7 +165,7 @@ export async function PUT(
     const updateData: any = {};
     
     if (body.invoiceNumber !== undefined) updateData.invoiceNumber = body.invoiceNumber;
-    if (body.invoiceDate !== undefined) updateData.invoiceDate = new Date(body.invoiceDate);
+    if (body.invoiceDate !== undefined) updateData.invoiceDate = parseDateInputAsLocalDate(body.invoiceDate);
     if (body.receiptNumber !== undefined) updateData.receiptNumber = body.receiptNumber;
     if (body.trackingNumber !== undefined) updateData.trackingNumber = body.trackingNumber;
     if (body.destination !== undefined) updateData.destination = body.destination;

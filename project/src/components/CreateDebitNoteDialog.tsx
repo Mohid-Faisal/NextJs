@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Info, Search } from "lucide-react";
-import { toDatetimeLocalValue } from "@/lib/noteFormats";
+import { parseDateInputAsLocalDate, toDatetimeLocalValue } from "@/lib/noteFormats";
 
 type Bill = {
   id: number;
@@ -283,7 +283,7 @@ export default function CreateDebitNoteDialog({
             },
             body: JSON.stringify({
               amount: numericAmount,
-              date,
+              date: parseDateInputAsLocalDate(date).toISOString(),
               description: prefixedDescription,
               debitAccountId: parseInt(debitAccountId, 10),
               creditAccountId: parseInt(creditAccountId, 10),
@@ -298,7 +298,7 @@ export default function CreateDebitNoteDialog({
               billId: selectedBill || null,
               vendorId: selectedVendor,
               amount: numericAmount,
-              date,
+              date: parseDateInputAsLocalDate(date).toISOString(),
               description: prefixedDescription,
               type: entryType,
               debitAccountId: parseInt(debitAccountId),

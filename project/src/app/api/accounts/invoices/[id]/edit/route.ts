@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgInvoice } from "@/lib/tenant/findOrgInvoice";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 import { updateInvoiceBalance, updateJournalEntriesForInvoice } from "@/lib/server/ledger";
 
 export async function GET(
@@ -100,11 +101,11 @@ export async function PUT(
     const newAmount = parseFloat(body.totalAmount) || 0;
     const amountChanged = Math.abs(oldAmount - newAmount) > 0.0001;
 
-    const newInvoiceDate = body.invoiceDate ? new Date(body.invoiceDate) : currentInvoice.invoiceDate;
+    const newInvoiceDate = body.invoiceDate ? parseDateInputAsLocalDate(body.invoiceDate) : currentInvoice.invoiceDate;
     const dateChanged = Boolean(
       body.invoiceDate &&
       currentInvoice.invoiceDate &&
-      new Date(body.invoiceDate).getTime() !== new Date(currentInvoice.invoiceDate).getTime()
+      parseDateInputAsLocalDate(body.invoiceDate).getTime() !== new Date(currentInvoice.invoiceDate).getTime()
     );
     const invoiceNumberChanged = Boolean(body.invoiceNumber && body.invoiceNumber !== currentInvoice.invoiceNumber);
     const journalNeedsUpdate = amountChanged || dateChanged || invoiceNumberChanged;
@@ -115,7 +116,7 @@ export async function PUT(
         where: { id: invoiceId },
         data: {
           invoiceNumber: body.invoiceNumber || currentInvoice.invoiceNumber,
-          invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : currentInvoice.invoiceDate,
+          invoiceDate: body.invoiceDate ? parseDateInputAsLocalDate(body.invoiceDate) : currentInvoice.invoiceDate,
           totalAmount: newAmount,
           fscCharges: parseFloat(body.fscCharges) || 0,
           discount: parseFloat(body.discount) || 0,

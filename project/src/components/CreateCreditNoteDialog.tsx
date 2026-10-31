@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Info, Search } from "lucide-react";
-import { toDatetimeLocalValue } from "@/lib/noteFormats";
+import { parseDateInputAsLocalDate, toDatetimeLocalValue } from "@/lib/noteFormats";
 
 type Invoice = {
   id: number;
@@ -285,7 +285,7 @@ export default function CreateCreditNoteDialog({
             },
             body: JSON.stringify({
               amount: parseFloat(amount),
-              date,
+              date: parseDateInputAsLocalDate(date).toISOString(),
               description: prefixedDescription,
               debitAccountId: parseInt(debitAccountId, 10),
               creditAccountId: parseInt(creditAccountId, 10),
@@ -300,7 +300,7 @@ export default function CreateCreditNoteDialog({
               invoiceNumber: selectedInvoice || null,
               customerId: selectedCustomer,
               amount: parseFloat(amount),
-              date,
+              date: parseDateInputAsLocalDate(date).toISOString(),
               description: prefixedDescription,
               type: entryType,
               debitAccountId: parseInt(debitAccountId),

@@ -68,9 +68,13 @@ export function inferAdjustmentType(opts: {
   return opts.fallback ?? "CREDIT";
 }
 
+/** Lahore / Pakistan Standard Time (Asia/Karachi) is permanently UTC+05:00 (no DST). */
+export const LAHORE_OFFSET_MS = 5 * 60 * 60 * 1000;
+
 /**
- * Parse HTML date `YYYY-MM-DD` or datetime-local `YYYY-MM-DDTHH:mm` as local time.
- * Date-only values use noon local to avoid UTC midnight shifting the displayed day.
+ * Parse HTML date `YYYY-MM-DD`, datetime-local `YYYY-MM-DDTHH:mm`, or ISO string
+ * using Lahore clock (`Asia/Karachi`, UTC+05:00) for timezone-less inputs.
+ * Date-only values use noon Lahore time (07:00 UTC) to avoid midnight boundary shifts.
  */
 export function parseDateInputAsLocalDate(
   input: string | Date | undefined | null
@@ -78,7 +82,15 @@ export function parseDateInputAsLocalDate(
   if (input == null || input === "") return new Date();
   if (input instanceof Date) return input;
   const s = String(input).trim();
-  const ymdHm = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(s);
+  // If string already carries an explicit timezone offset (Z or ±HH:MM), preserve it as-is
+  if (/(?:Z|[+-]\d{2}:?\d{2})$/i.test(s)) {
+    const t = Date.parse(s);
+    if (!Number.isNaN(t)) return new Date(t);
+  }
+  const ymdHm =
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(
+      s
+    );
   if (ymdHm) {
     const y = parseInt(ymdHm[1], 10);
     const m = parseInt(ymdHm[2], 10) - 1;
@@ -86,27 +98,39 @@ export function parseDateInputAsLocalDate(
     const hh = parseInt(ymdHm[4], 10);
     const mm = parseInt(ymdHm[5], 10);
     const ss = ymdHm[6] ? parseInt(ymdHm[6], 10) : 0;
-    return new Date(y, m, d, hh, mm, ss, 0);
+    const ms = ymdHm[7] ? parseInt(ymdHm[7].padEnd(3, "0"), 10) : 0;
+    return new Date(Date.UTC(y, m, d, hh - 5, mm, ss, ms));
   }
   const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (ymd) {
     const y = parseInt(ymd[1], 10);
     const m = parseInt(ymd[2], 10) - 1;
     const d = parseInt(ymd[3], 10);
-    return new Date(y, m, d, 12, 0, 0, 0);
+    return new Date(Date.UTC(y, m, d, 12 - 5, 0, 0, 0));
   }
   const t = Date.parse(s);
   if (!Number.isNaN(t)) return new Date(t);
   return new Date();
 }
 
-/** Format a Date for `<input type="datetime-local">` in local time. */
+/** Format a Date for `<input type="datetime-local">` in Lahore time (Asia/Karachi, UTC+05:00). */
 export function toDatetimeLocalValue(input: string | Date | undefined | null): string {
   if (input == null || input === "") return "";
-  const d = input instanceof Date ? input : new Date(input);
+  const d = input instanceof Date ? input : parseDateInputAsLocalDate(input);
   if (Number.isNaN(d.getTime())) return "";
+  const lahore = new Date(d.getTime() + LAHORE_OFFSET_MS);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${lahore.getUTCFullYear()}-${pad(lahore.getUTCMonth() + 1)}-${pad(lahore.getUTCDate())}T${pad(lahore.getUTCHours())}:${pad(lahore.getUTCMinutes())}`;
+}
+
+/** Format a Date for `<input type="date">` (YYYY-MM-DD) in Lahore time (Asia/Karachi, UTC+05:00). */
+export function toDateInputValue(input: string | Date | undefined | null): string {
+  if (input == null || input === "") return "";
+  const d = input instanceof Date ? input : parseDateInputAsLocalDate(input);
+  if (Number.isNaN(d.getTime())) return "";
+  const lahore = new Date(d.getTime() + LAHORE_OFFSET_MS);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${lahore.getUTCFullYear()}-${pad(lahore.getUTCMonth() + 1)}-${pad(lahore.getUTCDate())}`;
 }
 
 /**
@@ -141,12 +165,13 @@ export function extractNoteDetailDescription(stored: string | null | undefined):
   return t;
 }
 
-/** Format shipment date for ledger description (dd/MM/yy HH:mm). */
+/** Format shipment date for ledger description (dd/MM/yy HH:mm) in Lahore time. */
 function formatShipmentDateForDesc(input: string | Date): string {
-  const d = input instanceof Date ? input : new Date(input);
+  const d = input instanceof Date ? input : parseDateInputAsLocalDate(input);
   if (Number.isNaN(d.getTime())) return String(input);
+  const lahore = new Date(d.getTime() + LAHORE_OFFSET_MS);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(lahore.getUTCDate())}/${pad(lahore.getUTCMonth() + 1)}/${String(lahore.getUTCFullYear()).slice(-2)} ${pad(lahore.getUTCHours())}:${pad(lahore.getUTCMinutes())}`;
 }
 
 /**

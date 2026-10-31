@@ -6,6 +6,7 @@ import { findOrgChartAccount } from "@/lib/tenant/findOrgChartAccount";
 import { findOrgJournalEntry } from "@/lib/tenant/findOrgJournalEntry";
 import { nextJournalEntryNumber } from "@/lib/tenant/orgJournalChart";
 import { parseListPaging } from "@/lib/money";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 
 export async function GET(request: NextRequest) {
   try {
@@ -155,7 +156,7 @@ export async function POST(req: NextRequest) {
       const entry = await tx.journalEntry.create({
         data: orgData(session, {
           entryNumber,
-          date: new Date(date),
+          date: parseDateInputAsLocalDate(date),
           description,
           reference,
           totalDebit,

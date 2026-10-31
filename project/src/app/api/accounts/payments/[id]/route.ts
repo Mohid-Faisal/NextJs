@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { findOrgPayment } from "@/lib/tenant/findOrgPayment";
 import { findOrgInvoiceByNumber } from "@/lib/tenant/findOrgPayment";
+import { parseDateInputAsLocalDate } from "@/lib/noteFormats";
 import {
   cleanupOrphanPaymentJournalEntriesAfterDelete,
   findJournalEntriesForPayment,
@@ -127,7 +128,7 @@ export async function PUT(
       data: {
         transactionType: body.transactionType,
         category: body.category,
-        date: body.date,
+        date: body.date ? parseDateInputAsLocalDate(body.date) : existingPayment.date,
         amount: body.amount,
         fromPartyType: body.fromPartyType,
         fromCustomerId: body.fromCustomerId,
@@ -142,7 +143,7 @@ export async function PUT(
     // Update customer/vendor transactions for this payment (CREDIT rows only — never invoice DEBIT)
     try {
       const paymentReference = existingPayment.reference || `Payment-${paymentId}`;
-      const newDate = body.date ? new Date(body.date) : existingPayment.date;
+      const newDate = body.date ? parseDateInputAsLocalDate(body.date) : existingPayment.date;
       const newAmountNum = Number(body.amount) || 0;
       const amountDelta = newAmountNum - oldAmount;
 
@@ -274,7 +275,7 @@ export async function PUT(
           await prisma.journalEntry.update({
             where: { id: journalEntry.id },
             data: {
-              date: new Date(body.date),
+              date: body.date ? parseDateInputAsLocalDate(body.date) : journalEntry.date,
               description: `Payment: ${body.category} - ${body.description || 'No description'}${userRef}`,
               reference: paymentKey,
               totalDebit: Number(body.amount),

@@ -31,7 +31,7 @@ import { Country, State, City } from "country-state-city";
 import { toast } from "sonner";
 import { TablePagination } from "@/components/TablePagination";
 import { TableViewOptions, type ColumnOption } from "@/components/TableViewOptions";
-import { toDatetimeLocalValue } from "@/lib/noteFormats";
+import { parseDateInputAsLocalDate, toDatetimeLocalValue } from "@/lib/noteFormats";
 import { useDebouncedValue } from "@/lib/DebounceSearch";
 
 const STATUSES = ["All", "Active", "Inactive"];
@@ -1278,7 +1278,7 @@ export default function CustomersPage() {
                             amount: Math.abs(balanceValue),
                             description: "Starting Balance Adjustment",
                             reference: `STARTING-BALANCE-${Date.now()}`,
-                            date: startingBalanceDate,
+                            date: parseDateInputAsLocalDate(startingBalanceDate).toISOString(),
                           }),
                         }
                       );
