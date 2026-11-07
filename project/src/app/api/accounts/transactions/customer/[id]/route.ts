@@ -513,7 +513,7 @@ export async function GET(
       console.error("Error in customer transaction self-heal:", healErr);
     }
 
-    // Ensure all customer invoices have corresponding DEBIT transactions
+    // Ensure all customer invoices have corresponding DEBIT transactions, and sync amounts
     const customerInvoices = await prisma.invoice.findMany({
       where: orgWhere(session, {
         customerId,
@@ -530,6 +530,8 @@ export async function GET(
             totalWeight: true,
             shipmentDate: true,
             recipientName: true,
+            totalCost: true,
+            price: true,
           },
         },
       },
@@ -546,9 +548,10 @@ export async function GET(
             { invoice: { in: invNumbers } },
           ],
         }),
-        select: { reference: true, invoice: true, description: true },
+        select: { id: true, reference: true, invoice: true, amount: true, description: true },
       });
 
+      const existingDebitMap = new Map<string, { id: number; amount: number }>();
       const existingSet = new Set<string>();
       for (const t of existingDebitTxs) {
         if (
@@ -558,8 +561,40 @@ export async function GET(
         ) {
           continue;
         }
+        const key = t.invoice || t.reference;
+        if (key && !key.startsWith("STARTING-BALANCE")) {
+          existingDebitMap.set(key, { id: t.id, amount: Number(t.amount || 0) });
+          existingSet.add(key);
+        }
         if (t.reference) existingSet.add(t.reference);
         if (t.invoice) existingSet.add(t.invoice);
+      }
+
+      let customerTransactionsModified = false;
+      for (const inv of customerInvoices) {
+        let invTotal = Number(inv.totalAmount) || 0;
+        if (invTotal <= 0 && inv.shipment) {
+          const shipCost = Number((inv.shipment as any).totalCost || (inv.shipment as any).price || 0);
+          if (shipCost > 0) {
+            await prisma.invoice.update({
+              where: { id: inv.id },
+              data: { totalAmount: shipCost },
+            });
+            inv.totalAmount = shipCost;
+            invTotal = shipCost;
+          }
+        }
+
+        if (invTotal > 0) {
+          const existing = existingDebitMap.get(inv.invoiceNumber);
+          if (existing && Math.abs(existing.amount - invTotal) > 0.01) {
+            await prisma.customerTransaction.update({
+              where: { id: existing.id },
+              data: { amount: invTotal },
+            });
+            customerTransactionsModified = true;
+          }
+        }
       }
 
       const missingInvoices = customerInvoices.filter(
@@ -567,6 +602,7 @@ export async function GET(
       );
 
       if (missingInvoices.length > 0) {
+        customerTransactionsModified = true;
         for (const inv of missingInvoices) {
           const tracking = inv.shipment?.trackingId || inv.trackingNumber || "N/A";
           const country = inv.shipment?.destination || inv.destination || "N/A";
@@ -593,6 +629,34 @@ export async function GET(
             },
           });
         }
+      }
+
+      if (customerTransactionsModified) {
+        const remainingTxs = await prisma.customerTransaction.findMany({
+          where: orgWhere(session, { customerId }),
+          orderBy: { createdAt: "asc" },
+        });
+        const startingTx = remainingTxs.find(
+          (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
+        );
+        let newBal = 0;
+        if (startingTx) {
+          newBal =
+            startingTx.type === "DEBIT"
+              ? -Number(startingTx.amount || 0)
+              : Number(startingTx.amount || 0);
+        }
+        for (const t of remainingTxs) {
+          if (t.reference && t.reference.startsWith("STARTING-BALANCE")) continue;
+          const amt = Number(t.amount || 0);
+          if (t.type === "DEBIT") newBal -= amt;
+          else if (t.type === "CREDIT") newBal += amt;
+        }
+        await prisma.customers.update({
+          where: { id: customerId },
+          data: { currentBalance: newBal },
+        });
+        customer.currentBalance = newBal;
       }
     }
 
