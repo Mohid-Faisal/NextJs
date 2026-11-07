@@ -307,9 +307,6 @@ export async function lookupVendorRate(
   }
 }
 
-function __noop_marker__() {
-}
-
 export async function addCustomerTransaction(
   prisma: any,
   customerId: number,

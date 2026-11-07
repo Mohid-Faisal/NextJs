@@ -5,7 +5,12 @@ import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
 import { computeVendorLedgerVoucherDate } from "@/lib/accounts/vendorLedgerVoucherDate";
 import type { InvoiceFieldsForDebitVoucher } from "@/lib/accounts/invoiceDebitVoucherDate";
-import { isVendorDebitNoteReference, parseDateInputAsLocalDate } from "@/lib/noteFormats";
+import {
+  inferAdjustmentType,
+  isVendorDebitNoteReference,
+  normalizeNoteLineDescription,
+  parseDateInputAsLocalDate,
+} from "@/lib/noteFormats";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { debitNoteOrgFilter } from "@/lib/tenant/findOrgDebitNote";
@@ -49,7 +54,7 @@ export async function GET(
     const toDate = searchParams.get('toDate');
     const sortField = searchParams.get('sortField') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
-    let recalcBalances = searchParams.get('recalc') === 'true';
+    const recalcBalances = searchParams.get('recalc') === 'true';
 
     // Build where clause for filtering
     const whereClause: any = orgWhere(session, {
@@ -210,14 +215,30 @@ export async function GET(
             ],
           }),
           orderBy: { id: "asc" },
-          select: { id: true, reference: true, invoice: true, amount: true },
+          select: { id: true, reference: true, invoice: true, amount: true, description: true },
         });
 
         const existingSet = new Set<string>();
+        const seenAdjustmentRefs = new Set<string>();
         const duplicateIds: number[] = [];
         for (const t of existingDebitTxs) {
+          if (
+            isVendorDebitNoteReference(t.reference) ||
+            isVendorDebitNoteReference(t.invoice) ||
+            /^(Adjustment|Credit Note|Debit Note)\s*:/i.test(t.description || "")
+          ) {
+            const adjRef = t.reference || t.invoice;
+            if (adjRef) {
+              if (seenAdjustmentRefs.has(adjRef)) {
+                duplicateIds.push(t.id);
+              } else {
+                seenAdjustmentRefs.add(adjRef);
+              }
+            }
+            continue;
+          }
           const key = t.invoice || t.reference;
-          if (!key || isVendorDebitNoteReference(key) || key.startsWith("STARTING-BALANCE")) {
+          if (!key || key.startsWith("STARTING-BALANCE")) {
             continue;
           }
           if (existingSet.has(key)) {
@@ -328,6 +349,13 @@ export async function GET(
         const keptDebitByInv = new Map<string, { id: number; amount: number }>();
         for (const t of existingDebitTxs) {
           if (duplicateIds.includes(t.id)) continue;
+          if (
+            isVendorDebitNoteReference(t.reference) ||
+            isVendorDebitNoteReference(t.invoice) ||
+            /^(Adjustment|Credit Note|Debit Note)\s*:/i.test(t.description || "")
+          ) {
+            continue;
+          }
           const k = t.invoice || t.reference;
           if (k && !keptDebitByInv.has(k)) {
             keptDebitByInv.set(k, { id: t.id, amount: Number(t.amount) || 0 });
@@ -439,6 +467,86 @@ export async function GET(
             });
           }
           // Fast list path already computes chronological runningBal and updates vendor.currentBalance
+        }
+      }
+
+      // Ensure all vendor adjustments (DebitNote: #DR / #CR) have corresponding VendorTransaction rows
+      const vendorDebitNotes = await prisma.debitNote.findMany({
+        where: { ...debitNoteOrgFilter(session), vendorId },
+        include: {
+          bill: { select: { invoiceNumber: true } },
+        },
+      });
+
+      if (vendorDebitNotes.length > 0) {
+        const dnNumbers = vendorDebitNotes
+          .map((dn) => dn.debitNoteNumber)
+          .filter(Boolean);
+        const existingDnTxs = await prisma.vendorTransaction.findMany({
+          where: orgWhere(session, {
+            vendorId,
+            reference: { in: dnNumbers },
+          }),
+          select: { id: true, reference: true, type: true, amount: true, invoice: true },
+        });
+
+        const existingDnTxByRef = new Map(
+          existingDnTxs.map((t) => [t.reference!, t])
+        );
+
+        for (const dn of vendorDebitNotes) {
+          const dnAmt = Math.abs(Number(dn.amount) || 0);
+          if (dnAmt <= 0 || !dn.debitNoteNumber) continue;
+
+          const existingTx = existingDnTxByRef.get(dn.debitNoteNumber);
+          const inferredType = inferAdjustmentType({
+            reference: dn.debitNoteNumber,
+            description: dn.description,
+            transactionType:
+              existingTx?.type === "DEBIT" || existingTx?.type === "CREDIT"
+                ? existingTx.type
+                : null,
+            fallback: "DEBIT",
+          });
+          const expectedInv =
+            dn.bill?.invoiceNumber || (dn.billId ? `Bill ${dn.billId}` : null);
+          const expectedDesc =
+            dn.description ||
+            normalizeNoteLineDescription(
+              inferredType === "CREDIT" ? "credit" : "debit",
+              "",
+              dn.debitNoteNumber
+            );
+
+          if (!existingTx) {
+            await prisma.vendorTransaction.create({
+              data: {
+                organizationId: session.organizationId,
+                vendorId,
+                type: inferredType,
+                amount: dnAmt,
+                description: expectedDesc,
+                reference: dn.debitNoteNumber,
+                invoice: expectedInv,
+                previousBalance: 0,
+                newBalance: inferredType === "DEBIT" ? dnAmt : -dnAmt,
+                createdAt: dn.date || dn.createdAt,
+              },
+            });
+          } else if (
+            existingTx.type !== inferredType ||
+            Math.abs(Number(existingTx.amount) - dnAmt) > 0.01 ||
+            (!existingTx.invoice && expectedInv)
+          ) {
+            await prisma.vendorTransaction.update({
+              where: { id: existingTx.id },
+              data: {
+                type: inferredType,
+                amount: dnAmt,
+                ...(expectedInv && !existingTx.invoice ? { invoice: expectedInv } : {}),
+              },
+            });
+          }
         }
       }
     } catch (healErr) {

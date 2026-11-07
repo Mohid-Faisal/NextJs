@@ -288,8 +288,24 @@ export async function PUT(
         await tx.vendorTransaction.update({
           where: { id: txn.id },
           data: {
+            type,
             amount: newAmount,
             description: lineDesc,
+            createdAt: newDate,
+          },
+        });
+      } else {
+        await tx.vendorTransaction.create({
+          data: {
+            organizationId: session.organizationId,
+            vendorId,
+            type,
+            amount: newAmount,
+            description: lineDesc,
+            reference: note.debitNoteNumber,
+            invoice: (note as any).bill?.invoiceNumber || (note.billId ? `Bill ${note.billId}` : null),
+            previousBalance: 0,
+            newBalance: type === "DEBIT" ? newAmount : -newAmount,
             createdAt: newDate,
           },
         });

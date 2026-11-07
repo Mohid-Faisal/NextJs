@@ -372,7 +372,7 @@ export async function POST(request: NextRequest) {
           parseFloat(amount),
           lineDesc,
           debitNoteNumber,
-          billId ? `Bill ${billId}` : undefined,
+          debitNote.bill?.invoiceNumber || (billId ? `Bill ${billId}` : undefined),
           parseDateInputAsLocalDate(date),
           session.organizationId
         );
@@ -492,7 +492,7 @@ export async function POST(request: NextRequest) {
           parseFloat(amount),
           lineDesc,
           debitNoteNumber,
-          billId ? `Bill ${billId}` : undefined,
+          debitNote.bill?.invoiceNumber || (billId ? `Bill ${billId}` : undefined),
           parseDateInputAsLocalDate(date),
           session.organizationId
         );

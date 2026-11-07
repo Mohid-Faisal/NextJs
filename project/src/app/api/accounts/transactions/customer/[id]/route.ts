@@ -10,7 +10,12 @@ import {
 import { Country } from "country-state-city";
 import { resolveCreditPaymentVoucherDate } from "@/lib/accounts/resolveCreditPaymentVoucherDate";
 import { debitVoucherDateFromInvoice } from "@/lib/accounts/invoiceDebitVoucherDate";
-import { isCustomerCreditNoteReference, parseDateInputAsLocalDate } from "@/lib/noteFormats";
+import {
+  inferAdjustmentType,
+  isCustomerCreditNoteReference,
+  normalizeNoteLineDescription,
+  parseDateInputAsLocalDate,
+} from "@/lib/noteFormats";
 import { requirePermission } from "@/lib/auth/requirePermission";
 import { orgWhere } from "@/lib/tenant/prismaScope";
 import { creditNoteOrgFilter } from "@/lib/tenant/findOrgCreditNote";
@@ -54,7 +59,7 @@ export async function GET(
     const toDate = searchParams.get('toDate');
     const sortField = searchParams.get('sortField') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
-    let recalcBalances = searchParams.get('recalc') === 'true';
+    const recalcBalances = searchParams.get('recalc') === 'true';
 
     // Build where clause for filtering
     const whereClause: any = orgWhere(session, {
@@ -170,14 +175,20 @@ export async function GET(
           type: "DEBIT",
         }),
         orderBy: { id: "asc" },
-        select: { id: true, invoice: true, reference: true, amount: true },
+        select: { id: true, invoice: true, reference: true, amount: true, description: true },
       });
 
       const candidateInvNos = Array.from(
         new Set(
           allCustomerDebitTxs
+            .filter(
+              (t) =>
+                !isCustomerCreditNoteReference(t.reference) &&
+                !isCustomerCreditNoteReference(t.invoice) &&
+                !/^(Adjustment|Credit Note|Debit Note)\s*:/i.test(t.description || "")
+            )
             .flatMap((t) => [t.invoice, t.reference])
-            .filter((v): v is string => !!v && !isCustomerCreditNoteReference(v) && !v.startsWith("STARTING-BALANCE"))
+            .filter((v): v is string => !!v && !v.startsWith("STARTING-BALANCE"))
         )
       );
 
@@ -320,30 +331,43 @@ export async function GET(
             where: orgWhere(session, {
               customerId,
               type: "DEBIT",
-              OR: [
-                { invoice: { in: vendorInvNumbers } },
-                { reference: { in: vendorInvNumbers } },
-              ],
+              reference: { in: vendorInvNumbers },
             }),
           });
-          recalcBalances = true;
         }
       }
 
       // Deduplicate any duplicate DEBIT rows for the exact same customer invoice number
+      // while NEVER treating customer adjustments (#CR / #DR) as duplicate invoice debits
       const remainingCustomerDebitTxs = await prisma.customerTransaction.findMany({
         where: orgWhere(session, {
           customerId,
           type: "DEBIT",
         }),
         orderBy: { id: "asc" },
-        select: { id: true, invoice: true, reference: true },
+        select: { id: true, invoice: true, reference: true, description: true },
       });
       const seenInvoiceDebits = new Set<string>();
+      const seenAdjustmentRefs = new Set<string>();
       const duplicateDebitIds: number[] = [];
       for (const txRow of remainingCustomerDebitTxs) {
+        if (
+          isCustomerCreditNoteReference(txRow.reference) ||
+          isCustomerCreditNoteReference(txRow.invoice) ||
+          /^(Adjustment|Credit Note|Debit Note)\s*:/i.test(txRow.description || "")
+        ) {
+          const adjRef = txRow.reference || txRow.invoice;
+          if (adjRef) {
+            if (seenAdjustmentRefs.has(adjRef)) {
+              duplicateDebitIds.push(txRow.id);
+            } else {
+              seenAdjustmentRefs.add(adjRef);
+            }
+          }
+          continue;
+        }
         const key = txRow.invoice || txRow.reference;
-        if (!key || isCustomerCreditNoteReference(key) || key.startsWith("STARTING-BALANCE")) {
+        if (!key || key.startsWith("STARTING-BALANCE")) {
           continue;
         }
         if (seenInvoiceDebits.has(key)) {
@@ -356,7 +380,6 @@ export async function GET(
         await prisma.customerTransaction.deleteMany({
           where: { id: { in: duplicateDebitIds } },
         });
-        recalcBalances = true;
       }
     } catch (healErr) {
       console.error("Error in customer transaction self-heal:", healErr);
@@ -378,6 +401,7 @@ export async function GET(
             weight: true,
             totalWeight: true,
             shipmentDate: true,
+            recipientName: true,
           },
         },
       },
@@ -394,11 +418,18 @@ export async function GET(
             { invoice: { in: invNumbers } },
           ],
         }),
-        select: { reference: true, invoice: true },
+        select: { reference: true, invoice: true, description: true },
       });
 
       const existingSet = new Set<string>();
       for (const t of existingDebitTxs) {
+        if (
+          isCustomerCreditNoteReference(t.reference) ||
+          isCustomerCreditNoteReference(t.invoice) ||
+          /^(Adjustment|Credit Note|Debit Note)\s*:/i.test(t.description || "")
+        ) {
+          continue;
+        }
         if (t.reference) existingSet.add(t.reference);
         if (t.invoice) existingSet.add(t.invoice);
       }
@@ -413,7 +444,10 @@ export async function GET(
           const country = inv.shipment?.destination || inv.destination || "N/A";
           const pkg = inv.shipment?.packaging || "Wpx";
           const wt = inv.shipment?.totalWeight || inv.shipment?.weight || 0;
-          const desc = `Tracking: ${tracking} | Country: ${country} | Type: ${pkg} | Weight: ${wt}Kg`;
+          const consigneePrefix = inv.shipment?.recipientName
+            ? `Consignee: ${inv.shipment.recipientName} | `
+            : "";
+          const desc = `${consigneePrefix}Tracking: ${tracking} | Country: ${country} | Type: ${pkg} | Weight: ${wt}Kg`;
           const txDate = inv.shipment?.shipmentDate || inv.invoiceDate || inv.createdAt;
 
           await prisma.customerTransaction.create({
@@ -431,8 +465,90 @@ export async function GET(
             },
           });
         }
-        recalcBalances = true;
       }
+    }
+
+    // Ensure all customer adjustments (CreditNote: #CR / #DR) have corresponding CustomerTransaction rows
+    try {
+      const customerCreditNotes = await prisma.creditNote.findMany({
+        where: { ...creditNoteOrgFilter(session), customerId },
+        include: {
+          invoice: { select: { invoiceNumber: true } },
+        },
+      });
+
+      if (customerCreditNotes.length > 0) {
+        const cnNumbers = customerCreditNotes
+          .map((cn) => cn.creditNoteNumber)
+          .filter(Boolean);
+        const existingCnTxs = await prisma.customerTransaction.findMany({
+          where: orgWhere(session, {
+            customerId,
+            reference: { in: cnNumbers },
+          }),
+          select: { id: true, reference: true, type: true, amount: true, invoice: true },
+        });
+
+        const existingCnTxByRef = new Map(
+          existingCnTxs.map((t) => [t.reference!, t])
+        );
+
+        for (const cn of customerCreditNotes) {
+          const cnAmt = Math.abs(Number(cn.amount) || 0);
+          if (cnAmt <= 0 || !cn.creditNoteNumber) continue;
+
+          const existingTx = existingCnTxByRef.get(cn.creditNoteNumber);
+          const inferredType = inferAdjustmentType({
+            reference: cn.creditNoteNumber,
+            description: cn.description,
+            transactionType:
+              existingTx?.type === "DEBIT" || existingTx?.type === "CREDIT"
+                ? existingTx.type
+                : null,
+            fallback: "CREDIT",
+          });
+          const expectedInv = cn.invoice?.invoiceNumber || null;
+          const expectedDesc =
+            cn.description ||
+            normalizeNoteLineDescription(
+              inferredType === "DEBIT" ? "debit" : "credit",
+              "",
+              cn.creditNoteNumber
+            );
+
+          if (!existingTx) {
+            await prisma.customerTransaction.create({
+              data: {
+                organizationId: session.organizationId,
+                customerId,
+                type: inferredType,
+                amount: cnAmt,
+                description: expectedDesc,
+                reference: cn.creditNoteNumber,
+                invoice: expectedInv,
+                previousBalance: 0,
+                newBalance: inferredType === "CREDIT" ? cnAmt : -cnAmt,
+                createdAt: cn.date || cn.createdAt,
+              },
+            });
+          } else if (
+            existingTx.type !== inferredType ||
+            Math.abs(Number(existingTx.amount) - cnAmt) > 0.01 ||
+            (!existingTx.invoice && expectedInv)
+          ) {
+            await prisma.customerTransaction.update({
+              where: { id: existingTx.id },
+              data: {
+                type: inferredType,
+                amount: cnAmt,
+                ...(expectedInv && !existingTx.invoice ? { invoice: expectedInv } : {}),
+              },
+            });
+          }
+        }
+      }
+    } catch (cnHealErr) {
+      console.error("Error healing customer credit/debit notes:", cnHealErr);
     }
 
     // List path: use existing balances; always filter and sort by voucher date (not createdAt)

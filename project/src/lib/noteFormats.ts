@@ -57,14 +57,14 @@ export function inferAdjustmentType(opts: {
   /** Default when nothing else matches (income page → CREDIT, expense → DEBIT) */
   fallback?: "CREDIT" | "DEBIT";
 }): "CREDIT" | "DEBIT" {
+  const desc = (opts.description ?? "").trim().toLowerCase();
+  if (desc.startsWith("debit note")) return "DEBIT";
+  if (desc.startsWith("credit note")) return "CREDIT";
   if (opts.transactionType === "CREDIT" || opts.transactionType === "DEBIT") {
     return opts.transactionType;
   }
   const fromRef = inferNoteTypeFromReference(opts.reference);
   if (fromRef) return fromRef;
-  const desc = (opts.description ?? "").toLowerCase();
-  if (desc.startsWith("debit note")) return "DEBIT";
-  if (desc.startsWith("credit note")) return "CREDIT";
   return opts.fallback ?? "CREDIT";
 }
 
