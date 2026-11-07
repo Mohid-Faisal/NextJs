@@ -257,6 +257,135 @@ export async function GET(
           // Fast list path already computes chronological runningBal and updates vendor.currentBalance
         }
 
+        // Clean up orphan vendor transactions left behind by deleted shipments:
+        // (a) Fake ADJUST- / REFUND- rows created for deleted shipments
+        // (b) DEBIT rows where neither invoice nor shipment exists in DB
+        const allVendorTxsForOrphanCheck = await prisma.vendorTransaction.findMany({
+          where: orgWhere(session, { vendorId }),
+          select: { id: true, invoice: true, reference: true, type: true, description: true },
+        });
+
+        const candVInvNums = Array.from(
+          new Set(
+            allVendorTxsForOrphanCheck
+              .map((t) =>
+                t.reference?.startsWith("ADJUST-") || t.reference?.startsWith("REFUND-")
+                  ? t.reference.replace(/^(ADJUST|REFUND)-/, "")
+                  : t.invoice || t.reference
+              )
+              .filter(
+                (n): n is string =>
+                  typeof n === "string" &&
+                  n.trim().length > 0 &&
+                  !n.startsWith("STARTING-BALANCE") &&
+                  !isVendorDebitNoteReference(n)
+              )
+          )
+        );
+        const existingVInvoices = candVInvNums.length
+          ? await prisma.invoice.findMany({
+              where: orgWhere(session, {
+                vendorId,
+                invoiceNumber: { in: candVInvNums },
+              }),
+              select: { invoiceNumber: true },
+            })
+          : [];
+        const existingVInvoiceSet = new Set(
+          existingVInvoices.map((i) => i.invoiceNumber)
+        );
+
+        const vTrackingIdsToCheck: string[] = [];
+        for (const t of allVendorTxsForOrphanCheck) {
+          const match = t.description?.match(/Tracking:\s*([^\s|]+)/i);
+          if (match && match[1]) vTrackingIdsToCheck.push(match[1]);
+        }
+        const existingVShipments = vTrackingIdsToCheck.length
+          ? await prisma.shipment.findMany({
+              where: orgWhere(session, {
+                trackingId: { in: Array.from(new Set(vTrackingIdsToCheck)) },
+              }),
+              select: { trackingId: true },
+            })
+          : [];
+        const existingVShipmentSet = new Set(
+          existingVShipments.map((s) => s.trackingId).filter(Boolean)
+        );
+
+        const orphanVendorTxIds: number[] = [];
+        for (const t of allVendorTxsForOrphanCheck) {
+          if (
+            t.reference?.startsWith("STARTING-BALANCE") ||
+            isVendorDebitNoteReference(t.reference) ||
+            isVendorDebitNoteReference(t.invoice) ||
+            /^(Adjustment|Credit Note|Debit Note)\s*:/i.test(t.description || "")
+          ) {
+            continue;
+          }
+
+          if (
+            t.reference?.startsWith("ADJUST-") ||
+            t.reference?.startsWith("REFUND-") ||
+            /deleted shipment/i.test(t.description || "")
+          ) {
+            const invNum = t.reference
+              ? t.reference.replace(/^(ADJUST|REFUND)-/, "")
+              : t.invoice;
+            if (!invNum || !existingVInvoiceSet.has(invNum)) {
+              orphanVendorTxIds.push(t.id);
+            }
+            continue;
+          }
+
+          if (t.type === "DEBIT") {
+            const invNum = t.invoice || t.reference;
+            let exists = false;
+            if (invNum && existingVInvoiceSet.has(invNum)) exists = true;
+            if (!exists) {
+              const match = t.description?.match(/Tracking:\s*([^\s|]+)/i);
+              if (match && match[1] && existingVShipmentSet.has(match[1]))
+                exists = true;
+            }
+            if (!exists) {
+              orphanVendorTxIds.push(t.id);
+            }
+          }
+        }
+
+        if (orphanVendorTxIds.length > 0) {
+          await prisma.vendorTransaction.deleteMany({
+            where: { id: { in: orphanVendorTxIds } },
+          });
+        }
+
+        if (duplicateIds.length > 0 || orphanVendorTxIds.length > 0) {
+          const remainingTxs = await prisma.vendorTransaction.findMany({
+            where: orgWhere(session, { vendorId }),
+            orderBy: { createdAt: "asc" },
+          });
+          const startingTx = remainingTxs.find(
+            (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
+          );
+          let newBal = 0;
+          if (startingTx) {
+            newBal =
+              startingTx.type === "DEBIT"
+                ? Number(startingTx.amount || 0)
+                : -Number(startingTx.amount || 0);
+          }
+          for (const t of remainingTxs) {
+            if (t.reference && t.reference.startsWith("STARTING-BALANCE")) continue;
+            const amt = Number(t.amount || 0);
+            if (t.type === "DEBIT") newBal += amt;
+            else if (t.type === "CREDIT") newBal -= amt;
+          }
+          await prisma.vendors.update({
+            where: { id: vendorId },
+            data: { currentBalance: newBal },
+          });
+          vendor.currentBalance = newBal;
+        }
+
         // Clean up bogus prepayment application rows ("Balance applied for vendor invoice..." / CREDIT-{inv})
         // while preserving their amounts as a recovery signal for zeroed vendor invoices
         const bogusVendorCredits = await prisma.vendorTransaction.findMany({

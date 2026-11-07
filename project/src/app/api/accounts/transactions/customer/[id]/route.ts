@@ -381,6 +381,134 @@ export async function GET(
           where: { id: { in: duplicateDebitIds } },
         });
       }
+
+      // Clean up orphan customer transactions left behind by deleted shipments:
+      // (a) Fake REFUND- rows created for deleted shipments
+      // (b) DEBIT rows where neither invoice nor shipment exists in DB
+      const allCustomerTxsForOrphanCheck = await prisma.customerTransaction.findMany({
+        where: orgWhere(session, { customerId }),
+        select: { id: true, invoice: true, reference: true, type: true, description: true },
+      });
+
+      const candInvNums = Array.from(
+        new Set(
+          allCustomerTxsForOrphanCheck
+            .map((t) =>
+              t.reference?.startsWith("REFUND-")
+                ? t.reference.replace(/^REFUND-/, "")
+                : t.invoice || t.reference
+            )
+            .filter(
+              (n): n is string =>
+                typeof n === "string" &&
+                n.trim().length > 0 &&
+                !n.startsWith("STARTING-BALANCE") &&
+                !isCustomerCreditNoteReference(n)
+            )
+        )
+      );
+      const existingInvoices = candInvNums.length
+        ? await prisma.invoice.findMany({
+            where: orgWhere(session, {
+              customerId,
+              invoiceNumber: { in: candInvNums },
+            }),
+            select: { invoiceNumber: true },
+          })
+        : [];
+      const existingInvoiceSet = new Set(
+        existingInvoices.map((i) => i.invoiceNumber)
+      );
+
+      const trackingIdsToCheck: string[] = [];
+      for (const t of allCustomerTxsForOrphanCheck) {
+        const match = t.description?.match(/Tracking:\s*([^\s|]+)/i);
+        if (match && match[1]) trackingIdsToCheck.push(match[1]);
+      }
+      const existingShipments = trackingIdsToCheck.length
+        ? await prisma.shipment.findMany({
+            where: orgWhere(session, {
+              trackingId: { in: Array.from(new Set(trackingIdsToCheck)) },
+            }),
+            select: { trackingId: true },
+          })
+        : [];
+      const existingShipmentSet = new Set(
+        existingShipments.map((s) => s.trackingId).filter(Boolean)
+      );
+
+      const orphanCustomerTxIds: number[] = [];
+      for (const t of allCustomerTxsForOrphanCheck) {
+        if (
+          t.reference?.startsWith("STARTING-BALANCE") ||
+          isCustomerCreditNoteReference(t.reference) ||
+          isCustomerCreditNoteReference(t.invoice) ||
+          /^(Adjustment|Credit Note|Debit Note)\s*:/i.test(t.description || "")
+        ) {
+          continue;
+        }
+
+        if (
+          t.reference?.startsWith("REFUND-") ||
+          /Refund for deleted shipment/i.test(t.description || "")
+        ) {
+          const invNum = t.reference
+            ? t.reference.replace(/^REFUND-/, "")
+            : t.invoice;
+          if (!invNum || !existingInvoiceSet.has(invNum)) {
+            orphanCustomerTxIds.push(t.id);
+          }
+          continue;
+        }
+
+        if (t.type === "DEBIT") {
+          const invNum = t.invoice || t.reference;
+          let exists = false;
+          if (invNum && existingInvoiceSet.has(invNum)) exists = true;
+          if (!exists) {
+            const match = t.description?.match(/Tracking:\s*([^\s|]+)/i);
+            if (match && match[1] && existingShipmentSet.has(match[1]))
+              exists = true;
+          }
+          if (!exists) {
+            orphanCustomerTxIds.push(t.id);
+          }
+        }
+      }
+
+      if (orphanCustomerTxIds.length > 0) {
+        await prisma.customerTransaction.deleteMany({
+          where: { id: { in: orphanCustomerTxIds } },
+        });
+      }
+
+      if (duplicateDebitIds.length > 0 || orphanCustomerTxIds.length > 0) {
+        const remainingTxs = await prisma.customerTransaction.findMany({
+          where: orgWhere(session, { customerId }),
+          orderBy: { createdAt: "asc" },
+        });
+        const startingTx = remainingTxs.find(
+          (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
+        );
+        let newBal = 0;
+        if (startingTx) {
+          newBal =
+            startingTx.type === "DEBIT"
+              ? -Number(startingTx.amount || 0)
+              : Number(startingTx.amount || 0);
+        }
+        for (const t of remainingTxs) {
+          if (t.reference && t.reference.startsWith("STARTING-BALANCE")) continue;
+          const amt = Number(t.amount || 0);
+          if (t.type === "DEBIT") newBal -= amt;
+          else if (t.type === "CREDIT") newBal += amt;
+        }
+        await prisma.customers.update({
+          where: { id: customerId },
+          data: { currentBalance: newBal },
+        });
+        customer.currentBalance = newBal;
+      }
     } catch (healErr) {
       console.error("Error in customer transaction self-heal:", healErr);
     }

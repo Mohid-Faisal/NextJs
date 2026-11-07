@@ -316,9 +316,13 @@ export async function DELETE(
       customerTxnOr.push({
         reference: { in: customerInvoiceNumbers.map((n) => `CREDIT-${n}`) },
       });
+      customerTxnOr.push({
+        reference: { in: customerInvoiceNumbers.map((n) => `REFUND-${n}`) },
+      });
     }
     if (trackingId) {
       customerTxnOr.push({ reference: trackingId });
+      customerTxnOr.push({ description: { contains: trackingId } });
     }
 
     const relatedCustomerTransactions = customerTxnOr.length
@@ -343,9 +347,16 @@ export async function DELETE(
       vendorTxnOr.push({
         reference: { in: vendorInvoiceNumbers.map((n) => `CREDIT-${n}`) },
       });
+      vendorTxnOr.push({
+        reference: { in: vendorInvoiceNumbers.map((n) => `ADJUST-${n}`) },
+      });
+      vendorTxnOr.push({
+        reference: { in: vendorInvoiceNumbers.map((n) => `REFUND-${n}`) },
+      });
     }
     if (trackingId) {
       vendorTxnOr.push({ reference: trackingId });
+      vendorTxnOr.push({ description: { contains: trackingId } });
     }
 
     const relatedVendorTransactions = vendorTxnOr.length
@@ -354,43 +365,11 @@ export async function DELETE(
         })
       : [];
 
-    const unpaidCustomerTransactions = relatedCustomerTransactions.filter(
-      (t) => {
-        const normalizedRef = t.reference
-          ? t.reference.replace(/^(CREDIT|REFUND)-/, "")
-          : null;
-        const relatedInvoice = relatedInvoices.find(
-          (inv) =>
-            (t.invoice && inv.invoiceNumber === t.invoice) ||
-            (normalizedRef && inv.invoiceNumber === normalizedRef) ||
-            (t.reference && inv.trackingNumber === t.reference)
-        );
-        return !relatedInvoice || relatedInvoice.status !== "Paid";
-      }
-    );
-
-    const unpaidVendorTransactions = relatedVendorTransactions.filter((t) => {
-      const normalizedRef = t.reference
-        ? t.reference.replace(/^(CREDIT|REFUND)-/, "")
-        : null;
-      const relatedInvoice = relatedInvoices.find(
-        (inv) =>
-          (t.invoice && inv.invoiceNumber === t.invoice) ||
-          (normalizedRef && inv.invoiceNumber === normalizedRef) ||
-          (t.reference && inv.trackingNumber === t.reference)
-      );
-      return !relatedInvoice || relatedInvoice.status !== "Paid";
-    });
-
-    let customerRefundsProcessed = 0;
-    let vendorAdjustmentsProcessed = 0;
-    let totalRefundAmount = 0;
-    let totalAdjustmentAmount = 0;
     let customerBalancesRecalculated = 0;
     let vendorBalancesRecalculated = 0;
 
-    // ATOMIC CASCADE DELETION: Execute all deletions, balance recalculations,
-    // and financial refund postings inside a single database transaction.
+    // ATOMIC CASCADE DELETION: Execute all deletions and balance recalculations
+    // inside a single database transaction.
     await prisma.$transaction(
       async (tx) => {
         // 1. Delete related journal entries (lines first)
@@ -404,150 +383,98 @@ export async function DELETE(
           });
         }
 
-        // 2. Financial adjustments for paid invoices
-        for (const invoice of relatedInvoices) {
-          if (invoice.status === "Paid" && invoice.totalAmount > 0) {
-            if (invoice.profile === "Customer" && invoice.customerId) {
-              const customer = await tx.customers.findFirst({
-                where: orgWhere(session, { id: invoice.customerId }),
-              });
-              if (customer) {
-                const previousBalance = Number(customer.currentBalance) || 0;
-                const newBalance = previousBalance + Number(invoice.totalAmount || 0);
-                await tx.customerTransaction.create({
-                  data: orgData(session, {
-                    customerId: invoice.customerId,
-                    type: "CREDIT",
-                    amount: invoice.totalAmount,
-                    description: `Refund for deleted shipment ${shipment.trackingId}`,
-                    reference: `REFUND-${invoice.invoiceNumber}`,
-                    invoice: invoice.invoiceNumber,
-                    previousBalance,
-                    newBalance,
-                    createdAt: new Date(),
-                  }),
-                });
-                await tx.customers.update({
-                  where: { id: invoice.customerId },
-                  data: { currentBalance: newBalance },
-                });
-                customerRefundsProcessed++;
-                totalRefundAmount += invoice.totalAmount;
-              }
-            } else if (invoice.profile === "Vendor" && invoice.vendorId) {
-              const vendor = await tx.vendors.findFirst({
-                where: orgWhere(session, { id: invoice.vendorId }),
-              });
-              if (vendor) {
-                const previousBalance = Number(vendor.currentBalance) || 0;
-                const newBalance = previousBalance - Number(invoice.totalAmount || 0);
-                await tx.vendorTransaction.create({
-                  data: orgData(session, {
-                    vendorId: invoice.vendorId,
-                    type: "CREDIT",
-                    amount: invoice.totalAmount,
-                    description: `Payment adjustment for deleted shipment ${shipment.trackingId}`,
-                    reference: `ADJUST-${invoice.invoiceNumber}`,
-                    invoice: invoice.invoiceNumber,
-                    previousBalance,
-                    newBalance,
-                    createdAt: new Date(),
-                  }),
-                });
-                await tx.vendors.update({
-                  where: { id: invoice.vendorId },
-                  data: { currentBalance: newBalance },
-                });
-                vendorAdjustmentsProcessed++;
-                totalAdjustmentAmount += invoice.totalAmount;
-              }
-            }
-          }
-        }
-
-        // 3. Delete unpaid customer transactions & recalculate customer balances
-        if (unpaidCustomerTransactions.length > 0) {
+        // 2. Delete related customer transactions & recalculate customer balances
+        if (relatedCustomerTransactions.length > 0) {
           await tx.customerTransaction.deleteMany({
-            where: { id: { in: unpaidCustomerTransactions.map((t) => t.id) } },
+            where: { id: { in: relatedCustomerTransactions.map((t) => t.id) } },
           });
-          const affectedCustomers = new Set(
-            unpaidCustomerTransactions.map((t) => t.customerId)
-          );
-          for (const customerId of affectedCustomers) {
-            const remainingTransactions = await tx.customerTransaction.findMany({
-              where: orgWhere(session, { customerId }),
-              orderBy: { createdAt: "asc" },
-            });
-            const startingTx = remainingTransactions.find(
-              (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
-            );
-            let newBalance = 0;
-            if (startingTx) {
-              newBalance =
-                startingTx.type === "DEBIT"
-                  ? -Number(startingTx.amount || 0)
-                  : Number(startingTx.amount || 0);
-            }
-            for (const transaction of remainingTransactions) {
-              if (
-                transaction.reference &&
-                transaction.reference.startsWith("STARTING-BALANCE")
-              )
-                continue;
-              const amt = Number(transaction.amount || 0);
-              if (transaction.type === "DEBIT") newBalance -= amt;
-              else if (transaction.type === "CREDIT") newBalance += amt;
-            }
-            await tx.customers.update({
-              where: { id: customerId },
-              data: { currentBalance: newBalance },
-            });
-            customerBalancesRecalculated++;
-          }
+        }
+        const affectedCustomerIds = new Set<number>();
+        for (const t of relatedCustomerTransactions) {
+          if (t.customerId) affectedCustomerIds.add(t.customerId);
+        }
+        for (const inv of relatedInvoices) {
+          if (inv.customerId) affectedCustomerIds.add(inv.customerId);
         }
 
-        // 4. Delete unpaid vendor transactions & recalculate vendor balances
-        if (unpaidVendorTransactions.length > 0) {
+        for (const customerId of affectedCustomerIds) {
+          const remainingTransactions = await tx.customerTransaction.findMany({
+            where: orgWhere(session, { customerId }),
+            orderBy: { createdAt: "asc" },
+          });
+          const startingTx = remainingTransactions.find(
+            (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
+          );
+          let newBalance = 0;
+          if (startingTx) {
+            newBalance =
+              startingTx.type === "DEBIT"
+                ? -Number(startingTx.amount || 0)
+                : Number(startingTx.amount || 0);
+          }
+          for (const transaction of remainingTransactions) {
+            if (
+              transaction.reference &&
+              transaction.reference.startsWith("STARTING-BALANCE")
+            )
+              continue;
+            const amt = Number(transaction.amount || 0);
+            if (transaction.type === "DEBIT") newBalance -= amt;
+            else if (transaction.type === "CREDIT") newBalance += amt;
+          }
+          await tx.customers.update({
+            where: { id: customerId },
+            data: { currentBalance: newBalance },
+          });
+          customerBalancesRecalculated++;
+        }
+
+        // 3. Delete related vendor transactions & recalculate vendor balances
+        if (relatedVendorTransactions.length > 0) {
           await tx.vendorTransaction.deleteMany({
-            where: { id: { in: unpaidVendorTransactions.map((t) => t.id) } },
+            where: { id: { in: relatedVendorTransactions.map((t) => t.id) } },
           });
-          const affectedVendors = new Set(
-            unpaidVendorTransactions.map((t) => t.vendorId)
+        }
+        const affectedVendorIds = new Set<number>();
+        for (const t of relatedVendorTransactions) {
+          if (t.vendorId) affectedVendorIds.add(t.vendorId);
+        }
+        for (const inv of relatedInvoices) {
+          if (inv.vendorId) affectedVendorIds.add(inv.vendorId);
+        }
+        for (const vendorId of affectedVendorIds) {
+          const remainingTransactions = await tx.vendorTransaction.findMany({
+            where: orgWhere(session, { vendorId }),
+            orderBy: { createdAt: "asc" },
+          });
+          const startingTx = remainingTransactions.find(
+            (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
           );
-          for (const vendorId of affectedVendors) {
-            const remainingTransactions = await tx.vendorTransaction.findMany({
-              where: orgWhere(session, { vendorId }),
-              orderBy: { createdAt: "asc" },
-            });
-            const startingTx = remainingTransactions.find(
-              (t) => t.reference && t.reference.startsWith("STARTING-BALANCE")
-            );
-            let newBalance = 0;
-            if (startingTx) {
-              newBalance =
-                startingTx.type === "DEBIT"
-                  ? Number(startingTx.amount || 0)
-                  : -Number(startingTx.amount || 0);
-            }
-            for (const transaction of remainingTransactions) {
-              if (
-                transaction.reference &&
-                transaction.reference.startsWith("STARTING-BALANCE")
-              )
-                continue;
-              const amt = Number(transaction.amount || 0);
-              if (transaction.type === "DEBIT") newBalance += amt;
-              else if (transaction.type === "CREDIT") newBalance -= amt;
-            }
-            await tx.vendors.update({
-              where: { id: vendorId },
-              data: { currentBalance: newBalance },
-            });
-            vendorBalancesRecalculated++;
+          let newBalance = 0;
+          if (startingTx) {
+            newBalance =
+              startingTx.type === "DEBIT"
+                ? Number(startingTx.amount || 0)
+                : -Number(startingTx.amount || 0);
           }
+          for (const transaction of remainingTransactions) {
+            if (
+              transaction.reference &&
+              transaction.reference.startsWith("STARTING-BALANCE")
+            )
+              continue;
+            const amt = Number(transaction.amount || 0);
+            if (transaction.type === "DEBIT") newBalance += amt;
+            else if (transaction.type === "CREDIT") newBalance += amt;
+          }
+          await tx.vendors.update({
+            where: { id: vendorId },
+            data: { currentBalance: newBalance },
+          });
+          vendorBalancesRecalculated++;
         }
 
-        // 5. Delete related invoices (including payment allocations, debit notes, and credit notes)
+        // 4. Delete related invoices (including payment allocations, debit notes, and credit notes)
         if (relatedInvoices.length > 0) {
           const invoiceIds = relatedInvoices.map((inv) => inv.id);
           await tx.paymentAllocation.deleteMany({
@@ -564,7 +491,7 @@ export async function DELETE(
           });
         }
 
-        // 6. Delete shipment
+        // 5. Delete shipment
         await tx.shipment.delete({
           where: { id: shipmentId },
         });
@@ -574,27 +501,14 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: `Shipment deleted successfully. ${relatedInvoices.length} related invoices, ${relatedJournalEntries.length} journal entries, ${unpaidCustomerTransactions.length} unpaid customer transactions, and ${unpaidVendorTransactions.length} unpaid vendor transactions were also deleted. ${customerBalancesRecalculated} customer balances and ${vendorBalancesRecalculated} vendor balances were recalculated. ${customerRefundsProcessed} customer refunds and ${vendorAdjustmentsProcessed} vendor adjustments were processed for paid invoices.`,
+      message: `Shipment deleted successfully. ${relatedInvoices.length} related invoices, ${relatedJournalEntries.length} journal entries, ${relatedCustomerTransactions.length} customer transactions, and ${relatedVendorTransactions.length} vendor transactions were deleted. ${customerBalancesRecalculated} customer balances and ${vendorBalancesRecalculated} vendor balances were recalculated.`,
       deletedInvoices: relatedInvoices.length,
       deletedJournalEntries: relatedJournalEntries.length,
-      deletedCustomerTransactions: unpaidCustomerTransactions.length,
-      deletedVendorTransactions: unpaidVendorTransactions.length,
+      deletedCustomerTransactions: relatedCustomerTransactions.length,
+      deletedVendorTransactions: relatedVendorTransactions.length,
       balanceRecalculations: {
         customers: customerBalancesRecalculated,
         vendors: vendorBalancesRecalculated,
-      },
-      refundsProcessed: {
-        customers: customerRefundsProcessed,
-        vendors: vendorAdjustmentsProcessed,
-      },
-      financialAdjustments: relatedInvoices.filter(
-        (inv) => inv.status === "Paid"
-      ).length,
-      financialSummary: {
-        customerRefundsProcessed,
-        vendorAdjustmentsProcessed,
-        totalRefundAmount,
-        totalAdjustmentAmount,
       },
     });
   } catch (error) {
