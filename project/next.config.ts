@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
           // Once clean for a week, move this value to the enforcing
           // "Content-Security-Policy" header below.
           { key: "Content-Security-Policy-Report-Only", value: csp },
-          { key: "X-App-Build", value: "2026-11-07-v2" },
+          { key: "X-App-Build", value: "2026-11-08-v1" },
         ],
       },
     ];

@@ -407,17 +407,17 @@ export async function GET(
             )
         )
       );
-      const existingInvoices = candInvNums.length
+      const candInvoices = candInvNums.length
         ? await prisma.invoice.findMany({
             where: orgWhere(session, {
-              customerId,
               invoiceNumber: { in: candInvNums },
             }),
-            select: { invoiceNumber: true },
+            select: { invoiceNumber: true, customerId: true },
           })
         : [];
+      const invoiceCustomerMap = new Map(candInvoices.map((i) => [i.invoiceNumber, i.customerId]));
       const existingInvoiceSet = new Set(
-        existingInvoices.map((i) => i.invoiceNumber)
+        candInvoices.filter((i) => i.customerId === customerId).map((i) => i.invoiceNumber)
       );
 
       const trackingIdsToCheck: string[] = [];
@@ -464,7 +464,17 @@ export async function GET(
         if (t.type === "DEBIT") {
           const invNum = t.invoice || t.reference;
           let exists = false;
-          if (invNum && existingInvoiceSet.has(invNum)) exists = true;
+          if (invNum && invoiceCustomerMap.has(invNum)) {
+            const invoiceCustId = invoiceCustomerMap.get(invNum);
+            // If the invoice belongs to a different customer, it's a cross-customer leak -> delete
+            if (invoiceCustId && invoiceCustId !== customerId) {
+              orphanCustomerTxIds.push(t.id);
+              continue;
+            }
+            if (invoiceCustId === customerId) {
+              exists = true;
+            }
+          }
           if (!exists) {
             const match = t.description?.match(/Tracking:\s*([^\s|]+)/i);
             if (match && match[1] && existingShipmentSet.has(match[1]))
@@ -811,7 +821,10 @@ export async function GET(
       >();
       if (invoiceNumbersList.length > 0) {
         const invoicesList = await prisma.invoice.findMany({
-          where: { ...orgWhere(session), invoiceNumber: { in: invoiceNumbersList } },
+          where: orgWhere(session, {
+            customerId,
+            invoiceNumber: { in: invoiceNumbersList },
+          }),
           include: {
             shipment: { select: { shipmentDate: true } },
           },
