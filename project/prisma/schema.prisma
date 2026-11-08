@@ -552,6 +552,7 @@ model DebitNote {
   bill            Invoice? @relation(fields: [billId], references: [id])
   vendorId        Int?
   vendor          Vendors? @relation(fields: [vendorId], references: [id])
+  type            String   @default("DEBIT")
   amount          Decimal  @db.Decimal(19, 4)
   date            DateTime
   description     String?
@@ -570,7 +571,8 @@ model CreditNote {
   invoice          Invoice?  @relation(fields: [invoiceId], references: [id])
   customerId       Int
   customer         Customers @relation(fields: [customerId], references: [id])
-  amount           Decimal   @db.Decimal(19, 4)
+  type            String   @default("CREDIT")
+  amount          Decimal  @db.Decimal(19, 4)
   date             DateTime
   description      String?
   currency         String    @default("USD")

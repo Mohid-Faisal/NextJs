@@ -63,15 +63,19 @@ export async function GET(
       select: { type: true },
     });
 
-    const type = inferAdjustmentType({
-      reference: note.debitNoteNumber,
-      description: note.description,
-      transactionType:
-        linkedTxn?.type === "DEBIT" || linkedTxn?.type === "CREDIT"
-          ? linkedTxn.type
-          : null,
-      fallback: "DEBIT",
-    });
+    const type =
+      note.type === "DEBIT" || note.type === "CREDIT"
+        ? (note.type as "DEBIT" | "CREDIT")
+        : inferAdjustmentType({
+            noteType: note.type,
+            reference: note.debitNoteNumber,
+            description: note.description,
+            transactionType:
+              linkedTxn?.type === "DEBIT" || linkedTxn?.type === "CREDIT"
+                ? linkedTxn.type
+                : null,
+            fallback: "DEBIT",
+          });
 
     const kind = type === "CREDIT" ? "credit" : "debit";
 
@@ -146,15 +150,21 @@ export async function PUT(
       where: orgWhere(session, { reference: note.debitNoteNumber }),
       select: { type: true },
     });
-    const type = inferAdjustmentType({
-      reference: note.debitNoteNumber,
-      description: note.description,
-      transactionType:
-        linkedTxnForType?.type === "DEBIT" || linkedTxnForType?.type === "CREDIT"
-          ? linkedTxnForType.type
-          : null,
-      fallback: "DEBIT",
-    });
+    const type =
+      body.type === "DEBIT" || body.type === "CREDIT"
+        ? body.type
+        : note.type === "DEBIT" || note.type === "CREDIT"
+        ? (note.type as "DEBIT" | "CREDIT")
+        : inferAdjustmentType({
+            noteType: note.type,
+            reference: note.debitNoteNumber,
+            description: note.description,
+            transactionType:
+              linkedTxnForType?.type === "DEBIT" || linkedTxnForType?.type === "CREDIT"
+                ? linkedTxnForType.type
+                : null,
+            fallback: "DEBIT",
+          });
     const kind = type === "CREDIT" ? "credit" : "debit";
 
     const oldAmount = Number(note.amount);
@@ -230,6 +240,7 @@ export async function PUT(
       await tx.debitNote.update({
         where: { id: idNum },
         data: {
+          type,
           amount: newAmount,
           date: newDate,
           description: lineDesc,

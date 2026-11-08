@@ -628,15 +628,19 @@ export async function GET(
           if (dnAmt <= 0 || !dn.debitNoteNumber) continue;
 
           const existingTx = existingDnTxByRef.get(dn.debitNoteNumber);
-          const inferredType = inferAdjustmentType({
-            reference: dn.debitNoteNumber,
-            description: dn.description,
-            transactionType:
-              existingTx?.type === "DEBIT" || existingTx?.type === "CREDIT"
-                ? existingTx.type
-                : null,
-            fallback: "DEBIT",
-          });
+          const inferredType =
+            dn.type === "DEBIT" || dn.type === "CREDIT"
+              ? (dn.type as "DEBIT" | "CREDIT")
+              : inferAdjustmentType({
+                  noteType: dn.type,
+                  reference: dn.debitNoteNumber,
+                  description: dn.description,
+                  transactionType:
+                    existingTx?.type === "DEBIT" || existingTx?.type === "CREDIT"
+                      ? existingTx.type
+                      : null,
+                  fallback: "DEBIT",
+                });
           const expectedInv =
             dn.bill?.invoiceNumber || (dn.billId ? `Bill ${dn.billId}` : null);
           const expectedDesc =

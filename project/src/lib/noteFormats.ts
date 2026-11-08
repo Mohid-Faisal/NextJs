@@ -51,12 +51,16 @@ export function inferNoteTypeFromReference(
  * Prefers explicit txn type (handles legacy DEBIT rows that still have `#CR` refs).
  */
 export function inferAdjustmentType(opts: {
+  noteType?: string | null;
   reference?: string | null;
   description?: string | null;
   transactionType?: "CREDIT" | "DEBIT" | null;
   /** Default when nothing else matches (income page → CREDIT, expense → DEBIT) */
   fallback?: "CREDIT" | "DEBIT";
 }): "CREDIT" | "DEBIT" {
+  if (opts.noteType === "CREDIT" || opts.noteType === "DEBIT") {
+    return opts.noteType;
+  }
   const desc = (opts.description ?? "").trim().toLowerCase();
   if (desc.startsWith("debit note")) return "DEBIT";
   if (desc.startsWith("credit note")) return "CREDIT";

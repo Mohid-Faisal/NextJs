@@ -700,15 +700,19 @@ export async function GET(
           if (cnAmt <= 0 || !cn.creditNoteNumber) continue;
 
           const existingTx = existingCnTxByRef.get(cn.creditNoteNumber);
-          const inferredType = inferAdjustmentType({
-            reference: cn.creditNoteNumber,
-            description: cn.description,
-            transactionType:
-              existingTx?.type === "DEBIT" || existingTx?.type === "CREDIT"
-                ? existingTx.type
-                : null,
-            fallback: "CREDIT",
-          });
+          const inferredType =
+            cn.type === "DEBIT" || cn.type === "CREDIT"
+              ? (cn.type as "DEBIT" | "CREDIT")
+              : inferAdjustmentType({
+                  noteType: cn.type,
+                  reference: cn.creditNoteNumber,
+                  description: cn.description,
+                  transactionType:
+                    existingTx?.type === "DEBIT" || existingTx?.type === "CREDIT"
+                      ? existingTx.type
+                      : null,
+                  fallback: "CREDIT",
+                });
           const expectedInv = cn.invoice?.invoiceNumber || null;
           const expectedDesc =
             cn.description ||

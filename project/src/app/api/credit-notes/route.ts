@@ -149,12 +149,16 @@ export async function GET(request: NextRequest) {
 
     const withType = creditNotes.map((cn: any) => ({
       ...cn,
-      type: inferAdjustmentType({
-        reference: cn.creditNoteNumber,
-        description: cn.description,
-        transactionType: txnTypeByRef.get(cn.creditNoteNumber) ?? null,
-        fallback: "CREDIT",
-      }),
+      type:
+        cn.type === "DEBIT" || cn.type === "CREDIT"
+          ? cn.type
+          : inferAdjustmentType({
+              noteType: cn.type,
+              reference: cn.creditNoteNumber,
+              description: cn.description,
+              transactionType: txnTypeByRef.get(cn.creditNoteNumber) ?? null,
+              fallback: "CREDIT",
+            }),
     }));
 
     // Get total count for pagination
@@ -281,6 +285,7 @@ export async function POST(request: NextRequest) {
           creditNoteNumber,
           invoiceId: resolvedInvoiceId,
           customerId: parseInt(customerId),
+          type: "CREDIT",
           amount: parseFloat(amount),
           date: parseDateInputAsLocalDate(date),
           description: lineDesc,
@@ -403,6 +408,7 @@ export async function POST(request: NextRequest) {
           creditNoteNumber,
           invoiceId: resolvedInvoiceId,
           customerId: parseInt(customerId),
+          type: "DEBIT",
           amount: parseFloat(amount),
           date: parseDateInputAsLocalDate(date),
           description: lineDesc,

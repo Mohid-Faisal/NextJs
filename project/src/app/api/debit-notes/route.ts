@@ -143,12 +143,16 @@ export async function GET(request: NextRequest) {
 
     const withType = debitNotes.map((dn: any) => ({
       ...dn,
-      type: inferAdjustmentType({
-        reference: dn.debitNoteNumber,
-        description: dn.description,
-        transactionType: txnTypeByRef.get(dn.debitNoteNumber) ?? null,
-        fallback: "DEBIT",
-      }),
+      type:
+        dn.type === "DEBIT" || dn.type === "CREDIT"
+          ? dn.type
+          : inferAdjustmentType({
+              noteType: dn.type,
+              reference: dn.debitNoteNumber,
+              description: dn.description,
+              transactionType: txnTypeByRef.get(dn.debitNoteNumber) ?? null,
+              fallback: "DEBIT",
+            }),
     }));
 
     // Get total count for pagination
@@ -275,6 +279,7 @@ export async function POST(request: NextRequest) {
             debitNoteNumber,
             billId: billId ? parseInt(billId) : null,
             vendorId: parseInt(vendorId),
+            type: "DEBIT",
             amount: parseFloat(amount),
             date: parseDateInputAsLocalDate(date),
             description: lineDesc,
@@ -396,6 +401,7 @@ export async function POST(request: NextRequest) {
             debitNoteNumber,
             billId: billId ? parseInt(billId) : null,
             vendorId: parseInt(vendorId),
+            type: "CREDIT",
             amount: parseFloat(amount),
             date: parseDateInputAsLocalDate(date),
             description: lineDesc,
