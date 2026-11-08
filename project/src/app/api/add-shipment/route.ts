@@ -596,7 +596,7 @@ export async function POST(req: NextRequest) {
                 ? Number(customerInvoice.totalAmount)
                 : customerTotalCost;
 
-            if (customerId && customerDebitAmount >= 0) {
+            if (customerId && customerDebitAmount > 0) {
               await addCustomerTransaction(
                 tx,
                 customerId,
@@ -629,7 +629,7 @@ export async function POST(req: NextRequest) {
                 ? Number(vendorInvoice.totalAmount)
                 : vendorTotalCost;
 
-            if (vendorId && vendorDebitAmount >= 0) {
+            if (vendorId && vendorDebitAmount > 0) {
               await addVendorTransaction(
                 tx,
                 vendorId,
