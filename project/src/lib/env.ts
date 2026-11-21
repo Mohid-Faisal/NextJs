@@ -58,7 +58,7 @@ export const serverEnv = {
     return optional("GOOGLE_CLIENT_SECRET");
   },
   get NEXT_PUBLIC_APP_URL(): string {
-    return optional("NEXT_PUBLIC_APP_URL") ?? "http://localhost:3000";
+    return optional("NEXT_PUBLIC_APP_URL") ?? "https://psswwe.com";
   },
 };
 

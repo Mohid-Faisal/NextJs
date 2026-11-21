@@ -53,7 +53,7 @@ export function verifyTrackingToken(token: string): string | null {
 
 /** Build a full public tracking URL for a shipment. */
 export function buildTrackingUrl(trackingId: string, appUrl?: string): string {
-  const base = (appUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const base = (appUrl || process.env.NEXT_PUBLIC_APP_URL || "https://psswwe.com").replace(/\/$/, "");
   const token = signTrackingToken(trackingId);
   return `${base}/tracking?t=${encodeURIComponent(token)}`;
 }

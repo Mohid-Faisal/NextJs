@@ -57,8 +57,26 @@ export async function middleware(req: NextRequest) {
   const isApiRoute = pathname.startsWith("/api");
   const isStaticFile = pathname.includes(".");
 
-  // Allowed public pages that don't require login (only tracking)
-  const isPublicPage = pathname.startsWith("/tracking");
+  // Allowed public pages that don't require login
+  const isPublicPage =
+    pathname === "/" ||
+    pathname.startsWith("/tracking") ||
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname.startsWith("/opengraph-image") ||
+    pathname.startsWith("/twitter-image") ||
+    pathname.startsWith("/icon") ||
+    pathname.startsWith("/apple-icon");
+
+  const isLegacyPublicPage =
+    pathname.startsWith("/about") ||
+    pathname.startsWith("/contact") ||
+    pathname.startsWith("/services") ||
+    pathname.startsWith("/tools") ||
+    pathname.startsWith("/rate-calculator");
 
   if (isAuthPage || isApiRoute || isStaticFile) {
     return NextResponse.next();
@@ -67,6 +85,9 @@ export async function middleware(req: NextRequest) {
   if (!token) {
     if (isPublicPage) {
       return NextResponse.next();
+    }
+    if (isLegacyPublicPage) {
+      return NextResponse.redirect(new URL("/", req.url));
     }
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
@@ -85,15 +106,7 @@ export async function middleware(req: NextRequest) {
       return res;
     }
 
-    const isUnusedPublicPage =
-      pathname === "/" ||
-      pathname.startsWith("/about") ||
-      pathname.startsWith("/contact") ||
-      pathname.startsWith("/services") ||
-      pathname.startsWith("/tools") ||
-      pathname.startsWith("/rate-calculator");
-
-    if (isUnusedPublicPage) {
+    if (isLegacyPublicPage) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
@@ -101,6 +114,11 @@ export async function middleware(req: NextRequest) {
   } catch {
     if (isPublicPage) {
       const res = NextResponse.next();
+      res.cookies.delete("token");
+      return res;
+    }
+    if (isLegacyPublicPage) {
+      const res = NextResponse.redirect(new URL("/", req.url));
       res.cookies.delete("token");
       return res;
     }

@@ -7,15 +7,84 @@ import PublicLayout from "@/components/PublicLayout";
 import NextTopLoader from "nextjs-toploader";
 import TopLoaderFetch from "@/components/TopLoaderFetch";
 import type { Metadata, Viewport } from "next";
+import { JsonLd } from "@/components/seo/JsonLd";
+import {
+  SITE_CONFIG,
+  getSiteUrl,
+  getOrganizationSchema,
+  getWebSiteSchema,
+} from "@/lib/seo";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
+
+const googleVerification =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim() || undefined;
+const bingVerification =
+  process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION?.trim() || undefined;
 
 export const metadata: Metadata = {
-  title: "Courier Express",
-  description: "Fast, Reliable and Affordable Courier Services",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: `${SITE_CONFIG.fullBrand} — Courier & Cargo Management SaaS`,
+    template: `%s | ${SITE_CONFIG.name}`,
+  },
+  description: SITE_CONFIG.description,
+  applicationName: SITE_CONFIG.name,
+  keywords: [...SITE_CONFIG.keywords],
+  authors: [{ name: SITE_CONFIG.name, url: getSiteUrl() }],
+  creator: SITE_CONFIG.name,
+  publisher: SITE_CONFIG.name,
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    siteName: SITE_CONFIG.fullBrand,
+    title: `${SITE_CONFIG.fullBrand} — Courier & Cargo Management SaaS`,
+    description: SITE_CONFIG.description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_CONFIG.fullBrand} — Courier & Cargo Management SaaS`,
+    description: SITE_CONFIG.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  verification:
+    googleVerification || bingVerification
+      ? {
+          google: googleVerification,
+          other: bingVerification
+            ? { "msvalidate.01": bingVerification }
+            : undefined,
+        }
+      : undefined,
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#090d1f" },
+  ],
+};
 
 export default function RootLayout({
   children,
@@ -27,6 +96,7 @@ export default function RootLayout({
       <body
         className={`min-h-screen font-sans antialiased ${inter.className}`}
       >
+        <JsonLd data={[getOrganizationSchema(), getWebSiteSchema()]} />
         <NextTopLoader
           color="#3b82f6"
           height={3}
@@ -41,9 +111,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ThemeInitializer>
-            <PublicLayout>
-              {children}
-            </PublicLayout>
+            <PublicLayout>{children}</PublicLayout>
             <Toaster position="top-center" richColors />
           </ThemeInitializer>
         </ThemeProvider>
