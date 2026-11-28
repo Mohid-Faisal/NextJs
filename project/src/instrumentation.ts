@@ -11,17 +11,35 @@ export async function register() {
     try {
       void process.stdin;
     } catch {
-      const { Readable } = await import("node:stream");
-      Object.defineProperty(process, "stdin", {
-        value: new Readable({
-          read() {
-            this.push(null);
-          },
-        }),
-        enumerable: true,
-        configurable: true,
-        writable: true,
-      });
+      try {
+        type StreamModule = {
+          Readable?: new (opts: { read(this: { push(chunk: null): void }): void }) => unknown;
+          default?: {
+            Readable?: new (opts: { read(this: { push(chunk: null): void }): void }) => unknown;
+          };
+        };
+        const getBuiltin = (
+          process as unknown as { getBuiltinModule?: (id: string) => StreamModule | undefined }
+        ).getBuiltinModule;
+        const streamMod: StreamModule =
+          getBuiltin?.("node:stream") ?? ((await import("node:stream")) as unknown as StreamModule);
+        const ReadableCtor = streamMod?.Readable ?? streamMod?.default?.Readable;
+        const fallbackStdin = ReadableCtor
+          ? new ReadableCtor({
+              read() {
+                this.push(null);
+              },
+            })
+          : null;
+        Object.defineProperty(process, "stdin", {
+          value: fallbackStdin,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
+      } catch (stdinPatchErr) {
+        console.warn("[instrumentation] Failed to patch process.stdin:", stdinPatchErr);
+      }
     }
 
     const { warnOnMissingRecommendedEnv } = await import("@/lib/env");
