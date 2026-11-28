@@ -5,6 +5,25 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // Guard against LiteSpeed/lsnode (Hostinger) FD 0 socket conflict on Node.js 22:
+    // ESM imports of `node:process` trigger BuiltinModule.syncExports(), which invokes
+    // the `process.stdin` getter and throws `Error: open EEXIST` when lsnode owns FD 0.
+    try {
+      void process.stdin;
+    } catch {
+      const { Readable } = await import("node:stream");
+      Object.defineProperty(process, "stdin", {
+        value: new Readable({
+          read() {
+            this.push(null);
+          },
+        }),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+
     const { warnOnMissingRecommendedEnv } = await import("@/lib/env");
     warnOnMissingRecommendedEnv();
 
